@@ -2,12 +2,12 @@
   "meta": {
     "schema_version": "1.1.0",
     "awf_version": "4.1.2",
-    "last_updated": "2026-02-03T16:17:00+07:00"
+    "last_updated": "2026-02-03T23:44:00+07:00"
   },
   "project": {
     "name": "revenue-management-system",
     "type": "SaaS Web App",
-    "status": "Development - UI Polished (SaaS Pro Light Theme)",
+    "status": "Production - Deployed to Vercel",
     "description": "RMS Version 01 (MVP) - Revenue Management System with Pricing Engine. Full-stack TypeScript.",
     "github": "https://github.com/4tkhospitality/revenue-managment-system"
   },
@@ -35,8 +35,21 @@
     },
     "deployment": {
       "vcs": "GitHub",
+      "hosting": "Vercel",
       "tools": "Docker, Shell Scripts",
-      "strategy": "One-click Run"
+      "strategy": "Git-based Auto Deploy",
+      "vercel_config": {
+        "root_directory": "apps/web",
+        "framework": "Next.js",
+        "build_command": "npm run build (auto)",
+        "output_directory": "Next.js default",
+        "env_vars": [
+          "DATABASE_URL",
+          "DIRECT_URL",
+          "DEFAULT_HOTEL_ID",
+          "NEXT_PUBLIC_DEFAULT_HOTEL_ID"
+        ]
+      }
     }
   },
   "database_schema": {
@@ -190,7 +203,13 @@
       "apps/web was added as submodule - removed .git folder to fix",
       "Prisma generate fails while dev server running (file lock) - restart server",
       "PricingLogic.optimize takes (currentPrice, remainingDemand, remainingSupply)",
-      "Layout files set background, but child components can override - must update all"
+      "Layout files set background, but child components can override - must update all",
+      "Vercel monorepo: Must set Root Directory to 'apps/web' in Project Settings",
+      "Vercel monorepo: Framework Preset must be 'Next.js', not 'Other'",
+      "Vercel: Don't use vercel.json with 'cd apps/web' if Root Directory already set",
+      "Vercel: Redeploy copies OLD deployment settings - delete project and reimport if settings wrong",
+      "Vercel: Production Overrides can differ from Project Settings - check both",
+      "tsconfig.json: Exclude 'scripts' folder to prevent build errors from dev scripts"
     ],
     "formulas": {
       "rooms_otb": "SUM(num_rooms) from reservations for that stay_date",
