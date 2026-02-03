@@ -2,12 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Upload, Database } from 'lucide-react';
+import { LayoutDashboard, Upload, Database, Settings, BookOpen } from 'lucide-react';
 
 const navItems = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/upload', label: 'Upload', icon: Upload },
     { href: '/data', label: 'Data Inspector', icon: Database },
+    { href: '/settings', label: 'Settings', icon: Settings },
+    { href: '/guide', label: 'Hướng dẫn', icon: BookOpen },
 ];
 
 export function Sidebar() {

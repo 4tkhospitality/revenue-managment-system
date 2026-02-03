@@ -56,10 +56,10 @@ function KpiCard({ title, value, trend, trendLabel, formula }: KpiCardProps) {
 
 interface KpiCardsProps {
     data: KpiData;
+    hotelCapacity: number;
 }
 
-export function KpiCards({ data }: KpiCardsProps) {
-    const hotelCapacity = 240; // Hardcoded, same as dashboard
+export function KpiCards({ data, hotelCapacity }: KpiCardsProps) {
     const days = 30;
 
     return (
@@ -82,7 +82,7 @@ export function KpiCards({ data }: KpiCardsProps) {
                 title="Avg Pickup T7"
                 value={`+${data.avgPickupT7.toFixed(1)}`}
                 trend={data.avgPickupT7}
-                formula="AVG(pickup_t7) từ features_daily (hardcode 6.3)"
+                formula="AVG(pickup_t7) từ features_daily (30 ngày gần nhất)"
             />
             <KpiCard
                 title="Forecast Demand"

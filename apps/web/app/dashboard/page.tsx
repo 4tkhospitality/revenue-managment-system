@@ -3,6 +3,7 @@ import { KpiCards } from '@/components/dashboard/KpiCards';
 import { OtbChart } from '@/components/dashboard/OtbChart';
 import { RecommendationTable } from '@/components/dashboard/RecommendationTable';
 import { DateUtils } from '@/lib/date';
+import { PricingLogic } from '@/lib/pricing';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,8 +13,34 @@ export default async function DashboardPage() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const hotelId = process.env.DEFAULT_HOTEL_ID || '123e4567-e89b-12d3-a456-426614174000';
-    const hotelCapacity = 240; // TODO: Fetch from Hotel table
+    const hotelId = process.env.DEFAULT_HOTEL_ID;
+
+    // Check if hotel is configured
+    if (!hotelId) {
+        return (
+            <div className="p-6">
+                <div className="bg-amber-950/30 border border-amber-800 rounded-lg p-6 text-center">
+                    <h2 className="text-xl font-bold text-amber-400 mb-2">⚠️ Chưa cấu hình Hotel ID</h2>
+                    <p className="text-amber-300 mb-4">
+                        Vui lòng thêm <code className="bg-slate-800 px-2 py-1 rounded">DEFAULT_HOTEL_ID</code> vào file <code className="bg-slate-800 px-2 py-1 rounded">.env</code>
+                    </p>
+                    <a href="/settings" className="inline-block px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
+                        Đi tới Settings →
+                    </a>
+                </div>
+            </div>
+        );
+    }
+
+    // Fetch hotel settings from database
+    const hotel = await prisma.hotel.findUnique({
+        where: { hotel_id: hotelId }
+    });
+
+    // Check if hotel exists and has capacity set
+    const needsSetup = !hotel || !hotel.capacity;
+    const hotelCapacity = hotel?.capacity || 0;
+    const hotelName = hotel?.name || 'Chưa đặt tên';
 
     // Fetch OTB Data - try today first, fallback to latest available
     let otbData = await prisma.dailyOTB.findMany({
@@ -74,8 +101,15 @@ export default async function DashboardPage() {
 
     const totalForecast = forecastData.reduce((sum, d) => sum + (d.remaining_demand || 0), 0);
 
-    // Calculate Avg Pickup T7 (Mock for now)
-    const avgPickupT7 = 6.3; // TODO: Calculate from FeaturesDaily
+    // Calculate Avg Pickup T7 from features_daily (if data exists)
+    const featuresData = await prisma.featuresDaily.findMany({
+        where: { hotel_id: hotelId },
+        select: { pickup_t7: true },
+        take: 30,
+    });
+    const avgPickupT7 = featuresData.length > 0
+        ? featuresData.reduce((sum, f) => sum + (f.pickup_t7 || 0), 0) / featuresData.length
+        : 0; // Show 0 if no data yet
 
     const kpiData = {
         roomsOtb: totalOtb,
@@ -91,24 +125,31 @@ export default async function DashboardPage() {
         otbLastYear: Math.floor(d.rooms_otb * (0.8 + Math.random() * 0.4)), // Mock LY
     }));
 
-    // Build table data directly from OTB (instead of priceRecommendations)
-    // This shows actual OTB data immediately, ML recommendations will be added later
+    // Build table data directly from OTB with Pricing Engine
     const tableData = otbData.map((otb) => {
         const fcst = forecastData.find(
             (f) => f.stay_date.toISOString() === otb.stay_date.toISOString()
         );
         const remaining = hotelCapacity - otb.rooms_otb;
         const adr = otb.rooms_otb > 0 ? Number(otb.revenue_otb) / otb.rooms_otb : 0;
+        const forecastDemand = fcst?.remaining_demand || 0;
+
+        // Use Pricing Engine to calculate recommended price
+        const pricingResult = PricingLogic.optimize(
+            Math.round(adr),
+            forecastDemand,
+            remaining
+        );
 
         return {
             id: otb.stay_date.toISOString(),
             stayDate: otb.stay_date.toISOString(),
             roomsOtb: otb.rooms_otb,
             remaining,
-            forecast: fcst?.remaining_demand || 0,
-            currentPrice: Math.round(adr), // Use ADR as current price
-            recommendedPrice: Math.round(adr * 1.1), // Mock: +10% recommendation
-            isStopSell: remaining <= 0,
+            forecast: forecastDemand,
+            currentPrice: Math.round(adr),
+            recommendedPrice: pricingResult.recommendedPrice || Math.round(adr),
+            isStopSell: remaining <= 0 || pricingResult.recommendedPrice === null,
         };
     });
 
@@ -160,9 +201,9 @@ export default async function DashboardPage() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-50">Dashboard</h1>
+                    <h1 className="text-2xl font-bold text-slate-50">{hotelName}</h1>
                     <p className="text-sm text-slate-400">
-                        Revenue Management System V01
+                        Dashboard • {hotelCapacity} phòng
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
@@ -181,8 +222,17 @@ export default async function DashboardPage() {
                 </div>
             )}
 
+            {/* Setup Warning */}
+            {needsSetup && (
+                <div className="bg-rose-950/30 border border-rose-800 rounded-lg p-4">
+                    <p className="text-rose-400">
+                        ⚠️ Chưa cấu hình khách sạn! <a href="/settings" className="underline hover:text-rose-300">Vào Settings</a> để nhập Số phòng (Capacity) và các thông tin khác.
+                    </p>
+                </div>
+            )}
+
             {/* KPI Cards */}
-            <KpiCards data={kpiData} />
+            <KpiCards data={kpiData} hotelCapacity={hotelCapacity} />
 
             {/* OTB Chart */}
             <OtbChart data={chartData} />

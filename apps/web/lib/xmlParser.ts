@@ -93,21 +93,26 @@ export function parseCrystalReportXML(xmlContent: string, reportType: 'booked' |
 
         for (const pair of topLevelPairs) {
             if (pair['@_Level'] === '0' && pair['@_Type'] === 'Report') {
-                // Get Header area
-                const headerArea = pair['FormattedArea'];
-                if (headerArea && headerArea['@_Type'] === 'Header') {
-                    const sections = headerArea['FormattedSections']?.['FormattedSection'];
-                    const sectionArray = Array.isArray(sections) ? sections : [sections];
+                // FormattedArea can be array (Header + Footer) or single object
+                const areaRaw = pair['FormattedArea'];
+                const areas = Array.isArray(areaRaw) ? areaRaw : [areaRaw];
 
-                    for (const section of sectionArray) {
-                        const objects = getReportObjects(section);
+                for (const headerArea of areas) {
+                    if (headerArea && headerArea['@_Type'] === 'Header') {
+                        const sections = headerArea['FormattedSections']?.['FormattedSection'];
+                        const sectionArray = Array.isArray(sections) ? sections : [sections];
 
-                        // Look for @BookedDate or @todate field
-                        const bookedDate = extractFieldValue(objects, '@BookedDate');
-                        const toDate = extractFieldValue(objects, '@todate');
-                        const printDate = extractFieldValue(objects, 'PrintDate');
+                        for (const section of sectionArray) {
+                            const objects = getReportObjects(section);
 
-                        reportDate = bookedDate || toDate || printDate || '';
+                            // Look for @BookedDate or @todate field - these contain the booking date
+                            const bookedDate = extractFieldValue(objects, '@BookedDate');
+                            const toDate = extractFieldValue(objects, '@todate');
+
+                            // Use @BookedDate or @todate (same report filter), NOT PrintDate
+                            reportDate = bookedDate || toDate || '';
+                            if (reportDate) break;
+                        }
                         if (reportDate) break;
                     }
                 }

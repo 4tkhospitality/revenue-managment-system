@@ -15,7 +15,10 @@ import { revalidatePath } from 'next/cache';
  * 4. Upsert into daily_otb table
  */
 export async function buildDailyOTB() {
-    const hotelId = process.env.DEFAULT_HOTEL_ID || '123e4567-e89b-12d3-a456-426614174000';
+    const hotelId = process.env.DEFAULT_HOTEL_ID;
+    if (!hotelId) {
+        throw new Error('DEFAULT_HOTEL_ID chưa được cấu hình trong .env');
+    }
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -62,7 +65,9 @@ export async function buildDailyOTB() {
                 const existing = stayDateMap.get(dateKey) || { rooms: 0, revenue: 0 };
                 stayDateMap.set(dateKey, {
                     rooms: existing.rooms + res.rooms,
-                    revenue: existing.revenue + (revenuePerNight * res.rooms),
+                    // revenuePerNight already includes all rooms for that booking
+                    // Don't multiply by res.rooms again!
+                    revenue: existing.revenue + revenuePerNight,
                 });
             }
         }

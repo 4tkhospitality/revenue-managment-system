@@ -2,6 +2,10 @@ import prisma from '../../lib/prisma';
 import { DateUtils } from '../../lib/date';
 import Link from 'next/link';
 import { BuildOtbButton } from './BuildOtbButton';
+import { BuildFeaturesButton } from './BuildFeaturesButton';
+import { RunForecastButton } from './RunForecastButton';
+import { ResetButton } from './ResetButton';
+import { PaginatedImportJobs } from './PaginatedImportJobs';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,6 +42,14 @@ export default async function DataInspectorPage() {
     const totalJobs = await prisma.importJob.count();
     const totalOtbDays = await prisma.dailyOTB.count();
 
+    // Data Freshness - Get min/max booking dates
+    const dateRange = await prisma.reservationsRaw.aggregate({
+        _min: { booking_date: true },
+        _max: { booking_date: true }
+    });
+    const latestBookingDate = dateRange._max.booking_date;
+    const earliestBookingDate = dateRange._min.booking_date;
+
     return (
         <div className="p-6 space-y-8">
             {/* Header */}
@@ -56,6 +68,16 @@ export default async function DataInspectorPage() {
                 </Link>
             </div>
 
+            {/* Action Buttons */}
+            <div className="flex items-center gap-4 flex-wrap">
+                <BuildOtbButton />
+                <BuildFeaturesButton />
+                <RunForecastButton />
+                <div className="border-l border-slate-700 pl-4">
+                    <ResetButton />
+                </div>
+            </div>
+
             {/* Summary Cards */}
             <div className="grid grid-cols-4 gap-4">
                 <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
@@ -70,68 +92,34 @@ export default async function DataInspectorPage() {
                     <div className="text-3xl font-bold text-amber-400">{totalOtbDays}</div>
                     <div className="text-sm text-slate-400">OTB Days Built</div>
                 </div>
-                <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
-                    <div className="text-3xl font-bold text-purple-400">
-                        {reservationStats.length > 0
-                            ? DateUtils.format(reservationStats[0].booking_date, 'dd/MM/yyyy')
+                {/* Data Freshness Card */}
+                <div className="bg-slate-900 border border-emerald-800 rounded-lg p-4">
+                    <div className="text-sm text-slate-400 mb-1">📅 Data Range (Booking Date)</div>
+                    <div className="text-lg font-bold text-emerald-400">
+                        {latestBookingDate
+                            ? DateUtils.format(latestBookingDate, 'dd/MM/yyyy')
                             : 'N/A'}
                     </div>
-                    <div className="text-sm text-slate-400">Latest Booking Date</div>
+                    <div className="text-xs text-slate-500 mt-1">
+                        {earliestBookingDate && latestBookingDate
+                            ? `Từ ${DateUtils.format(earliestBookingDate, 'dd/MM/yy')} → ${DateUtils.format(latestBookingDate, 'dd/MM/yy')}`
+                            : 'Chưa có dữ liệu'}
+                    </div>
                 </div>
             </div>
 
-            {/* Import Jobs */}
-            <div className="bg-slate-900 border border-slate-800 rounded-lg overflow-hidden">
-                <div className="px-4 py-3 border-b border-slate-800">
-                    <h2 className="text-lg font-semibold text-slate-50">📁 Import Jobs</h2>
-                </div>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                        <thead className="bg-slate-800/50">
-                            <tr>
-                                <th className="px-4 py-2 text-left text-slate-400">File</th>
-                                <th className="px-4 py-2 text-left text-slate-400">Status</th>
-                                <th className="px-4 py-2 text-left text-slate-400">Created</th>
-                                <th className="px-4 py-2 text-left text-slate-400">Finished</th>
-                                <th className="px-4 py-2 text-left text-slate-400">Error</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {importJobs.map((job) => (
-                                <tr key={job.job_id} className="border-t border-slate-800 hover:bg-slate-800/30">
-                                    <td className="px-4 py-2 text-slate-300 font-mono text-xs">
-                                        {job.file_name || 'N/A'}
-                                    </td>
-                                    <td className="px-4 py-2">
-                                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${job.status === 'completed' ? 'bg-emerald-500/20 text-emerald-400' :
-                                            job.status === 'failed' ? 'bg-rose-500/20 text-rose-400' :
-                                                'bg-amber-500/20 text-amber-400'
-                                            }`}>
-                                            {job.status}
-                                        </span>
-                                    </td>
-                                    <td className="px-4 py-2 text-slate-400 text-xs">
-                                        {DateUtils.format(job.created_at, 'dd/MM HH:mm')}
-                                    </td>
-                                    <td className="px-4 py-2 text-slate-400 text-xs">
-                                        {job.finished_at ? DateUtils.format(job.finished_at, 'dd/MM HH:mm') : '-'}
-                                    </td>
-                                    <td className="px-4 py-2 text-rose-400 text-xs max-w-xs truncate">
-                                        {job.error_summary || '-'}
-                                    </td>
-                                </tr>
-                            ))}
-                            {importJobs.length === 0 && (
-                                <tr>
-                                    <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
-                                        Chưa có import job nào
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+            {/* Import Jobs - Paginated */}
+            <PaginatedImportJobs
+                initialJobs={importJobs.map(j => ({
+                    job_id: j.job_id,
+                    file_name: j.file_name,
+                    status: j.status,
+                    created_at: j.created_at,
+                    finished_at: j.finished_at,
+                    error_summary: j.error_summary,
+                }))}
+                totalCount={totalJobs}
+            />
 
             {/* Reservations by Booking Date */}
             <div className="bg-slate-900 border border-slate-800 rounded-lg overflow-hidden">

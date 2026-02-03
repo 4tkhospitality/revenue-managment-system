@@ -1,14 +1,15 @@
 {
   "meta": {
     "schema_version": "1.1.0",
-    "awf_version": "3.3.0",
-    "last_updated": "2026-02-02T17:53:00+07:00"
+    "awf_version": "4.1.2",
+    "last_updated": "2026-02-03T11:03:00+07:00"
   },
   "project": {
     "name": "revenue-management-system",
     "type": "SaaS Web App",
-    "status": "Development - Dashboard & Data Import Working",
-    "description": "RMS Version 01 (MVP) - RMS lõi, tối ưu triển khai nhanh trong 14 ngày. Full-stack TypeScript."
+    "status": "Development - Full Pipeline Working (Upload → OTB → Features → Forecast → Pricing)",
+    "description": "RMS Version 01 (MVP) - Revenue Management System with Pricing Engine. Full-stack TypeScript.",
+    "github": "https://github.com/4tkhospitality/revenue-managment-system"
   },
   "tech_stack": {
     "frontend": {
@@ -19,11 +20,11 @@
       "charts": "Recharts"
     },
     "backend": {
-      "framework": "Next.js Server Actions",
+      "framework": "Next.js Server Actions + API Routes",
       "csv_parser": "Papaparse",
       "xml_parser": "fast-xml-parser",
       "forecasting": "Heuristic (TS)",
-      "pricing": "Rule-based Ladder (TS)"
+      "pricing": "Ladder Pricing Strategy (TS)"
     },
     "database": {
       "type": "PostgreSQL",
@@ -32,6 +33,7 @@
       "hosting": "Supabase"
     },
     "deployment": {
+      "vcs": "GitHub",
       "tools": "Docker, Shell Scripts",
       "strategy": "One-click Run"
     }
@@ -41,7 +43,7 @@
     "tables": [
       {
         "name": "hotels",
-        "description": "Tenant root. Stores hotel metadata. Capacity hardcoded at 240 rooms."
+        "description": "Tenant root. Stores hotel metadata, capacity, pricing config, timezone, ladder_steps."
       },
       {
         "name": "users",
@@ -75,20 +77,27 @@
         "name": "pricing_decisions",
         "description": "Audit log of user actions (Accept/Override)."
       }
-    ]
+    ],
+    "hotel_fields": {
+      "new_fields": [
+        "timezone (default: Asia/Ho_Chi_Minh)",
+        "fiscal_start_day (1-31, default: 1)",
+        "ladder_steps (JSON array of price adjustment percentages)"
+      ]
+    }
   },
   "api_endpoints": [
     {
       "path": "Server Action: ingestCSV",
-      "explained": "Processes uploaded CSV, validates rows (Strict), saves to reservations_raw (Append-only)."
+      "explained": "Processes uploaded CSV, validates rows, saves to reservations_raw."
     },
     {
       "path": "Server Action: ingestXML",
-      "explained": "Parses Crystal Reports PMS XML format. Aggregates by ConfirmNum. Extracts @BookedDate from header."
+      "explained": "Parses Crystal Reports PMS XML format. Aggregates by ConfirmNum."
     },
     {
       "path": "Server Action: buildDailyOTB",
-      "explained": "Calculates DailyOTB from reservations. Aggregates rooms_otb and revenue_otb by stay_date. Uses today as as_of_date."
+      "explained": "Calculates DailyOTB from reservations. Aggregates by stay_date."
     },
     {
       "path": "Server Action: buildFeatures",
@@ -96,57 +105,78 @@
     },
     {
       "path": "Server Action: runForecast",
-      "explained": "Heuristic Model: Max(AvgPickup, T7) * LeadTimeFactor. Outputs DemandForecast."
+      "explained": "Heuristic Model: Max(AvgPickup, T7) * LeadTimeFactor."
     },
     {
-      "path": "Server Action: runPricingEngine",
-      "explained": "Optimization Model: Ladder Search (-20% to +20%). Outputs PriceRecommendations."
+      "path": "Server Action: resetDerivedData",
+      "explained": "Clears all derived data (OTB, Features, Forecast, Pricing) while keeping raw reservations."
     },
     {
       "path": "Server Action: submitDecision",
-      "explained": "Log User Action: Accept/Override. Immutable Insert to pricing_decisions."
+      "explained": "Log User Action: Accept/Override to pricing_decisions."
+    },
+    {
+      "path": "GET/POST /api/settings",
+      "explained": "Hotel settings management with timezone, fiscal_start_day, ladder_steps."
+    },
+    {
+      "path": "GET /api/import-jobs",
+      "explained": "Paginated list of import jobs. Query: page, pageSize."
     }
   ],
   "features": [
     "PMS-agnostic CSV Import",
-    "Crystal Reports XML Import (NEW)",
-    "Data Inspector Page with OTB Build button (NEW)",
+    "Crystal Reports XML Import",
+    "Data Inspector Page with Build OTB, Build Features, Run Forecast buttons",
+    "Reset & Rebuild Button (clears derived data)",
+    "Import Jobs Pagination (10/page)",
     "Daily OTB Time-Travel (Time-Machine View)",
     "Dashboard with KPI Cards, OTB Chart, Recommendations Table",
-    "Quick Filters (Today/7/14/30 Days/Custom) for Recommendations",
+    "Real Pricing Engine Integration (Ladder Strategy)",
+    "Quick Filters (Today/7/14/30 Days/Custom)",
     "Weekend Highlighting in Tables",
-    "Formula Explanations in UI for debugging",
+    "Formula Explanations in UI",
+    "Accept/Override Decision Actions",
     "Remaining Demand Forecast (Heuristic)",
-    "Rule-based Pricing Optimization",
-    "Accept/Override Decision Log",
+    "Settings: Timezone, Fiscal Start Day, Ladder Config",
+    "Comprehensive Guide/Help Page",
     "Excel Export"
   ],
   "decisions": [
-    "Pivot from Python/FastAPI to Full-stack Next.js for MVP speed and simplicity",
-    "Use UUIDs for all Primary Keys to ensure SaaS scalability",
-    "Store Reservations as Append-Only for full audit trail",
-    "Use Prisma Enums for Status fields",
+    "Full-stack Next.js for MVP speed",
+    "UUIDs for all Primary Keys (SaaS scalability)",
+    "Append-Only reservations for audit trail",
     "Use Supabase for Database Hosting",
-    "Use Heuristic Forecasting instead of ML for V01 (No Data, Explainability)",
-    "Use Rule-based Pricing Ladder (-20% to +20%) for V01",
-    "Use Docker & Scripts for Pilot Deployment (Simple & Robust)",
-    "Use fast-xml-parser for server-side XML parsing (browser DOMParser not available)",
-    "Dashboard uses OTB data directly for table (not priceRecommendations) - Current Price = ADR, Recommended = +10%",
-    "Normalize dates to midnight (00:00:00) for Prisma date comparisons",
-    "Hotel capacity hardcoded at 240 rooms (TODO: fetch from hotels table)"
+    "Heuristic Forecasting instead of ML for V01",
+    "Ladder Pricing Strategy with configurable presets (Conservative ±10%, Standard ±20%, Aggressive ±30%)",
+    "Use fast-xml-parser for server-side XML parsing",
+    "Dashboard uses PricingLogic.optimize() for real price recommendations",
+    "Normalize dates to midnight for Prisma date comparisons",
+    "Hotel capacity configurable in Settings (default 240)",
+    "Timezone support for regional OTB calculations",
+    "Git repository pushed to GitHub"
   ],
   "knowledge_items": {
     "gotchas": [
-      "DOMParser is browser-only, use fast-xml-parser for Node.js/Server Actions",
-      "Prisma Date comparison requires exact match - always normalize to midnight",
-      "as_of_date must match between OTB build and dashboard query",
-      "priceRecommendations seed data has old stay_dates - use OTB data directly for now"
+      "DOMParser is browser-only, use fast-xml-parser for Node.js",
+      "Prisma Date comparison requires exact match - normalize to midnight",
+      "apps/web was added as submodule - removed .git folder to fix",
+      "Prisma generate fails while dev server running (file lock) - restart server",
+      "PricingLogic.optimize takes (currentPrice, remainingDemand, remainingSupply)"
     ],
     "formulas": {
       "rooms_otb": "SUM(num_rooms) from reservations for that stay_date",
-      "remaining_supply": "(Capacity × 30 days) − Total OTB",
+      "remaining_supply": "Capacity − rooms_otb",
       "adr": "revenue_otb ÷ rooms_otb",
-      "remaining": "Capacity (240) − OTB for that day"
+      "recommended_price": "PricingLogic.optimize(ADR, forecast_demand, remaining_supply)",
+      "forecast_demand": "baseDemand * lead_time_factor (from features_daily)"
+    },
+    "data_pipeline": {
+      "step1": "Upload CSV/XML → reservations_raw",
+      "step2": "Build OTB → daily_otb",
+      "step3": "Build Features → features_daily",
+      "step4": "Run Forecast → demand_forecast",
+      "step5": "Pricing Engine → recommended_price (calculated on-the-fly)"
     }
   }
 }

@@ -5,7 +5,13 @@ import { Upload, FileText, CheckCircle, XCircle, Loader2, FileSpreadsheet, FileC
 import { ingestCSV } from '../actions/ingestCSV';
 import { ingestXML } from '../actions/ingestXML';
 
-const DEFAULT_HOTEL_ID = '123e4567-e89b-12d3-a456-426614174000';
+const getHotelId = () => {
+    const hotelId = process.env.NEXT_PUBLIC_DEFAULT_HOTEL_ID;
+    if (!hotelId) {
+        console.warn('NEXT_PUBLIC_DEFAULT_HOTEL_ID not configured');
+    }
+    return hotelId || '';
+};
 
 type UploadStatus = 'idle' | 'uploading' | 'success' | 'error';
 type ReportType = 'booked' | 'cancelled';
@@ -40,7 +46,7 @@ export default function UploadPage() {
         try {
             const formData = new FormData();
             formData.append('file', file);
-            formData.append('hotelId', DEFAULT_HOTEL_ID);
+            formData.append('hotelId', getHotelId());
             formData.append('reportType', activeTab);
 
             let result;

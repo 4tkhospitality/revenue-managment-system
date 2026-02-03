@@ -29,12 +29,17 @@ enum DecisionAction {
 // Models
 
 model Hotel {
-  hotel_id   String   @id @default(uuid()) @db.Uuid
-  name       String
-  timezone   String   @default("UTC")
-  capacity   Int
-  currency   String   @default("USD")
-  created_at DateTime @default(now())
+  hotel_id          String   @id @default(uuid()) @db.Uuid
+  name              String
+  timezone          String   @default("Asia/Ho_Chi_Minh")
+  capacity          Int
+  currency          String   @default("USD")
+  default_base_rate Decimal? @db.Decimal(12, 2)
+  min_rate          Decimal? @db.Decimal(12, 2)
+  max_rate          Decimal? @db.Decimal(12, 2)
+  fiscal_start_day  Int      @default(1)  // 1-31, first day of fiscal month
+  ladder_steps      String?  // JSON array: "[-0.2,-0.1,-0.05,0,0.05,0.1,0.2]"
+  created_at        DateTime @default(now())
 
   users                 User[]
   import_jobs           ImportJob[]
