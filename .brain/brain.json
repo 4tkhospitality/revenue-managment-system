@@ -1,0 +1,152 @@
+{
+  "meta": {
+    "schema_version": "1.1.0",
+    "awf_version": "3.3.0",
+    "last_updated": "2026-02-02T17:53:00+07:00"
+  },
+  "project": {
+    "name": "revenue-management-system",
+    "type": "SaaS Web App",
+    "status": "Development - Dashboard & Data Import Working",
+    "description": "RMS Version 01 (MVP) - RMS lõi, tối ưu triển khai nhanh trong 14 ngày. Full-stack TypeScript."
+  },
+  "tech_stack": {
+    "frontend": {
+      "framework": "Next.js 14+ (App Router)",
+      "language": "TypeScript",
+      "styling": "Tailwind CSS",
+      "components": "Custom + Lucide Icons",
+      "charts": "Recharts"
+    },
+    "backend": {
+      "framework": "Next.js Server Actions",
+      "csv_parser": "Papaparse",
+      "xml_parser": "fast-xml-parser",
+      "forecasting": "Heuristic (TS)",
+      "pricing": "Rule-based Ladder (TS)"
+    },
+    "database": {
+      "type": "PostgreSQL",
+      "version": "16",
+      "orm": "Prisma",
+      "hosting": "Supabase"
+    },
+    "deployment": {
+      "tools": "Docker, Shell Scripts",
+      "strategy": "One-click Run"
+    }
+  },
+  "database_schema": {
+    "summary": "RMS Schema designed for Multi-tenancy and Time-Travel OTB calculation.",
+    "tables": [
+      {
+        "name": "hotels",
+        "description": "Tenant root. Stores hotel metadata. Capacity hardcoded at 240 rooms."
+      },
+      {
+        "name": "users",
+        "description": "System users linked to hotels."
+      },
+      {
+        "name": "import_jobs",
+        "description": "Tracks CSV/XML file uploads and processing status."
+      },
+      {
+        "name": "reservations_raw",
+        "description": "Append-only raw booking data from PMS. Linked to ImportJob."
+      },
+      {
+        "name": "daily_otb",
+        "description": "Fact table. Snapshots of OTB by stay_date. Built from reservations."
+      },
+      {
+        "name": "features_daily",
+        "description": "Computed features (Pickup T30/15/7/5, Pace, Weekend, Month)."
+      },
+      {
+        "name": "demand_forecast",
+        "description": "Forecast outputs. Remaining Demand predictions."
+      },
+      {
+        "name": "price_recommendations",
+        "description": "Pricing engine outputs. Suggestions for GM."
+      },
+      {
+        "name": "pricing_decisions",
+        "description": "Audit log of user actions (Accept/Override)."
+      }
+    ]
+  },
+  "api_endpoints": [
+    {
+      "path": "Server Action: ingestCSV",
+      "explained": "Processes uploaded CSV, validates rows (Strict), saves to reservations_raw (Append-only)."
+    },
+    {
+      "path": "Server Action: ingestXML",
+      "explained": "Parses Crystal Reports PMS XML format. Aggregates by ConfirmNum. Extracts @BookedDate from header."
+    },
+    {
+      "path": "Server Action: buildDailyOTB",
+      "explained": "Calculates DailyOTB from reservations. Aggregates rooms_otb and revenue_otb by stay_date. Uses today as as_of_date."
+    },
+    {
+      "path": "Server Action: buildFeatures",
+      "explained": "Computes Pickup (T30, T15, T7, T5) and Pace vs LY."
+    },
+    {
+      "path": "Server Action: runForecast",
+      "explained": "Heuristic Model: Max(AvgPickup, T7) * LeadTimeFactor. Outputs DemandForecast."
+    },
+    {
+      "path": "Server Action: runPricingEngine",
+      "explained": "Optimization Model: Ladder Search (-20% to +20%). Outputs PriceRecommendations."
+    },
+    {
+      "path": "Server Action: submitDecision",
+      "explained": "Log User Action: Accept/Override. Immutable Insert to pricing_decisions."
+    }
+  ],
+  "features": [
+    "PMS-agnostic CSV Import",
+    "Crystal Reports XML Import (NEW)",
+    "Data Inspector Page with OTB Build button (NEW)",
+    "Daily OTB Time-Travel (Time-Machine View)",
+    "Dashboard with KPI Cards, OTB Chart, Recommendations Table",
+    "Quick Filters (Today/7/14/30 Days/Custom) for Recommendations",
+    "Weekend Highlighting in Tables",
+    "Formula Explanations in UI for debugging",
+    "Remaining Demand Forecast (Heuristic)",
+    "Rule-based Pricing Optimization",
+    "Accept/Override Decision Log",
+    "Excel Export"
+  ],
+  "decisions": [
+    "Pivot from Python/FastAPI to Full-stack Next.js for MVP speed and simplicity",
+    "Use UUIDs for all Primary Keys to ensure SaaS scalability",
+    "Store Reservations as Append-Only for full audit trail",
+    "Use Prisma Enums for Status fields",
+    "Use Supabase for Database Hosting",
+    "Use Heuristic Forecasting instead of ML for V01 (No Data, Explainability)",
+    "Use Rule-based Pricing Ladder (-20% to +20%) for V01",
+    "Use Docker & Scripts for Pilot Deployment (Simple & Robust)",
+    "Use fast-xml-parser for server-side XML parsing (browser DOMParser not available)",
+    "Dashboard uses OTB data directly for table (not priceRecommendations) - Current Price = ADR, Recommended = +10%",
+    "Normalize dates to midnight (00:00:00) for Prisma date comparisons",
+    "Hotel capacity hardcoded at 240 rooms (TODO: fetch from hotels table)"
+  ],
+  "knowledge_items": {
+    "gotchas": [
+      "DOMParser is browser-only, use fast-xml-parser for Node.js/Server Actions",
+      "Prisma Date comparison requires exact match - always normalize to midnight",
+      "as_of_date must match between OTB build and dashboard query",
+      "priceRecommendations seed data has old stay_dates - use OTB data directly for now"
+    ],
+    "formulas": {
+      "rooms_otb": "SUM(num_rooms) from reservations for that stay_date",
+      "remaining_supply": "(Capacity × 30 days) − Total OTB",
+      "adr": "revenue_otb ÷ rooms_otb",
+      "remaining": "Capacity (240) − OTB for that day"
+    }
+  }
+}
