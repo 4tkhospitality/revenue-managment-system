@@ -98,33 +98,39 @@ export function RecommendationTable({
     }, [data, quickFilter, customStartDate, customEndDate]);
 
     const quickFilterButtons: { key: QuickFilter; label: string }[] = [
-        { key: 'today', label: 'Today' },
-        { key: '7days', label: '7 Days' },
-        { key: '14days', label: '14 Days' },
-        { key: '30days', label: '30 Days' },
-        { key: 'custom', label: 'Custom' },
+        { key: 'today', label: 'Hôm nay' },
+        { key: '7days', label: '7 ngày' },
+        { key: '14days', label: '14 ngày' },
+        { key: '30days', label: '30 ngày' },
+        { key: 'custom', label: 'Tuỳ chọn' },
     ];
 
+    // Surface styling - consistent with other components
+    const surface = "rounded-2xl bg-white border border-slate-200/80 shadow-[0_1px_2px_rgba(16,24,40,0.06)]";
+
     return (
-        <div className="bg-slate-900 border border-slate-800 rounded-lg overflow-hidden">
+        <div className={`${surface} overflow-hidden`}>
             {/* Header with Filters */}
-            <div className="px-4 py-3 border-b border-slate-800">
+            <div className="px-5 py-4 border-b border-slate-100">
                 <div className="flex items-center justify-between flex-wrap gap-4">
-                    <h2 className="text-lg font-semibold text-slate-50">
-                        Daily Performance & Price Recommendations
+                    <h2 className="text-lg font-semibold text-gray-900">
+                        Hiệu suất & Đề xuất giá
                     </h2>
 
                     {/* Quick Filters */}
                     <div className="flex items-center gap-2 flex-wrap">
-                        <div className="flex rounded-lg overflow-hidden border border-slate-700">
+                        <div className="flex rounded-lg overflow-hidden" style={{ border: '1px solid #e2e8f0' }}>
                             {quickFilterButtons.map(({ key, label }) => (
                                 <button
                                     key={key}
                                     onClick={() => setQuickFilter(key)}
                                     className={`px-3 py-1.5 text-xs font-medium transition-colors ${quickFilter === key
-                                        ? 'bg-blue-600 text-white'
-                                        : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                                        ? 'text-white'
+                                        : 'text-gray-600 hover:text-gray-900'
                                         }`}
+                                    style={{
+                                        backgroundColor: quickFilter === key ? '#2D4A8C' : '#f8fafc'
+                                    }}
                                 >
                                     {label}
                                 </button>
@@ -135,35 +141,35 @@ export function RecommendationTable({
 
                 {/* Custom Date Range Picker */}
                 {quickFilter === 'custom' && (
-                    <div className="flex items-center gap-3 mt-3 pt-3 border-t border-slate-800">
-                        <Calendar className="w-4 h-4 text-slate-400" />
+                    <div className="flex items-center gap-3 mt-3 pt-3 border-t" style={{ borderColor: '#e2e8f0' }}>
+                        <Calendar className="w-4 h-4 text-gray-400" />
                         <div className="flex items-center gap-2">
-                            <label className="text-xs text-slate-400">From:</label>
+                            <label className="text-xs text-gray-500">Từ:</label>
                             <input
                                 type="date"
                                 value={customStartDate}
                                 onChange={(e) => setCustomStartDate(e.target.value)}
-                                className="px-2 py-1 bg-slate-800 border border-slate-700 rounded text-sm text-slate-50 focus:outline-none focus:border-blue-500"
+                                className="px-2 py-1 bg-gray-50 border border-gray-200 rounded text-sm text-gray-900 focus:outline-none focus:border-blue-500"
                             />
                         </div>
                         <div className="flex items-center gap-2">
-                            <label className="text-xs text-slate-400">To:</label>
+                            <label className="text-xs text-gray-500">Đến:</label>
                             <input
                                 type="date"
                                 value={customEndDate}
                                 onChange={(e) => setCustomEndDate(e.target.value)}
-                                className="px-2 py-1 bg-slate-800 border border-slate-700 rounded text-sm text-slate-50 focus:outline-none focus:border-blue-500"
+                                className="px-2 py-1 bg-gray-50 border border-gray-200 rounded text-sm text-gray-900 focus:outline-none focus:border-blue-500"
                             />
                         </div>
-                        <span className="text-xs text-slate-500">
-                            ({filteredData.length} days)
+                        <span className="text-xs text-gray-400">
+                            ({filteredData.length} ngày)
                         </span>
                     </div>
                 )}
 
                 {/* Result count */}
-                <div className="text-xs text-slate-500 mt-2">
-                    Showing {filteredData.length} of {data.length} days
+                <div className="text-xs text-gray-400 mt-2">
+                    Hiển thị {filteredData.length} / {data.length} ngày
                 </div>
             </div>
 
@@ -171,35 +177,35 @@ export function RecommendationTable({
             <div className="overflow-x-auto max-h-[500px]">
                 <table className="w-full text-sm">
                     <thead className="sticky top-0 z-10">
-                        <tr className="bg-slate-800/90 text-left backdrop-blur-sm">
-                            <th className="px-4 py-3 font-medium text-slate-400 sticky left-0 bg-slate-800/90">
-                                Date
+                        <tr style={{ backgroundColor: '#f8fafc' }} className="text-left">
+                            <th className="px-4 py-3 font-medium text-gray-500 sticky left-0" style={{ backgroundColor: '#f8fafc' }}>
+                                Ngày
                             </th>
-                            <th className="px-4 py-3 font-medium text-slate-400 text-right">
+                            <th className="px-4 py-3 font-medium text-gray-500 text-right">
                                 OTB
                             </th>
-                            <th className="px-4 py-3 font-medium text-slate-400 text-right">
-                                Rem.
+                            <th className="px-4 py-3 font-medium text-gray-500 text-right">
+                                Còn
                             </th>
-                            <th className="px-4 py-3 font-medium text-slate-400 text-right">
-                                Fcst
+                            <th className="px-4 py-3 font-medium text-gray-500 text-right">
+                                D.Báo
                             </th>
-                            <th className="px-4 py-3 font-medium text-slate-400 text-right">
-                                Current
+                            <th className="px-4 py-3 font-medium text-gray-500 text-right">
+                                Hiện tại
                             </th>
-                            <th className="px-4 py-3 font-medium text-slate-400 text-right">
-                                Rec.
+                            <th className="px-4 py-3 font-medium text-gray-500 text-right">
+                                Đề xuất
                             </th>
-                            <th className="px-4 py-3 font-medium text-slate-400 text-center">
-                                Action
+                            <th className="px-4 py-3 font-medium text-gray-500 text-center">
+                                Thao tác
                             </th>
                         </tr>
                     </thead>
                     <tbody>
                         {filteredData.length === 0 ? (
                             <tr>
-                                <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
-                                    No data for the selected date range
+                                <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
+                                    Không có dữ liệu cho khoảng thời gian đã chọn
                                 </td>
                             </tr>
                         ) : (
@@ -208,61 +214,62 @@ export function RecommendationTable({
                                 return (
                                     <tr
                                         key={row.id}
-                                        className={`border-t border-slate-800 transition-colors ${row.isStopSell
-                                            ? 'bg-rose-900/20'
+                                        className={`transition-colors ${row.isStopSell
+                                            ? 'bg-rose-50'
                                             : isWeekend
-                                                ? 'bg-amber-900/10'
-                                                : 'hover:bg-slate-800/50'
+                                                ? 'bg-amber-50'
+                                                : 'hover:bg-gray-50'
                                             }`}
+                                        style={{ borderTop: '1px solid #e2e8f0' }}
                                     >
                                         <td className="px-4 py-3 sticky left-0 bg-inherit">
                                             <div className="flex items-center gap-2">
-                                                <span className={`text-xs font-medium w-8 ${isWeekend ? 'text-amber-400' : 'text-slate-500'
+                                                <span className={`text-xs font-medium w-8 ${isWeekend ? 'text-amber-600' : 'text-gray-400'
                                                     }`}>
                                                     {dayOfWeek}
                                                 </span>
-                                                <span className="text-slate-50">{formatted}</span>
+                                                <span className="text-gray-900">{formatted}</span>
                                             </div>
                                         </td>
-                                        <td className="px-4 py-3 text-slate-50 text-right">
+                                        <td className="px-4 py-3 text-gray-900 text-right">
                                             {row.roomsOtb}
                                         </td>
-                                        <td className="px-4 py-3 text-slate-50 text-right">
+                                        <td className="px-4 py-3 text-gray-900 text-right">
                                             {row.remaining}
                                         </td>
-                                        <td className="px-4 py-3 text-slate-50 text-right">
+                                        <td className="px-4 py-3 text-gray-900 text-right">
                                             {row.forecast}
                                         </td>
-                                        <td className="px-4 py-3 text-slate-400 text-right">
+                                        <td className="px-4 py-3 text-gray-500 text-right">
                                             {formatCurrency(row.currentPrice)}
                                         </td>
                                         <td className="px-4 py-3 text-right">
                                             {row.isStopSell ? (
-                                                <span className="text-rose-500 font-semibold">
-                                                    STOP SELL
+                                                <span className="text-rose-600 font-semibold">
+                                                    NGỪNG BÁN
                                                 </span>
                                             ) : (
-                                                <span className="text-blue-400 font-semibold">
+                                                <span style={{ color: '#2D4A8C' }} className="font-semibold">
                                                     {formatCurrency(row.recommendedPrice)}
                                                 </span>
                                             )}
                                         </td>
                                         <td className="px-4 py-3 text-center">
                                             {row.isStopSell ? (
-                                                <span className="text-xs text-slate-500">N/A</span>
+                                                <span className="text-xs text-gray-400">N/A</span>
                                             ) : (
                                                 <div className="flex items-center justify-center gap-2">
                                                     <button
                                                         onClick={() => onAccept(row.id)}
-                                                        className="p-1.5 rounded bg-emerald-500/20 text-emerald-500 hover:bg-emerald-500/30 transition-colors"
-                                                        title="Accept"
+                                                        className="p-1.5 rounded bg-emerald-100 text-emerald-600 hover:bg-emerald-200 transition-colors"
+                                                        title="Chấp nhận"
                                                     >
                                                         <Check className="w-4 h-4" />
                                                     </button>
                                                     <button
                                                         onClick={() => onOverride(row.id)}
-                                                        className="p-1.5 rounded bg-rose-500/20 text-rose-500 hover:bg-rose-500/30 transition-colors"
-                                                        title="Override"
+                                                        className="p-1.5 rounded bg-rose-100 text-rose-600 hover:bg-rose-200 transition-colors"
+                                                        title="Bỏ qua"
                                                     >
                                                         <X className="w-4 h-4" />
                                                     </button>
@@ -278,18 +285,18 @@ export function RecommendationTable({
             </div>
 
             {/* Footer with formula explanations */}
-            <div className="px-4 py-3 border-t border-slate-800 bg-slate-800/30 space-y-1">
-                <p className="text-[10px] text-slate-400 font-medium mb-2">📐 Cách tính các cột:</p>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1 text-[10px] font-mono text-slate-500">
-                    <div><span className="text-slate-400">Date:</span> Ngày ở (stay_date)</div>
-                    <div><span className="text-slate-400">OTB:</span> SUM(rooms) từ reservations cho ngày đó</div>
-                    <div><span className="text-slate-400">Rem:</span> Capacity (240) − OTB</div>
-                    <div><span className="text-slate-400">Fcst:</span> remaining_demand từ ML forecast</div>
-                    <div><span className="text-slate-400">Current:</span> ADR = Revenue ÷ Rooms</div>
-                    <div><span className="text-slate-400">Rec:</span> Current × 1.1 (mock +10%)</div>
+            <div className="px-4 py-3 border-t bg-gray-50 space-y-1" style={{ borderColor: '#e2e8f0' }}>
+                <p className="text-[10px] text-gray-500 font-medium mb-2">📐 Cách tính các cột:</p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1 text-[10px] font-mono text-gray-400">
+                    <div><span className="text-gray-500">Ngày:</span> Ngày ở (stay_date)</div>
+                    <div><span className="text-gray-500">OTB:</span> SUM(rooms) từ reservations</div>
+                    <div><span className="text-gray-500">Còn:</span> Capacity (240) − OTB</div>
+                    <div><span className="text-gray-500">D.Báo:</span> remaining_demand từ ML</div>
+                    <div><span className="text-gray-500">Hiện tại:</span> ADR = Revenue ÷ Rooms</div>
+                    <div><span className="text-gray-500">Đề xuất:</span> Hiện tại × 1.1 (+10%)</div>
                 </div>
-                <div className="text-[10px] text-slate-500 mt-2 pt-2 border-t border-slate-800">
-                    🟡 Weekend (Sat/Sun) | 🔴 Stop Sell (Remaining ≤ 0)
+                <div className="text-[10px] text-gray-400 mt-2 pt-2 border-t" style={{ borderColor: '#e2e8f0' }}>
+                    🟡 Cuối tuần (T7/CN) | 🔴 Ngừng bán (Còn ≤ 0)
                 </div>
             </div>
         </div>

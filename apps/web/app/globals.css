@@ -1,15 +1,48 @@
 @import "tailwindcss";
 
-/* Force Dark Mode for RMS Dashboard */
+/* 4TK Hospitality - LIGHT THEME */
 :root {
-  --background: #020617; /* slate-950 */
-  --foreground: #f8fafc; /* slate-50 */
-  --surface: #0f172a;    /* slate-900 */
-  --border: #1e293b;     /* slate-800 */
-  --primary: #3b82f6;    /* blue-500 */
-  --success: #10b981;    /* emerald-500 */
-  --danger: #f43f5e;     /* rose-500 */
-  --muted: #94a3b8;      /* slate-400 */
+  /* Brand Colors from Logo */
+  --brand-primary: #2D4A8C;
+  /* Logo Royal Blue */
+  --brand-secondary: #4169E1;
+  /* Lighter blue */
+  --brand-accent: #6B8DD6;
+  /* Accent blue */
+
+  /* Light Theme Colors */
+  --background: #F5F7FB;
+  /* Light lavender gray background */
+  --foreground: #1e293b;
+  /* Dark text */
+  --surface: #ffffff;
+  /* White cards */
+  --surface-alt: #f1f5f9;
+  /* Slightly gray surface */
+  --border: #e2e8f0;
+  /* Light border */
+
+  /* Functional Colors */
+  --primary: #2D4A8C;
+  /* Primary action */
+  --primary-hover: #1e3a6e;
+  /* Darker on hover */
+  --success: #10b981;
+  /* Green */
+  --warning: #f59e0b;
+  /* Amber */
+  --danger: #ef4444;
+  /* Red */
+  --muted: #64748b;
+  /* Gray text */
+
+  /* Sidebar (keeps brand colors) */
+  --sidebar-bg: #2D4A8C;
+  /* Logo blue */
+  --sidebar-text: #ffffff;
+  /* White */
+  --sidebar-hover: #1e3a6e;
+  /* Darker blue */
 }
 
 @theme inline {
@@ -24,18 +57,21 @@ body {
   font-family: 'Inter', system-ui, sans-serif;
 }
 
-/* Custom scrollbar for dark mode */
+/* Custom scrollbar - Light theme */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
+
 ::-webkit-scrollbar-track {
-  background: var(--surface);
+  background: var(--surface-alt);
 }
+
 ::-webkit-scrollbar-thumb {
   background: var(--border);
   border-radius: 4px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: var(--muted);
 }

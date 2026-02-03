@@ -6,11 +6,18 @@ export default function DashboardLayout({
     children: React.ReactNode;
 }) {
     return (
-        <div className="min-h-screen bg-slate-950">
+        <div className="min-h-screen flex">
+            {/* Sidebar giữ xanh */}
             <Sidebar />
-            <main className="ml-64 min-h-screen">
+
+            {/* Main content nền SÁNG */}
+            <main
+                className="ml-64 flex-1 min-h-screen"
+                style={{ backgroundColor: '#F5F7FB' }}
+            >
                 {children}
             </main>
         </div>
     );
 }
+

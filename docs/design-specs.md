@@ -1,77 +1,152 @@
-# Design Specifications (Dark Mode Professional) - V2 (Refined)
+# 4TK Hospitality - Design Specifications
 
-**Vibe**: Professional, Data-Dense, High Contrast.
-**Reference**: TradingView, Linear, Vercel Dashboard.
-**Primary Device**: Desktop/Laptop.
+## 🏢 Brand Identity
 
-## 🎨 Color Palette (Tailwind Slate)
+**Company:** 4TK Hospitality  
+**Tagline:** Hotel & Resort Management in Vietnam  
+**Logo File:** `/public/logo.png`
 
-| Role | Tailwind Class | Hex Value | Usage |
-|------|----------------|-----------|-------|
-| **Background** | `bg-slate-950` | `#020617` | Main app background (Ultra dark) |
-| **Surface** | `bg-slate-900` | `#0f172a` | Cards, Sidebar, Modals |
-| **Border** | `border-slate-800` | `#1e293b` | Dividers, Borders |
-| **Primary** | `text-blue-500` | `#3b82f6` | Active states, Primary buttons |
-| **Secondary** | `text-slate-400` | `#94a3b8` | Secondary text, Icons |
-| **Success** | `text-emerald-500` | `#10b981` | Positive trends, "Accept" button |
-| **Danger** | `text-rose-500` | `#f43f5e` | Negative trends, "Override" button, Stop Sell |
-| **Text Main** | `text-slate-50` | `#f8fafc` | Headings, Key data |
-| **Text Muted** | `text-slate-400` | `#94a3b8` | Labels, Axis text |
+---
 
-## 📐 Layout & Spacing
+## 🎨 Color Palette
 
-**Grid System**: 12-column grid.
-**Sidebar**: Fixed width `w-64` (256px).
+### Brand Colors (from Logo)
+| Name | Hex | CSS Variable | Usage |
+|------|-----|--------------|-------|
+| **Royal Blue** | `#2B4690` | `--brand-primary` | Primary brand color, buttons |
+| **Bright Blue** | `#4169E1` | `--brand-secondary` | Active states, links |
+| **Light Blue** | `#6B8DD6` | `--brand-accent` | Accents, subtle highlights |
 
-## 🖼️ Component Wireframes
+### UI Colors (Dark Theme)
+| Name | Hex | CSS Variable | Usage |
+|------|-----|--------------|-------|
+| Background | `#0a1628` | `--background` | Page background |
+| Surface | `#142140` | `--surface` | Cards, modals, sidebar |
+| Surface Alt | `#1a2d54` | `--surface-alt` | Hover states |
+| Border | `#1e3a5f` | `--border` | Dividers, borders |
 
-### 1. Dashboard Layout (Simplified V01)
+### Functional Colors
+| Name | Hex | CSS Variable | Usage |
+|------|-----|--------------|-------|
+| Success | `#10b981` | `--success` | Positive values, confirmed |
+| Warning | `#f59e0b` | `--warning` | Warnings, attention needed |
+| Danger | `#ef4444` | `--danger` | Errors, decreases |
+| Muted | `#64748b` | `--muted` | Secondary text, disabled |
+
+### Text Colors
+| Name | Hex | Usage |
+|------|-----|-------|
+| Primary Text | `#f8fafc` | Main content |
+| Secondary Text | `#94a3b8` | Descriptions, labels |
+| Muted Text | `#64748b` | Placeholders, disabled |
+
+---
+
+## 📝 Typography
+
+| Element | Font | Size | Weight |
+|---------|------|------|--------|
+| H1 | Inter | 32px | 700 |
+| H2 | Inter | 24px | 600 |
+| H3 | Inter | 20px | 600 |
+| Body | Inter | 16px | 400 |
+| Small | Inter | 14px | 400 |
+| Caption | Inter | 12px | 400 |
+
+---
+
+## 📐 Spacing System
+
+| Name | Value |
+|------|-------|
+| xs | 4px |
+| sm | 8px |
+| md | 16px |
+| lg | 24px |
+| xl | 32px |
+| 2xl | 48px |
+
+---
+
+## 🔲 Border Radius
+
+| Name | Value | Usage |
+|------|-------|-------|
+| sm | 6px | Buttons, inputs |
+| md | 8px | Cards |
+| lg | 12px | Modals |
+| full | 9999px | Avatars, pills |
+
+---
+
+## 📱 Logo Usage
+
+**Primary Logo File:** `public/logo.png`
+
+### Placement Guidelines:
+1. **Sidebar Header:** 180x60px, centered
+2. **Login Page:** 240x80px, centered
+3. **Reports/Exports:** 120x40px, top-left corner
+
+### Supported Formats:
+- PNG (preferred, with transparency)
+- JPG (fallback)
+- SVG (for scalable uses)
+
+---
+
+## 🎯 Component Styles
+
+### Buttons
+```css
+/* Primary Button */
+.btn-primary {
+  background-color: var(--brand-primary);
+  color: white;
+  border-radius: 6px;
+  padding: 8px 16px;
+}
+.btn-primary:hover {
+  background-color: var(--primary-hover);
+}
+
+/* Secondary Button */
+.btn-secondary {
+  background-color: transparent;
+  border: 1px solid var(--brand-primary);
+  color: var(--brand-secondary);
+}
 ```
-+----------------+---------------------------------------------------+
-|  SIDEBAR       |  HEADER (Breadcrumbs | Date Picker | User)      |
-|  (Logo)        +---------------------------------------------------+
-|  - Dashboard   |  STATS ROW (RMS Native KPIs)                      |
-|  - Upload      |  [OTB]  [Rem. Supply]  [Pickup T7]  [Fcst Dmd]  |
-|                +---------------------------------------------------+
-|                |                                                   |
-|                |  [ MAIN CHART: OTB vs Last Year ] (Height: 400px) |
-|                |  Line 1: OTB This Year (Solid Blue)               |
-|                |  Line 2: OTB Last Year (Dashed Gray)              |
-|                |                                                   |
-|                +---------------------------------------------------+
-|                |                                                   |
-|                |  [ TABLE: Pricing Recommendations ]               |
-|                |  Date | OTB | Rem | Fcst | Curr | Rec | Action  |
-|                |                                                   |
-+----------------+---------------------------------------------------+
+
+### Cards
+```css
+.card {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+}
 ```
 
-### 2. KPI Cards (Native RMS)
-Focus on Booking Velocity & Supply, not Revenue.
-1.  **Rooms OTB**: Total rooms sold for range (e.g. 185).
-2.  **Remaining Supply**: Total rooms left (e.g. 42).
-3.  **Avg Pickup T7**: Velocity last 7 days (e.g. +6.3).
-4.  **Forecast Demand**: Predicted pickup (e.g. +18).
+### Tables
+```css
+table {
+  background-color: var(--surface);
+}
+th {
+  background-color: var(--background);
+  color: var(--muted);
+}
+tr:hover {
+  background-color: var(--surface-alt);
+}
+```
 
-### 3. Main Chart (Pace Analysis)
-- **Title**: "OTB vs Last Year (Rooms Sold)"
-- **Series**:
-    - **Current OTB**: Solid Blue line (`#3b82f6`).
-    - **Last Year OTB**: Dashed Slate line (`#64748b`).
-- **Tooltip**: Show OTB difference (Pace).
+---
 
-### 4. Recommendation Table
-- **Style**: Dense, Sticky Header. Update columns order:
-  1. `Date` (Sticky)
-  2. `Rooms OTB` (int)
-  3. `Remaining` (int) - *New*
-  4. `Forecast` (int) - *Demand prediction*
-  5. `Current Price` ($) - *Reference*
-  6. `Recommended` ($) - *Target*
-  7. `Action` (Buttons)
+## ✨ Usage Notes
 
-- **Special State: STOP SELL**
-  - Trigger: Remaining Supply <= 0 (or Forecast > Remaining * Factor)
-  - Visual: Row Background `bg-rose-900/20`.
-  - Content: "STOP SELL" text in Recommended column.
-  - Actions: Disabled or specific "Open" override.
+1. **Keep Dark Theme** - The app uses a dark theme that matches the royal blue background in the logo
+2. **Contrast Matters** - Ensure text has sufficient contrast against dark backgrounds
+3. **Consistent Blues** - Use `--brand-primary` for all primary actions
+4. **Accent Colors** - Use success/warning/danger only for semantic meanings

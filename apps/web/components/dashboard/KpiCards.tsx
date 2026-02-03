@@ -2,6 +2,13 @@
 
 import { ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
 
+// Number formatters for Vietnamese style
+const nf0 = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 });
+const nf1 = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 });
+
+// Surface styling - consistent across all cards
+const surface = "rounded-2xl bg-white border border-slate-200/80 shadow-[0_1px_2px_rgba(16,24,40,0.06)]";
+
 interface KpiData {
     roomsOtb: number;
     remainingSupply: number;
@@ -12,9 +19,9 @@ interface KpiData {
 interface KpiCardProps {
     title: string;
     value: string | number;
-    trend?: number; // positive = up, negative = down, 0 = neutral
+    trend?: number;
     trendLabel?: string;
-    formula?: string; // Formula explanation for debugging
+    formula?: string;
 }
 
 function KpiCard({ title, value, trend, trendLabel, formula }: KpiCardProps) {
@@ -25,28 +32,28 @@ function KpiCard({ title, value, trend, trendLabel, formula }: KpiCardProps) {
             : ArrowDownRight;
 
     const trendColor = trend === undefined || trend === 0
-        ? 'text-slate-400'
+        ? 'text-gray-400'
         : trend > 0
-            ? 'text-emerald-500'
-            : 'text-rose-500';
+            ? 'text-emerald-600'
+            : 'text-rose-600';
 
     return (
-        <div className="bg-slate-900 border border-slate-800 rounded-lg p-4 flex flex-col gap-2">
-            <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">
+        <div className={`${surface} p-5 flex flex-col gap-2 hover:shadow-md transition-shadow`}>
+            <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
                 {title}
             </p>
             <div className="flex items-end justify-between">
-                <p className="text-3xl font-bold text-slate-50">{value}</p>
+                <p className="text-3xl font-bold text-gray-900">{value}</p>
                 {trend !== undefined && (
                     <div className={`flex items-center gap-1 text-sm ${trendColor}`}>
                         <TrendIcon className="w-4 h-4" />
-                        <span>{trendLabel || (trend > 0 ? `+${trend}` : trend)}</span>
+                        <span>{trendLabel || (trend > 0 ? `+${nf1.format(trend)}` : nf1.format(trend))}</span>
                     </div>
                 )}
             </div>
-            {/* Formula explanation - for debugging, remove later */}
+            {/* Formula explanation */}
             {formula && (
-                <p className="text-[10px] text-slate-500 font-mono mt-1 border-t border-slate-800 pt-2">
+                <p className="text-[10px] font-mono mt-1 pt-2 text-gray-400 border-t border-slate-100">
                     📐 {formula}
                 </p>
             )}
@@ -65,31 +72,32 @@ export function KpiCards({ data, hotelCapacity }: KpiCardsProps) {
     return (
         <div className="grid grid-cols-4 gap-4">
             <KpiCard
-                title="Rooms OTB"
-                value={data.roomsOtb}
+                title="Phòng đã đặt (OTB)"
+                value={nf0.format(data.roomsOtb)}
                 trend={5}
                 trendLabel="+5% MoM"
                 formula={`SUM(rooms_otb) trong ${days} ngày tới`}
             />
             <KpiCard
-                title="Remaining Supply"
-                value={data.remainingSupply}
+                title="Còn trống"
+                value={nf0.format(data.remainingSupply)}
                 trend={data.remainingSupply < 20 ? -1 : 0}
-                trendLabel={data.remainingSupply < 20 ? 'Low' : ''}
-                formula={`(${hotelCapacity} phòng × ${days} ngày) − ${data.roomsOtb} OTB = ${hotelCapacity * days} − ${data.roomsOtb}`}
+                trendLabel={data.remainingSupply < 20 ? 'Thấp' : ''}
+                formula={`(${hotelCapacity} × ${days}) − ${nf0.format(data.roomsOtb)} = ${nf0.format(data.remainingSupply)}`}
             />
             <KpiCard
-                title="Avg Pickup T7"
-                value={`+${data.avgPickupT7.toFixed(1)}`}
+                title="Pickup TB (7 ngày)"
+                value={`+${nf1.format(data.avgPickupT7)}`}
                 trend={data.avgPickupT7}
-                formula="AVG(pickup_t7) từ features_daily (30 ngày gần nhất)"
+                trendLabel={`+${nf1.format((data.avgPickupT7 / data.roomsOtb) * 100)}%`}
+                formula="AVG pickup 30 ngày gần nhất"
             />
             <KpiCard
-                title="Forecast Demand"
-                value={`+${data.forecastDemand}`}
+                title="Dự báo nhu cầu"
+                value={`+${nf0.format(data.forecastDemand)}`}
                 trend={data.forecastDemand}
-                trendLabel="rooms"
-                formula={`SUM(remaining_demand) từ demand_forecast`}
+                trendLabel="phòng"
+                formula="SUM(remaining_demand)"
             />
         </div>
     );

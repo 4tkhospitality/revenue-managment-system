@@ -22,7 +22,7 @@ export default async function DashboardPage() {
                 <div className="bg-amber-950/30 border border-amber-800 rounded-lg p-6 text-center">
                     <h2 className="text-xl font-bold text-amber-400 mb-2">⚠️ Chưa cấu hình Hotel ID</h2>
                     <p className="text-amber-300 mb-4">
-                        Vui lòng thêm <code className="bg-slate-800 px-2 py-1 rounded">DEFAULT_HOTEL_ID</code> vào file <code className="bg-slate-800 px-2 py-1 rounded">.env</code>
+                        Vui lòng thêm <code className="bg-gray-100 px-2 py-1 rounded text-gray-700">DEFAULT_HOTEL_ID</code> vào file <code className="bg-gray-100 px-2 py-1 rounded text-gray-700">.env</code>
                     </p>
                     <a href="/settings" className="inline-block px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
                         Đi tới Settings →
@@ -197,36 +197,40 @@ export default async function DashboardPage() {
         : DateUtils.format(today, 'MMM dd, yyyy');
 
     return (
-        <div className="p-6 space-y-6">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold text-slate-50">{hotelName}</h1>
-                    <p className="text-sm text-slate-400">
-                        Dashboard • {hotelCapacity} phòng
-                    </p>
-                </div>
-                <div className="flex items-center gap-3">
-                    <div className="px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-sm text-slate-400">
-                        Data as of: {dataAsOf}
+        <div className="mx-auto max-w-[1400px] px-8 py-6 space-y-6">
+            {/* Header Brand Card - lighter, thinner */}
+            <header
+                className="rounded-2xl px-6 py-4 text-white shadow-sm"
+                style={{ background: 'linear-gradient(to right, #1E3A8A, #102A4C)' }}
+            >
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-lg font-semibold">{hotelName}</h1>
+                        <p className="text-white/70 text-sm">
+                            Dashboard • {hotelCapacity} phòng
+                        </p>
+                    </div>
+                    <div className="px-3 py-1.5 bg-white/10 rounded-lg text-sm backdrop-blur-sm">
+                        Dữ liệu: {dataAsOf}
                     </div>
                 </div>
-            </div>
+            </header>
 
+            {/* Main Content - already on light bg from layout */}
             {/* Empty State */}
             {otbData.length === 0 && (
-                <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
-                    <p className="text-amber-400">
-                        ⚠️ No OTB data found. Please <a href="/upload" className="underline hover:text-amber-300">upload reservations</a> and then <a href="/data" className="underline hover:text-amber-300">build OTB</a>.
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                    <p className="text-amber-700">
+                        ⚠️ Chưa có dữ liệu OTB. Vui lòng <a href="/upload" className="underline hover:text-amber-900">tải lên reservations</a> và <a href="/data" className="underline hover:text-amber-900">build OTB</a>.
                     </p>
                 </div>
             )}
 
             {/* Setup Warning */}
             {needsSetup && (
-                <div className="bg-rose-950/30 border border-rose-800 rounded-lg p-4">
-                    <p className="text-rose-400">
-                        ⚠️ Chưa cấu hình khách sạn! <a href="/settings" className="underline hover:text-rose-300">Vào Settings</a> để nhập Số phòng (Capacity) và các thông tin khác.
+                <div className="bg-rose-50 border border-rose-200 rounded-lg p-4">
+                    <p className="text-rose-700">
+                        ⚠️ Chưa cấu hình khách sạn! <a href="/settings" className="underline hover:text-rose-900">Vào Cài đặt</a> để nhập Số phòng và các thông tin khác.
                     </p>
                 </div>
             )}
@@ -237,7 +241,7 @@ export default async function DashboardPage() {
             {/* OTB Chart */}
             <OtbChart data={chartData} />
 
-            {/* Recommendation Table - now using OTB data directly */}
+            {/* Recommendation Table */}
             <RecommendationTable
                 data={tableData}
                 onAccept={handleAccept}
