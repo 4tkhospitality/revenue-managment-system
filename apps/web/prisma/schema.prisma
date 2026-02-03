@@ -1,0 +1,190 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// Enums
+enum JobStatus {
+  pending
+  processing
+  completed
+  failed
+}
+
+enum ReservationStatus {
+  booked
+  cancelled
+}
+
+enum DecisionAction {
+  accept
+  override
+}
+
+// Models
+
+model Hotel {
+  hotel_id   String   @id @default(uuid()) @db.Uuid
+  name       String
+  timezone   String   @default("UTC")
+  capacity   Int
+  currency   String   @default("USD")
+  created_at DateTime @default(now())
+
+  users                 User[]
+  import_jobs           ImportJob[]
+  reservations_raw      ReservationsRaw[]
+  daily_otb             DailyOTB[]
+  features_daily        FeaturesDaily[]
+  demand_forecast       DemandForecast[]
+  price_recommendations PriceRecommendations[]
+  pricing_decisions     PricingDecision[]
+
+  @@map("hotels")
+}
+
+model User {
+  user_id    String   @id @default(uuid()) @db.Uuid
+  hotel_id   String   @db.Uuid
+  email      String   @unique
+  role       String   @default("manager")
+  created_at DateTime @default(now())
+
+  hotel             Hotel             @relation(fields: [hotel_id], references: [hotel_id])
+  pricing_decisions PricingDecision[]
+
+  @@map("users")
+}
+
+model ImportJob {
+  job_id        String    @id @default(uuid()) @db.Uuid
+  hotel_id      String    @db.Uuid
+  file_name     String
+  file_hash     String?
+  status        JobStatus @default(pending)
+  error_summary String?
+  total_rows    Int?
+  error_log     Json?
+  created_at    DateTime  @default(now())
+  finished_at   DateTime?
+
+  hotel            Hotel             @relation(fields: [hotel_id], references: [hotel_id])
+  reservations_raw ReservationsRaw[]
+
+  @@map("import_jobs")
+}
+
+model ReservationsRaw {
+  id              String            @id @default(uuid()) @db.Uuid
+  hotel_id        String            @db.Uuid
+  job_id          String            @db.Uuid
+  reservation_id  String
+  booking_date    DateTime          @db.Date
+  arrival_date    DateTime          @db.Date
+  departure_date  DateTime          @db.Date
+  rooms           Int               // Note: rooms per night
+  revenue         Decimal           @db.Decimal
+  status          ReservationStatus
+  cancel_date     DateTime?         @db.Date
+  loaded_at       DateTime          @default(now())
+
+  hotel Hotel     @relation(fields: [hotel_id], references: [hotel_id])
+  job   ImportJob @relation(fields: [job_id], references: [job_id])
+
+  // Tracking history and idempotency
+  @@unique([hotel_id, reservation_id, job_id], name: "uq_res_job")
+  @@map("reservations_raw")
+}
+
+model DailyOTB {
+  hotel_id    String   @db.Uuid
+  as_of_date  DateTime @db.Date
+  stay_date   DateTime @db.Date
+  rooms_otb   Int
+  revenue_otb Decimal  @db.Decimal
+  created_at  DateTime @default(now())
+
+  hotel Hotel @relation(fields: [hotel_id], references: [hotel_id])
+
+  @@id([hotel_id, as_of_date, stay_date])
+  @@index([hotel_id, as_of_date], name: "idx_otb_as_of")
+  @@index([hotel_id, stay_date], name: "idx_otb_stay")
+  @@map("daily_otb")
+}
+
+model FeaturesDaily {
+  hotel_id         String   @db.Uuid
+  as_of_date       DateTime @db.Date
+  stay_date        DateTime @db.Date
+  dow              Int?
+  is_weekend       Boolean?
+  month            Int?
+  pickup_t30       Int?
+  pickup_t15       Int?
+  pickup_t7        Int?
+  pickup_t5        Int?
+  pickup_t3        Int?
+  pace_vs_ly       Float?
+  remaining_supply Int?
+  created_at       DateTime @default(now())
+
+  hotel Hotel @relation(fields: [hotel_id], references: [hotel_id])
+
+  @@id([hotel_id, as_of_date, stay_date])
+  @@map("features_daily")
+}
+
+model DemandForecast {
+  hotel_id         String   @db.Uuid
+  as_of_date       DateTime @db.Date
+  stay_date        DateTime @db.Date
+  remaining_demand Int?
+  model_version    String?
+  created_at       DateTime @default(now())
+
+  hotel Hotel @relation(fields: [hotel_id], references: [hotel_id])
+
+  @@id([hotel_id, as_of_date, stay_date])
+  @@map("demand_forecast")
+}
+
+model PriceRecommendations {
+  hotel_id          String   @db.Uuid
+  as_of_date        DateTime @db.Date
+  stay_date         DateTime @db.Date
+  current_price     Decimal? @db.Decimal
+  recommended_price Decimal? @db.Decimal
+  expected_revenue  Decimal? @db.Decimal
+  uplift_pct        Float?
+  explanation       String?
+  created_at        DateTime @default(now())
+
+  hotel Hotel @relation(fields: [hotel_id], references: [hotel_id])
+
+  @@id([hotel_id, as_of_date, stay_date])
+  @@unique([hotel_id, stay_date, as_of_date], name: "unique_rec")
+  @@map("price_recommendations")
+}
+
+model PricingDecision {
+  decision_id  String         @id @default(uuid()) @db.Uuid
+  hotel_id     String         @db.Uuid
+  user_id      String         @db.Uuid
+  as_of_date   DateTime       @db.Date
+  stay_date    DateTime       @db.Date
+  action       DecisionAction
+  system_price Decimal?       @db.Decimal
+  final_price  Decimal?       @db.Decimal
+  reason       String?
+  decided_at   DateTime       @default(now())
+
+  hotel Hotel @relation(fields: [hotel_id], references: [hotel_id])
+  user  User  @relation(fields: [user_id], references: [user_id])
+
+  @@map("pricing_decisions")
+}
