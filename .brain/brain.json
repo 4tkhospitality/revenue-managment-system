@@ -2,12 +2,12 @@
   "meta": {
     "schema_version": "1.1.0",
     "awf_version": "4.1.2",
-    "last_updated": "2026-02-03T11:03:00+07:00"
+    "last_updated": "2026-02-03T16:17:00+07:00"
   },
   "project": {
     "name": "revenue-management-system",
     "type": "SaaS Web App",
-    "status": "Development - Full Pipeline Working (Upload → OTB → Features → Forecast → Pricing)",
+    "status": "Development - UI Polished (SaaS Pro Light Theme)",
     "description": "RMS Version 01 (MVP) - Revenue Management System with Pricing Engine. Full-stack TypeScript.",
     "github": "https://github.com/4tkhospitality/revenue-managment-system"
   },
@@ -17,7 +17,8 @@
       "language": "TypeScript",
       "styling": "Tailwind CSS",
       "components": "Custom + Lucide Icons",
-      "charts": "Recharts"
+      "charts": "Recharts",
+      "theme": "Light SaaS Pro (lavender gray #F5F7FB, white surfaces, subtle shadows)"
     },
     "backend": {
       "framework": "Next.js Server Actions + API Routes",
@@ -140,7 +141,8 @@
     "Remaining Demand Forecast (Heuristic)",
     "Settings: Timezone, Fiscal Start Day, Ladder Config",
     "Comprehensive Guide/Help Page",
-    "Excel Export"
+    "Excel Export",
+    "SaaS Pro Light Theme (consistent across all pages)"
   ],
   "decisions": [
     "Full-stack Next.js for MVP speed",
@@ -154,15 +156,41 @@
     "Normalize dates to midnight for Prisma date comparisons",
     "Hotel capacity configurable in Settings (default 240)",
     "Timezone support for regional OTB calculations",
-    "Git repository pushed to GitHub"
+    "Git repository pushed to GitHub",
+    "Light SaaS Pro theme with lavender gray (#F5F7FB) background",
+    "Consistent surface styling: rounded-2xl, white bg, subtle shadow",
+    "Number formatting with Intl.NumberFormat('vi-VN')"
   ],
+  "ui_design": {
+    "theme": "SaaS Pro Light",
+    "colors": {
+      "background": "#F5F7FB (lavender gray)",
+      "surface": "#ffffff (white cards)",
+      "primary": "#1E3A8A (royal blue)",
+      "header_gradient": "linear-gradient(#1E3A8A → #102A4C)",
+      "text": "#1e293b (dark gray)",
+      "border": "slate-200/80"
+    },
+    "components": {
+      "surface": "rounded-2xl bg-white border border-slate-200/80 shadow-[0_1px_2px_rgba(16,24,40,0.06)]",
+      "header": "rounded-2xl px-6 py-4 text-white shadow-sm",
+      "container": "mx-auto max-w-[1400px] px-8 py-6 space-y-6"
+    },
+    "sidebar": {
+      "background": "#204184 (LOGO_BLUE)",
+      "border": "border-r border-white/10",
+      "active": "bg-white/10",
+      "hover": "bg-white/5"
+    }
+  },
   "knowledge_items": {
     "gotchas": [
       "DOMParser is browser-only, use fast-xml-parser for Node.js",
       "Prisma Date comparison requires exact match - normalize to midnight",
       "apps/web was added as submodule - removed .git folder to fix",
       "Prisma generate fails while dev server running (file lock) - restart server",
-      "PricingLogic.optimize takes (currentPrice, remainingDemand, remainingSupply)"
+      "PricingLogic.optimize takes (currentPrice, remainingDemand, remainingSupply)",
+      "Layout files set background, but child components can override - must update all"
     ],
     "formulas": {
       "rooms_otb": "SUM(num_rooms) from reservations for that stay_date",
