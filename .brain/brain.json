@@ -2,13 +2,13 @@
   "meta": {
     "schema_version": "1.1.0",
     "awf_version": "4.1.2",
-    "last_updated": "2026-02-04T16:21:00+07:00"
+    "last_updated": "2026-02-04T17:54:00+07:00"
   },
   "project": {
     "name": "revenue-management-system",
     "type": "SaaS Web App",
     "status": "Production - Deployed to Vercel",
-    "description": "RMS Version 01 (MVP) - Revenue Management System with Pricing Engine + User Management. Full-stack TypeScript.",
+    "description": "RMS Version 01.1 (MVP) - Revenue Management System with Pricing Engine + User Management + Cancellation Bridge. Full-stack TypeScript.",
     "github": "https://github.com/4tkhospitality/revenue-managment-system"
   },
   "tech_stack": {
@@ -56,7 +56,7 @@
     }
   },
   "database_schema": {
-    "summary": "RMS Schema designed for Multi-tenancy with RBAC User Management (V01).",
+    "summary": "RMS Schema designed for Multi-tenancy with RBAC User Management (V01) + Cancellation Bridge (V01.1).",
     "tables": [
       {
         "name": "hotels",
@@ -78,11 +78,17 @@
       },
       {
         "name": "reservations_raw",
-        "description": "Append-only raw booking data from PMS. Linked to ImportJob."
+        "description": "Append-only raw booking data from PMS. Linked to ImportJob.",
+        "v011_changes": "Added book_time, cancel_time, cancel_reason, cancel_source, last_modified_time, reservation_id_norm, room_code, room_code_norm. FK from cancellations_raw."
+      },
+      {
+        "name": "cancellations_raw",
+        "description": "Cancellation records from Crystal Reports XML. Linked to ImportJob.",
+        "v011_changes": "Added folio_num_norm, room_code_norm, matched_reservation_id (FK), matched_at, match_status, match_notes. Unique constraint uq_cancel_event."
       },
       {
         "name": "daily_otb",
-        "description": "Fact table. Snapshots of OTB by stay_date. Built from reservations."
+        "description": "Fact table. Snapshots of OTB by stay_date. Built from reservations with time-travel logic."
       },
       {
         "name": "features_daily",
@@ -112,6 +118,13 @@
         ],
         "description": "Role hierarchy: super_admin > hotel_admin > manager > viewer"
       }
+    ],
+    "v011_indexes": [
+      "idx_res_raw_match1 (hotel_id, reservation_id_norm, arrival_date, room_code_norm)",
+      "idx_res_raw_match2 (hotel_id, reservation_id_norm, arrival_date)",
+      "idx_res_raw_otb (hotel_id, book_time, cancel_time, arrival_date, departure_date)",
+      "idx_cancel_match_status (hotel_id, match_status)",
+      "uq_cancel_event (hotel_id, folio_num_norm, arrival_date, cancel_time)"
     ]
   },
   "api_endpoints": [
@@ -122,6 +135,21 @@
     {
       "path": "Server Action: ingestXML",
       "explained": "Parses Crystal Reports PMS XML format. Aggregates by ConfirmNum."
+    },
+    {
+      "path": "Server Action: ingestCancellationXml",
+      "explained": "V01.1: Parses cancellation XML, normalizes keys, runs bridge to match reservations.",
+      "v011_new": true
+    },
+    {
+      "path": "Server Action: buildDailyOTB",
+      "explained": "V01.1: Time-travel OTB with asOfTs, book_time fallback, revenue split per night.",
+      "v011_updated": true
+    },
+    {
+      "path": "Server Action: backfillOTB",
+      "explained": "V01.1: Backfill OTB snapshots for historical dates.",
+      "v011_new": true
     },
     {
       "path": "POST /api/user/switch-hotel",
@@ -167,10 +195,11 @@
   "features": [
     "PMS-agnostic CSV Import",
     "Crystal Reports XML Import",
+    "Cancellation XML Import with Auto-Bridge (V01.1)",
     "Data Inspector Page with Build OTB, Build Features, Run Forecast buttons",
     "Reset & Rebuild Button (clears derived data)",
     "Import Jobs Pagination (10/page)",
-    "Daily OTB Time-Travel (Time-Machine View)",
+    "Daily OTB Time-Travel with asOfTs (V01.1)",
     "Dashboard with KPI Cards, OTB Chart, Recommendations Table",
     "Real Pricing Engine Integration (Ladder Strategy)",
     "Settings: Timezone, Fiscal Start Day, Ladder Config",
@@ -183,6 +212,40 @@
     "Admin Panel (Users + Hotels management)",
     "Blocked User auto sign-out"
   ],
+  "cancellation_bridge_v011": {
+    "status": "Implemented",
+    "description": "Bridges cancellation records to reservations for accurate OTB calculation",
+    "files": [
+      "lib/normalize.ts - Key normalization (UPPER, TRIM, alphanumeric only)",
+      "lib/cancellationBridge.ts - Bridge logic with matching, conflict resolution, DQ checks"
+    ],
+    "matching_algorithm": {
+      "strategy": "take:2 for ambiguity detection",
+      "order": [
+        "last_modified_time desc",
+        "book_time desc",
+        "loaded_at desc"
+      ],
+      "keys": [
+        "reservation_id_norm",
+        "arrival_date",
+        "room_code_norm (optional)"
+      ]
+    },
+    "match_statuses": [
+      "matched",
+      "unmatched",
+      "ambiguous",
+      "conflict",
+      "dq_issue",
+      "unsupported_partial"
+    ],
+    "time_travel_otb": {
+      "formula": "booking_date <= asOfTs AND (cancel_time IS NULL OR cancel_time > asOfTs)",
+      "book_time_fallback": "booking_date at 00:00:00 if book_time is null",
+      "revenue_split": "total/nights per night, remainder to last night"
+    }
+  },
   "user_management_v01": {
     "status": "Implemented",
     "roles": {
@@ -217,7 +280,10 @@
     "JWT-based session with user role and accessible hotels",
     "httpOnly cookie for active hotel persistence",
     "HotelUser junction table for many-to-many user-hotel relationships",
-    "Separate global role (User.role) and per-hotel role (HotelUser.role)"
+    "Separate global role (User.role) and per-hotel role (HotelUser.role)",
+    "V01.1: Bridge cancellations to reservations for accurate OTB",
+    "V01.1: Use timestamptz for cancel_time and book_time",
+    "V01.1: Time-travel OTB using asOfTs parameter"
   ],
   "ui_design": {
     "theme": "SaaS Pro Light",
@@ -245,17 +311,21 @@
       "Vercel monorepo: Must set Root Directory to 'apps/web' in Project Settings",
       "Vercel monorepo: Framework Preset must be 'Next.js', not 'Other'",
       "TypeScript IDE may need restart after prisma generate to pick up new types",
-      "Admin pages need layout.tsx to include sidebar (app/admin/layout.tsx)"
+      "Admin pages need layout.tsx to include sidebar (app/admin/layout.tsx)",
+      "V01.1: Prisma.ModelGetPayload<object> for inferred types",
+      "V01.1: Use prisma.$transaction for atomic bridge updates"
     ],
     "formulas": {
       "rooms_otb": "SUM(num_rooms) from reservations for that stay_date",
       "remaining_supply": "Capacity − rooms_otb",
       "adr": "revenue_otb ÷ rooms_otb",
-      "recommended_price": "PricingLogic.optimize(ADR, forecast_demand, remaining_supply)"
+      "recommended_price": "PricingLogic.optimize(ADR, forecast_demand, remaining_supply)",
+      "time_travel_active": "book_time <= asOfTs AND (cancel_time IS NULL OR cancel_time > asOfTs)"
     },
     "data_pipeline": {
       "step1": "Upload CSV/XML → reservations_raw",
-      "step2": "Build OTB → daily_otb",
+      "step1b": "Upload Cancellation XML → cancellations_raw → Bridge → reservations_raw",
+      "step2": "Build OTB (time-travel) → daily_otb",
       "step3": "Build Features → features_daily",
       "step4": "Run Forecast → demand_forecast",
       "step5": "Pricing Engine → recommended_price (calculated on-the-fly)"

@@ -1,4 +1,4 @@
-import { BookOpen, BarChart3, TrendingUp, DollarSign, CalendarDays, Upload, Database, Settings, HelpCircle } from 'lucide-react';
+import { BookOpen, BarChart3, TrendingUp, DollarSign, CalendarDays, Upload, Database, Settings, HelpCircle, XCircle } from 'lucide-react';
 import Link from 'next/link';
 
 export default function GuidePage() {
@@ -29,6 +29,8 @@ export default function GuidePage() {
                         <a href="#bieu-do" className="block text-blue-600 hover:text-blue-700 ml-4">2.2. Biểu đồ OTB</a>
                         <a href="#bang-khuyen-nghi" className="block text-blue-600 hover:text-blue-700 ml-4">2.3. Bảng khuyến nghị giá</a>
                         <a href="#upload" className="block text-blue-600 hover:text-blue-700">3. Import dữ liệu</a>
+                        <a href="#upload-reservation" className="block text-blue-600 hover:text-blue-700 ml-4">3.1. Import đặt phòng</a>
+                        <a href="#upload-cancellation" className="block text-blue-600 hover:text-blue-700 ml-4">3.2. Import hủy phòng (MỚI)</a>
                         <a href="#data-inspector" className="block text-blue-600 hover:text-blue-700">4. Data Inspector</a>
                         <a href="#settings" className="block text-blue-600 hover:text-blue-700">5. Cài đặt khách sạn</a>
                         <a href="#thuat-ngu" className="block text-blue-600 hover:text-blue-700">6. Thuật ngữ chuyên ngành</a>
@@ -52,6 +54,7 @@ export default function GuidePage() {
                         </p>
                         <ul className="list-disc list-inside space-y-1 ml-4">
                             <li>Theo dõi lượng đặt phòng (OTB - On The Books)</li>
+                            <li>Theo dõi và xử lý các booking bị hủy</li>
                             <li>Dự đoán nhu cầu tương lai</li>
                             <li>Đề xuất mức giá tối ưu cho từng ngày</li>
                             <li>Phân tích hiệu quả kinh doanh</li>
@@ -184,35 +187,114 @@ export default function GuidePage() {
                 </section>
 
                 {/* Section 3: Upload */}
-                <section id="upload" className="bg-white border border-gray-200 rounded-xl p-6 space-y-4 shadow-sm">
+                <section id="upload" className="bg-white border border-gray-200 rounded-xl p-6 space-y-6 shadow-sm">
                     <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
                         <Upload className="w-5 h-5 text-blue-600" />
-                        3. Import dữ liệu đặt phòng
+                        3. Import dữ liệu
                     </h2>
 
-                    <div className="text-gray-700 space-y-4">
-                        <p>
-                            Để hệ thống hoạt động, bạn cần import dữ liệu đặt phòng từ PMS.
-                        </p>
+                    <p className="text-gray-700">
+                        Để hệ thống hoạt động chính xác, bạn cần import dữ liệu từ PMS gồm 2 loại:
+                    </p>
 
-                        {/* Steps */}
-                        <div className="border-t border-gray-200 pt-4">
-                            <h4 className="font-medium text-gray-900 mb-3">📝 Các bước thực hiện:</h4>
-                            <ol className="list-decimal list-inside space-y-2 ml-4 text-gray-600">
-                                <li>Export báo cáo &quot;Reservation Booked On Date&quot; từ PMS</li>
-                                <li>Lưu file dạng CSV hoặc XML (Crystal Reports)</li>
-                                <li>Vào menu <strong>Upload</strong> → Kéo thả file vào</li>
-                                <li>Chờ hệ thống xử lý (vài giây)</li>
-                                <li>Vào <strong>Data Inspector</strong> → Nhấn các nút theo thứ tự: <br />
-                                    <span className="text-blue-600">Build OTB</span> → <span className="text-purple-600">Build Features</span> → <span className="text-amber-600">Run Forecast</span>
-                                </li>
-                            </ol>
-                        </div>
+                    {/* 3.1 Reservation Import */}
+                    <div id="upload-reservation" className="border-t border-gray-200 pt-4">
+                        <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2 mb-3">
+                            <Upload className="w-4 h-4 text-blue-600" />
+                            3.1. Import đặt phòng (Reservation)
+                        </h3>
 
-                        <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mt-4">
-                            <p className="text-blue-700 text-sm">
-                                <strong>📌 Tần suất:</strong> Nên import mỗi ngày vào buổi sáng để có dữ liệu mới nhất.
+                        <div className="text-gray-700 space-y-3">
+                            <p>
+                                File này chứa các booking mới được tạo trong ngày.
                             </p>
+
+                            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                                <h4 className="font-medium text-blue-700 mb-2">📝 Nguồn file:</h4>
+                                <p className="text-sm text-gray-700">
+                                    Export báo cáo <strong>&quot;Reservation Booked On Date&quot;</strong> từ PMS Crystal Reports
+                                </p>
+                            </div>
+
+                            <div className="space-y-2 ml-4">
+                                <h4 className="font-medium text-gray-900">Các bước thực hiện:</h4>
+                                <ol className="list-decimal list-inside space-y-1 text-gray-600 text-sm">
+                                    <li>Export báo cáo từ PMS (định dạng XML hoặc CSV)</li>
+                                    <li>Vào menu <strong>Upload</strong></li>
+                                    <li>Kéo thả file vào ô upload</li>
+                                    <li>Chờ hệ thống xử lý (vài giây)</li>
+                                </ol>
+                            </div>
+
+                            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mt-4">
+                                <p className="text-blue-700 text-sm">
+                                    <strong>📌 Tần suất:</strong> Mỗi ngày 1 lần vào buổi sáng.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 3.2 Cancellation Import - NEW */}
+                    <div id="upload-cancellation" className="border-t border-gray-200 pt-4">
+                        <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2 mb-3">
+                            <XCircle className="w-4 h-4 text-red-500" />
+                            3.2. Import hủy phòng (Cancellation)
+                            <span className="bg-red-100 text-red-600 text-xs px-2 py-0.5 rounded-full">MỚI</span>
+                        </h3>
+
+                        <div className="text-gray-700 space-y-3">
+                            <p>
+                                File này chứa các booking bị hủy. Hệ thống sẽ <strong>tự động khớp</strong> với
+                                booking gốc để cập nhật trạng thái và tính OTB chính xác.
+                            </p>
+
+                            <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                                <h4 className="font-medium text-red-700 mb-2">📝 Nguồn file:</h4>
+                                <p className="text-sm text-gray-700">
+                                    Export báo cáo <strong>&quot;Cancellation Report&quot;</strong> từ PMS Crystal Reports
+                                </p>
+                            </div>
+
+                            <div className="space-y-2 ml-4">
+                                <h4 className="font-medium text-gray-900">Các bước thực hiện:</h4>
+                                <ol className="list-decimal list-inside space-y-1 text-gray-600 text-sm">
+                                    <li>Export báo cáo hủy phòng từ PMS (định dạng XML)</li>
+                                    <li>Vào menu <strong>Upload</strong></li>
+                                    <li>Kéo thả file vào ô upload (hệ thống tự nhận dạng loại file)</li>
+                                    <li>Chờ hệ thống xử lý và khớp dữ liệu (vài giây)</li>
+                                </ol>
+                            </div>
+
+                            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mt-4">
+                                <h4 className="font-medium text-amber-700 mb-2">🔄 Cách hệ thống xử lý:</h4>
+                                <ul className="text-sm text-gray-700 space-y-1">
+                                    <li>• Hệ thống tự động tìm booking gốc dựa vào <strong>Folio Number</strong> và <strong>Arrival Date</strong></li>
+                                    <li>• Cập nhật trạng thái booking thành <strong>Cancelled</strong></li>
+                                    <li>• Phòng đã hủy sẽ được tính vào <strong>Remaining Supply</strong></li>
+                                </ul>
+                            </div>
+
+                            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 mt-4">
+                                <p className="text-emerald-700 text-sm">
+                                    <strong>💡 Lưu ý:</strong> Chỉ hủy toàn bộ booking được hỗ trợ (không hỗ trợ hủy một phần đêm).
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Quy trình chuẩn */}
+                    <div className="bg-gray-100 rounded-xl p-4 mt-4">
+                        <p className="text-sm text-gray-700">
+                            <strong>💡 Quy trình import hàng ngày:</strong>
+                        </p>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                            <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm">1. Import Reservation</span>
+                            <span className="text-gray-400">→</span>
+                            <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm">2. Import Cancellation</span>
+                            <span className="text-gray-400">→</span>
+                            <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm">3. Build OTB</span>
+                            <span className="text-gray-400">→</span>
+                            <span className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-sm">4. Dashboard</span>
                         </div>
                     </div>
                 </section>
@@ -234,6 +316,8 @@ export default function GuidePage() {
                                 <span className="bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium">1. Build OTB</span>
                                 <p className="text-sm text-blue-700 mt-2">
                                     Tính <strong>rooms_otb</strong> và <strong>revenue_otb</strong> từ reservations.
+                                    <br />
+                                    <span className="text-gray-600">Tự động trừ các booking đã bị hủy.</span>
                                 </p>
                             </div>
 
@@ -328,6 +412,16 @@ export default function GuidePage() {
                                     <td className="px-3 py-3 font-mono text-blue-600">Pace</td>
                                     <td className="px-3 py-3">Tốc độ đặt phòng</td>
                                     <td className="px-3 py-3">So sánh OTB với cùng kỳ năm trước</td>
+                                </tr>
+                                <tr className="border-t border-gray-100 bg-red-50">
+                                    <td className="px-3 py-3 font-mono text-red-600">Cancellation</td>
+                                    <td className="px-3 py-3">Hủy phòng</td>
+                                    <td className="px-3 py-3">Booking bị khách hủy → trả lại phòng trống</td>
+                                </tr>
+                                <tr className="border-t border-gray-100 bg-amber-50">
+                                    <td className="px-3 py-3 font-mono text-amber-600">No-Show</td>
+                                    <td className="px-3 py-3">Không đến</td>
+                                    <td className="px-3 py-3">Khách đặt nhưng không đến nhận phòng</td>
                                 </tr>
                             </tbody>
                         </table>
