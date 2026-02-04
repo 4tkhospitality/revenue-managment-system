@@ -32,7 +32,7 @@ export function Sidebar() {
                 style={{ minHeight: '120px' }}
             >
                 <Image
-                    src="/logo.png"
+                    src="/logo.jpg"
                     alt="4TK Hospitality"
                     width={180}
                     height={180}
