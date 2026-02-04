@@ -2,6 +2,8 @@
 
 import prisma from "@/lib/prisma"
 import { parseCancellationXml } from "@/lib/parseCancellationXml"
+import { normalizeKey } from "@/lib/normalize"
+import { bridgeCancellations, BridgeResult } from "@/lib/cancellationBridge"
 import crypto from "crypto"
 
 interface IngestCancellationResult {
@@ -10,6 +12,13 @@ interface IngestCancellationResult {
     recordCount?: number
     asOfDate?: string
     error?: string
+    // V01.1: Bridge results
+    bridgeResult?: {
+        matched: number
+        unmatched: number
+        ambiguous: number
+        conflicts: number
+    }
 }
 
 export async function ingestCancellationXml(
@@ -66,11 +75,12 @@ export async function ingestCancellationXml(
             }
         }
 
-        // Insert cancellation records
+        // Insert cancellation records with normalized keys (V01.1)
         const cancellationData = records.map((record) => ({
             hotel_id: hotelId,
             job_id: job.job_id,
             folio_num: record.folioNum,
+            folio_num_norm: normalizeKey(record.folioNum), // V01.1: Normalized key
             arrival_date: record.arrivalDate,
             cancel_time: record.cancelTime,
             as_of_date: asOfDate,
@@ -81,13 +91,33 @@ export async function ingestCancellationXml(
             sale_group: record.saleGroup,
             room_type: record.roomType,
             room_code: record.roomCode,
+            room_code_norm: normalizeKey(record.roomCode), // V01.1: Normalized key
             guest_name: record.guestName,
+            match_status: 'unmatched' as const, // V01.1: Default status
         }))
 
         await prisma.cancellationRaw.createMany({
             data: cancellationData,
             skipDuplicates: true,
         })
+
+        // V01.1: Run bridge to match cancellations to reservations
+        const savedCancellations = await prisma.cancellationRaw.findMany({
+            where: {
+                job_id: job.job_id
+            }
+        })
+
+        let bridgeResult: IngestCancellationResult['bridgeResult'] = undefined
+        if (savedCancellations.length > 0) {
+            const result = await bridgeCancellations(hotelId, savedCancellations)
+            bridgeResult = {
+                matched: result.matched,
+                unmatched: result.unmatched,
+                ambiguous: result.ambiguous,
+                conflicts: result.conflicts
+            }
+        }
 
         // Update job status
         await prisma.importJob.update({
@@ -104,6 +134,7 @@ export async function ingestCancellationXml(
             jobId: job.job_id,
             recordCount: records.length,
             asOfDate: asOfDate.toISOString().split("T")[0],
+            bridgeResult,
         }
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Unknown error"
