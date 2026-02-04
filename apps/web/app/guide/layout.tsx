@@ -5,7 +5,7 @@ export default function GuideLayout({ children }: { children: React.ReactNode })
         <div className="min-h-screen flex">
             <Sidebar />
             <main
-                className="ml-64 flex-1 min-h-screen"
+                className="lg:ml-64 flex-1 min-h-screen pt-14 lg:pt-0"
                 style={{ backgroundColor: '#F5F7FB' }}
             >
                 {children}

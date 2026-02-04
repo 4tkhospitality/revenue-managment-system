@@ -11,8 +11,10 @@ export default function DashboardLayout({
             <Sidebar />
 
             {/* Main content nền SÁNG */}
+            {/* lg:ml-64 = only add margin on desktop (>=1024px) */}
+            {/* pt-14 lg:pt-0 = add top padding on mobile for fixed header */}
             <main
-                className="ml-64 flex-1 min-h-screen"
+                className="lg:ml-64 flex-1 min-h-screen pt-14 lg:pt-0"
                 style={{ backgroundColor: '#F5F7FB' }}
             >
                 {children}
@@ -20,4 +22,3 @@ export default function DashboardLayout({
         </div>
     );
 }
-
