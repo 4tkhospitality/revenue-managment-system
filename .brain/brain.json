@@ -2,18 +2,18 @@
   "meta": {
     "schema_version": "1.1.0",
     "awf_version": "4.1.2",
-    "last_updated": "2026-02-04T10:53:00+07:00"
+    "last_updated": "2026-02-04T16:21:00+07:00"
   },
   "project": {
     "name": "revenue-management-system",
     "type": "SaaS Web App",
     "status": "Production - Deployed to Vercel",
-    "description": "RMS Version 01 (MVP) - Revenue Management System with Pricing Engine. Full-stack TypeScript.",
+    "description": "RMS Version 01 (MVP) - Revenue Management System with Pricing Engine + User Management. Full-stack TypeScript.",
     "github": "https://github.com/4tkhospitality/revenue-managment-system"
   },
   "tech_stack": {
     "frontend": {
-      "framework": "Next.js 14+ (App Router)",
+      "framework": "Next.js 16.1.6 (App Router + Turbopack)",
       "language": "TypeScript",
       "styling": "Tailwind CSS",
       "components": "Custom + Lucide Icons",
@@ -22,15 +22,15 @@
     },
     "backend": {
       "framework": "Next.js Server Actions + API Routes",
+      "auth": "NextAuth.js v5 (Google OAuth)",
       "csv_parser": "Papaparse",
       "xml_parser": "fast-xml-parser",
       "forecasting": "Heuristic (TS)",
       "pricing": "Ladder Pricing Strategy (TS)"
     },
     "database": {
-      "type": "PostgreSQL",
-      "version": "16",
-      "orm": "Prisma",
+      "type": "PostgreSQL 16",
+      "orm": "Prisma 5.10.2",
       "hosting": "Supabase"
     },
     "deployment": {
@@ -47,13 +47,16 @@
           "DATABASE_URL",
           "DIRECT_URL",
           "DEFAULT_HOTEL_ID",
-          "NEXT_PUBLIC_DEFAULT_HOTEL_ID"
+          "NEXT_PUBLIC_DEFAULT_HOTEL_ID",
+          "GOOGLE_CLIENT_ID",
+          "GOOGLE_CLIENT_SECRET",
+          "ADMIN_EMAIL"
         ]
       }
     }
   },
   "database_schema": {
-    "summary": "RMS Schema designed for Multi-tenancy and Time-Travel OTB calculation.",
+    "summary": "RMS Schema designed for Multi-tenancy with RBAC User Management (V01).",
     "tables": [
       {
         "name": "hotels",
@@ -61,7 +64,13 @@
       },
       {
         "name": "users",
-        "description": "System users linked to hotels."
+        "description": "System users with global role (super_admin/viewer) and is_active flag.",
+        "v01_changes": "Added UserRole enum, is_active field, hotel_users relation"
+      },
+      {
+        "name": "hotel_users",
+        "description": "Junction table for User-Hotel many-to-many with per-hotel roles (hotel_admin/manager/viewer).",
+        "v01_new": true
       },
       {
         "name": "import_jobs",
@@ -92,13 +101,18 @@
         "description": "Audit log of user actions (Accept/Override)."
       }
     ],
-    "hotel_fields": {
-      "new_fields": [
-        "timezone (default: Asia/Ho_Chi_Minh)",
-        "fiscal_start_day (1-31, default: 1)",
-        "ladder_steps (JSON array of price adjustment percentages)"
-      ]
-    }
+    "enums": [
+      {
+        "name": "UserRole",
+        "values": [
+          "super_admin",
+          "hotel_admin",
+          "manager",
+          "viewer"
+        ],
+        "description": "Role hierarchy: super_admin > hotel_admin > manager > viewer"
+      }
+    ]
   },
   "api_endpoints": [
     {
@@ -110,32 +124,44 @@
       "explained": "Parses Crystal Reports PMS XML format. Aggregates by ConfirmNum."
     },
     {
-      "path": "Server Action: buildDailyOTB",
-      "explained": "Calculates DailyOTB from reservations. Aggregates by stay_date."
+      "path": "POST /api/user/switch-hotel",
+      "explained": "Sets active hotel via httpOnly cookie (rms_active_hotel).",
+      "v01_new": true
     },
     {
-      "path": "Server Action: buildFeatures",
-      "explained": "Computes Pickup (T30, T15, T7, T5) and Pace vs LY."
+      "path": "GET /api/admin/users",
+      "explained": "List all users with hotel assignments (super_admin only).",
+      "v01_new": true
     },
     {
-      "path": "Server Action: runForecast",
-      "explained": "Heuristic Model: Max(AvgPickup, T7) * LeadTimeFactor."
+      "path": "POST /api/admin/users",
+      "explained": "Create new user with optional hotel assignments.",
+      "v01_new": true
     },
     {
-      "path": "Server Action: resetDerivedData",
-      "explained": "Clears all derived data (OTB, Features, Forecast, Pricing) while keeping raw reservations."
+      "path": "PUT /api/admin/users/[id]",
+      "explained": "Update user role, is_active status.",
+      "v01_new": true
     },
     {
-      "path": "Server Action: submitDecision",
-      "explained": "Log User Action: Accept/Override to pricing_decisions."
+      "path": "PUT /api/admin/users/[id]/hotels",
+      "explained": "Replace user's hotel assignments.",
+      "v01_new": true
     },
     {
-      "path": "GET/POST /api/settings",
-      "explained": "Hotel settings management with timezone, fiscal_start_day, ladder_steps."
+      "path": "GET /api/admin/hotels",
+      "explained": "List all hotels with user counts.",
+      "v01_new": true
     },
     {
-      "path": "GET /api/import-jobs",
-      "explained": "Paginated list of import jobs. Query: page, pageSize."
+      "path": "POST /api/admin/hotels",
+      "explained": "Create new hotel.",
+      "v01_new": true
+    },
+    {
+      "path": "PUT /api/admin/hotels/[id]",
+      "explained": "Update hotel settings.",
+      "v01_new": true
     }
   ],
   "features": [
@@ -147,32 +173,51 @@
     "Daily OTB Time-Travel (Time-Machine View)",
     "Dashboard with KPI Cards, OTB Chart, Recommendations Table",
     "Real Pricing Engine Integration (Ladder Strategy)",
-    "Quick Filters (Today/7/14/30 Days/Custom)",
-    "Weekend Highlighting in Tables",
-    "Formula Explanations in UI",
-    "Accept/Override Decision Actions",
-    "Remaining Demand Forecast (Heuristic)",
     "Settings: Timezone, Fiscal Start Day, Ladder Config",
     "Comprehensive Guide/Help Page",
     "Excel Export",
-    "SaaS Pro Light Theme (consistent across all pages)"
+    "SaaS Pro Light Theme (consistent across all pages)",
+    "Google OAuth Authentication (NextAuth.js v5)",
+    "Role-Based Access Control (super_admin/hotel_admin/manager/viewer)",
+    "Multi-Hotel User Support with HotelSwitcher",
+    "Admin Panel (Users + Hotels management)",
+    "Blocked User auto sign-out"
   ],
+  "user_management_v01": {
+    "status": "Implemented",
+    "roles": {
+      "super_admin": "Global admin - access all hotels, all features",
+      "hotel_admin": "Per-hotel admin - full access within assigned hotels",
+      "manager": "Per-hotel manager - view + some edit permissions",
+      "viewer": "Per-hotel read-only access"
+    },
+    "pages": [
+      "/admin/users - User management with create/assign modals",
+      "/admin/hotels - Hotel management with create/edit modals",
+      "/select-hotel - Multi-hotel picker for users with multiple assignments",
+      "/blocked - Blocked user page (auto sign-out)",
+      "/no-hotel-access - Users without hotel assignments",
+      "/unauthorized - Permission denied page"
+    ],
+    "components": [
+      "HotelSwitcher - Dropdown in sidebar to switch active hotel",
+      "Sidebar - Updated with Admin Panel link (super_admin only)"
+    ]
+  },
   "decisions": [
     "Full-stack Next.js for MVP speed",
     "UUIDs for all Primary Keys (SaaS scalability)",
     "Append-Only reservations for audit trail",
     "Use Supabase for Database Hosting",
     "Heuristic Forecasting instead of ML for V01",
-    "Ladder Pricing Strategy with configurable presets (Conservative ±10%, Standard ±20%, Aggressive ±30%)",
+    "Ladder Pricing Strategy with configurable presets",
     "Use fast-xml-parser for server-side XML parsing",
-    "Dashboard uses PricingLogic.optimize() for real price recommendations",
-    "Normalize dates to midnight for Prisma date comparisons",
-    "Hotel capacity configurable in Settings (default 240)",
-    "Timezone support for regional OTB calculations",
-    "Git repository pushed to GitHub",
     "Light SaaS Pro theme with lavender gray (#F5F7FB) background",
-    "Consistent surface styling: rounded-2xl, white bg, subtle shadow",
-    "Number formatting with Intl.NumberFormat('vi-VN')"
+    "NextAuth.js v5 with Google OAuth for authentication",
+    "JWT-based session with user role and accessible hotels",
+    "httpOnly cookie for active hotel persistence",
+    "HotelUser junction table for many-to-many user-hotel relationships",
+    "Separate global role (User.role) and per-hotel role (HotelUser.role)"
   ],
   "ui_design": {
     "theme": "SaaS Pro Light",
@@ -180,43 +225,33 @@
       "background": "#F5F7FB (lavender gray)",
       "surface": "#ffffff (white cards)",
       "primary": "#1E3A8A (royal blue)",
-      "header_gradient": "linear-gradient(#1E3A8A → #102A4C)",
+      "sidebar": "#204184 (LOGO_BLUE)",
       "text": "#1e293b (dark gray)",
       "border": "slate-200/80"
     },
     "components": {
       "surface": "rounded-2xl bg-white border border-slate-200/80 shadow-[0_1px_2px_rgba(16,24,40,0.06)]",
       "header": "rounded-2xl px-6 py-4 text-white shadow-sm",
-      "container": "mx-auto max-w-[1400px] px-8 py-6 space-y-6"
-    },
-    "sidebar": {
-      "background": "#204184 (LOGO_BLUE)",
-      "border": "border-r border-white/10",
-      "active": "bg-white/10",
-      "hover": "bg-white/5"
+      "container": "mx-auto max-w-[1400px] px-8 py-6 space-y-6",
+      "sidebar": "fixed left-0 w-64 h-screen bg-[#204184] text-white"
     }
   },
   "knowledge_items": {
     "gotchas": [
       "DOMParser is browser-only, use fast-xml-parser for Node.js",
       "Prisma Date comparison requires exact match - normalize to midnight",
-      "apps/web was added as submodule - removed .git folder to fix",
       "Prisma generate fails while dev server running (file lock) - restart server",
-      "PricingLogic.optimize takes (currentPrice, remainingDemand, remainingSupply)",
-      "Layout files set background, but child components can override - must update all",
+      "PrismaClient cannot run in Edge Middleware - use API routes for DB calls",
       "Vercel monorepo: Must set Root Directory to 'apps/web' in Project Settings",
       "Vercel monorepo: Framework Preset must be 'Next.js', not 'Other'",
-      "Vercel: Don't use vercel.json with 'cd apps/web' if Root Directory already set",
-      "Vercel: Redeploy copies OLD deployment settings - delete project and reimport if settings wrong",
-      "Vercel: Production Overrides can differ from Project Settings - check both",
-      "tsconfig.json: Exclude 'scripts' folder to prevent build errors from dev scripts"
+      "TypeScript IDE may need restart after prisma generate to pick up new types",
+      "Admin pages need layout.tsx to include sidebar (app/admin/layout.tsx)"
     ],
     "formulas": {
       "rooms_otb": "SUM(num_rooms) from reservations for that stay_date",
       "remaining_supply": "Capacity − rooms_otb",
       "adr": "revenue_otb ÷ rooms_otb",
-      "recommended_price": "PricingLogic.optimize(ADR, forecast_demand, remaining_supply)",
-      "forecast_demand": "baseDemand * lead_time_factor (from features_daily)"
+      "recommended_price": "PricingLogic.optimize(ADR, forecast_demand, remaining_supply)"
     },
     "data_pipeline": {
       "step1": "Upload CSV/XML → reservations_raw",

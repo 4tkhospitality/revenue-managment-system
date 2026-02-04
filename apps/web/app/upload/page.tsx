@@ -1,29 +1,44 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Upload, FileText, CheckCircle, XCircle, Loader2, FileSpreadsheet, FileCode } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 import { ingestCSV } from '../actions/ingestCSV';
 import { ingestXML } from '../actions/ingestXML';
-
-const getHotelId = () => {
-    const hotelId = process.env.NEXT_PUBLIC_DEFAULT_HOTEL_ID;
-    if (!hotelId) {
-        console.warn('NEXT_PUBLIC_DEFAULT_HOTEL_ID not configured');
-    }
-    return hotelId || '';
-};
+import { ingestCancellationXml } from '../actions/ingestCancellationXml';
 
 type UploadStatus = 'idle' | 'uploading' | 'success' | 'error';
 type ReportType = 'booked' | 'cancelled';
 type FileType = 'csv' | 'xml';
 
 export default function UploadPage() {
+    const { data: session } = useSession();
     const [activeTab, setActiveTab] = useState<ReportType>('booked');
     const [status, setStatus] = useState<UploadStatus>('idle');
     const [message, setMessage] = useState<string>('');
     const [dragActive, setDragActive] = useState(false);
     const [resultDetails, setResultDetails] = useState<{ count?: number; reportDate?: string } | null>(null);
+    const [activeHotelId, setActiveHotelId] = useState<string | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
+
+    // Fetch active hotel from cookie on mount
+    useEffect(() => {
+        const fetchActiveHotel = async () => {
+            try {
+                const res = await fetch('/api/user/switch-hotel');
+                const data = await res.json();
+                if (data.activeHotelId) {
+                    setActiveHotelId(data.activeHotelId);
+                } else if (session?.user?.accessibleHotels?.length) {
+                    setActiveHotelId(session.user.accessibleHotels[0].hotelId);
+                }
+            } catch (error) {
+                console.error('Error fetching active hotel:', error);
+                setActiveHotelId(process.env.NEXT_PUBLIC_DEFAULT_HOTEL_ID || '');
+            }
+        };
+        fetchActiveHotel();
+    }, [session]);
 
     const detectFileType = (file: File): FileType => {
         if (file.name.endsWith('.xml')) return 'xml';
@@ -44,12 +59,41 @@ export default function UploadPage() {
         setResultDetails(null);
 
         try {
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('hotelId', getHotelId());
-            formData.append('reportType', activeTab);
+            const hotelId = activeHotelId || process.env.NEXT_PUBLIC_DEFAULT_HOTEL_ID || '';
+
+            if (!hotelId) {
+                setStatus('error');
+                setMessage('Không tìm thấy Hotel ID. Vui lòng đăng nhập lại.');
+                return;
+            }
 
             let result;
+
+            // Cancellation tab: use cancellation parser
+            if (activeTab === 'cancelled' && fileType === 'xml') {
+                const xmlContent = await file.text();
+                result = await ingestCancellationXml(hotelId, xmlContent, file.name);
+
+                if (result.success) {
+                    setStatus('success');
+                    setMessage(`Đã import ${result.recordCount} cancellations!`);
+                    setResultDetails({
+                        count: result.recordCount,
+                        reportDate: result.asOfDate
+                    });
+                } else {
+                    setStatus('error');
+                    setMessage(result.error || 'Import thất bại.');
+                }
+                return;
+            }
+
+            // Reservation tab: use existing parsers
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('hotelId', hotelId);
+            formData.append('reportType', activeTab);
+
             if (fileType === 'xml') {
                 result = await ingestXML(formData);
             } else {

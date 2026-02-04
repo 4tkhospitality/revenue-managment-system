@@ -42,6 +42,20 @@ export default async function DashboardPage() {
     const hotelCapacity = hotel?.capacity || 0;
     const hotelName = hotel?.name || 'Chưa đặt tên';
 
+    // Fetch latest reservation date
+    const latestReservation = await prisma.reservationsRaw.findFirst({
+        where: { hotel_id: hotelId },
+        orderBy: { booking_date: 'desc' },
+        select: { booking_date: true }
+    });
+
+    // Fetch latest cancellation date
+    const latestCancellation = await prisma.cancellationRaw.findFirst({
+        where: { hotel_id: hotelId },
+        orderBy: { cancel_time: 'desc' },
+        select: { cancel_time: true, as_of_date: true }
+    });
+
     // Fetch OTB Data - try today first, fallback to latest available
     let otbData = await prisma.dailyOTB.findMany({
         where: {
@@ -210,8 +224,26 @@ export default async function DashboardPage() {
                             Dashboard • {hotelCapacity} phòng
                         </p>
                     </div>
-                    <div className="px-3 py-1.5 bg-white/10 rounded-lg text-sm backdrop-blur-sm">
-                        Dữ liệu: {dataAsOf}
+                    <div className="flex items-center gap-4">
+                        <div className="text-right">
+                            <div className="text-xs text-white/60 mb-1">Dữ liệu đặt phòng</div>
+                            <div className="px-2 py-1 bg-emerald-500/20 rounded text-sm text-emerald-200">
+                                📅 {latestReservation
+                                    ? DateUtils.format(latestReservation.booking_date, 'dd/MM/yyyy')
+                                    : 'Chưa có'}
+                            </div>
+                        </div>
+                        <div className="text-right">
+                            <div className="text-xs text-white/60 mb-1">Dữ liệu hủy phòng</div>
+                            <div className="px-2 py-1 bg-rose-500/20 rounded text-sm text-rose-200">
+                                📅 {latestCancellation
+                                    ? DateUtils.format(latestCancellation.as_of_date, 'dd/MM/yyyy')
+                                    : 'Chưa có'}
+                            </div>
+                        </div>
+                        <div className="px-3 py-1.5 bg-white/10 rounded-lg text-sm backdrop-blur-sm">
+                            OTB: {dataAsOf}
+                        </div>
                     </div>
                 </div>
             </header>

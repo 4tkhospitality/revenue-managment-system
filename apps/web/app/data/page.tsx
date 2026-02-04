@@ -6,6 +6,7 @@ import { BuildFeaturesButton } from './BuildFeaturesButton';
 import { RunForecastButton } from './RunForecastButton';
 import { ResetButton } from './ResetButton';
 import { PaginatedImportJobs } from './PaginatedImportJobs';
+import { CancellationSection } from './CancellationSection';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,28 +14,28 @@ export default async function DataInspectorPage() {
     // Get import jobs
     const importJobs = await prisma.importJob.findMany({
         orderBy: { created_at: 'desc' },
-        take: 20
+        take: 10 // Reduced from 20 to 10
     });
 
-    // Get reservation count by booking date
+    // Get reservation count by booking date - limit to 10 for faster loading
     const reservationStats = await prisma.reservationsRaw.groupBy({
         by: ['booking_date', 'status'],
         _count: { reservation_id: true },
         _sum: { revenue: true, rooms: true },
         orderBy: { booking_date: 'desc' },
-        take: 30
+        take: 10 // Reduced from 30 to 10
     });
 
-    // Get recent reservations
+    // Get recent reservations - limit to 10 for faster loading
     const recentReservations = await prisma.reservationsRaw.findMany({
         orderBy: { booking_date: 'desc' },
-        take: 50
+        take: 10 // Reduced from 50 to 10
     });
 
-    // Get Daily OTB stats
+    // Get Daily OTB stats - limit to 10
     const dailyOtb = await prisma.dailyOTB.findMany({
         orderBy: { stay_date: 'asc' },
-        take: 30
+        take: 10 // Reduced from 30 to 10
     });
 
     // Total counts
@@ -111,7 +112,7 @@ export default async function DataInspectorPage() {
                 </div>
             </div>
 
-            {/* Import Jobs - Paginated */}
+            {/* Import Jobs - Paginated with Expand/Collapse */}
             <PaginatedImportJobs
                 initialJobs={importJobs.map(j => ({
                     job_id: j.job_id,
@@ -124,10 +125,74 @@ export default async function DataInspectorPage() {
                 totalCount={totalJobs}
             />
 
+            {/* 2-Column Layout: Recent Reservations + Cancellations */}
+            <div className="grid grid-cols-2 gap-6">
+                {/* Recent Reservations */}
+                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+                    <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
+                        <h2 className="text-lg font-semibold text-gray-900">🏨 Đặt phòng gần đây</h2>
+                        <span className="text-xs text-gray-500">10 bản ghi mới nhất</span>
+                    </div>
+                    <div className="overflow-x-auto max-h-80">
+                        <table className="w-full text-sm">
+                            <thead className="bg-gray-50 sticky top-0">
+                                <tr>
+                                    <th className="px-3 py-2 text-left text-gray-600 font-medium">Mã ĐP</th>
+                                    <th className="px-3 py-2 text-left text-gray-600 font-medium">Ngày đặt</th>
+                                    <th className="px-3 py-2 text-left text-gray-600 font-medium">Đến</th>
+                                    <th className="px-3 py-2 text-right text-gray-600 font-medium">Phòng</th>
+                                    <th className="px-3 py-2 text-right text-gray-600 font-medium">DT</th>
+                                    <th className="px-3 py-2 text-left text-gray-600 font-medium">TT</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {recentReservations.map((res) => (
+                                    <tr key={res.id} className="border-t border-gray-100 hover:bg-gray-50">
+                                        <td className="px-3 py-2 text-blue-600 font-mono text-xs">
+                                            {res.reservation_id}
+                                        </td>
+                                        <td className="px-3 py-2 text-gray-900 text-xs">
+                                            {DateUtils.format(res.booking_date, 'dd/MM/yy')}
+                                        </td>
+                                        <td className="px-3 py-2 text-gray-900 text-xs">
+                                            {DateUtils.format(res.arrival_date, 'dd/MM/yy')}
+                                        </td>
+                                        <td className="px-3 py-2 text-gray-900 text-right">
+                                            {res.rooms}
+                                        </td>
+                                        <td className="px-3 py-2 text-gray-900 text-right font-mono text-xs">
+                                            {(Number(res.revenue) / 1000000).toFixed(1)}M
+                                        </td>
+                                        <td className="px-3 py-2">
+                                            <span className={`px-2 py-0.5 rounded text-xs ${res.status === 'booked' ? 'bg-emerald-100 text-emerald-700' :
+                                                'bg-rose-100 text-rose-700'
+                                                }`}>
+                                                {res.status === 'booked' ? '✓' : '✗'}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {recentReservations.length === 0 && (
+                                    <tr>
+                                        <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
+                                            Chưa có reservations nào
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {/* Cancellations */}
+                <CancellationSection />
+            </div>
+
             {/* Reservations by Booking Date */}
             <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
                 <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
                     <h2 className="text-lg font-semibold text-gray-900">📅 Reservations theo Ngày đặt</h2>
+                    <span className="text-xs text-gray-500">10 ngày gần nhất</span>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
@@ -167,66 +232,6 @@ export default async function DataInspectorPage() {
                             {reservationStats.length === 0 && (
                                 <tr>
                                     <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
-                                        Chưa có reservations nào
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            {/* Recent Reservations */}
-            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-                <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-                    <h2 className="text-lg font-semibold text-gray-900">🏨 Reservations gần đây (50 gần nhất)</h2>
-                </div>
-                <div className="overflow-x-auto max-h-96">
-                    <table className="w-full text-sm">
-                        <thead className="bg-gray-50 sticky top-0">
-                            <tr>
-                                <th className="px-3 py-2 text-left text-gray-600 font-medium">Mã ĐP</th>
-                                <th className="px-3 py-2 text-left text-gray-600 font-medium">Ngày đặt</th>
-                                <th className="px-3 py-2 text-left text-gray-600 font-medium">Đến</th>
-                                <th className="px-3 py-2 text-left text-gray-600 font-medium">Đi</th>
-                                <th className="px-3 py-2 text-right text-gray-600 font-medium">Phòng</th>
-                                <th className="px-3 py-2 text-right text-gray-600 font-medium">Doanh thu</th>
-                                <th className="px-3 py-2 text-left text-gray-600 font-medium">Trạng thái</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {recentReservations.map((res) => (
-                                <tr key={res.id} className="border-t border-gray-100 hover:bg-gray-50">
-                                    <td className="px-3 py-2 text-blue-600 font-mono text-xs">
-                                        {res.reservation_id}
-                                    </td>
-                                    <td className="px-3 py-2 text-gray-900 text-xs">
-                                        {DateUtils.format(res.booking_date, 'dd/MM/yy')}
-                                    </td>
-                                    <td className="px-3 py-2 text-gray-900 text-xs">
-                                        {DateUtils.format(res.arrival_date, 'dd/MM/yy')}
-                                    </td>
-                                    <td className="px-3 py-2 text-gray-900 text-xs">
-                                        {DateUtils.format(res.departure_date, 'dd/MM/yy')}
-                                    </td>
-                                    <td className="px-3 py-2 text-gray-900 text-right">
-                                        {res.rooms}
-                                    </td>
-                                    <td className="px-3 py-2 text-gray-900 text-right font-mono text-xs">
-                                        {(Number(res.revenue) / 1000000).toFixed(1)}M
-                                    </td>
-                                    <td className="px-3 py-2">
-                                        <span className={`px-2 py-0.5 rounded text-xs ${res.status === 'booked' ? 'bg-emerald-100 text-emerald-700' :
-                                            'bg-rose-100 text-rose-700'
-                                            }`}>
-                                            {res.status === 'booked' ? 'Đã đặt' : 'Đã huỷ'}
-                                        </span>
-                                    </td>
-                                </tr>
-                            ))}
-                            {recentReservations.length === 0 && (
-                                <tr>
-                                    <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
                                         Chưa có reservations nào
                                     </td>
                                 </tr>

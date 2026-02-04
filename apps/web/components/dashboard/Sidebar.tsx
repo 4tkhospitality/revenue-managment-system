@@ -3,7 +3,9 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Upload, Database, Settings, BookOpen } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import { LayoutDashboard, Upload, Database, Settings, BookOpen, Shield } from 'lucide-react';
+import { HotelSwitcher } from '@/components/HotelSwitcher';
 
 // Navigation items - Vietnamese
 const navItems = [
@@ -16,10 +18,10 @@ const navItems = [
 
 // Brand blue from logo - exact color match
 const LOGO_BLUE = '#204184';
-const LOGO_BLUE_DARK = '#1a3670';
 
 export function Sidebar() {
     const pathname = usePathname();
+    const { data: session } = useSession();
 
     return (
         <aside
@@ -40,6 +42,11 @@ export function Sidebar() {
                     style={{ maxHeight: '100px' }}
                     priority
                 />
+            </div>
+
+            {/* Hotel Switcher */}
+            <div className="px-4 pb-4">
+                <HotelSwitcher />
             </div>
 
             {/* Navigation */}
@@ -73,6 +80,21 @@ export function Sidebar() {
                         </Link>
                     );
                 })}
+
+                {/* Admin Link - Only for super_admin */}
+                {session?.user?.isAdmin && (
+                    <Link
+                        href="/admin/users"
+                        className="flex items-center gap-3 px-6 py-3 text-sm font-medium transition-all duration-200 mx-2 rounded-lg mb-1 mt-4 border-t border-white/10 pt-4"
+                        style={{
+                            backgroundColor: pathname.startsWith('/admin') ? 'rgba(255,255,255,0.2)' : 'transparent',
+                            color: '#ffffff',
+                        }}
+                    >
+                        <Shield className="w-5 h-5" />
+                        Admin Panel
+                    </Link>
+                )}
             </nav>
 
             {/* Footer */}

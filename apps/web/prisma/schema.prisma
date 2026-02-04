@@ -26,6 +26,19 @@ enum DecisionAction {
   override
 }
 
+enum ImportType {
+  RESERVATION
+  CANCELLATION
+}
+
+// User roles - global and per-hotel
+enum UserRole {
+  super_admin   // Global system admin
+  hotel_admin   // Full access for assigned hotel
+  manager       // View + edit + pricing
+  viewer        // Read-only
+}
+
 // Models
 
 model Hotel {
@@ -33,15 +46,17 @@ model Hotel {
   name              String
   timezone          String   @default("Asia/Ho_Chi_Minh")
   capacity          Int
-  currency          String   @default("USD")
+  currency          String   @default("VND")
   default_base_rate Decimal? @db.Decimal(12, 2)
   min_rate          Decimal? @db.Decimal(12, 2)
   max_rate          Decimal? @db.Decimal(12, 2)
   fiscal_start_day  Int      @default(1)  // 1-31, first day of fiscal month
   ladder_steps      String?  // JSON array: "[-0.2,-0.1,-0.05,0,0.05,0.1,0.2]"
+  company_email     String?  // Optional - for reports/export only
   created_at        DateTime @default(now())
 
-  users                 User[]
+  users                 User[]           // Legacy relation
+  hotel_users           HotelUser[]      // New multi-hotel relation
   import_jobs           ImportJob[]
   reservations_raw      ReservationsRaw[]
   daily_otb             DailyOTB[]
@@ -49,37 +64,108 @@ model Hotel {
   demand_forecast       DemandForecast[]
   price_recommendations PriceRecommendations[]
   pricing_decisions     PricingDecision[]
+  cancellations_raw     CancellationRaw[]
 
   @@map("hotels")
 }
 
 model User {
-  user_id    String   @id @default(uuid()) @db.Uuid
-  hotel_id   String   @db.Uuid
-  email      String   @unique
-  role       String   @default("manager")
-  created_at DateTime @default(now())
+  id            String    @id @default(uuid()) @db.Uuid @map("user_id")
+  hotel_id      String?   @db.Uuid  // Legacy - kept for migration, remove in V02
+  email         String    @unique
+  emailVerified DateTime? @map("email_verified")
+  name          String?
+  image         String?   @map("avatar_url")
+  role          UserRole  @default(viewer)  // Global role (only super_admin is meaningful)
+  is_active     Boolean   @default(true)    // V01: blocked user check
+  created_at    DateTime  @default(now())
 
-  hotel             Hotel             @relation(fields: [hotel_id], references: [hotel_id])
+  // Relations
+  hotel             Hotel?            @relation(fields: [hotel_id], references: [hotel_id])
+  hotel_users       HotelUser[]       // New: multi-hotel access
   pricing_decisions PricingDecision[]
+  accounts          Account[]
+  sessions          Session[]
 
   @@map("users")
 }
 
+// V01: Junction table for User-Hotel many-to-many with per-hotel roles
+model HotelUser {
+  id         String   @id @default(uuid()) @db.Uuid
+  user_id    String   @db.Uuid
+  hotel_id   String   @db.Uuid
+  role       UserRole @default(viewer)  // Per-hotel role: hotel_admin/manager/viewer (NEVER super_admin)
+  is_primary Boolean  @default(false)   // Primary hotel for multi-hotel users
+  created_at DateTime @default(now())
+
+  user  User  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  hotel Hotel @relation(fields: [hotel_id], references: [hotel_id], onDelete: Cascade)
+
+  @@unique([user_id, hotel_id])
+  @@index([hotel_id])
+  @@map("hotel_users")
+}
+
+// NextAuth.js required models
+model Account {
+  id                String  @id @default(uuid()) @db.Uuid
+  userId            String  @db.Uuid
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+
+model Session {
+  id           String   @id @default(uuid()) @db.Uuid
+  sessionToken String   @unique
+  userId       String   @db.Uuid
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
 model ImportJob {
-  job_id        String    @id @default(uuid()) @db.Uuid
-  hotel_id      String    @db.Uuid
+  job_id        String     @id @default(uuid()) @db.Uuid
+  hotel_id      String     @db.Uuid
+  import_type   ImportType @default(RESERVATION)
   file_name     String
   file_hash     String?
-  status        JobStatus @default(pending)
+  status        JobStatus  @default(pending)
   error_summary String?
   total_rows    Int?
   error_log     Json?
-  created_at    DateTime  @default(now())
+  created_at    DateTime   @default(now())
   finished_at   DateTime?
 
-  hotel            Hotel             @relation(fields: [hotel_id], references: [hotel_id])
-  reservations_raw ReservationsRaw[]
+  hotel             Hotel             @relation(fields: [hotel_id], references: [hotel_id])
+  reservations_raw  ReservationsRaw[]
+  cancellations_raw CancellationRaw[]
 
   @@map("import_jobs")
 }
@@ -189,7 +275,38 @@ model PricingDecision {
   decided_at   DateTime       @default(now())
 
   hotel Hotel @relation(fields: [hotel_id], references: [hotel_id])
-  user  User  @relation(fields: [user_id], references: [user_id])
+  user  User  @relation(fields: [user_id], references: [id])
 
   @@map("pricing_decisions")
+}
+
+
+// V01 Feature: Cancellation Import
+model CancellationRaw {
+  id            String   @id @default(uuid()) @db.Uuid
+  hotel_id      String   @db.Uuid
+  job_id        String   @db.Uuid
+
+  folio_num     String
+  arrival_date  DateTime @db.Date
+  cancel_time   DateTime
+  as_of_date    DateTime @db.Date  // From {@fmFromDate} in XML header
+  nights        Int
+  rate_amount   Decimal  @db.Decimal(12, 2)
+  total_revenue Decimal  @db.Decimal(12, 2)
+  channel       String?  // sTA_Company from XML
+  sale_group    String?  // GroupName (Sale) from XML
+  room_type     String?  // RoomTypeCode from XML
+  room_code     String?  // Roomcode from XML
+  guest_name    String?
+
+  created_at    DateTime @default(now())
+
+  hotel Hotel     @relation(fields: [hotel_id], references: [hotel_id])
+  job   ImportJob @relation(fields: [job_id], references: [job_id])
+
+  @@index([hotel_id, as_of_date], name: "idx_cancel_as_of")
+  @@index([hotel_id, cancel_time], name: "idx_cancel_time")
+  @@index([hotel_id, arrival_date], name: "idx_cancel_arrival")
+  @@map("cancellations_raw")
 }
