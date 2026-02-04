@@ -9,6 +9,17 @@ export async function CancellationSection() {
         _sum: { nights: true, total_revenue: true }
     });
 
+    // V01.1: Match status breakdown
+    const matchStatusStats = await prisma.cancellationRaw.groupBy({
+        by: ['match_status'],
+        _count: { id: true }
+    });
+
+    const matchedCount = matchStatusStats.find(s => s.match_status === 'matched')?._count.id || 0;
+    const unmatchedCount = matchStatusStats.find(s => s.match_status === 'unmatched')?._count.id || 0;
+    const ambiguousCount = matchStatusStats.find(s => s.match_status === 'ambiguous')?._count.id || 0;
+    const pendingCount = matchStatusStats.find(s => s.match_status === 'pending' || !s.match_status)?._count.id || 0;
+
     // Group by channel (all time)
     const byChannel = await prisma.cancellationRaw.groupBy({
         by: ['channel'],
@@ -27,6 +38,7 @@ export async function CancellationSection() {
     const totalNights = cancellationStats._sum.nights || 0;
     const totalRevenue = Number(cancellationStats._sum.total_revenue || 0);
     const totalCount = cancellationStats._count.id || 0;
+    const matchRate = totalCount > 0 ? Math.round((matchedCount / totalCount) * 100) : 0;
 
     return (
         <div className="bg-white border border-rose-200 rounded-xl overflow-hidden shadow-sm">
@@ -50,6 +62,34 @@ export async function CancellationSection() {
                         {(totalRevenue / 1000000).toFixed(1)}M
                     </div>
                     <div className="text-xs text-gray-500">Doanh thu mất</div>
+                </div>
+            </div>
+
+            {/* V01.1: Match Status Breakdown */}
+            <div className="p-3 border-b border-gray-100 bg-gray-50">
+                <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-xs font-medium text-gray-700">🔗 Trạng thái khớp (Bridge)</h3>
+                    <span className="text-xs text-emerald-600 font-medium">{matchRate}% đã khớp</span>
+                </div>
+                <div className="flex gap-2">
+                    <div className="flex-1 px-2 py-1 bg-emerald-100 rounded text-center">
+                        <div className="text-sm font-bold text-emerald-700">{matchedCount}</div>
+                        <div className="text-[10px] text-emerald-600">Matched</div>
+                    </div>
+                    <div className="flex-1 px-2 py-1 bg-amber-100 rounded text-center">
+                        <div className="text-sm font-bold text-amber-700">{unmatchedCount}</div>
+                        <div className="text-[10px] text-amber-600">Unmatched</div>
+                    </div>
+                    <div className="flex-1 px-2 py-1 bg-purple-100 rounded text-center">
+                        <div className="text-sm font-bold text-purple-700">{ambiguousCount}</div>
+                        <div className="text-[10px] text-purple-600">Ambiguous</div>
+                    </div>
+                    {pendingCount > 0 && (
+                        <div className="flex-1 px-2 py-1 bg-gray-100 rounded text-center">
+                            <div className="text-sm font-bold text-gray-700">{pendingCount}</div>
+                            <div className="text-[10px] text-gray-600">Pending</div>
+                        </div>
+                    )}
                 </div>
             </div>
 

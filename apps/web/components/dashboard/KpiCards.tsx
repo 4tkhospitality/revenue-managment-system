@@ -1,10 +1,11 @@
 'use client';
 
-import { ArrowUpRight, ArrowDownRight, Minus, Lightbulb, TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Minus, Lightbulb, TrendingUp, TrendingDown, AlertTriangle, XCircle } from 'lucide-react';
 
 // Number formatters for Vietnamese style
 const nf0 = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 });
 const nf1 = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 });
+const nfCurrency = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 });
 
 // Surface styling - consistent across all cards
 const surface = "rounded-2xl bg-white border border-slate-200/80 shadow-[0_1px_2px_rgba(16,24,40,0.06)]";
@@ -14,6 +15,9 @@ interface KpiData {
     remainingSupply: number;
     avgPickupT7: number;
     forecastDemand: number;
+    // V01.1: Cancellation stats
+    cancelledRooms?: number;
+    lostRevenue?: number;
 }
 
 interface KpiCardProps {
@@ -201,6 +205,45 @@ export function KpiCards({ data, hotelCapacity }: KpiCardsProps) {
                     formula="SUM(remaining_demand)"
                 />
             </div>
+
+            {/* Cancellation Stats Row - V01.1 */}
+            {(data.cancelledRooms !== undefined || data.lostRevenue !== undefined) && (
+                <div className="grid grid-cols-2 gap-4">
+                    <div className={`${surface} p-5 flex flex-col gap-2 hover:shadow-md transition-shadow border-l-4 border-l-red-400`}>
+                        <div className="flex items-center gap-2">
+                            <XCircle className="w-4 h-4 text-red-500" />
+                            <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                                Phòng đã hủy (30 ngày)
+                            </p>
+                        </div>
+                        <div className="flex items-end justify-between">
+                            <p className="text-3xl font-bold text-red-600">
+                                {nf0.format(data.cancelledRooms || 0)}
+                            </p>
+                            <span className="text-xs text-gray-400">room-nights</span>
+                        </div>
+                        <p className="text-[10px] font-mono mt-1 pt-2 text-gray-400 border-t border-slate-100">
+                            📐 Tổng phòng bị hủy trong 30 ngày tới
+                        </p>
+                    </div>
+                    <div className={`${surface} p-5 flex flex-col gap-2 hover:shadow-md transition-shadow border-l-4 border-l-amber-400`}>
+                        <div className="flex items-center gap-2">
+                            <AlertTriangle className="w-4 h-4 text-amber-500" />
+                            <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                                Doanh thu mất (30 ngày)
+                            </p>
+                        </div>
+                        <div className="flex items-end justify-between">
+                            <p className="text-3xl font-bold text-amber-600">
+                                {nfCurrency.format(data.lostRevenue || 0)}
+                            </p>
+                        </div>
+                        <p className="text-[10px] font-mono mt-1 pt-2 text-gray-400 border-t border-slate-100">
+                            📐 Tổng doanh thu từ booking đã hủy
+                        </p>
+                    </div>
+                </div>
+            )}
 
             {/* Insights Panel */}
             {insights.length > 0 && (

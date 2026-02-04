@@ -125,11 +125,45 @@ export default async function DashboardPage() {
         ? featuresData.reduce((sum, f) => sum + (f.pickup_t7 || 0), 0) / featuresData.length
         : 0; // Show 0 if no data yet
 
+    // V01.1: Calculate cancellation stats (next 30 days)
+    const thirtyDaysLater = new Date(today);
+    thirtyDaysLater.setDate(thirtyDaysLater.getDate() + 30);
+
+    // Get reservations that have been cancelled with cancel_time set
+    const cancelledReservations = await prisma.reservationsRaw.findMany({
+        where: {
+            hotel_id: hotelId,
+            cancel_time: { not: null },
+            arrival_date: { gte: today, lte: thirtyDaysLater }
+        },
+        select: {
+            rooms: true,
+            revenue: true,
+            arrival_date: true,
+            departure_date: true
+        }
+    });
+
+    // Calculate cancelled room-nights and lost revenue
+    let cancelledRooms = 0;
+    let lostRevenue = 0;
+    for (const res of cancelledReservations) {
+        const nights = Math.max(1, Math.ceil(
+            (new Date(res.departure_date).getTime() - new Date(res.arrival_date).getTime()) / (1000 * 60 * 60 * 24)
+        ));
+        cancelledRooms += (res.rooms || 1) * nights;
+        lostRevenue += Number(res.revenue || 0);
+    }
+
+
     const kpiData = {
         roomsOtb: totalOtb,
         remainingSupply,
         avgPickupT7,
         forecastDemand: totalForecast,
+        // V01.1: Cancellation stats
+        cancelledRooms,
+        lostRevenue,
     };
 
     // Fetch Chart Data (OTB This Year vs Last Year)
