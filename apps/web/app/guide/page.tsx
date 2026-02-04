@@ -31,6 +31,7 @@ export default function GuidePage() {
                         <a href="#upload" className="block text-blue-600 hover:text-blue-700">3. Import dữ liệu</a>
                         <a href="#upload-reservation" className="block text-blue-600 hover:text-blue-700 ml-4">3.1. Import đặt phòng</a>
                         <a href="#upload-cancellation" className="block text-blue-600 hover:text-blue-700 ml-4">3.2. Import hủy phòng (MỚI)</a>
+                        <a href="#cancel-impact" className="block text-blue-600 hover:text-blue-700 ml-4">3.3. Ảnh hưởng khi hủy phòng</a>
                         <a href="#data-inspector" className="block text-blue-600 hover:text-blue-700">4. Data Inspector</a>
                         <a href="#settings" className="block text-blue-600 hover:text-blue-700">5. Cài đặt khách sạn</a>
                         <a href="#thuat-ngu" className="block text-blue-600 hover:text-blue-700">6. Thuật ngữ chuyên ngành</a>
@@ -278,6 +279,89 @@ export default function GuidePage() {
                                 <p className="text-emerald-700 text-sm">
                                     <strong>💡 Lưu ý:</strong> Chỉ hủy toàn bộ booking được hỗ trợ (không hỗ trợ hủy một phần đêm).
                                 </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 3.3 Cancellation Impact */}
+                    <div id="cancel-impact" className="border-t border-gray-200 pt-4">
+                        <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2 mb-3">
+                            📊 3.3. Ảnh hưởng khi nhập booking hủy
+                        </h3>
+
+                        <div className="text-gray-700 space-y-4">
+                            <p>
+                                Khi import file hủy phòng, hệ thống sẽ <strong>tự động cập nhật</strong> các chỉ số sau:
+                            </p>
+
+                            {/* Impact Table */}
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead className="bg-gray-100">
+                                        <tr>
+                                            <th className="px-3 py-2 text-left text-gray-600">Chỉ số</th>
+                                            <th className="px-3 py-2 text-center text-gray-600">Trước hủy</th>
+                                            <th className="px-3 py-2 text-center text-gray-600">Sau hủy</th>
+                                            <th className="px-3 py-2 text-center text-gray-600">Thay đổi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="text-gray-700">
+                                        <tr className="border-t border-gray-100">
+                                            <td className="px-3 py-2 font-medium">Rooms OTB</td>
+                                            <td className="px-3 py-2 text-center">50 phòng</td>
+                                            <td className="px-3 py-2 text-center">48 phòng</td>
+                                            <td className="px-3 py-2 text-center text-red-600">↓ -2</td>
+                                        </tr>
+                                        <tr className="border-t border-gray-100">
+                                            <td className="px-3 py-2 font-medium">Revenue OTB</td>
+                                            <td className="px-3 py-2 text-center">100M</td>
+                                            <td className="px-3 py-2 text-center">96M</td>
+                                            <td className="px-3 py-2 text-center text-red-600">↓ -4M</td>
+                                        </tr>
+                                        <tr className="border-t border-gray-100 bg-emerald-50">
+                                            <td className="px-3 py-2 font-medium">Remaining Supply</td>
+                                            <td className="px-3 py-2 text-center">10 phòng</td>
+                                            <td className="px-3 py-2 text-center">12 phòng</td>
+                                            <td className="px-3 py-2 text-center text-emerald-600">↑ +2</td>
+                                        </tr>
+                                        <tr className="border-t border-gray-100">
+                                            <td className="px-3 py-2 font-medium">Occupancy</td>
+                                            <td className="px-3 py-2 text-center">83%</td>
+                                            <td className="px-3 py-2 text-center">80%</td>
+                                            <td className="px-3 py-2 text-center text-red-600">↓ -3%</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Processing Flow */}
+                            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                                <h4 className="font-medium text-blue-700 mb-2">🔄 Luồng xử lý tự động:</h4>
+                                <ol className="text-sm text-gray-700 space-y-1">
+                                    <li><strong>1.</strong> Parse XML → Lưu vào bảng <code className="bg-blue-100 px-1 rounded">cancellations_raw</code></li>
+                                    <li><strong>2.</strong> Tìm booking gốc theo Folio Number + Arrival Date</li>
+                                    <li><strong>3.</strong> Cập nhật trạng thái booking → Cancelled</li>
+                                    <li><strong>4.</strong> Khi Build OTB → Booking đã hủy bị loại khỏi tính toán</li>
+                                </ol>
+                            </div>
+
+                            {/* Pricing Impact */}
+                            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                                <h4 className="font-medium text-amber-700 mb-2">💰 Ảnh hưởng đến Pricing Engine:</h4>
+                                <p className="text-sm text-gray-700">
+                                    Khi có nhiều booking bị hủy → <strong>Remaining Supply tăng</strong> →
+                                    Pricing Engine sẽ khuyến nghị giá <strong>thấp hơn</strong> để kích cầu.
+                                </p>
+                            </div>
+
+                            {/* Special Cases */}
+                            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                                <h4 className="font-medium text-gray-700 mb-2">⚠️ Các trường hợp đặc biệt:</h4>
+                                <ul className="text-sm text-gray-600 space-y-1">
+                                    <li>• <strong>Không tìm thấy booking gốc:</strong> Đánh dấu &quot;unmatched&quot;, cần kiểm tra thủ công</li>
+                                    <li>• <strong>Nhiều booking giống nhau:</strong> Đánh dấu &quot;ambiguous&quot;, cần review</li>
+                                    <li>• <strong>Booking đã bị hủy trước đó:</strong> Bỏ qua, không xử lý trùng</li>
+                                </ul>
                             </div>
                         </div>
                     </div>
