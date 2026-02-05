@@ -31,46 +31,70 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 token.picture = profile.picture
             }
 
-            // Always fetch fresh user data from DB (for role changes)
-            if (token.email) {
+            // Only fetch from DB on initial sign in (not every request)
+            // This avoids edge runtime issues
+            if (account && token.email) {
                 try {
+                    console.log('[AUTH] Initial sign-in, fetching user:', token.email)
+
+                    // Step 1: Find user
                     const user = await prisma.user.findUnique({
                         where: { email: token.email as string },
-                        include: {
-                            hotel_users: {
-                                include: {
-                                    hotel: {
-                                        select: { hotel_id: true, name: true }
-                                    }
-                                }
-                            }
+                        select: {
+                            id: true,
+                            email: true,
+                            role: true,
+                            is_active: true,
                         }
                     })
 
                     if (user) {
+                        console.log('[AUTH] User found:', user.email)
                         token.userId = user.id
                         token.role = user.role
                         token.isActive = user.is_active
                         token.isAdmin = user.role === 'super_admin'
 
-                        // Map HotelUser records to accessible hotels
-                        token.accessibleHotels = user.hotel_users.map(hu => ({
+                        // Step 2: Find hotel assignments separately
+                        const hotelUsers = await prisma.hotelUser.findMany({
+                            where: { user_id: user.id },
+                            select: {
+                                hotel_id: true,
+                                role: true,
+                                is_primary: true,
+                            }
+                        })
+
+                        console.log('[AUTH] Hotel assignments:', hotelUsers.length)
+
+                        // Step 3: Get hotel names
+                        const hotelIds = hotelUsers.map(hu => hu.hotel_id)
+                        const hotels = await prisma.hotel.findMany({
+                            where: { hotel_id: { in: hotelIds } },
+                            select: { hotel_id: true, name: true }
+                        })
+
+                        const hotelMap = new Map(hotels.map(h => [h.hotel_id, h.name]))
+
+                        // Map to accessibleHotels
+                        token.accessibleHotels = hotelUsers.map(hu => ({
                             hotelId: hu.hotel_id,
-                            hotelName: hu.hotel.name,
+                            hotelName: hotelMap.get(hu.hotel_id) || 'Unknown Hotel',
                             role: hu.role,
                             isPrimary: hu.is_primary,
                         }))
+
+                        console.log('[AUTH] accessibleHotels:', JSON.stringify(token.accessibleHotels))
                     } else {
-                        // User exists in NextAuth but not in our DB yet
-                        // This happens on first OAuth sign-in
+                        console.log('[AUTH] User NOT found in DB:', token.email)
                         token.role = 'viewer'
                         token.isActive = true
                         token.isAdmin = token.email === ADMIN_EMAIL
                         token.accessibleHotels = []
                     }
                 } catch (error) {
-                    console.error('Error fetching user data in JWT callback:', error)
-                    // Fallback for edge runtime or DB errors
+                    console.error('[AUTH] ERROR in JWT callback:', error)
+                    // Fallback for DB errors
                     token.role = 'viewer'
                     token.isActive = true
                     token.isAdmin = token.email === ADMIN_EMAIL
