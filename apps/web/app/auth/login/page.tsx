@@ -41,15 +41,20 @@ export default function LoginPage() {
                 }}
             >
                 <div className="p-10">
-                    {/* Logo - hiển thị trực tiếp, không cần khung thêm */}
+                    {/* Logo - với nền xanh brand để tiệp màu logo JPG */}
                     <div className="flex justify-center mb-6">
-                        <Image
-                            src="/logo.jpg"
-                            alt="4TK Hospitality"
-                            width={100}
-                            height={100}
-                            className="rounded-2xl object-contain"
-                        />
+                        <div
+                            className="rounded-2xl p-0.5"
+                            style={{ backgroundColor: BRAND.primary }}
+                        >
+                            <Image
+                                src="/logo.jpg"
+                                alt="4TK Hospitality"
+                                width={100}
+                                height={100}
+                                className="rounded-2xl object-contain"
+                            />
+                        </div>
                     </div>
 
                     {/* Title - text-white cho title chính */}
