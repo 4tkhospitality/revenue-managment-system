@@ -51,28 +51,33 @@ export default function AdminHotelsPage() {
     }
 
     return (
-        <div className="mx-auto max-w-[1400px] px-8 py-6">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
+        <div className="mx-auto max-w-[1400px] px-8 py-6 space-y-6">
+            {/* Header - consistent with other pages */}
+            <header
+                className="rounded-2xl px-6 py-4 text-white flex items-center justify-between shadow-sm"
+                style={{ background: 'linear-gradient(to right, #1E3A8A, #102A4C)' }}
+            >
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">🏨 Quản lý Hotels</h1>
-                    <p className="text-gray-500 mt-1">Danh sách khách sạn trong hệ thống</p>
+                    <h1 className="text-lg font-semibold">🏨 Quản lý Hotels</h1>
+                    <p className="text-white/70 text-sm mt-1">
+                        Danh sách khách sạn trong hệ thống
+                    </p>
                 </div>
                 <div className="flex items-center gap-3">
                     <Link
                         href="/admin/users"
-                        className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                        className="px-4 py-2 bg-white/15 text-white rounded-lg hover:bg-white/25 transition-colors backdrop-blur-sm text-sm"
                     >
                         👥 Quản lý Users
                     </Link>
                     <button
                         onClick={() => setShowCreateModal(true)}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        className="px-4 py-2 bg-white text-blue-900 font-medium rounded-lg hover:bg-blue-50 transition-colors text-sm"
                     >
                         + Thêm Hotel
                     </button>
                 </div>
-            </div>
+            </header>
 
             {/* Hotels Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
