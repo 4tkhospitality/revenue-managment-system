@@ -14,7 +14,7 @@ const navItems = [
     { href: '/upload', label: 'Tải lên', icon: Upload },
     { href: '/data', label: 'Dữ liệu', icon: Database },
     { href: '/pricing', label: 'Tính giá OTA', icon: DollarSign },
-    { href: '/settings', label: 'Cài đặt', icon: Settings },
+    { href: '/settings', label: 'Cài đặt', icon: Settings, hideForDemo: true },
     { href: '/guide', label: 'Hướng dẫn', icon: BookOpen },
 ];
 
@@ -25,6 +25,21 @@ export function Sidebar() {
     const pathname = usePathname();
     const { data: session } = useSession();
     const [isOpen, setIsOpen] = useState(false);
+    const [isDemo, setIsDemo] = useState(false);
+
+    // Check if Demo Hotel
+    useEffect(() => {
+        const checkDemoHotel = async () => {
+            try {
+                const res = await fetch('/api/is-demo-hotel');
+                const data = await res.json();
+                setIsDemo(data.isDemo || false);
+            } catch (error) {
+                console.error('Error checking demo hotel:', error);
+            }
+        };
+        checkDemoHotel();
+    }, []);
 
     // Close sidebar when route changes (mobile)
     useEffect(() => {
@@ -39,6 +54,9 @@ export function Sidebar() {
         document.addEventListener('keydown', handleEscape);
         return () => document.removeEventListener('keydown', handleEscape);
     }, []);
+
+    // Filter nav items based on Demo Hotel status
+    const filteredNavItems = navItems.filter(item => !isDemo || !item.hideForDemo);
 
     return (
         <>
@@ -117,7 +135,7 @@ export function Sidebar() {
 
                 {/* Navigation */}
                 <nav className="flex-1 py-2 overflow-y-auto">
-                    {navItems.map((item) => {
+                    {filteredNavItems.map((item) => {
                         const isActive = pathname === item.href ||
                             (item.href !== '/dashboard' && pathname.startsWith(item.href));
                         const Icon = item.icon;
@@ -140,6 +158,7 @@ export function Sidebar() {
 
                     {/* Admin Link - Only for super_admin */}
                     {session?.user?.isAdmin && (
+
                         <Link
                             href="/admin/users"
                             className="flex items-center gap-3 px-6 py-3 text-sm font-medium transition-all duration-200 mx-2 rounded-lg mb-1 mt-4 border-t border-white/10 pt-4"

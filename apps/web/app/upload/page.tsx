@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Upload, FileText, CheckCircle, XCircle, Loader2, FileSpreadsheet, FileCode } from 'lucide-react';
+import { Upload, FileText, CheckCircle, XCircle, Loader2, FileSpreadsheet, FileCode, Lock } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { ingestCSV } from '../actions/ingestCSV';
 import { ingestXML } from '../actions/ingestXML';
@@ -19,9 +19,10 @@ export default function UploadPage() {
     const [dragActive, setDragActive] = useState(false);
     const [resultDetails, setResultDetails] = useState<{ count?: number; reportDate?: string } | null>(null);
     const [activeHotelId, setActiveHotelId] = useState<string | null>(null);
+    const [isDemo, setIsDemo] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
 
-    // Fetch active hotel from cookie on mount
+    // Fetch active hotel and check if Demo Hotel
     useEffect(() => {
         const fetchActiveHotel = async () => {
             try {
@@ -32,6 +33,11 @@ export default function UploadPage() {
                 } else if (session?.user?.accessibleHotels?.length) {
                     setActiveHotelId(session.user.accessibleHotels[0].hotelId);
                 }
+
+                // Check if Demo Hotel
+                const demoRes = await fetch('/api/is-demo-hotel');
+                const demoData = await demoRes.json();
+                setIsDemo(demoData.isDemo || false);
             } catch (error) {
                 console.error('Error fetching active hotel:', error);
                 setActiveHotelId(process.env.NEXT_PUBLIC_DEFAULT_HOTEL_ID || '');
@@ -46,6 +52,13 @@ export default function UploadPage() {
     };
 
     const handleFile = async (file: File) => {
+        // Block uploads for Demo Hotel
+        if (isDemo) {
+            setStatus('error');
+            setMessage('Demo Hotel không được phép upload file. Vui lòng liên hệ admin để được gán khách sạn.');
+            return;
+        }
+
         const fileType = detectFileType(file);
 
         if (fileType !== 'csv' && fileType !== 'xml') {
@@ -120,6 +133,7 @@ export default function UploadPage() {
     const handleDrag = (e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
+        if (isDemo) return; // Block drag for Demo Hotel
         if (e.type === 'dragenter' || e.type === 'dragover') {
             setDragActive(true);
         } else if (e.type === 'dragleave') {
@@ -131,6 +145,7 @@ export default function UploadPage() {
         e.preventDefault();
         e.stopPropagation();
         setDragActive(false);
+        if (isDemo) return; // Block drop for Demo Hotel
 
         if (e.dataTransfer.files && e.dataTransfer.files[0]) {
             handleFile(e.dataTransfer.files[0]);
@@ -144,6 +159,7 @@ export default function UploadPage() {
     };
 
     const handleButtonClick = () => {
+        if (isDemo) return; // Block for Demo Hotel
         inputRef.current?.click();
     };
 
@@ -175,51 +191,71 @@ export default function UploadPage() {
             </header>
 
             <div className="max-w-3xl mx-auto space-y-6">
+                {/* Demo Hotel Warning */}
+                {isDemo && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+                        <Lock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                        <div>
+                            <p className="text-amber-800 font-medium">Demo Hotel - Chế độ xem</p>
+                            <p className="text-amber-700 text-sm">
+                                Bạn đang sử dụng Demo Hotel. Upload file bị tắt.
+                                Vui lòng liên hệ admin để được gán khách sạn thực.
+                            </p>
+                        </div>
+                    </div>
+                )}
+
                 {/* Tabs */}
                 <div className="flex gap-2">
                     <button
                         onClick={() => handleTabChange('booked')}
+                        disabled={isDemo}
                         className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors ${activeTab === 'booked'
                             ? 'bg-blue-600 text-white'
                             : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-                            }`}
+                            } ${isDemo ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                         <CheckCircle className="w-4 h-4" />
                         Báo cáo Đặt phòng
                     </button>
                     <button
                         onClick={() => handleTabChange('cancelled')}
+                        disabled={isDemo}
                         className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors ${activeTab === 'cancelled'
                             ? 'bg-rose-600 text-white'
                             : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-                            }`}
+                            } ${isDemo ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                         <XCircle className="w-4 h-4" />
                         Báo cáo Huỷ phòng
                     </button>
                 </div>
 
-                {/* Tab Description */}
-                <div className={`p-4 rounded-xl border ${activeTab === 'booked'
-                    ? 'bg-blue-50 border-blue-200'
-                    : 'bg-rose-50 border-rose-200'
-                    }`}>
-                    <p className={`text-sm ${activeTab === 'booked' ? 'text-blue-700' : 'text-rose-700'}`}>
-                        {activeTab === 'booked'
-                            ? '📥 Upload báo cáo "Reservation Booked On Date" từ PMS. File này chứa các booking mới.'
-                            : '📤 Upload báo cáo "Reservation Cancelled" từ PMS. File này đánh dấu các booking đã huỷ.'}
-                    </p>
-                </div>
+                {/* Tab Description - hidden for Demo Hotel */}
+                {!isDemo && (
+                    <div className={`p-4 rounded-xl border ${activeTab === 'booked'
+                        ? 'bg-blue-50 border-blue-200'
+                        : 'bg-rose-50 border-rose-200'
+                        }`}>
+                        <p className={`text-sm ${activeTab === 'booked' ? 'text-blue-700' : 'text-rose-700'}`}>
+                            {activeTab === 'booked'
+                                ? '📥 Upload báo cáo "Reservation Booked On Date" từ PMS. File này chứa các booking mới.'
+                                : '📤 Upload báo cáo "Reservation Cancelled" từ PMS. File này đánh dấu các booking đã huỷ.'}
+                        </p>
+                    </div>
+                )}
 
                 {/* Upload Area */}
                 <div
-                    className={`relative border-2 border-dashed rounded-xl p-10 text-center transition-colors ${dragActive
-                        ? 'border-blue-500 bg-blue-50'
-                        : status === 'success'
-                            ? 'border-emerald-500 bg-emerald-50'
-                            : status === 'error'
-                                ? 'border-rose-500 bg-rose-50'
-                                : 'border-gray-300 bg-white hover:border-gray-400'
+                    className={`relative border-2 border-dashed rounded-xl p-10 text-center transition-colors ${isDemo
+                            ? 'border-gray-300 bg-gray-50 cursor-not-allowed'
+                            : dragActive
+                                ? 'border-blue-500 bg-blue-50'
+                                : status === 'success'
+                                    ? 'border-emerald-500 bg-emerald-50'
+                                    : status === 'error'
+                                        ? 'border-rose-500 bg-rose-50'
+                                        : 'border-gray-300 bg-white hover:border-gray-400'
                         }`}
                     onDragEnter={handleDrag}
                     onDragLeave={handleDrag}
@@ -232,9 +268,20 @@ export default function UploadPage() {
                         accept=".csv,.xml"
                         onChange={handleChange}
                         className="hidden"
+                        disabled={isDemo}
                     />
 
-                    {status === 'idle' && (
+                    {isDemo ? (
+                        <>
+                            <Lock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                            <p className="text-gray-500 text-lg mb-2">
+                                Upload bị tắt cho Demo Hotel
+                            </p>
+                            <p className="text-gray-400 text-sm">
+                                Liên hệ admin để được gán khách sạn
+                            </p>
+                        </>
+                    ) : status === 'idle' ? (
                         <>
                             <div className="flex justify-center gap-4 mb-4">
                                 <FileSpreadsheet className="w-10 h-10 text-emerald-500" />
@@ -256,16 +303,12 @@ export default function UploadPage() {
                                 Chọn file
                             </button>
                         </>
-                    )}
-
-                    {status === 'uploading' && (
+                    ) : status === 'uploading' ? (
                         <>
                             <Loader2 className="w-12 h-12 text-blue-500 mx-auto mb-4 animate-spin" />
                             <p className="text-gray-700 text-lg">{message}</p>
                         </>
-                    )}
-
-                    {status === 'success' && (
+                    ) : status === 'success' ? (
                         <>
                             <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto mb-4" />
                             <p className="text-emerald-600 text-lg mb-2">{message}</p>
@@ -281,9 +324,7 @@ export default function UploadPage() {
                                 Upload file khác
                             </button>
                         </>
-                    )}
-
-                    {status === 'error' && (
+                    ) : (
                         <>
                             <XCircle className="w-12 h-12 text-rose-500 mx-auto mb-4" />
                             <p className="text-rose-600 text-lg mb-4">{message}</p>
@@ -297,53 +338,58 @@ export default function UploadPage() {
                     )}
                 </div>
 
-                {/* Format Guide */}
-                <div className="grid grid-cols-2 gap-4">
-                    {/* XML Format */}
-                    <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-                        <div className="flex items-center gap-2 mb-3">
-                            <FileCode className="w-5 h-5 text-blue-500" />
-                            <h2 className="text-base font-semibold text-gray-900">XML Format (Crystal Reports)</h2>
-                        </div>
-                        <p className="text-sm text-gray-600 mb-3">
-                            Export từ PMS với format Crystal Reports XML.
-                        </p>
-                        <div className="text-xs text-gray-500 space-y-1">
-                            <div>• ConfirmNum → Reservation ID</div>
-                            <div>• FromDate → Arrival</div>
-                            <div>• ToDate → Departure</div>
-                            <div>• NumRoom → Rooms</div>
-                            <div>• GNetRate → Rate/room/night</div>
-                        </div>
-                    </div>
+                {/* Format Guide - hidden for Demo Hotel */}
+                {!isDemo && (
+                    <>
+                        <div className="grid grid-cols-2 gap-4">
+                            {/* XML Format */}
+                            <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <FileCode className="w-5 h-5 text-blue-500" />
+                                    <h2 className="text-base font-semibold text-gray-900">XML Format (Crystal Reports)</h2>
+                                </div>
+                                <p className="text-sm text-gray-600 mb-3">
+                                    Export từ PMS với format Crystal Reports XML.
+                                </p>
+                                <div className="text-xs text-gray-500 space-y-1">
+                                    <div>• ConfirmNum → Reservation ID</div>
+                                    <div>• FromDate → Arrival</div>
+                                    <div>• ToDate → Departure</div>
+                                    <div>• NumRoom → Rooms</div>
+                                    <div>• GNetRate → Rate/room/night</div>
+                                </div>
+                            </div>
 
-                    {/* CSV Format */}
-                    <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-                        <div className="flex items-center gap-2 mb-3">
-                            <FileSpreadsheet className="w-5 h-5 text-emerald-500" />
-                            <h2 className="text-base font-semibold text-gray-900">CSV Format</h2>
+                            {/* CSV Format */}
+                            <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <FileSpreadsheet className="w-5 h-5 text-emerald-500" />
+                                    <h2 className="text-base font-semibold text-gray-900">CSV Format</h2>
+                                </div>
+                                <p className="text-sm text-gray-600 mb-3">
+                                    File CSV với các cột:
+                                </p>
+                                <div className="bg-gray-50 rounded p-2 overflow-x-auto">
+                                    <code className="text-xs text-gray-700">
+                                        reservation_id, booking_date,<br />
+                                        arrival_date, departure_date,<br />
+                                        rooms, revenue, status
+                                    </code>
+                                </div>
+                            </div>
                         </div>
-                        <p className="text-sm text-gray-600 mb-3">
-                            File CSV với các cột:
-                        </p>
-                        <div className="bg-gray-50 rounded p-2 overflow-x-auto">
-                            <code className="text-xs text-gray-700">
-                                reservation_id, booking_date,<br />
-                                arrival_date, departure_date,<br />
-                                rooms, revenue, status
-                            </code>
-                        </div>
-                    </div>
-                </div>
 
-                {/* Note */}
-                <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
-                    <p className="text-sm text-amber-700">
-                        <strong>Lưu ý:</strong> Với XML, <code className="bg-amber-100 px-1 rounded">GNetRate</code> là giá
-                        <em> per room per night</em>. Hệ thống sẽ tự tính: <code className="bg-amber-100 px-1 rounded">Revenue = Rate × Rooms × Nights</code>
-                    </p>
-                </div>
+                        {/* Note */}
+                        <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                            <p className="text-sm text-amber-700">
+                                <strong>Lưu ý:</strong> Với XML, <code className="bg-amber-100 px-1 rounded">GNetRate</code> là giá
+                                <em> per room per night</em>. Hệ thống sẽ tự tính: <code className="bg-amber-100 px-1 rounded">Revenue = Rate × Rooms × Nights</code>
+                            </p>
+                        </div>
+                    </>
+                )}
             </div>
         </div>
     );
 }
+

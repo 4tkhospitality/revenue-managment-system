@@ -6,7 +6,7 @@ import prisma from '@/lib/prisma';
 const ACTIVE_HOTEL_COOKIE = 'rms_active_hotel';
 
 // Demo Hotel - used for new users who haven't been assigned to a hotel yet
-const DEMO_HOTEL_NAME = 'Demo Hotel';
+export const DEMO_HOTEL_NAME = 'Demo Hotel';
 const DEMO_HOTEL_DEFAULTS = {
     name: DEMO_HOTEL_NAME,
     timezone: 'Asia/Ho_Chi_Minh',
@@ -33,6 +33,17 @@ export async function getOrCreateDemoHotel(): Promise<string> {
     }
 
     return demoHotel.hotel_id;
+}
+
+/**
+ * Check if a hotel ID belongs to Demo Hotel
+ */
+export async function isDemoHotel(hotelId: string): Promise<boolean> {
+    const hotel = await prisma.hotel.findUnique({
+        where: { hotel_id: hotelId },
+        select: { name: true },
+    });
+    return hotel?.name === DEMO_HOTEL_NAME;
 }
 
 /**
@@ -82,4 +93,5 @@ export async function isAuthenticated(): Promise<boolean> {
         return false;
     }
 }
+
 

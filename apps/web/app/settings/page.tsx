@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Save, Hotel, AlertCircle, CheckCircle } from 'lucide-react';
+import { Save, Hotel, AlertCircle, CheckCircle, Lock } from 'lucide-react';
+import Link from 'next/link';
 
 // Ladder presets
 const LADDER_PRESETS = {
@@ -69,6 +70,22 @@ export default function SettingsPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+    const [isDemo, setIsDemo] = useState(false);
+
+    // Check if Demo Hotel
+    useEffect(() => {
+        const checkDemoHotel = async () => {
+            try {
+                const res = await fetch('/api/is-demo-hotel');
+                const data = await res.json();
+                setIsDemo(data.isDemo || false);
+            } catch (error) {
+                console.error('Error checking demo hotel:', error);
+            }
+        };
+        checkDemoHotel();
+    }, []);
+
 
     useEffect(() => {
         setDisplayValues({
@@ -160,7 +177,42 @@ export default function SettingsPage() {
         );
     }
 
+    // Demo Hotel access denied
+    if (isDemo) {
+        return (
+            <div className="mx-auto max-w-[1400px] px-8 py-6 space-y-6">
+                <header
+                    className="rounded-2xl px-6 py-4 text-white shadow-sm"
+                    style={{ background: 'linear-gradient(to right, #1E3A8A, #102A4C)' }}
+                >
+                    <div className="flex items-center gap-2">
+                        <Hotel className="w-5 h-5" />
+                        <h1 className="text-lg font-semibold">Cài đặt Khách sạn</h1>
+                    </div>
+                </header>
+
+                <div className="max-w-3xl mx-auto">
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-8 text-center">
+                        <Lock className="w-12 h-12 text-amber-500 mx-auto mb-4" />
+                        <h2 className="text-xl font-semibold text-amber-800 mb-2">Demo Hotel - Truy cập bị giới hạn</h2>
+                        <p className="text-amber-700 mb-6">
+                            Bạn đang sử dụng Demo Hotel nên không thể truy cập Cài đặt.<br />
+                            Vui lòng liên hệ admin để được gán khách sạn thực.
+                        </p>
+                        <Link
+                            href="/pricing"
+                            className="inline-block px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                        >
+                            Đi tới Tính giá OTA
+                        </Link>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
+
         <div className="mx-auto max-w-[1400px] px-8 py-6 space-y-6">
             {/* Header - lighter */}
             <header
