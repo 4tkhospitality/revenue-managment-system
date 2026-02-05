@@ -137,35 +137,122 @@ export function calcBarFromNet(
 
 /**
  * Calculate NET from BAR (reverse calculation)
- * Using binary search for precision
+ * NET = BAR × (1 - totalDiscount) × (1 - commission)
+ * Returns full CalcResult with trace for UI display
  */
 export function calcNetFromBar(
     bar: number,
-    commission: number,
+    commission: number,     // % (0-100)
     discounts: DiscountItem[],
-    calcType: CalcType
-): number {
-    // Binary search to find NET that produces the target BAR
-    let low = 0;
-    let high = bar;
-    const tolerance = 1; // VND
+    calcType: CalcType,
+    vendor: string = 'agoda'
+): CalcResult {
+    const trace: TraceStep[] = [];
 
-    for (let i = 0; i < 50; i++) {
-        const mid = (low + high) / 2;
-        const result = calcBarFromNet(mid, commission, discounts, calcType, 'NONE');
+    // Validate inputs
+    const validation = validatePromotions(discounts, commission, vendor);
 
-        if (Math.abs(result.barRaw - bar) < tolerance) {
-            return Math.round(mid);
-        }
-
-        if (result.barRaw < bar) {
-            low = mid;
-        } else {
-            high = mid;
-        }
+    // If commission >= 100, return error
+    if (commission >= 100) {
+        return {
+            bar,
+            barRaw: bar,
+            net: 0,
+            commission,
+            totalDiscount: 0,
+            validation: {
+                isValid: false,
+                errors: ['Commission phải < 100%'],
+                warnings: [],
+            },
+            trace: [],
+        };
     }
 
-    return Math.round((low + high) / 2);
+    trace.push({
+        step: 'Giá hiển thị',
+        description: `BAR = ${formatVND(bar)}`,
+        priceAfter: bar,
+    });
+
+    // Step 1: Calculate total discount
+    let totalDiscount = 0;
+    let afterDiscount: number;
+
+    if (calcType === 'PROGRESSIVE') {
+        // Progressive: afterDiscount = BAR × Π(1 - dᵢ)
+        let multiplier = 1;
+        let running = bar;
+
+        discounts.forEach((d) => {
+            const before = running;
+            running = running * (1 - d.percent / 100);
+            multiplier *= (1 - d.percent / 100);
+            trace.push({
+                step: `KM: ${d.name}`,
+                description: `${formatVND(before)} × (1 - ${d.percent}%) = ${formatVND(running)}`,
+                priceAfter: running,
+            });
+        });
+
+        totalDiscount = (1 - multiplier) * 100;
+        afterDiscount = running;
+    } else {
+        // Additive: afterDiscount = BAR × (1 - Σdᵢ)
+        totalDiscount = discounts.reduce((sum, d) => sum + d.percent, 0);
+
+        if (totalDiscount >= 100) {
+            return {
+                bar,
+                barRaw: bar,
+                net: 0,
+                commission,
+                totalDiscount,
+                validation: {
+                    isValid: false,
+                    errors: ['Tổng giảm giá phải < 100%'],
+                    warnings: [],
+                },
+                trace,
+            };
+        }
+
+        afterDiscount = bar * (1 - totalDiscount / 100);
+
+        trace.push({
+            step: 'Tổng KM',
+            description: `${formatVND(bar)} × (1 - ${totalDiscount.toFixed(1)}%) = ${formatVND(afterDiscount)}`,
+            priceAfter: afterDiscount,
+        });
+    }
+
+    // Step 2: Subtract commission
+    const commissionDecimal = commission / 100;
+    const net = afterDiscount * (1 - commissionDecimal);
+
+    trace.push({
+        step: 'Hoa hồng OTA',
+        description: `${formatVND(afterDiscount)} × (1 - ${commission}%) = ${formatVND(net)}`,
+        priceAfter: net,
+    });
+
+    const netRounded = Math.round(net);
+
+    trace.push({
+        step: '💰 Thu về',
+        description: `NET = ${formatVND(netRounded)}`,
+        priceAfter: netRounded,
+    });
+
+    return {
+        bar,
+        barRaw: bar,
+        net: netRounded,
+        commission,
+        totalDiscount,
+        validation,
+        trace,
+    };
 }
 
 /**

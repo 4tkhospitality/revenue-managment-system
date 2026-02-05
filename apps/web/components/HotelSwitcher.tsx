@@ -27,7 +27,7 @@ export function HotelSwitcher() {
         // Get active hotel from cookie
         const fetchActiveHotel = async () => {
             try {
-                const res = await fetch('/api/user/switch-hotel');
+                const res = await fetch('/api/user/switch-hotel', { credentials: 'include' });
                 const data = await res.json();
                 setActiveHotelId(data.activeHotelId);
             } catch (error) {
@@ -59,6 +59,7 @@ export function HotelSwitcher() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ hotelId }),
+                credentials: 'include',
             });
 
             if (res.ok) {

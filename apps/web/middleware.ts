@@ -101,6 +101,7 @@ export async function middleware(request: NextRequest) {
                     secure: process.env.NODE_ENV === 'production',
                     sameSite: 'lax',
                     maxAge: 60 * 60 * 24 * 30, // 30 days
+                    path: '/', // IMPORTANT: Cookie must be sent to all paths including /api
                 })
                 return response
             }

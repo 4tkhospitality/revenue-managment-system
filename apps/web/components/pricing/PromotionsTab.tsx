@@ -431,7 +431,10 @@ function PriceCalculator({
                     <input
                         type="text"
                         value={customInput || formatNumber(calcMode === 'net_to_display' ? baseNetPrice : baseNetPrice / discountMultiplier / commissionMultiplier)}
-                        onChange={(e) => setCustomInput(e.target.value)}
+                        onChange={(e) => {
+                            const num = parseNumber(e.target.value);
+                            setCustomInput(num > 0 ? formatNumber(num) : '');
+                        }}
                         placeholder={calcMode === 'net_to_display' ? 'VD: 1.000.000' : 'VD: 1.500.000'}
                         className="w-full px-3 py-2 pr-8 bg-white border border-[#DBE1EB] rounded-lg text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-[#204183]"
                     />
@@ -601,7 +604,7 @@ export default function PromotionsTab() {
     useEffect(() => {
         const fetchChannels = async () => {
             try {
-                const res = await fetch('/api/pricing/ota-channels');
+                const res = await fetch('/api/pricing/ota-channels', { credentials: 'include' });
                 if (!res.ok) throw new Error('Failed to fetch');
                 const data = await res.json();
                 setChannels(data);
@@ -620,7 +623,7 @@ export default function PromotionsTab() {
     useEffect(() => {
         const fetchRoomTypes = async () => {
             try {
-                const res = await fetch('/api/pricing/room-types');
+                const res = await fetch('/api/pricing/room-types', { credentials: 'include' });
                 if (!res.ok) throw new Error('Failed to fetch');
                 const data = await res.json();
                 setRoomTypes(data);

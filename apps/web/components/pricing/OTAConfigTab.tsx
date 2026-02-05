@@ -32,7 +32,7 @@ export default function OTAConfigTab() {
     // Fetch channels
     const fetchChannels = async () => {
         try {
-            const res = await fetch('/api/pricing/ota-channels');
+            const res = await fetch('/api/pricing/ota-channels', { credentials: 'include' });
             if (!res.ok) throw new Error('Failed to fetch');
             const data = await res.json();
             setChannels(data);

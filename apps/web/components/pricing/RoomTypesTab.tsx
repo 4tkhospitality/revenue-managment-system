@@ -35,7 +35,7 @@ export default function RoomTypesTab() {
     // Fetch room types
     const fetchRoomTypes = async () => {
         try {
-            const res = await fetch('/api/pricing/room-types');
+            const res = await fetch('/api/pricing/room-types', { credentials: 'include' });
             if (!res.ok) throw new Error('Failed to fetch');
             const data = await res.json();
             setRoomTypes(data);

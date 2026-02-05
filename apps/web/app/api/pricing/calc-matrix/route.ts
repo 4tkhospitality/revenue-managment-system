@@ -1,15 +1,39 @@
 // V01.2: Calculate Price Matrix API
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { cookies } from 'next/headers';
-import { calcBarFromNet } from '@/lib/pricing/engine';
+import { auth } from '@/lib/auth';
+import { calcBarFromNet, calcNetFromBar } from '@/lib/pricing/engine';
 import type { CalcType, DiscountItem, MatrixCell, PriceMatrixResponse } from '@/lib/pricing/types';
 
+interface CalcMatrixRequest {
+    mode?: 'net_to_bar' | 'bar_to_net';
+    displayPrice?: number; // Used when mode = bar_to_net
+}
+
 // POST /api/pricing/calc-matrix - Calculate full price matrix
-export async function POST() {
+export async function POST(request: NextRequest) {
     try {
-        const cookieStore = await cookies();
-        const hotelId = cookieStore.get('rms_active_hotel')?.value;
+        // Parse request body
+        let body: CalcMatrixRequest = {};
+        try {
+            body = await request.json();
+        } catch {
+            // No body or invalid JSON - use defaults
+        }
+
+        const mode = body.mode || 'net_to_bar';
+        const displayPrice = body.displayPrice;
+
+        // Read cookie directly from request
+        let hotelId = request.cookies.get('rms_active_hotel')?.value;
+
+        // Fallback: If no cookie (e.g., Admin users), get from session
+        if (!hotelId) {
+            const session = await auth();
+            if (session?.user?.accessibleHotels?.length) {
+                hotelId = session.user.accessibleHotels[0].hotelId;
+            }
+        }
 
         if (!hotelId) {
             return NextResponse.json(
@@ -59,26 +83,48 @@ export async function POST() {
                     subCategory: c.promo.sub_category || undefined,
                 }));
 
-                // Calculate BAR
-                const result = calcBarFromNet(
-                    roomType.net_price,
-                    channel.commission,
-                    discounts,
-                    channel.calc_type as CalcType,
-                    roundingRule
-                );
-
                 const key = `${roomType.id}:${channel.id}`;
-                matrix[key] = {
-                    roomTypeId: roomType.id,
-                    channelId: channel.id,
-                    bar: result.bar,
-                    net: result.net,
-                    commission: result.commission,
-                    totalDiscount: result.totalDiscount,
-                    validation: result.validation,
-                    trace: result.trace,
-                };
+
+                if (mode === 'bar_to_net' && displayPrice) {
+                    // Reverse mode: Calculate NET from uniform display price
+                    const result = calcNetFromBar(
+                        displayPrice,
+                        channel.commission,
+                        discounts,
+                        channel.calc_type as CalcType
+                    );
+
+                    matrix[key] = {
+                        roomTypeId: roomType.id,
+                        channelId: channel.id,
+                        bar: displayPrice,
+                        net: result.net,
+                        commission: result.commission,
+                        totalDiscount: result.totalDiscount,
+                        validation: result.validation,
+                        trace: result.trace,
+                    };
+                } else {
+                    // Normal mode: Calculate BAR from NET
+                    const result = calcBarFromNet(
+                        roomType.net_price,
+                        channel.commission,
+                        discounts,
+                        channel.calc_type as CalcType,
+                        roundingRule
+                    );
+
+                    matrix[key] = {
+                        roomTypeId: roomType.id,
+                        channelId: channel.id,
+                        bar: result.bar,
+                        net: result.net,
+                        commission: result.commission,
+                        totalDiscount: result.totalDiscount,
+                        validation: result.validation,
+                        trace: result.trace,
+                    };
+                }
             }
         }
 
