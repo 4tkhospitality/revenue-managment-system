@@ -1,14 +1,14 @@
 {
   "meta": {
-    "schema_version": "1.1.0",
+    "schema_version": "1.2.0",
     "awf_version": "4.1.2",
-    "last_updated": "2026-02-05T10:11:00+07:00"
+    "last_updated": "2026-02-05T16:32:00+07:00"
   },
   "project": {
     "name": "revenue-management-system",
     "type": "SaaS Web App",
     "status": "Production - Deployed to Vercel",
-    "description": "RMS Version 01.1 (MVP) - Revenue Management System with Pricing Engine + User Management + Cancellation Bridge. Full-stack TypeScript.",
+    "description": "RMS Version 01.2 - Revenue Management System with OTA Pricing Module + User Management + Cancellation Bridge. Full-stack TypeScript.",
     "github": "https://github.com/4tkhospitality/revenue-managment-system"
   },
   "tech_stack": {
@@ -65,7 +65,8 @@
       {
         "name": "users",
         "description": "System users with global role (super_admin/viewer) and is_active flag.",
-        "v01_changes": "Added UserRole enum, is_active field, hotel_users relation"
+        "v01_changes": "Added UserRole enum, is_active field, hotel_users relation",
+        "v012_changes": "Added phone field for contact number"
       },
       {
         "name": "hotel_users",
@@ -105,6 +106,31 @@
       {
         "name": "pricing_decisions",
         "description": "Audit log of user actions (Accept/Override)."
+      },
+      {
+        "name": "room_types",
+        "description": "V01.2: Room types with NET base prices for OTA pricing.",
+        "v012_new": true
+      },
+      {
+        "name": "ota_channels",
+        "description": "V01.2: OTA channels with commission rates and calc mode (Progressive/Additive).",
+        "v012_new": true
+      },
+      {
+        "name": "promotion_catalog",
+        "description": "V01.2: Seedable global promotion templates (Agoda + Booking.com). 27 promotions total.",
+        "v012_new": true
+      },
+      {
+        "name": "campaign_instances",
+        "description": "V01.2: Links promotions to OTA channels per hotel.",
+        "v012_new": true
+      },
+      {
+        "name": "pricing_settings",
+        "description": "V01.2: Hotel-specific pricing settings (currency, rounding, max discount).",
+        "v012_new": true
       }
     ],
     "enums": [
@@ -117,6 +143,23 @@
           "viewer"
         ],
         "description": "Role hierarchy: super_admin > hotel_admin > manager > viewer"
+      },
+      {
+        "name": "CalcType",
+        "values": [
+          "PROGRESSIVE",
+          "ADDITIVE"
+        ],
+        "description": "V01.2: BAR calculation mode. PROGRESSIVE = NET/(1-comm)/Π(1-dᵢ), ADDITIVE = NET/(1-comm)/(1-Σdᵢ)"
+      },
+      {
+        "name": "PromotionGroup",
+        "values": [
+          "SEASONAL",
+          "ESSENTIAL",
+          "TARGETED"
+        ],
+        "description": "V01.2: Promotion stacking rules. SEASONAL=max 1, TARGETED=max 1 per subcategory"
       }
     ],
     "v011_indexes": [
@@ -190,6 +233,61 @@
       "path": "PUT /api/admin/hotels/[id]",
       "explained": "Update hotel settings.",
       "v01_new": true
+    },
+    {
+      "path": "GET /api/pricing/room-types",
+      "explained": "V01.2: List room types for active hotel.",
+      "v012_new": true
+    },
+    {
+      "path": "POST /api/pricing/room-types",
+      "explained": "V01.2: Create room type with NET price.",
+      "v012_new": true
+    },
+    {
+      "path": "PATCH/DELETE /api/pricing/room-types/[id]",
+      "explained": "V01.2: Update or delete room type.",
+      "v012_new": true
+    },
+    {
+      "path": "GET /api/pricing/ota-channels",
+      "explained": "V01.2: List OTA channels with active campaigns.",
+      "v012_new": true
+    },
+    {
+      "path": "POST /api/pricing/ota-channels",
+      "explained": "V01.2: Create OTA channel with commission and calc mode.",
+      "v012_new": true
+    },
+    {
+      "path": "PATCH/DELETE /api/pricing/ota-channels/[id]",
+      "explained": "V01.2: Update or delete OTA channel.",
+      "v012_new": true
+    },
+    {
+      "path": "GET /api/pricing/campaigns",
+      "explained": "V01.2: List campaigns (promo instances) for hotel.",
+      "v012_new": true
+    },
+    {
+      "path": "POST /api/pricing/campaigns",
+      "explained": "V01.2: Create campaign linking promo to OTA channel.",
+      "v012_new": true
+    },
+    {
+      "path": "PATCH/DELETE /api/pricing/campaigns/[id]",
+      "explained": "V01.2: Update or delete campaign.",
+      "v012_new": true
+    },
+    {
+      "path": "POST /api/pricing/calc-matrix",
+      "explained": "V01.2: Calculate full price matrix (RoomTypes × Channels).",
+      "v012_new": true
+    },
+    {
+      "path": "GET /api/pricing/catalog",
+      "explained": "V01.2: Get promotion catalog (Agoda).",
+      "v012_new": true
     }
   ],
   "features": [
@@ -213,7 +311,20 @@
     "Blocked User auto sign-out",
     "Mobile Responsive Layout with Hamburger Menu",
     "Dashboard Cancellation Stats (Room-nights + Lost Revenue)",
-    "Data Inspector Match Status Breakdown (Matched/Unmatched/Ambiguous)"
+    "Data Inspector Match Status Breakdown (Matched/Unmatched/Ambiguous)",
+    "Login Page with 4TK Brand Colors (#204183, Glassmorphism)",
+    "Sidebar Logout Button with User Info",
+    "Consistent Gradient Headers across all pages (including Admin)",
+    "V01.2: OTA Pricing Module - Calculate BAR from NET with commissions and promotions",
+    "V01.2: Room Types Management (CRUD)",
+    "V01.2: OTA Channels Configuration (commission, calc mode)",
+    "V01.2: Promotions Tab (campaign picker, validation panel)",
+    "V01.2: Overview Tab (price matrix, heatmap, CSV export)",
+    "V01.2: Booking.com Promotions (Genius, Mobile, Deals) - 10 promotions",
+    "V01.2: Editable Discount Percentage - User can modify % per campaign",
+    "V01.2: Demo Hotel - Default hotel for new users without assignment",
+    "V01.2: User Phone Field - Contact number in user profile",
+    "V01.2: Vendor-specific Discount Validation - Agoda 80% cap, Booking.com no limit"
   ],
   "cancellation_bridge_v011": {
     "status": "Implemented",
@@ -267,7 +378,9 @@
     ],
     "components": [
       "HotelSwitcher - Dropdown in sidebar to switch active hotel",
-      "Sidebar - Updated with Admin Panel link (super_admin only)"
+      "Sidebar - Hamburger menu on mobile, logout button with user info in footer",
+      "LoginPage - Glassmorphism card with 4TK brand gradient background",
+      "AdminPages - Gradient blue header matching Data Inspector style"
     ]
   },
   "decisions": [
@@ -286,7 +399,13 @@
     "Separate global role (User.role) and per-hotel role (HotelUser.role)",
     "V01.1: Bridge cancellations to reservations for accurate OTB",
     "V01.1: Use timestamptz for cancel_time and book_time",
-    "V01.1: Time-travel OTB using asOfTs parameter"
+    "V01.1: Time-travel OTB using asOfTs parameter",
+    "V01.2: Progressive mode = BAR / (1-comm) / Π(1-dᵢ) - compounds discounts",
+    "V01.2: Additive mode = BAR / (1-comm) / (1-Σdᵢ) - sums discounts",
+    "V01.2: Validation rules: max 1 Seasonal, max 1 Targeted per subcategory",
+    "V01.2: Vendor-specific max discount: Agoda 80%, Booking.com no limit",
+    "V01.2: Booking.com promotions mapped to existing PromotionGroup types",
+    "V01.2: Demo Hotel (ID: 159fe315-79a0-48a3-adac-f47d4f56b748) as fallback for new users"
   ],
   "ui_design": {
     "theme": "SaaS Pro Light",
@@ -298,11 +417,18 @@
       "text": "#1e293b (dark gray)",
       "border": "slate-200/80"
     },
+    "brand_colors": {
+      "primary": "#204183 (from logo)",
+      "dark": "#0B1E3A (deep background)",
+      "mid": "#16325F (gradient middle)",
+      "light": "#AABAD1 (hover/highlight)"
+    },
     "components": {
       "surface": "rounded-2xl bg-white border border-slate-200/80 shadow-[0_1px_2px_rgba(16,24,40,0.06)]",
-      "header": "rounded-2xl px-6 py-4 text-white shadow-sm",
+      "header": "rounded-2xl px-6 py-4 text-white shadow-sm background: linear-gradient(to right, #1E3A8A, #102A4C)",
       "container": "mx-auto max-w-[1400px] px-8 py-6 space-y-6",
-      "sidebar": "fixed left-0 w-64 h-screen bg-[#204184] text-white (hidden on mobile with hamburger toggle)"
+      "sidebar": "fixed left-0 w-64 h-screen bg-[#204184] text-white (hidden on mobile with hamburger toggle)",
+      "login_page": "Gradient background (#0B1E3A → #16325F → #204183), glassmorphism card (bg-white/10 backdrop-blur-xl)"
     },
     "responsive": {
       "breakpoint": "lg (1024px)",

@@ -31,6 +31,18 @@ enum ImportType {
   CANCELLATION
 }
 
+// V01.2: OTA Pricing Module Enums
+enum CalcType {
+  PROGRESSIVE  // BAR = NET / (1-comm) / Π(1-dᵢ)
+  ADDITIVE     // BAR = NET / (1-comm) / (1-Σdᵢ)
+}
+
+enum PromotionGroup {
+  SEASONAL   // Max 1 per OTA
+  ESSENTIAL  // Stackable
+  TARGETED   // Max 1 per subcategory
+}
+
 // User roles - global and per-hotel
 enum UserRole {
   super_admin   // Global system admin
@@ -65,6 +77,11 @@ model Hotel {
   price_recommendations PriceRecommendations[]
   pricing_decisions     PricingDecision[]
   cancellations_raw     CancellationRaw[]
+  
+  // V01.2: OTA Pricing Module
+  room_types            RoomType[]
+  ota_channels          OTAChannel[]
+  pricing_setting       PricingSetting?
 
   @@map("hotels")
 }
@@ -75,6 +92,7 @@ model User {
   email         String    @unique
   emailVerified DateTime? @map("email_verified")
   name          String?
+  phone         String?   // V01.2: Contact phone number
   image         String?   @map("avatar_url")
   role          UserRole  @default(viewer)  // Global role (only super_admin is meaningful)
   is_active     Boolean   @default(true)    // V01: blocked user check
@@ -354,3 +372,108 @@ model CancellationRaw {
   @@map("cancellations_raw")
 }
 
+
+// ============================================================
+// V01.2: OTA Pricing Module
+// ============================================================
+
+// Room Types with NET base price
+model RoomType {
+  id          String   @id @default(cuid())
+  hotel_id    String   @db.Uuid
+  hotel       Hotel    @relation(fields: [hotel_id], references: [hotel_id], onDelete: Cascade)
+  
+  name        String
+  description String?
+  net_price   Float    // NET base price (VND)
+  
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  @@index([hotel_id])
+  @@unique([hotel_id, name], name: "uq_room_type_name")
+  @@map("room_types")
+}
+
+// OTA Channel configuration
+model OTAChannel {
+  id          String   @id @default(cuid())
+  hotel_id    String   @db.Uuid
+  hotel       Hotel    @relation(fields: [hotel_id], references: [hotel_id], onDelete: Cascade)
+
+  name        String   // Display name: "Agoda"
+  code        String   // Code: "agoda", "booking", etc.
+  calc_type   CalcType @default(PROGRESSIVE)
+  commission  Float    // % (0-100)
+  is_active   Boolean  @default(true)
+
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  campaigns   CampaignInstance[]
+
+  @@index([hotel_id])
+  @@unique([hotel_id, code], name: "uq_ota_channel_code")
+  @@map("ota_channels")
+}
+
+// Global Promotion Catalog (seed data)
+model PromotionCatalog {
+  id                       String         @id // e.g. "agoda-seasonal-double-day"
+  vendor                   String         // "agoda" | "booking" | etc.
+  name                     String
+  group_type               PromotionGroup
+  sub_category             String?        // For TARGETED: "LOYALTY" | "PLATFORM" | etc.
+  default_pct              Float?         // Default discount percentage
+  allow_stack              Boolean        @default(true)
+  
+  // Validation rules
+  max_one_in_group         Boolean        @default(false) // true for SEASONAL
+  max_one_per_subcategory  Boolean        @default(false) // true for TARGETED
+
+  instances                CampaignInstance[]
+
+  @@index([vendor, group_type])
+  @@map("promotion_catalog")
+}
+
+// Campaign Instance (promotion applied to hotel/OTA)
+model CampaignInstance {
+  id             String           @id @default(cuid())
+  hotel_id       String           @db.Uuid
+
+  ota_channel_id String
+  ota_channel    OTAChannel       @relation(fields: [ota_channel_id], references: [id], onDelete: Cascade)
+
+  promo_id       String
+  promo          PromotionCatalog @relation(fields: [promo_id], references: [id])
+
+  discount_pct   Float            // Applied discount %
+  is_active      Boolean          @default(true)
+
+  start_date     DateTime?        @db.Date
+  end_date       DateTime?        @db.Date
+
+  created_at     DateTime         @default(now())
+  updated_at     DateTime         @updatedAt
+
+  @@index([hotel_id, ota_channel_id])
+  @@index([promo_id])
+  @@map("campaign_instances")
+}
+
+// Pricing Settings per hotel
+model PricingSetting {
+  id               String   @id @default(cuid())
+  hotel_id         String   @unique @db.Uuid
+  hotel            Hotel    @relation(fields: [hotel_id], references: [hotel_id], onDelete: Cascade)
+
+  currency         String   @default("VND")
+  rounding_rule    String   @default("CEIL_1000") // CEIL_1000 | ROUND_100 | NONE
+  max_discount_cap Float    @default(80)          // Max total discount %
+
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  @@map("pricing_settings")
+}

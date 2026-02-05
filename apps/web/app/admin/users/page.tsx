@@ -15,6 +15,7 @@ interface User {
     id: string;
     email: string;
     name: string | null;
+    phone: string | null;
     image: string | null;
     role: string;
     isActive: boolean;
@@ -159,6 +160,7 @@ export default function AdminUsersPage() {
                     <thead className="bg-gray-50 border-b border-gray-200">
                         <tr>
                             <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Người dùng</th>
+                            <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Số điện thoại</th>
                             <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Global Role</th>
                             <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Hotels</th>
                             <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Trạng thái</th>
@@ -168,13 +170,13 @@ export default function AdminUsersPage() {
                     <tbody>
                         {loading ? (
                             <tr>
-                                <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
+                                <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
                                     Đang tải...
                                 </td>
                             </tr>
                         ) : users.length === 0 ? (
                             <tr>
-                                <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
+                                <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
                                     Không tìm thấy người dùng
                                 </td>
                             </tr>
@@ -195,6 +197,13 @@ export default function AdminUsersPage() {
                                                 <div className="text-sm text-gray-500">{user.email}</div>
                                             </div>
                                         </div>
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        {user.phone ? (
+                                            <span className="text-gray-700">{user.phone}</span>
+                                        ) : (
+                                            <span className="text-gray-400 text-sm italic">Chưa có</span>
+                                        )}
                                     </td>
                                     <td className="px-4 py-3">
                                         {getRoleBadge(user.role)}
@@ -272,6 +281,7 @@ function CreateUserModal({ hotels, onClose, onCreated }: {
 }) {
     const [email, setEmail] = useState('');
     const [name, setName] = useState('');
+    const [phone, setPhone] = useState('');
     const [role, setRole] = useState('viewer');
     const [hotelId, setHotelId] = useState('');
     const [hotelRole, setHotelRole] = useState('viewer');
@@ -286,7 +296,7 @@ function CreateUserModal({ hotels, onClose, onCreated }: {
             const res = await fetch('/api/admin/users', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, name, role, hotelAssignments })
+                body: JSON.stringify({ email, name, phone: phone || null, role, hotelAssignments })
             });
 
             if (res.ok) {
@@ -324,6 +334,16 @@ function CreateUserModal({ hotels, onClose, onCreated }: {
                             type="text"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Số điện thoại</label>
+                        <input
+                            type="tel"
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                            placeholder="VD: 0901234567"
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                         />
                     </div>

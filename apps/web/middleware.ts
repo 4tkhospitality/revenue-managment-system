@@ -8,8 +8,13 @@ const ACTIVE_HOTEL_COOKIE = 'rms_active_hotel'
 // Routes that don't require authentication
 const publicRoutes = ["/auth/login", "/api/auth"]
 
+// API routes that should bypass middleware (handle auth themselves)
+// This is needed because Prisma cannot run in Edge middleware
+const apiBypassRoutes = ["/api/pricing"]
+
 // Routes that don't require hotel access
 const noHotelRoutes = ["/admin", "/api/admin", "/blocked", "/no-hotel-access", "/select-hotel", "/onboarding"]
+
 
 // Role hierarchy for permission checks
 const ROLE_RANK: Record<string, number> = {
@@ -24,6 +29,12 @@ export async function middleware(request: NextRequest) {
 
     // 1. Allow public routes
     if (publicRoutes.some(route => pathname.startsWith(route))) {
+        return NextResponse.next()
+    }
+
+    // 1b. Allow API bypass routes (they handle auth themselves)
+    // This avoids Edge runtime issues with Prisma
+    if (apiBypassRoutes.some(route => pathname.startsWith(route))) {
         return NextResponse.next()
     }
 

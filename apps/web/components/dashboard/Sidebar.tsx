@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, Upload, Database, Settings, BookOpen, Shield, Menu, X, LogOut } from 'lucide-react';
+import { LayoutDashboard, Upload, Database, Settings, BookOpen, Shield, Menu, X, LogOut, DollarSign } from 'lucide-react';
 import { HotelSwitcher } from '@/components/HotelSwitcher';
 
 // Navigation items - Vietnamese
@@ -13,6 +13,7 @@ const navItems = [
     { href: '/dashboard', label: 'Tổng quan', icon: LayoutDashboard },
     { href: '/upload', label: 'Tải lên', icon: Upload },
     { href: '/data', label: 'Dữ liệu', icon: Database },
+    { href: '/pricing', label: 'Tính giá OTA', icon: DollarSign },
     { href: '/settings', label: 'Cài đặt', icon: Settings },
     { href: '/guide', label: 'Hướng dẫn', icon: BookOpen },
 ];
