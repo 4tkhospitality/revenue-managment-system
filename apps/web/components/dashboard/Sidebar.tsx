@@ -3,9 +3,9 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, Upload, Database, Settings, BookOpen, Shield, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Upload, Database, Settings, BookOpen, Shield, Menu, X, LogOut } from 'lucide-react';
 import { HotelSwitcher } from '@/components/HotelSwitcher';
 
 // Navigation items - Vietnamese
@@ -154,12 +154,26 @@ export function Sidebar() {
                     )}
                 </nav>
 
-                {/* Footer */}
+                {/* User Info & Logout */}
                 <div className="p-4 border-t border-white/20">
-                    <p className="text-xs text-white/70">
-                        4TK Revenue Management
-                    </p>
-                    <p className="text-xs mt-1 text-white/50">
+                    {session?.user && (
+                        <div className="mb-3">
+                            <p className="text-xs text-white/90 truncate">
+                                {session.user.name || session.user.email}
+                            </p>
+                            <p className="text-xs text-white/50 truncate">
+                                {session.user.email}
+                            </p>
+                        </div>
+                    )}
+                    <button
+                        onClick={() => signOut({ callbackUrl: '/auth/login' })}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                    >
+                        <LogOut className="w-4 h-4" />
+                        Đăng xuất
+                    </button>
+                    <p className="text-xs text-white/40 mt-3">
                         Phiên bản 1.0
                     </p>
                 </div>
