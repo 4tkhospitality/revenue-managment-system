@@ -41,17 +41,15 @@ export default function LoginPage() {
                 }}
             >
                 <div className="p-10">
-                    {/* Logo Container - khung mờ nhẹ theo brand */}
+                    {/* Logo - hiển thị trực tiếp, không cần khung thêm */}
                     <div className="flex justify-center mb-6">
-                        <div className="grid h-20 w-20 place-items-center rounded-2xl bg-white/10 ring-1 ring-white/20">
-                            <Image
-                                src="/logo.jpg"
-                                alt="4TK Hospitality"
-                                width={56}
-                                height={56}
-                                className="rounded-xl object-contain"
-                            />
-                        </div>
+                        <Image
+                            src="/logo.jpg"
+                            alt="4TK Hospitality"
+                            width={100}
+                            height={100}
+                            className="rounded-2xl object-contain"
+                        />
                     </div>
 
                     {/* Title - text-white cho title chính */}
