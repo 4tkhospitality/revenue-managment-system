@@ -2,7 +2,7 @@
   "meta": {
     "schema_version": "1.1.0",
     "awf_version": "4.1.2",
-    "last_updated": "2026-02-04T17:54:00+07:00"
+    "last_updated": "2026-02-05T10:11:00+07:00"
   },
   "project": {
     "name": "revenue-management-system",
@@ -210,7 +210,10 @@
     "Role-Based Access Control (super_admin/hotel_admin/manager/viewer)",
     "Multi-Hotel User Support with HotelSwitcher",
     "Admin Panel (Users + Hotels management)",
-    "Blocked User auto sign-out"
+    "Blocked User auto sign-out",
+    "Mobile Responsive Layout with Hamburger Menu",
+    "Dashboard Cancellation Stats (Room-nights + Lost Revenue)",
+    "Data Inspector Match Status Breakdown (Matched/Unmatched/Ambiguous)"
   ],
   "cancellation_bridge_v011": {
     "status": "Implemented",
@@ -299,7 +302,12 @@
       "surface": "rounded-2xl bg-white border border-slate-200/80 shadow-[0_1px_2px_rgba(16,24,40,0.06)]",
       "header": "rounded-2xl px-6 py-4 text-white shadow-sm",
       "container": "mx-auto max-w-[1400px] px-8 py-6 space-y-6",
-      "sidebar": "fixed left-0 w-64 h-screen bg-[#204184] text-white"
+      "sidebar": "fixed left-0 w-64 h-screen bg-[#204184] text-white (hidden on mobile with hamburger toggle)"
+    },
+    "responsive": {
+      "breakpoint": "lg (1024px)",
+      "mobile": "Hamburger menu in fixed header, sidebar slides from left, overlay for close",
+      "desktop": "Fixed sidebar always visible, ml-64 for main content"
     }
   },
   "knowledge_items": {
