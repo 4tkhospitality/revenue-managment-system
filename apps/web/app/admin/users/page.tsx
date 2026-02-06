@@ -179,7 +179,7 @@ export default function AdminUsersPage() {
                         <tr>
                             <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Người dùng</th>
                             <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Số điện thoại</th>
-                            <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Global Role</th>
+                            <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Hotel Role</th>
                             <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Hotels</th>
                             <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Trạng thái</th>
                             <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">Thao tác</th>
@@ -224,7 +224,17 @@ export default function AdminUsersPage() {
                                         )}
                                     </td>
                                     <td className="px-4 py-3">
-                                        {getRoleBadge(user.role)}
+                                        {user.hotels.length > 0 ? (
+                                            <div className="flex flex-wrap gap-1">
+                                                {user.hotels.slice(0, 1).map((h, i) => (
+                                                    <span key={i}>
+                                                        {getRoleBadge(h.role)}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <span className="text-gray-400 text-xs">Chưa gán</span>
+                                        )}
                                     </td>
                                     <td className="px-4 py-3">
                                         {user.hotels.length === 0 ? (
@@ -583,10 +593,10 @@ function EditUserModal({ user, onClose, onSaved }: {
             const res = await fetch(`/api/admin/users/${user.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    name: name || null, 
+                body: JSON.stringify({
+                    name: name || null,
                     phone: phone || null,
-                    role 
+                    role
                 })
             });
 
@@ -609,7 +619,7 @@ function EditUserModal({ user, onClose, onSaved }: {
             <div className="bg-white rounded-xl p-6 w-full max-w-md">
                 <h2 className="text-xl font-bold mb-1">Chỉnh sửa người dùng</h2>
                 <p className="text-gray-500 text-sm mb-4">{user.email}</p>
-                
+
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Họ tên</label>
