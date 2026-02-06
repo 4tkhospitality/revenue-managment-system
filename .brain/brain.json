@@ -1,8 +1,8 @@
 {
   "meta": {
-    "schema_version": "1.2.1",
+    "schema_version": "1.2.2",
     "awf_version": "4.1.2",
-    "last_updated": "2026-02-06T06:30:00+07:00"
+    "last_updated": "2026-02-06T14:26:00+07:00"
   },
   "project": {
     "name": "revenue-management-system",
@@ -324,7 +324,11 @@
     "V01.2: Editable Discount Percentage - User can modify % per campaign",
     "V01.2: Demo Hotel - Default hotel for new users without assignment",
     "V01.2: User Phone Field - Contact number in user profile",
-    "V01.2: Vendor-specific Discount Validation - Agoda 80% cap, Booking.com no limit"
+    "V01.2: Vendor-specific Discount Validation - Agoda 80% cap, Booking.com no limit",
+    "Delete Data By Month - Super admin can delete reservations/cancellations by month with confirmation",
+    "Cached Stats with TTL - 5-minute cache for reservation and cancellation statistics",
+    "Top 3 Agents by Company Name - Groups agents from XML ClientName field",
+    "All-time Cancellation Stats - Uses all data instead of 30-day filter for accurate display"
   ],
   "cancellation_bridge_v011": {
     "status": "Implemented",

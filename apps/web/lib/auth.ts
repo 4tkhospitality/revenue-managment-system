@@ -86,11 +86,40 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
 
                     } else {
+                        // NEW USER: Auto-create and assign to Demo Hotel
+                        const DEMO_HOTEL_ID = process.env.DEFAULT_HOTEL_ID || '123e4567-e89b-12d3-a456-426614174000'
 
+                        // Create new user
+                        const newUser = await prisma.user.create({
+                            data: {
+                                email: token.email as string,
+                                name: token.name as string || 'New User',
+                                role: 'viewer',
+                                is_active: true,
+                            }
+                        })
+
+                        // Auto-assign to Demo Hotel with viewer role
+                        await prisma.hotelUser.create({
+                            data: {
+                                user_id: newUser.id,
+                                hotel_id: DEMO_HOTEL_ID,
+                                role: 'viewer',
+                                is_primary: true,
+                            }
+                        })
+
+                        // Set token values
+                        token.userId = newUser.id
                         token.role = 'viewer'
                         token.isActive = true
                         token.isAdmin = token.email === ADMIN_EMAIL
-                        token.accessibleHotels = []
+                        token.accessibleHotels = [{
+                            hotelId: DEMO_HOTEL_ID,
+                            hotelName: 'Demo Hotel',
+                            role: 'viewer',
+                            isPrimary: true,
+                        }]
                     }
                 } catch (error) {
                     console.error('[AUTH] ERROR in JWT callback:', error)

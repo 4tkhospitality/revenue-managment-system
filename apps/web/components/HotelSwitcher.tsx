@@ -74,15 +74,18 @@ export function HotelSwitcher() {
         }
     };
 
-    // Super admin or single hotel - don't show switcher
+    // Super admin or single hotel - don't show switcher, show role badge instead
     if (session?.user?.isAdmin || accessibleHotels.length <= 1) {
-        const hotelName = accessibleHotels[0]?.hotelName || 'All Hotels';
+        const userRole = accessibleHotels[0]?.role || 'viewer';
+        const roleLabel = userRole === 'hotel_admin' ? 'Admin' : userRole === 'manager' ? 'Manager' : 'Viewer';
         return (
             <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-lg text-sm">
                 <span className="text-gray-500">🏨</span>
-                <span className="font-medium text-gray-700">{hotelName}</span>
-                {session?.user?.isAdmin && (
-                    <span className="px-1.5 py-0.5 bg-red-100 text-red-600 rounded text-xs">Admin</span>
+                <span className="font-medium text-gray-700">Dashboard</span>
+                {session?.user?.isAdmin ? (
+                    <span className="px-1.5 py-0.5 bg-red-100 text-red-600 rounded text-xs">Super Admin</span>
+                ) : (
+                    <span className="px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded text-xs">{roleLabel}</span>
                 )}
             </div>
         );

@@ -135,7 +135,7 @@ function hasRoutePermission(pathname: string, role: string): boolean {
     if (pathname.startsWith('/settings')) return roleIndex >= 2    // hotel_admin+
     if (pathname.startsWith('/data')) return roleIndex >= 1         // manager+
     if (pathname.startsWith('/upload')) return roleIndex >= 1       // manager+
-    if (pathname.startsWith('/pricing')) return roleIndex >= 1      // manager+
+    if (pathname.startsWith('/pricing')) return roleIndex >= 0      // viewer+
     if (pathname.startsWith('/dashboard')) return roleIndex >= 0    // viewer+
 
     return true

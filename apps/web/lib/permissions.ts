@@ -52,7 +52,7 @@ export const ROUTE_PERMISSIONS: Record<string, UserRole> = {
     '/settings': 'hotel_admin',
     '/data': 'manager',
     '/upload': 'manager',
-    '/pricing': 'manager',
+    '/pricing': 'viewer',
     '/dashboard': 'viewer',
 }
 
