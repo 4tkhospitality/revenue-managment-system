@@ -35,7 +35,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             // This avoids edge runtime issues
             if (account && token.email) {
                 try {
-                    console.log('[AUTH] Initial sign-in, fetching user:', token.email)
+
 
                     // Step 1: Find user
                     const user = await prisma.user.findUnique({
@@ -49,7 +49,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                     })
 
                     if (user) {
-                        console.log('[AUTH] User found:', user.email)
+
                         token.userId = user.id
                         token.role = user.role
                         token.isActive = user.is_active
@@ -65,7 +65,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                             }
                         })
 
-                        console.log('[AUTH] Hotel assignments:', hotelUsers.length)
+
 
                         // Step 3: Get hotel names
                         const hotelIds = hotelUsers.map(hu => hu.hotel_id)
@@ -84,9 +84,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                             isPrimary: hu.is_primary,
                         }))
 
-                        console.log('[AUTH] accessibleHotels:', JSON.stringify(token.accessibleHotels))
+
                     } else {
-                        console.log('[AUTH] User NOT found in DB:', token.email)
+
                         token.role = 'viewer'
                         token.isActive = true
                         token.isAdmin = token.email === ADMIN_EMAIL
