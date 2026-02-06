@@ -1,7 +1,7 @@
 // V01.2: Room Types API - Update & Delete
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { cookies } from 'next/headers';
+import { getActiveHotelId } from '@/lib/pricing/get-hotel';
 
 // PATCH /api/pricing/room-types/[id] - Update room type
 export async function PATCH(
@@ -10,8 +10,7 @@ export async function PATCH(
 ) {
     try {
         const { id } = await params;
-        const cookieStore = await cookies();
-        const hotelId = cookieStore.get('rms_active_hotel')?.value;
+        const hotelId = await getActiveHotelId();
 
         if (!hotelId) {
             return NextResponse.json(
@@ -67,8 +66,7 @@ export async function DELETE(
 ) {
     try {
         const { id } = await params;
-        const cookieStore = await cookies();
-        const hotelId = cookieStore.get('rms_active_hotel')?.value;
+        const hotelId = await getActiveHotelId();
 
         if (!hotelId) {
             return NextResponse.json(

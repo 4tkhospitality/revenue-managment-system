@@ -1,8 +1,8 @@
 {
   "meta": {
-    "schema_version": "1.2.2",
+    "schema_version": "1.2.3",
     "awf_version": "4.1.2",
-    "last_updated": "2026-02-06T14:26:00+07:00"
+    "last_updated": "2026-02-06T18:21:00+07:00"
   },
   "project": {
     "name": "revenue-management-system",
@@ -119,7 +119,7 @@
       },
       {
         "name": "promotion_catalog",
-        "description": "V01.2: Seedable global promotion templates (Agoda + Booking.com). 27 promotions total.",
+        "description": "V01.2: Global promotion templates for 5 OTAs. 61 promotions total (Agoda:17, Booking:15, Traveloka:10, Trip.com:11, Expedia:8). Includes allow_stack, description fields.",
         "v012_new": true
       },
       {
@@ -160,6 +160,15 @@
           "TARGETED"
         ],
         "description": "V01.2: Promotion stacking rules. SEASONAL=max 1, TARGETED=max 1 per subcategory"
+      },
+      {
+        "name": "CalcMode (conceptual)",
+        "values": [
+          "PROGRESSIVE (Agoda, Booking, Traveloka)",
+          "ADDITIVE (Trip.com/Ctrip)",
+          "ISOLATED (Expedia - no stacking)"
+        ],
+        "description": "OTA-specific calculation modes for promotion stacking"
       }
     ],
     "v011_indexes": [
@@ -286,8 +295,8 @@
     },
     {
       "path": "GET /api/pricing/catalog",
-      "explained": "V01.2: Get promotion catalog (Agoda).",
-      "v012_new": true
+      "explained": "V01.2: Get promotion catalog by vendor (agoda, booking, traveloka, ctrip, expedia).",
+      "v012_updated": true
     }
   ],
   "features": [
@@ -328,7 +337,10 @@
     "Delete Data By Month - Super admin can delete reservations/cancellations by month with confirmation",
     "Cached Stats with TTL - 5-minute cache for reservation and cancellation statistics",
     "Top 3 Agents by Company Name - Groups agents from XML ClientName field",
-    "All-time Cancellation Stats - Uses all data instead of 30-day filter for accurate display"
+    "All-time Cancellation Stats - Uses all data instead of 30-day filter for accurate display",
+    "V01.2: Full 5-OTA Promotion Catalogs - Agoda(17), Booking(15), Traveloka(10), Trip.com(11), Expedia(8) = 61 total",
+    "V01.2: OTA-Specific Validation Rules - Expedia ISOLATED, Trip.com ADDITIVE boxes, Booking Deep Deals no-stack",
+    "V01.2: Promotion Descriptions - Each promo has description field from OTA Partner Hubs"
   ],
   "cancellation_bridge_v011": {
     "status": "Implemented",
@@ -409,7 +421,11 @@
     "V01.2: Validation rules: max 1 Seasonal, max 1 Targeted per subcategory",
     "V01.2: Vendor-specific max discount: Agoda 80%, Booking.com no limit",
     "V01.2: Booking.com promotions mapped to existing PromotionGroup types",
-    "V01.2: Demo Hotel (ID: 159fe315-79a0-48a3-adac-f47d4f56b748) as fallback for new users"
+    "V01.2: Demo Hotel (ID: 159fe315-79a0-48a3-adac-f47d4f56b748) as fallback for new users",
+    "V01.2: Traveloka Channel Rate - applied before campaigns (Progressive mode)",
+    "V01.2: Trip.com ADDITIVE mode - same box pick 1, different boxes stack additively (d₁+d₂+...)",
+    "V01.2: Expedia ISOLATED mode - each promotion creates separate rate plan, no stacking",
+    "V01.2: Booking.com Deep Deals (Limited-time, Deal of the Day) - allow_stack=false"
   ],
   "ui_design": {
     "theme": "SaaS Pro Light",
