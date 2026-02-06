@@ -151,6 +151,7 @@ model ReservationsRaw {
   reservation_id_norm   String?
   room_code             String?
   room_code_norm        String?
+  company_name          String?           // OTA/Agent/Company name from XML
   matched_cancellations CancellationRaw[] @relation("MatchedCancellation")
   hotel                 Hotel             @relation(fields: [hotel_id], references: [hotel_id])
   job                   ImportJob         @relation(fields: [job_id], references: [job_id])

@@ -64,10 +64,11 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
         const { id } = await params
         const body = await request.json()
-        const { name, role, isActive } = body
+        const { name, phone, role, isActive } = body
 
         const updateData: Record<string, unknown> = {}
         if (name !== undefined) updateData.name = name
+        if (phone !== undefined) updateData.phone = phone
         if (role !== undefined) updateData.role = role
         if (isActive !== undefined) updateData.is_active = isActive
 

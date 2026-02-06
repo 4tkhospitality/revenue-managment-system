@@ -6,6 +6,7 @@ import { DateUtils } from '../../lib/date';
 import { HashUtils } from '../../lib/hash';
 import { Prisma } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
+import { invalidateStatsCache } from '../../lib/cachedStats';
 
 const STRICT_MODE = true; // Reject job on unknown status
 
@@ -125,6 +126,9 @@ export async function ingestCSV(formData: FormData) {
             where: { job_id: job.job_id },
             data: { status: 'completed', finished_at: new Date() }
         });
+
+        // 7.1 Invalidate stats cache
+        invalidateStatsCache();
 
         try {
             revalidatePath('/dashboard');

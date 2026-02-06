@@ -1,15 +1,12 @@
 import prisma from '../../lib/prisma';
 import { DateUtils } from '../../lib/date';
+import { getCancellationStats30Days } from '../../lib/cachedStats';
 
 export async function CancellationSection() {
-    // Get total cancellation stats (all time, not just 30 days)
-    // The issue was cancel_time in future years (2025/2026) didn't match 30 days filter
-    const cancellationStats = await prisma.cancellationRaw.aggregate({
-        _count: { id: true },
-        _sum: { nights: true, total_revenue: true }
-    });
+    // Get cancellation stats for last 30 days (cached)
+    const stats = await getCancellationStats30Days();
 
-    // V01.1: Match status breakdown
+    // V01.1: Match status breakdown (still all-time for matching purposes)
     const matchStatusStats = await prisma.cancellationRaw.groupBy({
         by: ['match_status'],
         _count: { id: true }
@@ -19,26 +16,14 @@ export async function CancellationSection() {
     const unmatchedCount = matchStatusStats.find(s => s.match_status === 'unmatched')?._count.id || 0;
     const ambiguousCount = matchStatusStats.find(s => s.match_status === 'ambiguous')?._count.id || 0;
     const pendingCount = matchStatusStats.find(s => s.match_status === 'pending' || !s.match_status)?._count.id || 0;
-
-    // Group by channel (all time)
-    const byChannel = await prisma.cancellationRaw.groupBy({
-        by: ['channel'],
-        _count: { id: true },
-        _sum: { nights: true, total_revenue: true },
-        orderBy: { _sum: { total_revenue: 'desc' } },
-        take: 5
-    });
+    const totalMatchCount = matchedCount + unmatchedCount + ambiguousCount + pendingCount;
+    const matchRate = totalMatchCount > 0 ? Math.round((matchedCount / totalMatchCount) * 100) : 0;
 
     // Recent cancellations - limit to 10 for faster loading
     const recentCancellations = await prisma.cancellationRaw.findMany({
         orderBy: { cancel_time: 'desc' },
-        take: 10 // Reduced from 20 to 10
+        take: 10
     });
-
-    const totalNights = cancellationStats._sum.nights || 0;
-    const totalRevenue = Number(cancellationStats._sum.total_revenue || 0);
-    const totalCount = cancellationStats._count.id || 0;
-    const matchRate = totalCount > 0 ? Math.round((matchedCount / totalCount) * 100) : 0;
 
     return (
         <div className="bg-white border border-rose-200 rounded-xl overflow-hidden shadow-sm">
@@ -47,19 +32,19 @@ export async function CancellationSection() {
                 <span className="text-xs text-gray-500">10 bản ghi mới nhất</span>
             </div>
 
-            {/* KPI Cards */}
+            {/* KPI Cards (30 days) */}
             <div className="p-4 grid grid-cols-3 gap-4 border-b border-gray-100">
                 <div className="text-center">
-                    <div className="text-2xl font-bold text-rose-600">{totalCount}</div>
-                    <div className="text-xs text-gray-500">Lượt huỷ</div>
+                    <div className="text-2xl font-bold text-rose-600">{stats.count}</div>
+                    <div className="text-xs text-gray-500">Tổng lượt huỷ</div>
                 </div>
                 <div className="text-center">
-                    <div className="text-2xl font-bold text-rose-600">{totalNights}</div>
+                    <div className="text-2xl font-bold text-rose-600">{stats.nights}</div>
                     <div className="text-xs text-gray-500">Room nights</div>
                 </div>
                 <div className="text-center">
                     <div className="text-2xl font-bold text-rose-600">
-                        {(totalRevenue / 1000000).toFixed(1)}M
+                        {(stats.revenue / 1000000).toFixed(1)}M
                     </div>
                     <div className="text-xs text-gray-500">Doanh thu mất</div>
                 </div>
@@ -93,22 +78,19 @@ export async function CancellationSection() {
                 </div>
             </div>
 
-            {/* By Channel - compact */}
-            {byChannel.length > 0 && (
+            {/* By Channel - Top 3 from all data */}
+            {stats.topChannels.length > 0 && (
                 <div className="p-3 border-b border-gray-100">
-                    <h3 className="text-xs font-medium text-gray-700 mb-2">Theo kênh</h3>
+                    <h3 className="text-xs font-medium text-gray-700 mb-2">Top 3 kênh hủy nhiều nhất</h3>
                     <div className="flex flex-wrap gap-2">
-                        {byChannel.slice(0, 3).map((ch, idx) => {
-                            const revenue = Number(ch._sum.total_revenue || 0);
-                            return (
-                                <div key={idx} className="px-2 py-1 bg-rose-50 rounded text-xs">
-                                    <span className="text-gray-600">{ch.channel || 'Khác'}</span>
-                                    <span className="text-rose-600 font-medium ml-1">
-                                        {(revenue / 1000000).toFixed(1)}M
-                                    </span>
-                                </div>
-                            );
-                        })}
+                        {stats.topChannels.map((ch, idx) => (
+                            <div key={idx} className="px-2 py-1 bg-rose-50 rounded text-xs">
+                                <span className="text-gray-600">{ch.channel || 'Khác'}</span>
+                                <span className="text-rose-600 font-medium ml-1">
+                                    {(ch.revenue / 1000000).toFixed(1)}M
+                                </span>
+                            </div>
+                        ))}
                     </div>
                 </div>
             )}

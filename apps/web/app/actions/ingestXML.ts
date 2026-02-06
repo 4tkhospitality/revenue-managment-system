@@ -4,6 +4,7 @@ import prisma from '../../lib/prisma';
 import { parseCrystalReportXML, ParsedReservation } from '../../lib/xmlParser';
 import { HashUtils } from '../../lib/hash';
 import { revalidatePath } from 'next/cache';
+import { invalidateStatsCache } from '../../lib/cachedStats';
 
 /**
  * Ingest Crystal Reports XML file (Booked or Cancelled report)
@@ -74,7 +75,8 @@ export async function ingestXML(formData: FormData) {
                 rooms: r.rooms,
                 revenue: r.revenue,
                 status: r.status,
-                cancel_date: r.status === 'cancelled' ? new Date(bookingDateStr) : null
+                cancel_date: r.status === 'cancelled' ? new Date(bookingDateStr) : null,
+                company_name: r.companyName || null, // OTA/Agent from XML
             };
         });
 
@@ -89,6 +91,9 @@ export async function ingestXML(formData: FormData) {
             where: { job_id: job.job_id },
             data: { status: 'completed', finished_at: new Date() }
         });
+
+        // 7.1 Invalidate stats cache
+        invalidateStatsCache();
 
         try {
             revalidatePath('/dashboard');

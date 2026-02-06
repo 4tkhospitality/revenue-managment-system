@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma"
 import { parseCancellationXml } from "@/lib/parseCancellationXml"
 import { normalizeKey } from "@/lib/normalize"
 import { bridgeCancellations, BridgeResult } from "@/lib/cancellationBridge"
+import { invalidateStatsCache } from "@/lib/cachedStats"
 import crypto from "crypto"
 
 interface IngestCancellationResult {
@@ -128,6 +129,9 @@ export async function ingestCancellationXml(
                 finished_at: new Date(),
             },
         })
+
+        // Invalidate stats cache
+        invalidateStatsCache()
 
         return {
             success: true,

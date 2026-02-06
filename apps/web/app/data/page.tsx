@@ -5,8 +5,10 @@ import { BuildOtbButton } from './BuildOtbButton';
 import { BuildFeaturesButton } from './BuildFeaturesButton';
 import { RunForecastButton } from './RunForecastButton';
 import { ResetButton } from './ResetButton';
+import { DeleteByMonthButton } from './DeleteByMonthButton';
 import { PaginatedImportJobs } from './PaginatedImportJobs';
 import { CancellationSection } from './CancellationSection';
+import { getReservationStats30 } from '../../lib/cachedStats';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,7 +20,7 @@ export default async function DataInspectorPage() {
     });
 
     // Get reservation count by booking date - limit to 10 for faster loading
-    const reservationStats = await prisma.reservationsRaw.groupBy({
+    const reservationsByDate = await prisma.reservationsRaw.groupBy({
         by: ['booking_date', 'status'],
         _count: { reservation_id: true },
         _sum: { revenue: true, rooms: true },
@@ -51,6 +53,9 @@ export default async function DataInspectorPage() {
     const latestBookingDate = dateRange._max.booking_date;
     const earliestBookingDate = dateRange._min.booking_date;
 
+    // Reservation summary stats (cached, 30 most recent)
+    const reservationStats = await getReservationStats30();
+
     return (
         <div className="mx-auto max-w-[1400px] px-8 py-6 space-y-6">
             {/* Header - lighter */}
@@ -77,8 +82,9 @@ export default async function DataInspectorPage() {
                 <BuildOtbButton />
                 <BuildFeaturesButton />
                 <RunForecastButton />
-                <div className="border-l border-gray-300 pl-4">
+                <div className="border-l border-gray-300 pl-4 flex gap-2">
                     <ResetButton />
+                    <DeleteByMonthButton />
                 </div>
             </div>
 
@@ -133,6 +139,46 @@ export default async function DataInspectorPage() {
                         <h2 className="text-lg font-semibold text-gray-900">🏨 Đặt phòng gần đây</h2>
                         <span className="text-xs text-gray-500">10 bản ghi mới nhất</span>
                     </div>
+
+                    {/* Summary Stats (30 most recent bookings) */}
+                    <div className="grid grid-cols-3 gap-3 p-4 bg-gradient-to-r from-blue-50 to-emerald-50 border-b border-gray-100">
+                        <div className="text-center">
+                            <div className="text-2xl font-bold text-blue-600">
+                                {reservationStats.count}
+                            </div>
+                            <div className="text-xs text-gray-500">Lượt đặt (30 ngày)</div>
+                        </div>
+                        <div className="text-center">
+                            <div className="text-2xl font-bold text-emerald-600">
+                                {reservationStats.rooms.toLocaleString()}
+                            </div>
+                            <div className="text-xs text-gray-500">Room-nights</div>
+                        </div>
+                        <div className="text-center">
+                            <div className="text-2xl font-bold text-amber-600">
+                                {(reservationStats.revenue / 1000000).toFixed(1)}M
+                            </div>
+                            <div className="text-xs text-gray-500">Doanh thu</div>
+                        </div>
+                    </div>
+
+                    {/* Top 3 Agents by Company Name */}
+                    {reservationStats.topAgents.length > 0 && (
+                        <div className="p-3 border-b border-gray-100">
+                            <h3 className="text-xs font-medium text-gray-700 mb-2">Top 3 đại lý (30 ngày)</h3>
+                            <div className="flex flex-wrap gap-2">
+                                {reservationStats.topAgents.map((agent, idx) => (
+                                    <div key={idx} className="px-2 py-1 bg-blue-50 rounded text-xs">
+                                        <span className="text-gray-600">{agent.company_name || 'Trực tiếp'}</span>
+                                        <span className="text-blue-600 font-medium ml-1">
+                                            {(agent.revenue / 1000000).toFixed(1)}M
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     <div className="overflow-x-auto max-h-80">
                         <table className="w-full text-sm">
                             <thead className="bg-gray-50 sticky top-0">
@@ -206,7 +252,7 @@ export default async function DataInspectorPage() {
                             </tr>
                         </thead>
                         <tbody>
-                            {reservationStats.map((stat, idx) => (
+                            {reservationsByDate.map((stat, idx) => (
                                 <tr key={idx} className="border-t border-gray-100 hover:bg-gray-50">
                                     <td className="px-4 py-2 text-gray-900">
                                         {DateUtils.format(stat.booking_date, 'dd/MM/yyyy')}
@@ -224,12 +270,12 @@ export default async function DataInspectorPage() {
                                     <td className="px-4 py-2 text-gray-900 text-right">
                                         {stat._sum.rooms || 0}
                                     </td>
-                                    <td className="px-4 py-2 text-gray-900 text-right font-mono">
+                                    <td className="px-4 py-2 text-gray-900 font-mono text-right">
                                         {(Number(stat._sum.revenue || 0) / 1000000).toFixed(1)}M
                                     </td>
                                 </tr>
                             ))}
-                            {reservationStats.length === 0 && (
+                            {reservationsByDate.length === 0 && (
                                 <tr>
                                     <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
                                         Chưa có reservations nào

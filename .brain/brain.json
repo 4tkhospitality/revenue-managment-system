@@ -1,8 +1,8 @@
 {
   "meta": {
-    "schema_version": "1.2.0",
+    "schema_version": "1.2.1",
     "awf_version": "4.1.2",
-    "last_updated": "2026-02-05T16:32:00+07:00"
+    "last_updated": "2026-02-06T06:30:00+07:00"
   },
   "project": {
     "name": "revenue-management-system",
@@ -447,7 +447,12 @@
       "TypeScript IDE may need restart after prisma generate to pick up new types",
       "Admin pages need layout.tsx to include sidebar (app/admin/layout.tsx)",
       "V01.1: Prisma.ModelGetPayload<object> for inferred types",
-      "V01.1: Use prisma.$transaction for atomic bridge updates"
+      "V01.1: Use prisma.$transaction for atomic bridge updates",
+      "JWT callback: Nested Prisma include fails silently in Edge runtime - use separate queries",
+      "JWT callback: Only fetch user data on initial sign-in (when account is present), not every request",
+      "Session stale: If user's hotel assignments changed, they must logout and login again to refresh JWT",
+      "Cookie activeHotelId may point to invalid hotel - middleware clears it and redirects to /select-hotel",
+      "React hydration mismatch warnings from browser extensions (Liner) - safe to ignore"
     ],
     "formulas": {
       "rooms_otb": "SUM(num_rooms) from reservations for that stay_date",

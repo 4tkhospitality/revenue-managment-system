@@ -36,6 +36,7 @@ export default function AdminUsersPage() {
     const [search, setSearch] = useState('');
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showAssignModal, setShowAssignModal] = useState(false);
+    const [showEditModal, setShowEditModal] = useState(false);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
     useEffect(() => {
@@ -77,6 +78,23 @@ export default function AdminUsersPage() {
             fetchUsers();
         } catch (error) {
             console.error('Error toggling user:', error);
+        }
+    };
+
+    const deleteUser = async (user: User) => {
+        if (!confirm(`⚠️ XÓA VĨNH VIỄN người dùng ${user.email}?\n\nHành động này không thể hoàn tác!`)) return;
+
+        try {
+            const res = await fetch(`/api/admin/users/${user.id}`, {
+                method: 'DELETE'
+            });
+            if (res.ok) {
+                fetchUsers();
+            } else {
+                alert('Có lỗi xảy ra khi xóa');
+            }
+        } catch (error) {
+            console.error('Error deleting user:', error);
         }
     };
 
@@ -232,6 +250,12 @@ export default function AdminUsersPage() {
                                     </td>
                                     <td className="px-4 py-3 text-right">
                                         <button
+                                            onClick={() => { setSelectedUser(user); setShowEditModal(true); }}
+                                            className="text-emerald-600 hover:text-emerald-800 text-sm mr-3"
+                                        >
+                                            Sửa
+                                        </button>
+                                        <button
                                             onClick={() => { setSelectedUser(user); setShowAssignModal(true); }}
                                             className="text-blue-600 hover:text-blue-800 text-sm mr-3"
                                         >
@@ -239,9 +263,15 @@ export default function AdminUsersPage() {
                                         </button>
                                         <button
                                             onClick={() => toggleUserActive(user)}
-                                            className={`text-sm ${user.isActive ? 'text-red-600 hover:text-red-800' : 'text-green-600 hover:text-green-800'}`}
+                                            className={`text-sm mr-3 ${user.isActive ? 'text-orange-600 hover:text-orange-800' : 'text-green-600 hover:text-green-800'}`}
                                         >
                                             {user.isActive ? 'Khóa' : 'Mở khóa'}
+                                        </button>
+                                        <button
+                                            onClick={() => deleteUser(user)}
+                                            className="text-red-600 hover:text-red-800 text-sm"
+                                        >
+                                            Xóa
                                         </button>
                                     </td>
                                 </tr>
@@ -261,6 +291,15 @@ export default function AdminUsersPage() {
             )}
 
             {/* Assign Hotels Modal */}
+            {/* Edit User Modal */}
+            {showEditModal && selectedUser && (
+                <EditUserModal
+                    user={selectedUser}
+                    onClose={() => { setShowEditModal(false); setSelectedUser(null); }}
+                    onSaved={() => { setShowEditModal(false); setSelectedUser(null); fetchUsers(); }}
+                />
+            )}
+
             {showAssignModal && selectedUser && (
                 <AssignHotelsModal
                     user={selectedUser}
@@ -520,6 +559,99 @@ function AssignHotelsModal({ user, hotels, onClose, onSaved }: {
                         {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
                     </button>
                 </div>
+            </div>
+        </div>
+    );
+}
+
+// Edit User Modal Component
+function EditUserModal({ user, onClose, onSaved }: {
+    user: User;
+    onClose: () => void;
+    onSaved: () => void;
+}) {
+    const [name, setName] = useState(user.name || '');
+    const [phone, setPhone] = useState(user.phone || '');
+    const [role, setRole] = useState(user.role);
+    const [saving, setSaving] = useState(false);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setSaving(true);
+
+        try {
+            const res = await fetch(`/api/admin/users/${user.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    name: name || null, 
+                    phone: phone || null,
+                    role 
+                })
+            });
+
+            if (res.ok) {
+                onSaved();
+            } else {
+                const data = await res.json();
+                alert(data.error || 'Có lỗi xảy ra');
+            }
+        } catch (error) {
+            console.error('Error updating user:', error);
+            alert('Có lỗi xảy ra');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-6 w-full max-w-md">
+                <h2 className="text-xl font-bold mb-1">Chỉnh sửa người dùng</h2>
+                <p className="text-gray-500 text-sm mb-4">{user.email}</p>
+                
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Họ tên</label>
+                        <input
+                            type="text"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            placeholder="Nhập họ tên đầy đủ"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Số điện thoại</label>
+                        <input
+                            type="tel"
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                            placeholder="VD: 0901234567"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Global Role</label>
+                        <select
+                            value={role}
+                            onChange={(e) => setRole(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="viewer">Viewer (default)</option>
+                            <option value="super_admin">Super Admin</option>
+                        </select>
+                        <p className="text-xs text-gray-500 mt-1">Global role chỉ cho super_admin. Quyền thật nằm ở Hotel Role (trong Gán hotel).</p>
+                    </div>
+                    <div className="flex justify-end gap-3 pt-4">
+                        <button type="button" onClick={onClose} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">
+                            Hủy
+                        </button>
+                        <button type="submit" disabled={saving} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+                            {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     );

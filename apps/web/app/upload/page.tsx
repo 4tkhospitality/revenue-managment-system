@@ -20,6 +20,7 @@ export default function UploadPage() {
     const [resultDetails, setResultDetails] = useState<{ count?: number; reportDate?: string } | null>(null);
     const [activeHotelId, setActiveHotelId] = useState<string | null>(null);
     const [isDemo, setIsDemo] = useState(false);
+    const [isAdmin, setIsAdmin] = useState(false); // Super admin bypass
     const inputRef = useRef<HTMLInputElement>(null);
 
     // Fetch active hotel and check if Demo Hotel
@@ -38,6 +39,9 @@ export default function UploadPage() {
                 const demoRes = await fetch('/api/is-demo-hotel');
                 const demoData = await demoRes.json();
                 setIsDemo(demoData.isDemo || false);
+
+                // Check if super_admin (bypass restrictions)
+                setIsAdmin(session?.user?.isAdmin || false);
             } catch (error) {
                 console.error('Error fetching active hotel:', error);
                 setActiveHotelId(process.env.NEXT_PUBLIC_DEFAULT_HOTEL_ID || '');
@@ -52,8 +56,8 @@ export default function UploadPage() {
     };
 
     const handleFile = async (file: File) => {
-        // Block uploads for Demo Hotel
-        if (isDemo) {
+        // Block uploads for Demo Hotel (but super_admin can bypass)
+        if (isDemo && !isAdmin) {
             setStatus('error');
             setMessage('Demo Hotel không được phép upload file. Vui lòng liên hệ admin để được gán khách sạn.');
             return;
@@ -133,7 +137,7 @@ export default function UploadPage() {
     const handleDrag = (e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        if (isDemo) return; // Block drag for Demo Hotel
+        if (isDemo && !isAdmin) return; // Block drag for Demo Hotel (admin bypass)
         if (e.type === 'dragenter' || e.type === 'dragover') {
             setDragActive(true);
         } else if (e.type === 'dragleave') {
@@ -145,7 +149,7 @@ export default function UploadPage() {
         e.preventDefault();
         e.stopPropagation();
         setDragActive(false);
-        if (isDemo) return; // Block drop for Demo Hotel
+        if (isDemo && !isAdmin) return; // Block drop for Demo Hotel (admin bypass)
 
         if (e.dataTransfer.files && e.dataTransfer.files[0]) {
             handleFile(e.dataTransfer.files[0]);
@@ -159,7 +163,7 @@ export default function UploadPage() {
     };
 
     const handleButtonClick = () => {
-        if (isDemo) return; // Block for Demo Hotel
+        if (isDemo && !isAdmin) return; // Block for Demo Hotel (admin bypass)
         inputRef.current?.click();
     };
 
@@ -191,8 +195,8 @@ export default function UploadPage() {
             </header>
 
             <div className="max-w-3xl mx-auto space-y-6">
-                {/* Demo Hotel Warning */}
-                {isDemo && (
+                {/* Demo Hotel Warning - only show if not admin */}
+                {isDemo && !isAdmin && (
                     <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
                         <Lock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
                         <div>
@@ -209,30 +213,30 @@ export default function UploadPage() {
                 <div className="flex gap-2">
                     <button
                         onClick={() => handleTabChange('booked')}
-                        disabled={isDemo}
+                        disabled={isDemo && !isAdmin}
                         className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors ${activeTab === 'booked'
                             ? 'bg-blue-600 text-white'
                             : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-                            } ${isDemo ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            } ${isDemo && !isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                         <CheckCircle className="w-4 h-4" />
                         Báo cáo Đặt phòng
                     </button>
                     <button
                         onClick={() => handleTabChange('cancelled')}
-                        disabled={isDemo}
+                        disabled={isDemo && !isAdmin}
                         className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors ${activeTab === 'cancelled'
                             ? 'bg-rose-600 text-white'
                             : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-                            } ${isDemo ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            } ${isDemo && !isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                         <XCircle className="w-4 h-4" />
                         Báo cáo Huỷ phòng
                     </button>
                 </div>
 
-                {/* Tab Description - hidden for Demo Hotel */}
-                {!isDemo && (
+                {/* Tab Description - hidden for Demo Hotel (unless admin) */}
+                {(!isDemo || isAdmin) && (
                     <div className={`p-4 rounded-xl border ${activeTab === 'booked'
                         ? 'bg-blue-50 border-blue-200'
                         : 'bg-rose-50 border-rose-200'
@@ -247,15 +251,15 @@ export default function UploadPage() {
 
                 {/* Upload Area */}
                 <div
-                    className={`relative border-2 border-dashed rounded-xl p-10 text-center transition-colors ${isDemo
-                            ? 'border-gray-300 bg-gray-50 cursor-not-allowed'
-                            : dragActive
-                                ? 'border-blue-500 bg-blue-50'
-                                : status === 'success'
-                                    ? 'border-emerald-500 bg-emerald-50'
-                                    : status === 'error'
-                                        ? 'border-rose-500 bg-rose-50'
-                                        : 'border-gray-300 bg-white hover:border-gray-400'
+                    className={`relative border-2 border-dashed rounded-xl p-10 text-center transition-colors ${(isDemo && !isAdmin)
+                        ? 'border-gray-300 bg-gray-50 cursor-not-allowed'
+                        : dragActive
+                            ? 'border-blue-500 bg-blue-50'
+                            : status === 'success'
+                                ? 'border-emerald-500 bg-emerald-50'
+                                : status === 'error'
+                                    ? 'border-rose-500 bg-rose-50'
+                                    : 'border-gray-300 bg-white hover:border-gray-400'
                         }`}
                     onDragEnter={handleDrag}
                     onDragLeave={handleDrag}
@@ -268,10 +272,10 @@ export default function UploadPage() {
                         accept=".csv,.xml"
                         onChange={handleChange}
                         className="hidden"
-                        disabled={isDemo}
+                        disabled={isDemo && !isAdmin}
                     />
 
-                    {isDemo ? (
+                    {(isDemo && !isAdmin) ? (
                         <>
                             <Lock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                             <p className="text-gray-500 text-lg mb-2">
@@ -338,8 +342,8 @@ export default function UploadPage() {
                     )}
                 </div>
 
-                {/* Format Guide - hidden for Demo Hotel */}
-                {!isDemo && (
+                {/* Format Guide - hidden for Demo Hotel (unless admin) */}
+                {(!isDemo || isAdmin) && (
                     <>
                         <div className="grid grid-cols-2 gap-4">
                             {/* XML Format */}
