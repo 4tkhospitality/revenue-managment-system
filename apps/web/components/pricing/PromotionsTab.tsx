@@ -60,6 +60,7 @@ interface Promo {
     group_type: GroupType;
     sub_category: string | null;
     default_pct: number | null;
+    allow_stack?: boolean; // Deep Deals set to false
 }
 
 interface Campaign {
@@ -686,6 +687,73 @@ export default function PromotionsTab() {
         const active = campaigns.filter((c) => c.is_active);
         const vendorCode = channels.find((c) => c.id === selectedChannel)?.code || 'agoda';
 
+        // =========================================================================
+        // EXPEDIA: ISOLATED Mode - Each promotion is standalone, no real stacking
+        // =========================================================================
+        if (vendorCode === 'expedia') {
+            if (active.length > 1) {
+                warnings.push(`Expedia: Mỗi promotion tạo rate plan riêng, không cộng dồn. Khách chỉ nhận 1 discount.`);
+            }
+            return { isValid: errors.length === 0, errors, warnings };
+        }
+
+        // =========================================================================
+        // TRIP.COM/CTRIP: ADDITIVE Mode - Same "box" = pick 1, different boxes = additive stack
+        // =========================================================================
+        if (vendorCode === 'ctrip') {
+            // Check same-box conflicts (REGULAR, TARGETING, CAMPAIGN, PACKAGE)
+            const boxGroups: Record<string, Campaign[]> = {};
+            active.forEach((c) => {
+                const box = c.promo.sub_category || 'OTHER';
+                if (!boxGroups[box]) boxGroups[box] = [];
+                boxGroups[box].push(c);
+            });
+            Object.entries(boxGroups).forEach(([box, items]) => {
+                if (items.length > 1) {
+                    errors.push(`Trip.com: Cùng nhóm "${box}" chỉ chọn được 1 (đang chọn ${items.length})`);
+                }
+            });
+            // Trip.com uses ADDITIVE calculation
+            const totalAdditive = active.reduce((sum, c) => sum + c.discount_pct, 0);
+            if (totalAdditive > 50) {
+                warnings.push(`Trip.com: Tổng discount CỘNG DỒN ${totalAdditive}% - khá cao`);
+            }
+            return { isValid: errors.length === 0, errors, warnings };
+        }
+
+        // =========================================================================
+        // BOOKING.COM: Progressive + Max 3 + Deep Deals no-stack
+        // =========================================================================
+        if (vendorCode === 'booking') {
+            // Deep Deals cannot stack
+            const deepDeals = active.filter((c) => c.promo.allow_stack === false);
+            if (deepDeals.length > 0 && active.length > 1) {
+                errors.push(`Deep Deal "${deepDeals[0].promo.name}" không thể kết hợp với promotions khác`);
+            }
+            // Max 3 stacking
+            if (active.length > 3) {
+                errors.push(`Booking.com chỉ cho phép tối đa 3 promotions cùng lúc (đang chọn ${active.length})`);
+            }
+            // Same subcategory = pick highest only
+            const subcatGroups: Record<string, Campaign[]> = {};
+            active.forEach((c) => {
+                if (c.promo.sub_category) {
+                    const key = c.promo.sub_category;
+                    if (!subcatGroups[key]) subcatGroups[key] = [];
+                    subcatGroups[key].push(c);
+                }
+            });
+            Object.entries(subcatGroups).forEach(([subcat, items]) => {
+                if (items.length > 1) {
+                    warnings.push(`Booking.com: Cùng nhóm "${subcat}" sẽ chỉ áp dụng discount cao nhất`);
+                }
+            });
+            return { isValid: errors.length === 0, errors, warnings };
+        }
+
+        // =========================================================================
+        // AGODA & TRAVELOKA: Progressive stacking with category rules
+        // =========================================================================
         // Max 1 SEASONAL
         const seasonals = active.filter((c) => c.promo.group_type === 'SEASONAL');
         if (seasonals.length > 1) {

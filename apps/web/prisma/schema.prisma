@@ -318,6 +318,7 @@ model PromotionCatalog {
   id                      String             @id
   vendor                  String
   name                    String
+  description             String?
   group_type              PromotionGroup
   sub_category            String?
   default_pct             Float?
