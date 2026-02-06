@@ -87,7 +87,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
                     } else {
                         // NEW USER: Auto-create and assign to Demo Hotel
-                        const DEMO_HOTEL_ID = process.env.DEFAULT_HOTEL_ID || '123e4567-e89b-12d3-a456-426614174000'
+                        const DEMO_HOTEL_ID = process.env.DEFAULT_HOTEL_ID || '159fe315-79a0-48a3-adac-f47d4f56b748'
 
                         // Create new user
                         const newUser = await prisma.user.create({
