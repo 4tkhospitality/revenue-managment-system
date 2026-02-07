@@ -78,11 +78,10 @@ export async function buildDailyOTB(params?: BuildOTBParams): Promise<BuildOTBRe
     const snapshotDate = new Date(asOfTs);
     snapshotDate.setHours(0, 0, 0, 0);
 
-    // Default stay date range: today to 365 days from now
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const stayDateFrom = params?.stayDateFrom || today;
-    const stayDateTo = params?.stayDateTo || new Date(today.getTime() + 365 * 24 * 60 * 60 * 1000);
+    // Default stay date range: use very wide range to capture all data
+    // (historical data may have arrivals in the past, not just future)
+    const stayDateFrom = params?.stayDateFrom || new Date('2020-01-01');
+    const stayDateTo = params?.stayDateTo || new Date('2030-12-31');
 
     try {
         // V01.1: Time-Travel Query
