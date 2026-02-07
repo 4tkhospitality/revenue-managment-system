@@ -23,6 +23,19 @@ export function calcBarFromNet(
     // Validate inputs with vendor-specific rules
     const validation = validatePromotions(discounts, commission, vendor);
 
+    // Enforce validation: reject if critical errors
+    if (!validation.isValid && validation.errors.length > 0) {
+        return {
+            bar: 0,
+            barRaw: 0,
+            net,
+            commission,
+            totalDiscount: 0,
+            validation,
+            trace: [],
+        };
+    }
+
     // If commission >= 100, return error
     if (commission >= 100) {
         return {
@@ -113,7 +126,8 @@ export function calcBarFromNet(
             break;
         case 'NONE':
         default:
-            bar = Math.round(bar);
+            // NONE = no rounding at all, preserve raw float
+            break;
     }
 
     if (barRaw !== bar) {

@@ -10,6 +10,19 @@ import { invalidateStatsCache } from '../../lib/cachedStats';
 
 const STRICT_MODE = true; // Reject job on unknown status
 
+/**
+ * Option A: Convert a date to local midnight (Asia/Ho_Chi_Minh) stored as UTC.
+ * VN = UTC+7, so local midnight = UTC 17:00 previous day.
+ * Example: booking_date "2026-01-15" → book_time "2026-01-14T17:00:00Z"
+ */
+function toLocalMidnightUTC(date: Date, tzOffsetHours: number = 7): Date {
+    const d = new Date(date);
+    // Set to midnight of the date in UTC, then subtract timezone offset
+    d.setUTCHours(0, 0, 0, 0);
+    d.setUTCHours(d.getUTCHours() - tzOffsetHours);
+    return d;
+}
+
 export async function ingestCSV(formData: FormData) {
     const file = formData.get('file') as File;
     const hotelId = formData.get('hotelId') as string;
@@ -23,7 +36,7 @@ export async function ingestCSV(formData: FormData) {
     const buffer = Buffer.from(arrayBuffer);
     const fileHash = HashUtils.computeFileHash(buffer);
 
-    // 2. Check Idempotency
+    // 2. Check Idempotency (with retry policy for failed jobs)
     const existingJob = await prisma.importJob.findFirst({
         where: {
             hotel_id: hotelId,
@@ -31,28 +44,45 @@ export async function ingestCSV(formData: FormData) {
         }
     });
 
+    let job: any;
+
     if (existingJob) {
         if (existingJob.status === 'completed') {
             return { success: false, message: "File already processed", error: "DUPLICATE_FILE" };
         }
-        // If failed, allow retry (create new job or reuse? Plan says retry = create new job)
+        if (existingJob.status === 'processing') {
+            return { success: false, message: "File is still being processed", error: "STILL_PROCESSING" };
+        }
+        if (existingJob.status === 'failed') {
+            // Retry: clean up old data, reuse same job
+            await prisma.reservationsRaw.deleteMany({ where: { job_id: existingJob.job_id } });
+            await prisma.importJob.update({
+                where: { job_id: existingJob.job_id },
+                data: { status: 'processing', error_summary: null, finished_at: null }
+            });
+            job = existingJob;
+        }
     }
 
-    // 3. Create Job
-    const job = await prisma.importJob.create({
-        data: {
-            hotel_id: hotelId,
-            file_name: file.name,
-            file_hash: fileHash,
-            status: 'processing'
-        }
-    });
+    // 3. Create Job (only if no existing job to reuse)
+    if (!job) {
+        job = await prisma.importJob.create({
+            data: {
+                hotel_id: hotelId,
+                file_name: file.name,
+                file_hash: fileHash,
+                status: 'processing',
+                snapshot_ts: new Date(), // Default snapshot = now
+            }
+        });
+    }
 
     try {
         // 4. Parse CSV
         const csvContent = buffer.toString('utf-8');
         const rows = await CSVUtils.parseString(csvContent);
         const validRows = [];
+        const seenResIds = new Set<string>(); // Duplicate detection within file
 
         // 5. Validation Loop
         for (const [index, row] of rows.entries()) {
@@ -82,20 +112,29 @@ export async function ingestCSV(formData: FormData) {
 
             // Logical Validations
             if (!DateUtils.isBefore(arrivalDate, departureDate)) {
-                // arrival >= departure -> Invalid stay
                 throw new Error(`Line ${line}: Arrival must be before Departure`);
             }
 
             const rooms = parseInt(row.rooms || '0');
-            const revenue = parseFloat(row.revenue || '0');
+            const revenue = Math.round(parseFloat(row.revenue || '0')); // VND integer guardrail
 
             if (rooms <= 0) throw new Error(`Line ${line}: Rooms must be > 0`);
             if (revenue < 0) throw new Error(`Line ${line}: Revenue cannot be negative`);
 
+            // P0: Reject cancelled rows missing cancel_date (strict policy)
             if (status === 'cancelled' && !cancelDate) {
-                console.warn(`Line ${line}: Cancelled booking missing cancel_date`);
-                // Allow? Plan says warn.
+                throw new Error(`Line ${line}: Cancelled booking MUST have cancel_date`);
             }
+
+            // P1: Detect duplicate reservation_id within same CSV
+            if (row.reservation_id && seenResIds.has(row.reservation_id)) {
+                throw new Error(`Line ${line}: Duplicate reservation_id '${row.reservation_id}' in same file`);
+            }
+            if (row.reservation_id) seenResIds.add(row.reservation_id);
+
+            // P0: Map date → timestamp for OTB time-travel (Option A: local midnight → UTC)
+            const bookTime = toLocalMidnightUTC(bookingDate);
+            const cancelTime = cancelDate ? toLocalMidnightUTC(cancelDate) : null;
 
             validRows.push({
                 hotel_id: hotelId,
@@ -107,18 +146,15 @@ export async function ingestCSV(formData: FormData) {
                 rooms: rooms,
                 revenue: revenue,
                 status: status,
-                cancel_date: cancelDate
+                cancel_date: cancelDate,
+                book_time: bookTime,       // NEW: local midnight as UTC
+                cancel_time: cancelTime,   // NEW: local midnight as UTC
             });
         }
 
-        // 6. Bulk Insert
-        // Note: createMany is supported in Prisma with Postgres
+        // 6. Bulk Insert (no skipDuplicates — Step 3 catches dupes explicitly)
         await prisma.reservationsRaw.createMany({
             data: validRows,
-            skipDuplicates: true // In case ID repeats in same file? Or let it crash per design?
-            // Design says "Append-only" but unique constraint exists (hotel, res, job).
-            // If duplicated within file, duplicate key error.
-            // Let's assume CSV is unique per res_id effectively.
         });
 
         // 7. Complete Job

@@ -62,6 +62,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                         }
 
                         // Step 2: Find hotel assignments separately
+                        console.log(`[AUTH] JWT Callback - Existing User: ${user.email}, Role: ${user.role}, IsActive: ${user.is_active}, IsAdmin: ${token.isAdmin}`)
+
                         const hotelUsers = await prisma.hotelUser.findMany({
                             where: { user_id: user.id },
                             select: {
@@ -133,6 +135,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                                 is_active: true,
                             }
                         })
+                        console.log(`[AUTH] Created New User: ${newUser.email}, ID: ${newUser.id}, IsActive: ${newUser.is_active}`)
 
                         // Auto-assign to Demo Hotel with viewer role
                         await prisma.hotelUser.create({

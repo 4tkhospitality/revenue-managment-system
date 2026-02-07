@@ -130,10 +130,12 @@ model ImportJob {
   error_log         Json?
   total_rows        Int?
   import_type       ImportType        @default(RESERVATION)
+  snapshot_ts       DateTime?         @db.Timestamptz(6)  // For OTB dedup: when the snapshot represents
   cancellations_raw CancellationRaw[]
   hotel             Hotel             @relation(fields: [hotel_id], references: [hotel_id])
   reservations_raw  ReservationsRaw[]
 
+  @@unique([hotel_id, file_hash], map: "uq_import_hotel_hash")
   @@map("import_jobs")
 }
 
@@ -164,6 +166,7 @@ model ReservationsRaw {
   job                   ImportJob         @relation(fields: [job_id], references: [job_id])
 
   @@unique([hotel_id, reservation_id, job_id], name: "uq_res_job")
+  @@index([hotel_id, reservation_id], map: "idx_res_raw_dedup")
   @@index([hotel_id, reservation_id_norm, arrival_date, room_code_norm], map: "idx_res_raw_match1")
   @@index([hotel_id, reservation_id_norm, arrival_date], map: "idx_res_raw_match2")
   @@index([hotel_id, book_time, cancel_time, arrival_date, departure_date], map: "idx_res_raw_otb")
@@ -250,6 +253,8 @@ model PricingDecision {
   hotel        Hotel          @relation(fields: [hotel_id], references: [hotel_id])
   user         User           @relation(fields: [user_id], references: [id])
 
+  @@index([hotel_id])
+  @@index([user_id])
   @@map("pricing_decisions")
 }
 

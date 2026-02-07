@@ -38,12 +38,13 @@ export async function middleware(request: NextRequest) {
         return NextResponse.next()
     }
 
-    // 2. Allow static files
+    // 1. Skip middleware for public assets and APIs
     if (
         pathname.startsWith("/_next") ||
-        pathname.startsWith("/favicon") ||
-        pathname.startsWith("/logo") ||
-        pathname.includes(".")
+        pathname.startsWith("/static") ||
+        pathname.startsWith("/api/auth") ||
+        pathname.startsWith("/api/public") ||
+        pathname.startsWith("/api/debug-fix-user") // Allow debug API
     ) {
         return NextResponse.next()
     }
@@ -51,8 +52,15 @@ export async function middleware(request: NextRequest) {
     // 3. Get session
     const session = await auth()
 
-    // 4. Not logged in -> redirect to login
+    // 4. Not logged in -> redirect to login (or 401 JSON for API routes)
     if (!session?.user) {
+        // API routes should return 401 JSON, not redirect
+        if (pathname.startsWith('/api/')) {
+            return NextResponse.json(
+                { error: 'Unauthorized', message: 'Authentication required' },
+                { status: 401 }
+            )
+        }
         const loginUrl = new URL("/auth/login", request.url)
         loginUrl.searchParams.set("callbackUrl", pathname)
         return NextResponse.redirect(loginUrl)
@@ -68,6 +76,7 @@ export async function middleware(request: NextRequest) {
 
     // 6. Blocked user check
     if (session.user.isActive === false) {
+
         if (pathname.startsWith('/blocked')) {
             return NextResponse.next()
         }

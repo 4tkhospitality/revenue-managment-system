@@ -3,18 +3,20 @@
 import prisma from '../../lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { Decimal } from '@prisma/client/runtime/library';
+import { Prisma } from '@prisma/client';
 
 /**
- * V01.1: Build Daily OTB (On The Books) with Time-Travel Logic
+ * V01.2: Build Daily OTB (On The Books) with Time-Travel + Dedup Logic
  * 
- * Key changes from V01:
- * - Uses asOfTs (timestamp) instead of asOfDate for accurate time-travel
- * - Checks cancel_time against asOfTs (not status field)
- * - Implements book_time fallback for legacy data
- * - Revenue split per night with remainder to last night
+ * Key changes from V01.1:
+ * - Raw SQL with DISTINCT ON (reservation_id) for deduplication
+ * - Orders by snapshot_ts DESC (latest snapshot wins, not created_at)
+ * - Tenant-safe join (j.hotel_id = r.hotel_id)
+ * - Overlap filter for performance (arrival < to AND departure > from)
+ * - cancel_time based filtering (event-time model)
  * 
  * Flow:
- * 1. Get all reservations that were active as-of asOfTs
+ * 1. Get deduplicated reservations active as-of asOfTs (latest version only)
  * 2. Expand each reservation to individual room-nights
  * 3. Aggregate by stay_date → rooms_otb, revenue_otb
  * 4. Upsert into daily_otb table
@@ -37,6 +39,17 @@ interface BuildOTBResult {
     dqFallbackCount?: number;  // Count of reservations using book_time fallback
 }
 
+/** Raw SQL result row type */
+interface RawReservationRow {
+    reservation_id: string;
+    booking_date: Date;
+    book_time: Date | null;
+    arrival_date: Date;
+    departure_date: Date;
+    rooms: number | string;
+    revenue: any; // Decimal comes as string from raw SQL
+}
+
 /**
  * Get effective book time with fallback for legacy data
  * If book_time is null, uses booking_date at 00:00:00
@@ -53,12 +66,11 @@ function getEffectiveBookTime(bookTime: Date | null, bookingDate: Date): Date {
  * Calculate revenue per night with remainder to last night
  * V01.1: Even split with remainder to last night for precision
  */
-function calculateRevenuePerNight(totalRevenue: number | Decimal, nights: number, nightIndex: number): number {
-    const total = typeof totalRevenue === 'number' ? totalRevenue : Number(totalRevenue);
-    if (nights <= 0) return total;
+function calculateRevenuePerNight(totalRevenue: number, nights: number, nightIndex: number): number {
+    if (nights <= 0) return totalRevenue;
 
-    const revenuePerNight = Math.floor(total / nights);
-    const remainder = total - (revenuePerNight * nights);
+    const revenuePerNight = Math.floor(totalRevenue / nights);
+    const remainder = totalRevenue - (revenuePerNight * nights);
 
     // Last night gets the remainder
     if (nightIndex === nights - 1) {
@@ -79,44 +91,37 @@ export async function buildDailyOTB(params?: BuildOTBParams): Promise<BuildOTBRe
     snapshotDate.setHours(0, 0, 0, 0);
 
     // Default stay date range: use very wide range to capture all data
-    // (historical data may have arrivals in the past, not just future)
     const stayDateFrom = params?.stayDateFrom || new Date('2020-01-01');
     const stayDateTo = params?.stayDateTo || new Date('2030-12-31');
 
     try {
-        // V01.1: Time-Travel Query
-        // A reservation is active as-of asOfTs if:
-        // 1. book_time <= asOfTs (or booking_date <= asOfTs for legacy)
-        // 2. AND (cancel_time IS NULL OR cancel_time > asOfTs)
-        const reservations = await prisma.reservationsRaw.findMany({
-            where: {
-                hotel_id: hotelId,
-                // book_time/booking_date <= asOfTs
-                OR: [
-                    { book_time: { lte: asOfTs } },
-                    {
-                        book_time: null,
-                        booking_date: { lte: asOfTs }
-                    }
-                ],
-                // NOT cancelled before or at asOfTs
-                AND: {
-                    OR: [
-                        { cancel_time: null },
-                        { cancel_time: { gt: asOfTs } }
-                    ]
-                }
-            },
-            select: {
-                reservation_id: true,
-                booking_date: true,
-                book_time: true,
-                arrival_date: true,
-                departure_date: true,
-                rooms: true,
-                revenue: true,
-            },
-        });
+        // V01.2: Dedup Query with Raw SQL
+        // DISTINCT ON (reservation_id) + ORDER BY snapshot_ts DESC = latest version wins
+        // Tenant-safe join: j.hotel_id = r.hotel_id
+        // Overlap filter: arrival < stayDateTo AND departure > stayDateFrom
+        const reservations = await prisma.$queryRaw<RawReservationRow[]>`
+            SELECT DISTINCT ON (r.reservation_id)
+                r.reservation_id,
+                r.booking_date,
+                r.book_time,
+                r.arrival_date,
+                r.departure_date,
+                r.rooms,
+                r.revenue
+            FROM reservations_raw r
+            JOIN import_jobs j
+              ON j.job_id = r.job_id
+              AND j.hotel_id = r.hotel_id
+            WHERE r.hotel_id = ${hotelId}::uuid
+              -- Time-travel: booked before snapshot
+              AND COALESCE(r.book_time, r.booking_date::timestamp) <= ${asOfTs}
+              -- Time-travel: not cancelled before snapshot (event-time model)
+              AND (r.cancel_time IS NULL OR r.cancel_time > ${asOfTs})
+              -- Performance: overlap filter
+              AND r.arrival_date < ${stayDateTo}::date
+              AND r.departure_date > ${stayDateFrom}::date
+            ORDER BY r.reservation_id, COALESCE(j.snapshot_ts, j.created_at) DESC
+        `;
 
         if (reservations.length === 0) {
             return {
@@ -138,6 +143,10 @@ export async function buildDailyOTB(params?: BuildOTBParams): Promise<BuildOTBRe
                 dqFallbackCount++;
             }
 
+            // Raw SQL type casting: Postgres may return numeric types as strings
+            const roomsNum = Number(res.rooms);
+            const revenueNum = Number(res.revenue);
+
             const arrival = new Date(res.arrival_date);
             const departure = new Date(res.departure_date);
             const nights = Math.ceil((departure.getTime() - arrival.getTime()) / (1000 * 60 * 60 * 24));
@@ -154,12 +163,12 @@ export async function buildDailyOTB(params?: BuildOTBParams): Promise<BuildOTBRe
 
                 const dateKey = stayDate.toISOString().split('T')[0];
 
-                // V01.1: Revenue split with remainder to last night
-                const revenueForNight = calculateRevenuePerNight(res.revenue, nights, i);
+                // V01.2: Revenue split with remainder to last night
+                const revenueForNight = calculateRevenuePerNight(revenueNum, nights, i);
 
                 const existing = stayDateMap.get(dateKey) || { rooms: 0, revenue: 0 };
                 stayDateMap.set(dateKey, {
-                    rooms: existing.rooms + res.rooms,
+                    rooms: existing.rooms + roomsNum,
                     revenue: existing.revenue + revenueForNight,
                 });
             }

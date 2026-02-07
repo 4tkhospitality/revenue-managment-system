@@ -115,11 +115,26 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
         const { id } = await params
 
-        // Soft delete - set is_active to false
-        await prisma.user.update({
-            where: { id },
-            data: { is_active: false }
-        })
+        // Try HARD DELETE first to support re-onboarding testing
+        try {
+            await prisma.user.delete({
+                where: { id }
+            })
+            return NextResponse.json({ success: true, message: 'User permanently deleted' })
+        } catch (error: any) {
+            // Foreign key constraint failed (e.g. user has PricingDecisions) -> Fallback to SOFT DELETE
+            if (error.code === 'P2003') {
+                console.log(`[ADMIN] Hard delete failed for user ${id}, falling back to soft delete`)
+
+                await prisma.user.update({
+                    where: { id },
+                    data: { is_active: false }
+                })
+                return NextResponse.json({ success: true, message: 'User deactivated (soft delete due to existing data)' })
+            }
+
+            throw error
+        }
 
         return NextResponse.json({ success: true, message: 'User deactivated' })
     } catch (error) {
