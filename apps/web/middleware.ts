@@ -58,22 +58,20 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(loginUrl)
     }
 
-    // 5. Blocked user check (Redline #7)
-    // Skip redirect if already on /blocked to prevent infinite redirect loop
+    // 5. Super admin bypass - MUST be before blocked check so admin can't be locked out
+    if (session.user.isAdmin || session.user.role === 'super_admin') {
+        if (pathname.startsWith("/onboarding")) {
+            return NextResponse.redirect(new URL("/dashboard", request.url))
+        }
+        return NextResponse.next()
+    }
+
+    // 6. Blocked user check
     if (session.user.isActive === false) {
         if (pathname.startsWith('/blocked')) {
             return NextResponse.next()
         }
         return NextResponse.redirect(new URL("/blocked", request.url))
-    }
-
-    // 6. Super admin bypass - no hotel check needed
-    if (session.user.isAdmin || session.user.role === 'super_admin') {
-        // Remove onboarding redirect for super_admin
-        if (pathname.startsWith("/onboarding")) {
-            return NextResponse.redirect(new URL("/dashboard", request.url))
-        }
-        return NextResponse.next()
     }
 
     // 7. Admin routes = super_admin only
