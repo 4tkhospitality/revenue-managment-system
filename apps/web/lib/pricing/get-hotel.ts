@@ -56,7 +56,16 @@ export async function getActiveHotelId(): Promise<string | null> {
     const cookieHotelId = cookieStore.get(ACTIVE_HOTEL_COOKIE)?.value;
 
     if (cookieHotelId) {
-        return cookieHotelId;
+        // Validate the cookie hotel still exists in the database
+        const hotelExists = await prisma.hotel.findUnique({
+            where: { hotel_id: cookieHotelId },
+            select: { hotel_id: true },
+        });
+        if (hotelExists) {
+            return cookieHotelId;
+        }
+        // Cookie points to a deleted hotel — fall through to other methods
+        console.warn('[Pricing] Cookie hotel_id not found in DB:', cookieHotelId);
     }
 
     // 2. Fallback to session's accessible hotels
@@ -65,12 +74,33 @@ export async function getActiveHotelId(): Promise<string | null> {
         const accessibleHotels = session?.user?.accessibleHotels || [];
 
         if (accessibleHotels.length > 0) {
-            // Return first hotel (or primary if available)
+            // Validate that session hotel IDs still exist in DB
             const primaryHotel = accessibleHotels.find(h => h.isPrimary);
-            return primaryHotel?.hotelId || accessibleHotels[0].hotelId;
+            const candidateId = primaryHotel?.hotelId || accessibleHotels[0].hotelId;
+
+            const hotelExists = await prisma.hotel.findUnique({
+                where: { hotel_id: candidateId },
+                select: { hotel_id: true },
+            });
+
+            if (hotelExists) {
+                return candidateId;
+            }
+
+            // Primary/first hotel deleted — try other hotels in the list
+            for (const h of accessibleHotels) {
+                if (h.hotelId === candidateId) continue;
+                const exists = await prisma.hotel.findUnique({
+                    where: { hotel_id: h.hotelId },
+                    select: { hotel_id: true },
+                });
+                if (exists) return h.hotelId;
+            }
+
+            console.warn('[Pricing] All session hotels not found in DB, falling back to Demo Hotel');
         }
 
-        // 3. User is logged in but has no hotel assignment -> use Demo Hotel
+        // 3. User is logged in but has no valid hotel assignment -> use Demo Hotel
         if (session?.user) {
             const demoHotelId = await getOrCreateDemoHotel();
             return demoHotelId;

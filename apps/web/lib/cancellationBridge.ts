@@ -59,6 +59,9 @@ export interface BridgeResult {
 /**
  * Bridge cancellations to reservations
  * Called after importing cancellation XML
+ * 
+ * OPTIMIZED: Uses batch queries instead of per-record queries
+ * to avoid N+1 problem with remote DB (Supabase)
  */
 export async function bridgeCancellations(
     hotelId: string,
@@ -75,32 +78,82 @@ export async function bridgeCancellations(
         details: []
     };
 
+    if (cancellations.length === 0) return result;
+
+    // ---- BATCH STEP 1: Collect all folio_num_norms and arrival_dates ----
+    const folioNorms = new Set<string>();
+    const arrivalDates = new Set<string>();
+
+    for (const c of cancellations) {
+        const norm = c.folio_num_norm || normalizeKey(c.folio_num);
+        if (norm) folioNorms.add(norm);
+        if (c.arrival_date) arrivalDates.add(c.arrival_date.toISOString());
+    }
+
+    // ---- BATCH STEP 2: Single query to fetch ALL potential matches ----
+    const allCandidates = folioNorms.size > 0
+        ? await prisma.reservationsRaw.findMany({
+            where: {
+                hotel_id: hotelId,
+                reservation_id_norm: { in: Array.from(folioNorms) },
+                arrival_date: { in: Array.from(arrivalDates).map(d => new Date(d)) },
+            },
+            orderBy: [
+                { last_modified_time: 'desc' },
+                { book_time: 'desc' },
+                { loaded_at: 'desc' }
+            ],
+        })
+        : [];
+
+    // ---- BATCH STEP 3: Index candidates for fast in-memory lookup ----
+    // Key: "folioNorm|arrivalISO" → candidates[]
+    const candidateIndex = new Map<string, ReservationsRaw[]>();
+    for (const res of allCandidates) {
+        const key = `${res.reservation_id_norm}|${res.arrival_date.toISOString()}`;
+        if (!candidateIndex.has(key)) {
+            candidateIndex.set(key, []);
+        }
+        candidateIndex.get(key)!.push(res);
+    }
+
+    // ---- BATCH STEP 4: Process each cancellation in-memory ----
+    const cancellationUpdates: Prisma.PrismaPromise<unknown>[] = [];
+    const reservationUpdates: Prisma.PrismaPromise<unknown>[] = [];
+
     for (const cancellation of cancellations) {
-        const matchResult = await processCancellation(hotelId, cancellation);
+        const folioNorm = cancellation.folio_num_norm || normalizeKey(cancellation.folio_num);
+        const roomCodeNorm = cancellation.room_code_norm || normalizeKey(cancellation.room_code);
+        const arrivalKey = cancellation.arrival_date?.toISOString() || '';
+
+        // Lookup candidates from index
+        const lookupKey = `${folioNorm}|${arrivalKey}`;
+        let candidates = candidateIndex.get(lookupKey) || [];
+
+        // Filter by room_code if available
+        if (roomCodeNorm && candidates.length > 0) {
+            const withRoom = candidates.filter(c => c.room_code_norm === roomCodeNorm);
+            if (withRoom.length > 0) {
+                candidates = withRoom;
+            }
+            // If no match with room filter, fall through to all candidates
+        }
+
+        // Take top 2 for ambiguity detection
+        const top2 = candidates.slice(0, 2);
+
+        // Evaluate match result
+        const matchResult = processMatchInMemory(cancellation, top2);
 
         // Update counters
         switch (matchResult.status) {
-            case 'matched':
-                result.matched++;
-                break;
-            case 'unmatched':
-                result.unmatched++;
-                break;
-            case 'ambiguous':
-                result.ambiguous++;
-                break;
-            case 'conflict':
-                result.conflicts++;
-                break;
-            case 'dq_issue':
-                result.dqIssues++;
-                break;
-            case 'unsupported_partial':
-                result.partial++;
-                break;
-            case 'already_matched':
-                result.alreadyMatched++;
-                break;
+            case 'matched': result.matched++; break;
+            case 'unmatched': result.unmatched++; break;
+            case 'ambiguous': result.ambiguous++; break;
+            case 'conflict': result.conflicts++; break;
+            case 'dq_issue': result.dqIssues++; break;
+            case 'unsupported_partial': result.partial++; break;
+            case 'already_matched': result.alreadyMatched++; break;
         }
 
         result.details.push({
@@ -109,6 +162,65 @@ export async function bridgeCancellations(
             reservationId: matchResult.reservation?.id,
             notes: matchResult.notes
         });
+
+        // Queue DB updates (batched)
+        if (matchResult.status === 'matched' && matchResult.reservation) {
+            const reservation = matchResult.reservation;
+
+            // Update reservation
+            reservationUpdates.push(
+                prisma.reservationsRaw.update({
+                    where: { id: reservation.id },
+                    data: {
+                        cancel_time: cancellation.cancel_time,
+                        cancel_date: cancellation.cancel_time,
+                        cancel_reason: null,
+                        cancel_source: 'import',
+                        status: 'cancelled'
+                    }
+                })
+            );
+
+            // Update cancellation
+            cancellationUpdates.push(
+                prisma.cancellationRaw.update({
+                    where: { id: cancellation.id },
+                    data: {
+                        matched_reservation_id: reservation.id,
+                        matched_at: new Date(),
+                        match_status: 'matched',
+                        match_notes: null
+                    }
+                })
+            );
+        } else if (matchResult.status === 'already_matched' && matchResult.reservation) {
+            cancellationUpdates.push(
+                prisma.cancellationRaw.update({
+                    where: { id: cancellation.id },
+                    data: {
+                        matched_reservation_id: matchResult.reservation.id,
+                        matched_at: new Date(),
+                        match_status: 'matched',
+                        match_notes: 'Already matched (idempotent)'
+                    }
+                })
+            );
+        } else {
+            cancellationUpdates.push(
+                prisma.cancellationRaw.update({
+                    where: { id: cancellation.id },
+                    data: {
+                        match_status: matchResult.status,
+                        match_notes: matchResult.notes
+                    }
+                })
+            );
+        }
+    }
+
+    // ---- BATCH STEP 5: Execute all updates in a single transaction ----
+    if (cancellationUpdates.length > 0 || reservationUpdates.length > 0) {
+        await prisma.$transaction([...reservationUpdates, ...cancellationUpdates]);
     }
 
     return result;
@@ -148,200 +260,78 @@ export async function bridgePendingCancellations(
 }
 
 // ============================================================================
-// Internal Functions
+// Internal Functions (In-memory processing)
 // ============================================================================
 
 /**
- * Process a single cancellation
+ * Process match logic in-memory (no DB calls)
  */
-async function processCancellation(
-    hotelId: string,
-    cancellation: CancellationRaw
-): Promise<MatchResult> {
-    // Step 1: Find matching reservation
-    const matchResult = await findMatchingReservation(hotelId, cancellation);
+function processMatchInMemory(
+    cancellation: CancellationRaw,
+    candidates: ReservationsRaw[]
+): MatchResult {
+    // No candidates found
+    if (candidates.length === 0) {
+        return { status: 'unmatched', reservation: null };
+    }
 
+    // Evaluate ambiguity
+    const matchResult = evaluateCandidates(candidates);
     if (matchResult.status !== 'matched' || !matchResult.reservation) {
-        // Update cancellation with match status
-        await prisma.cancellationRaw.update({
-            where: { id: cancellation.id },
-            data: {
-                match_status: matchResult.status,
-                match_notes: matchResult.notes
-            }
-        });
         return matchResult;
     }
 
     const reservation = matchResult.reservation;
 
-    // Step 2: Check for partial cancellation (V01.1 scope: only full cancel)
+    // Check for partial cancellation (V01.1 scope: only full cancel)
     const reservationNights = Math.ceil(
         (reservation.departure_date.getTime() - reservation.arrival_date.getTime()) / (1000 * 60 * 60 * 24)
     );
     if (cancellation.nights < reservationNights) {
-        const result: MatchResult = {
+        return {
             status: 'unsupported_partial',
             reservation: null,
             notes: `Partial cancel: ${cancellation.nights}/${reservationNights} nights`
         };
-        await prisma.cancellationRaw.update({
-            where: { id: cancellation.id },
-            data: {
-                match_status: result.status,
-                match_notes: result.notes
-            }
-        });
-        return result;
     }
 
-    // Step 3: Data quality check - cancel_time should be after book_time
+    // Data quality check - cancel_time should be after book_time
     const effectiveBookTime = reservation.book_time ??
         new Date(new Date(reservation.booking_date).setHours(0, 0, 0, 0));
 
     if (cancellation.cancel_time < effectiveBookTime) {
-        const result: MatchResult = {
+        return {
             status: 'dq_issue',
             reservation: null,
             notes: `cancel_time (${cancellation.cancel_time.toISOString()}) < book_time (${effectiveBookTime.toISOString()})`
         };
-        await prisma.cancellationRaw.update({
-            where: { id: cancellation.id },
-            data: {
-                match_status: result.status,
-                match_notes: result.notes
-            }
-        });
-        return result;
     }
 
-    // Step 4: Check for conflict (if cancel_time already set with different value)
+    // Check for conflict (if cancel_time already set with different value)
     if (reservation.cancel_time !== null) {
         const existingTime = reservation.cancel_time.getTime();
         const incomingTime = cancellation.cancel_time.getTime();
 
         if (existingTime === incomingTime) {
-            // Same value - idempotent, no-op
-            const result: MatchResult = {
+            return {
                 status: 'already_matched',
                 reservation: reservation,
                 notes: 'Same cancel_time already set'
             };
-            await prisma.cancellationRaw.update({
-                where: { id: cancellation.id },
-                data: {
-                    matched_reservation_id: reservation.id,
-                    matched_at: new Date(),
-                    match_status: 'matched',
-                    match_notes: 'Already matched (idempotent)'
-                }
-            });
-            return result;
         } else {
-            // Different value - conflict
-            const result: MatchResult = {
+            return {
                 status: 'conflict',
                 reservation: null,
                 notes: `Existing: ${reservation.cancel_time.toISOString()}, Incoming: ${cancellation.cancel_time.toISOString()}`
             };
-            await prisma.cancellationRaw.update({
-                where: { id: cancellation.id },
-                data: {
-                    match_status: result.status,
-                    match_notes: result.notes
-                }
-            });
-            return result;
         }
     }
 
-    // Step 5: Apply the bridge - transactional update
-    await prisma.$transaction([
-        // Update reservation with cancel info
-        prisma.reservationsRaw.update({
-            where: { id: reservation.id },
-            data: {
-                cancel_time: cancellation.cancel_time,
-                cancel_date: cancellation.cancel_time, // Also set legacy field
-                cancel_reason: null, // Not available in XML
-                cancel_source: 'import',
-                status: 'cancelled'
-            }
-        }),
-        // Update cancellation with match tracking
-        prisma.cancellationRaw.update({
-            where: { id: cancellation.id },
-            data: {
-                matched_reservation_id: reservation.id,
-                matched_at: new Date(),
-                match_status: 'matched',
-                match_notes: null
-            }
-        })
-    ]);
-
+    // All checks passed → matched
     return {
         status: 'matched',
         reservation: reservation
     };
-}
-
-/**
- * Find matching reservation for a cancellation
- * Uses take:2 strategy to detect ambiguous matches
- */
-async function findMatchingReservation(
-    hotelId: string,
-    cancellation: CancellationRaw
-): Promise<MatchResult> {
-    const folioNorm = cancellation.folio_num_norm || normalizeKey(cancellation.folio_num);
-    const roomCodeNorm = cancellation.room_code_norm || normalizeKey(cancellation.room_code);
-
-    // Query TOP 2 candidates to detect ambiguity
-    const candidates = await prisma.reservationsRaw.findMany({
-        where: {
-            hotel_id: hotelId,
-            reservation_id_norm: folioNorm,
-            arrival_date: cancellation.arrival_date,
-            // Optional: room_code filter for more precise matching
-            ...(roomCodeNorm && { room_code_norm: roomCodeNorm })
-        },
-        orderBy: [
-            { last_modified_time: 'desc' },
-            { book_time: 'desc' },
-            { loaded_at: 'desc' }
-        ],
-        take: 2  // MUST be 2 to detect ambiguity
-    });
-
-    if (candidates.length === 0) {
-        // Try without room_code filter
-        if (roomCodeNorm) {
-            const candidatesWithoutRoom = await prisma.reservationsRaw.findMany({
-                where: {
-                    hotel_id: hotelId,
-                    reservation_id_norm: folioNorm,
-                    arrival_date: cancellation.arrival_date
-                },
-                orderBy: [
-                    { last_modified_time: 'desc' },
-                    { book_time: 'desc' },
-                    { loaded_at: 'desc' }
-                ],
-                take: 2
-            });
-
-            if (candidatesWithoutRoom.length === 0) {
-                return { status: 'unmatched', reservation: null };
-            }
-
-            return evaluateCandidates(candidatesWithoutRoom);
-        }
-
-        return { status: 'unmatched', reservation: null };
-    }
-
-    return evaluateCandidates(candidates);
 }
 
 /**
@@ -372,3 +362,4 @@ function evaluateCandidates(candidates: ReservationsRaw[]): MatchResult {
     // Not a tie: pick first (highest priority by sort order)
     return { status: 'matched', reservation: candidates[0] };
 }
+

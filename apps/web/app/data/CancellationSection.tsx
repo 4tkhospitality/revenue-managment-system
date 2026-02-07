@@ -81,7 +81,7 @@ export async function CancellationSection() {
             {/* By Channel - Top 3 from all data */}
             {stats.topChannels.length > 0 && (
                 <div className="p-3 border-b border-gray-100">
-                    <h3 className="text-xs font-medium text-gray-700 mb-2">Top 3 kênh hủy nhiều nhất</h3>
+                    <h3 className="text-xs font-medium text-gray-700 mb-2">🏆 Top 3 đại lý hủy phòng</h3>
                     <div className="flex flex-wrap gap-2">
                         {stats.topChannels.map((ch, idx) => (
                             <div key={idx} className="px-2 py-1 bg-rose-50 rounded text-xs">

@@ -13,15 +13,20 @@ export async function GET(request: NextRequest) {
 
         const searchParams = request.nextUrl.searchParams
         const search = searchParams.get('search') || ''
+        const showInactive = searchParams.get('showInactive') === 'true'
         const page = parseInt(searchParams.get('page') || '1')
         const limit = parseInt(searchParams.get('limit') || '20')
 
-        const where = search ? {
-            OR: [
-                { email: { contains: search, mode: 'insensitive' as const } },
-                { name: { contains: search, mode: 'insensitive' as const } },
-            ]
-        } : {}
+        const where = {
+            // By default, only show active users
+            ...(!showInactive && { is_active: true }),
+            ...(search && {
+                OR: [
+                    { email: { contains: search, mode: 'insensitive' as const } },
+                    { name: { contains: search, mode: 'insensitive' as const } },
+                ]
+            }),
+        }
 
         const [users, total] = await Promise.all([
             prisma.user.findMany({

@@ -33,6 +33,19 @@ async function main() {
         })
         console.log(`✅ User: ${user.email}`)
 
+        // 3. Create Super Admin
+        const admin = await prisma.user.upsert({
+            where: { email: 'phan.le@vleisure.com' },
+            update: { role: 'super_admin' },
+            create: {
+                email: 'phan.le@vleisure.com',
+                role: 'super_admin',
+                name: 'Phan Le',
+                hotel_id: hotel.hotel_id
+            }
+        })
+        console.log(`✅ Super Admin: ${admin.email}`)
+
     } catch (e) {
         console.error(e)
         process.exit(1)

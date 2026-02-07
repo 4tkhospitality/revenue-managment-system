@@ -27,13 +27,25 @@ export async function ingestCancellationXml(
     xmlContent: string,
     fileName: string
 ): Promise<IngestCancellationResult> {
+    // 0. Validate hotel exists — fallback to Demo Hotel if not
+    let validHotelId = hotelId;
+    const hotelExists = await prisma.hotel.findUnique({
+        where: { hotel_id: hotelId },
+        select: { hotel_id: true },
+    });
+    if (!hotelExists) {
+        const { getOrCreateDemoHotel } = await import('@/lib/pricing/get-hotel');
+        validHotelId = await getOrCreateDemoHotel();
+        console.warn(`[Upload] Hotel ${hotelId} not found in DB, falling back to Demo Hotel: ${validHotelId}`);
+    }
+
     // Calculate file hash for idempotency
     const fileHash = crypto.createHash("md5").update(xmlContent).digest("hex")
 
     // Check for duplicate import
     const existingJob = await prisma.importJob.findFirst({
         where: {
-            hotel_id: hotelId,
+            hotel_id: validHotelId,
             file_hash: fileHash,
             import_type: "CANCELLATION",
         },
@@ -49,7 +61,7 @@ export async function ingestCancellationXml(
     // Create import job
     const job = await prisma.importJob.create({
         data: {
-            hotel_id: hotelId,
+            hotel_id: validHotelId,
             import_type: "CANCELLATION",
             file_name: fileName,
             file_hash: fileHash,
@@ -78,7 +90,7 @@ export async function ingestCancellationXml(
 
         // Insert cancellation records with normalized keys (V01.1)
         const cancellationData = records.map((record) => ({
-            hotel_id: hotelId,
+            hotel_id: validHotelId,
             job_id: job.job_id,
             folio_num: record.folioNum,
             folio_num_norm: normalizeKey(record.folioNum), // V01.1: Normalized key
@@ -111,7 +123,7 @@ export async function ingestCancellationXml(
 
         let bridgeResult: IngestCancellationResult['bridgeResult'] = undefined
         if (savedCancellations.length > 0) {
-            const result = await bridgeCancellations(hotelId, savedCancellations)
+            const result = await bridgeCancellations(validHotelId, savedCancellations)
             bridgeResult = {
                 matched: result.matched,
                 unmatched: result.unmatched,
@@ -130,8 +142,11 @@ export async function ingestCancellationXml(
             },
         })
 
-        // Invalidate stats cache
+        // Invalidate stats cache and revalidate pages
         invalidateStatsCache()
+        const { revalidatePath } = await import('next/cache')
+        revalidatePath('/data')
+        revalidatePath('/dashboard')
 
         return {
             success: true,

@@ -28,6 +28,38 @@ export default async function DataInspectorPage() {
         take: 10 // Reduced from 30 to 10
     });
 
+    // Get cancellations grouped by cancel date (cancel_time is timestamp, group in JS)
+    const allCancellationsForGroup = await prisma.cancellationRaw.findMany({
+        select: {
+            cancel_time: true,
+            nights: true,
+            total_revenue: true,
+        },
+        orderBy: { cancel_time: 'desc' },
+    });
+
+    // Group cancellations by date (extract date from cancel_time)
+    const cancelDateMap = new Map<string, { date: Date; count: number; nights: number; revenue: number }>();
+    for (const c of allCancellationsForGroup) {
+        const dateKey = DateUtils.format(c.cancel_time, 'yyyy-MM-dd');
+        const existing = cancelDateMap.get(dateKey);
+        if (existing) {
+            existing.count++;
+            existing.nights += c.nights || 0;
+            existing.revenue += Number(c.total_revenue || 0);
+        } else {
+            cancelDateMap.set(dateKey, {
+                date: c.cancel_time,
+                count: 1,
+                nights: c.nights || 0,
+                revenue: Number(c.total_revenue || 0),
+            });
+        }
+    }
+    const cancellationsByDate = Array.from(cancelDateMap.values())
+        .sort((a, b) => b.date.getTime() - a.date.getTime())
+        .slice(0, 10);
+
     // Get recent reservations - limit to 10 for faster loading
     const recentReservations = await prisma.reservationsRaw.findMany({
         orderBy: { booking_date: 'desc' },
@@ -146,7 +178,7 @@ export default async function DataInspectorPage() {
                             <div className="text-2xl font-bold text-blue-600">
                                 {reservationStats.count}
                             </div>
-                            <div className="text-xs text-gray-500">Lượt đặt (30 ngày)</div>
+                            <div className="text-xs text-gray-500">Tổng lượt đặt</div>
                         </div>
                         <div className="text-center">
                             <div className="text-2xl font-bold text-emerald-600">
@@ -165,7 +197,7 @@ export default async function DataInspectorPage() {
                     {/* Top 3 Agents by Company Name */}
                     {reservationStats.topAgents.length > 0 && (
                         <div className="p-3 border-b border-gray-100">
-                            <h3 className="text-xs font-medium text-gray-700 mb-2">Top 3 đại lý (30 ngày)</h3>
+                            <h3 className="text-xs font-medium text-gray-700 mb-2">🏆 Top 3 đại lý đặt phòng</h3>
                             <div className="flex flex-wrap gap-2">
                                 {reservationStats.topAgents.map((agent, idx) => (
                                     <div key={idx} className="px-2 py-1 bg-blue-50 rounded text-xs">
@@ -279,6 +311,51 @@ export default async function DataInspectorPage() {
                                 <tr>
                                     <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
                                         Chưa có reservations nào
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* Cancellations by Cancel Date */}
+            <div className="bg-white border border-rose-200 rounded-xl overflow-hidden shadow-sm">
+                <div className="px-4 py-3 border-b border-rose-200 bg-rose-50">
+                    <h2 className="text-lg font-semibold text-rose-700">📅 Cancellations theo Ngày hủy</h2>
+                    <span className="text-xs text-gray-500">10 ngày gần nhất</span>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                        <thead className="bg-gray-50">
+                            <tr>
+                                <th className="px-4 py-2 text-left text-gray-600 font-medium">Ngày hủy</th>
+                                <th className="px-4 py-2 text-right text-gray-600 font-medium">Số lượng</th>
+                                <th className="px-4 py-2 text-right text-gray-600 font-medium">Đêm</th>
+                                <th className="px-4 py-2 text-right text-gray-600 font-medium">Doanh thu mất</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {cancellationsByDate.map((stat, idx) => (
+                                <tr key={idx} className="border-t border-gray-100 hover:bg-gray-50">
+                                    <td className="px-4 py-2 text-gray-900">
+                                        {DateUtils.format(stat.date, 'dd/MM/yyyy')}
+                                    </td>
+                                    <td className="px-4 py-2 text-rose-600 text-right font-medium">
+                                        {stat.count}
+                                    </td>
+                                    <td className="px-4 py-2 text-gray-900 text-right">
+                                        {stat.nights}
+                                    </td>
+                                    <td className="px-4 py-2 text-rose-600 font-mono text-right">
+                                        {(stat.revenue / 1000000).toFixed(1)}M
+                                    </td>
+                                </tr>
+                            ))}
+                            {cancellationsByDate.length === 0 && (
+                                <tr>
+                                    <td colSpan={4} className="px-4 py-8 text-center text-gray-400">
+                                        Chưa có dữ liệu huỷ phòng
                                     </td>
                                 </tr>
                             )}

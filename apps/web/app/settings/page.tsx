@@ -72,13 +72,15 @@ export default function SettingsPage() {
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
     const [isDemo, setIsDemo] = useState(false);
 
-    // Check if Demo Hotel
+    // Check if Demo Hotel (but super_admin bypasses this)
     useEffect(() => {
         const checkDemoHotel = async () => {
             try {
                 const res = await fetch('/api/is-demo-hotel');
                 const data = await res.json();
-                setIsDemo(data.isDemo || false);
+                // Super admin and hotel admin can always access settings
+                const isAdmin = data.role === 'super_admin' || data.role === 'hotel_admin';
+                setIsDemo(isAdmin ? false : (data.isDemo || false));
             } catch (error) {
                 console.error('Error checking demo hotel:', error);
             }

@@ -1,26 +1,31 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Upload, FileText, CheckCircle, XCircle, Loader2, FileSpreadsheet, FileCode, Lock } from 'lucide-react';
+import { Upload, FileText, CheckCircle, XCircle, Loader2, FileSpreadsheet, FileCode, Lock, Files } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { ingestCSV } from '../actions/ingestCSV';
 import { ingestXML } from '../actions/ingestXML';
 import { ingestCancellationXml } from '../actions/ingestCancellationXml';
 
-type UploadStatus = 'idle' | 'uploading' | 'success' | 'error';
 type ReportType = 'booked' | 'cancelled';
 type FileType = 'csv' | 'xml';
+
+interface FileResult {
+    fileName: string;
+    status: 'pending' | 'processing' | 'success' | 'error';
+    message?: string;
+    count?: number;
+}
 
 export default function UploadPage() {
     const { data: session } = useSession();
     const [activeTab, setActiveTab] = useState<ReportType>('booked');
-    const [status, setStatus] = useState<UploadStatus>('idle');
-    const [message, setMessage] = useState<string>('');
+    const [isProcessing, setIsProcessing] = useState(false);
     const [dragActive, setDragActive] = useState(false);
-    const [resultDetails, setResultDetails] = useState<{ count?: number; reportDate?: string } | null>(null);
+    const [fileResults, setFileResults] = useState<FileResult[]>([]);
     const [activeHotelId, setActiveHotelId] = useState<string | null>(null);
     const [isDemo, setIsDemo] = useState(false);
-    const [isAdmin, setIsAdmin] = useState(false); // Super admin bypass
+    const [isAdmin, setIsAdmin] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
 
     // Fetch active hotel and check if Demo Hotel
@@ -35,13 +40,12 @@ export default function UploadPage() {
                     setActiveHotelId(session.user.accessibleHotels[0].hotelId);
                 }
 
-                // Check if Demo Hotel
                 const demoRes = await fetch('/api/is-demo-hotel');
                 const demoData = await demoRes.json();
                 setIsDemo(demoData.isDemo || false);
-
-                // Check if super_admin (bypass restrictions)
-                setIsAdmin(session?.user?.isAdmin || false);
+                // Check role for admin bypass
+                const isAdminRole = demoData.role === 'super_admin' || demoData.role === 'hotel_admin';
+                setIsAdmin(isAdminRole || session?.user?.isAdmin || false);
             } catch (error) {
                 console.error('Error fetching active hotel:', error);
                 setActiveHotelId(process.env.NEXT_PUBLIC_DEFAULT_HOTEL_ID || '');
@@ -55,57 +59,27 @@ export default function UploadPage() {
         return 'csv';
     };
 
-    const handleFile = async (file: File) => {
-        // Block uploads for Demo Hotel (but super_admin can bypass)
-        if (isDemo && !isAdmin) {
-            setStatus('error');
-            setMessage('Demo Hotel không được phép upload file. Vui lòng liên hệ admin để được gán khách sạn.');
-            return;
-        }
-
+    // Process a single file 
+    const processOneFile = async (file: File, hotelId: string): Promise<{ success: boolean; message: string; count?: number }> => {
         const fileType = detectFileType(file);
 
         if (fileType !== 'csv' && fileType !== 'xml') {
-            setStatus('error');
-            setMessage('Vui lòng tải lên file CSV hoặc XML.');
-            return;
+            return { success: false, message: 'Chỉ hỗ trợ file CSV hoặc XML' };
         }
 
-        setStatus('uploading');
-        setMessage(`Đang xử lý file ${fileType.toUpperCase()}...`);
-        setResultDetails(null);
-
         try {
-            const hotelId = activeHotelId || process.env.NEXT_PUBLIC_DEFAULT_HOTEL_ID || '';
-
-            if (!hotelId) {
-                setStatus('error');
-                setMessage('Không tìm thấy Hotel ID. Vui lòng đăng nhập lại.');
-                return;
-            }
-
             let result;
 
-            // Cancellation tab: use cancellation parser
             if (activeTab === 'cancelled' && fileType === 'xml') {
                 const xmlContent = await file.text();
                 result = await ingestCancellationXml(hotelId, xmlContent, file.name);
-
                 if (result.success) {
-                    setStatus('success');
-                    setMessage(`Đã import ${result.recordCount} cancellations!`);
-                    setResultDetails({
-                        count: result.recordCount,
-                        reportDate: result.asOfDate
-                    });
+                    return { success: true, message: `${result.recordCount} cancellations`, count: result.recordCount };
                 } else {
-                    setStatus('error');
-                    setMessage(result.error || 'Import thất bại.');
+                    return { success: false, message: result.error || 'Import thất bại' };
                 }
-                return;
             }
 
-            // Reservation tab: use existing parsers
             const formData = new FormData();
             formData.append('file', file);
             formData.append('hotelId', hotelId);
@@ -118,26 +92,65 @@ export default function UploadPage() {
             }
 
             if (result.success) {
-                setStatus('success');
-                setMessage(`Đã import thành công ${result.count} reservations!`);
-                setResultDetails({
-                    count: result.count,
-                    reportDate: (result as { reportDate?: string }).reportDate
-                });
+                return { success: true, message: `${result.count} reservations`, count: result.count };
             } else {
-                setStatus('error');
-                setMessage(result.message || 'Import thất bại.');
+                return { success: false, message: result.message || 'Import thất bại' };
             }
         } catch (err: any) {
-            setStatus('error');
-            setMessage(err.message || 'Đã xảy ra lỗi.');
+            return { success: false, message: err.message || 'Lỗi không xác định' };
         }
+    };
+
+    // Process multiple files sequentially
+    const handleFiles = async (files: File[]) => {
+        if (isDemo && !isAdmin) {
+            return;
+        }
+
+        const hotelId = activeHotelId || process.env.NEXT_PUBLIC_DEFAULT_HOTEL_ID || '';
+        if (!hotelId) {
+            setFileResults([{ fileName: 'ERROR', status: 'error', message: 'Không tìm thấy Hotel ID' }]);
+            return;
+        }
+
+        // Sort files by name for logical order
+        const sorted = [...files].sort((a, b) => a.name.localeCompare(b.name));
+
+        // Init all as pending
+        const initial: FileResult[] = sorted.map(f => ({
+            fileName: f.name,
+            status: 'pending' as const,
+        }));
+        setFileResults(initial);
+        setIsProcessing(true);
+
+        // Process one by one
+        for (let i = 0; i < sorted.length; i++) {
+            // Mark current as processing
+            setFileResults(prev => prev.map((r, idx) =>
+                idx === i ? { ...r, status: 'processing' as const } : r
+            ));
+
+            const result = await processOneFile(sorted[i], hotelId);
+
+            // Update result
+            setFileResults(prev => prev.map((r, idx) =>
+                idx === i ? {
+                    ...r,
+                    status: result.success ? 'success' as const : 'error' as const,
+                    message: result.message,
+                    count: result.count,
+                } : r
+            ));
+        }
+
+        setIsProcessing(false);
     };
 
     const handleDrag = (e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        if (isDemo && !isAdmin) return; // Block drag for Demo Hotel (admin bypass)
+        if (isDemo && !isAdmin) return;
         if (e.type === 'dragenter' || e.type === 'dragover') {
             setDragActive(true);
         } else if (e.type === 'dragleave') {
@@ -149,53 +162,63 @@ export default function UploadPage() {
         e.preventDefault();
         e.stopPropagation();
         setDragActive(false);
-        if (isDemo && !isAdmin) return; // Block drop for Demo Hotel (admin bypass)
+        if (isDemo && !isAdmin) return;
+        if (isProcessing) return;
 
-        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-            handleFile(e.dataTransfer.files[0]);
+        const files = Array.from(e.dataTransfer.files);
+        if (files.length > 0) {
+            handleFiles(files);
         }
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            handleFile(e.target.files[0]);
+        if (e.target.files && e.target.files.length > 0) {
+            handleFiles(Array.from(e.target.files));
         }
     };
 
     const handleButtonClick = () => {
-        if (isDemo && !isAdmin) return; // Block for Demo Hotel (admin bypass)
+        if (isDemo && !isAdmin) return;
+        if (isProcessing) return;
         inputRef.current?.click();
     };
 
     const resetUpload = () => {
-        setStatus('idle');
-        setMessage('');
-        setResultDetails(null);
+        setFileResults([]);
+        setIsProcessing(false);
         if (inputRef.current) {
             inputRef.current.value = '';
         }
     };
 
     const handleTabChange = (tab: ReportType) => {
+        if (isProcessing) return;
         setActiveTab(tab);
         resetUpload();
     };
 
+    // Summary stats
+    const successCount = fileResults.filter(r => r.status === 'success').length;
+    const errorCount = fileResults.filter(r => r.status === 'error').length;
+    const totalRecords = fileResults.reduce((sum, r) => sum + (r.count || 0), 0);
+    const isDone = fileResults.length > 0 && !isProcessing;
+    const isIdle = fileResults.length === 0;
+
     return (
         <div className="mx-auto max-w-[1400px] px-8 py-6 space-y-6">
-            {/* Header Card - lighter */}
+            {/* Header */}
             <header
                 className="rounded-2xl px-6 py-4 text-white shadow-sm"
                 style={{ background: 'linear-gradient(to right, #1E3A8A, #102A4C)' }}
             >
                 <h1 className="text-lg font-semibold">Tải lên Reservations</h1>
                 <p className="text-white/70 text-sm mt-1">
-                    Import báo cáo đặt phòng từ PMS (CSV hoặc Crystal Reports XML)
+                    Import báo cáo đặt phòng từ PMS — hỗ trợ upload <strong>nhiều file cùng lúc</strong> (tối đa 31 file)
                 </p>
             </header>
 
             <div className="max-w-3xl mx-auto space-y-6">
-                {/* Demo Hotel Warning - only show if not admin */}
+                {/* Demo Hotel Warning */}
                 {isDemo && !isAdmin && (
                     <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
                         <Lock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
@@ -213,29 +236,29 @@ export default function UploadPage() {
                 <div className="flex gap-2">
                     <button
                         onClick={() => handleTabChange('booked')}
-                        disabled={isDemo && !isAdmin}
+                        disabled={(isDemo && !isAdmin) || isProcessing}
                         className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors ${activeTab === 'booked'
                             ? 'bg-blue-600 text-white'
                             : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-                            } ${isDemo && !isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            } ${(isDemo && !isAdmin) || isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                         <CheckCircle className="w-4 h-4" />
                         Báo cáo Đặt phòng
                     </button>
                     <button
                         onClick={() => handleTabChange('cancelled')}
-                        disabled={isDemo && !isAdmin}
+                        disabled={(isDemo && !isAdmin) || isProcessing}
                         className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors ${activeTab === 'cancelled'
                             ? 'bg-rose-600 text-white'
                             : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-                            } ${isDemo && !isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            } ${(isDemo && !isAdmin) || isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                         <XCircle className="w-4 h-4" />
                         Báo cáo Huỷ phòng
                     </button>
                 </div>
 
-                {/* Tab Description - hidden for Demo Hotel (unless admin) */}
+                {/* Tab Description */}
                 {(!isDemo || isAdmin) && (
                     <div className={`p-4 rounded-xl border ${activeTab === 'booked'
                         ? 'bg-blue-50 border-blue-200'
@@ -243,8 +266,8 @@ export default function UploadPage() {
                         }`}>
                         <p className={`text-sm ${activeTab === 'booked' ? 'text-blue-700' : 'text-rose-700'}`}>
                             {activeTab === 'booked'
-                                ? '📥 Upload báo cáo "Reservation Booked On Date" từ PMS. File này chứa các booking mới.'
-                                : '📤 Upload báo cáo "Reservation Cancelled" từ PMS. File này đánh dấu các booking đã huỷ.'}
+                                ? '📥 Upload báo cáo "Reservation Booked On Date" từ PMS. Chọn nhiều file cùng lúc (Ctrl+Click hoặc kéo thả).'
+                                : '📤 Upload báo cáo "Reservation Cancelled" từ PMS. Chọn nhiều file cùng lúc.'}
                         </p>
                     </div>
                 )}
@@ -255,11 +278,9 @@ export default function UploadPage() {
                         ? 'border-gray-300 bg-gray-50 cursor-not-allowed'
                         : dragActive
                             ? 'border-blue-500 bg-blue-50'
-                            : status === 'success'
-                                ? 'border-emerald-500 bg-emerald-50'
-                                : status === 'error'
-                                    ? 'border-rose-500 bg-rose-50'
-                                    : 'border-gray-300 bg-white hover:border-gray-400'
+                            : isIdle
+                                ? 'border-gray-300 bg-white hover:border-gray-400'
+                                : 'border-gray-200 bg-gray-50'
                         }`}
                     onDragEnter={handleDrag}
                     onDragLeave={handleDrag}
@@ -270,32 +291,28 @@ export default function UploadPage() {
                         ref={inputRef}
                         type="file"
                         accept=".csv,.xml"
+                        multiple
                         onChange={handleChange}
                         className="hidden"
-                        disabled={isDemo && !isAdmin}
+                        disabled={(isDemo && !isAdmin) || isProcessing}
                     />
 
                     {(isDemo && !isAdmin) ? (
                         <>
                             <Lock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                            <p className="text-gray-500 text-lg mb-2">
-                                Upload bị tắt cho Demo Hotel
-                            </p>
-                            <p className="text-gray-400 text-sm">
-                                Liên hệ admin để được gán khách sạn
-                            </p>
+                            <p className="text-gray-500 text-lg mb-2">Upload bị tắt cho Demo Hotel</p>
+                            <p className="text-gray-400 text-sm">Liên hệ admin để được gán khách sạn</p>
                         </>
-                    ) : status === 'idle' ? (
+                    ) : isIdle ? (
                         <>
                             <div className="flex justify-center gap-4 mb-4">
-                                <FileSpreadsheet className="w-10 h-10 text-emerald-500" />
-                                <FileCode className="w-10 h-10 text-blue-500" />
+                                <Files className="w-10 h-10 text-blue-500" />
                             </div>
                             <p className="text-gray-700 text-lg mb-2">
                                 Kéo thả file CSV hoặc XML vào đây
                             </p>
                             <p className="text-gray-500 text-sm mb-4">
-                                Hỗ trợ: .csv, .xml (Crystal Reports)
+                                Hỗ trợ chọn <strong>nhiều file</strong> cùng lúc (tối đa 31 file/lần)
                             </p>
                             <button
                                 onClick={handleButtonClick}
@@ -304,49 +321,126 @@ export default function UploadPage() {
                                     : 'bg-rose-600 hover:bg-rose-700'
                                     }`}
                             >
-                                Chọn file
+                                Chọn file (có thể chọn nhiều)
                             </button>
                         </>
-                    ) : status === 'uploading' ? (
-                        <>
-                            <Loader2 className="w-12 h-12 text-blue-500 mx-auto mb-4 animate-spin" />
-                            <p className="text-gray-700 text-lg">{message}</p>
-                        </>
-                    ) : status === 'success' ? (
-                        <>
-                            <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto mb-4" />
-                            <p className="text-emerald-600 text-lg mb-2">{message}</p>
-                            {resultDetails?.reportDate && (
-                                <p className="text-gray-500 text-sm mb-4">
-                                    Ngày báo cáo: {resultDetails.reportDate}
-                                </p>
-                            )}
-                            <button
-                                onClick={resetUpload}
-                                className="px-6 py-2.5 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors"
-                            >
-                                Upload file khác
-                            </button>
-                        </>
-                    ) : (
-                        <>
-                            <XCircle className="w-12 h-12 text-rose-500 mx-auto mb-4" />
-                            <p className="text-rose-600 text-lg mb-4">{message}</p>
-                            <button
-                                onClick={resetUpload}
-                                className="px-6 py-2.5 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors"
-                            >
-                                Thử lại
-                            </button>
-                        </>
-                    )}
+                    ) : null}
                 </div>
 
-                {/* Format Guide - hidden for Demo Hotel (unless admin) */}
-                {(!isDemo || isAdmin) && (
+                {/* File Queue / Progress */}
+                {fileResults.length > 0 && (
+                    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+                        {/* Queue Header */}
+                        <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <Files className="w-4 h-4 text-gray-500" />
+                                <h3 className="text-sm font-semibold text-gray-700">
+                                    {isProcessing
+                                        ? `Đang xử lý... (${successCount + errorCount}/${fileResults.length})`
+                                        : `Hoàn tất ${successCount}/${fileResults.length} file`}
+                                </h3>
+                            </div>
+                            {isDone && (
+                                <div className="flex items-center gap-3">
+                                    <span className="text-xs text-emerald-600 font-medium">
+                                        ✅ {successCount} thành công
+                                    </span>
+                                    {errorCount > 0 && (
+                                        <span className="text-xs text-rose-600 font-medium">
+                                            ❌ {errorCount} lỗi
+                                        </span>
+                                    )}
+                                    <span className="text-xs text-gray-500">
+                                        Tổng: {totalRecords} records
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Progress bar */}
+                        {isProcessing && (
+                            <div className="h-1 bg-gray-100">
+                                <div
+                                    className="h-full bg-blue-500 transition-all duration-300"
+                                    style={{ width: `${((successCount + errorCount) / fileResults.length) * 100}%` }}
+                                />
+                            </div>
+                        )}
+
+                        {/* File list */}
+                        <div className="max-h-[400px] overflow-y-auto divide-y divide-gray-100">
+                            {fileResults.map((result, idx) => (
+                                <div key={idx} className={`px-4 py-2.5 flex items-center gap-3 ${result.status === 'processing' ? 'bg-blue-50' : ''
+                                    }`}>
+                                    {/* Status icon */}
+                                    {result.status === 'pending' && (
+                                        <div className="w-5 h-5 rounded-full border-2 border-gray-300" />
+                                    )}
+                                    {result.status === 'processing' && (
+                                        <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
+                                    )}
+                                    {result.status === 'success' && (
+                                        <CheckCircle className="w-5 h-5 text-emerald-500" />
+                                    )}
+                                    {result.status === 'error' && (
+                                        <XCircle className="w-5 h-5 text-rose-500" />
+                                    )}
+
+                                    {/* File info */}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="text-sm text-gray-900 truncate font-mono">
+                                            {result.fileName}
+                                        </div>
+                                    </div>
+
+                                    {/* Result message */}
+                                    <div className="text-xs shrink-0">
+                                        {result.status === 'pending' && (
+                                            <span className="text-gray-400">Chờ...</span>
+                                        )}
+                                        {result.status === 'processing' && (
+                                            <span className="text-blue-500">Đang xử lý...</span>
+                                        )}
+                                        {result.status === 'success' && (
+                                            <span className="text-emerald-600 font-medium">
+                                                ✓ {result.message}
+                                            </span>
+                                        )}
+                                        {result.status === 'error' && (
+                                            <span className="text-rose-600">{result.message}</span>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Done actions */}
+                        {isDone && (
+                            <div className="px-4 py-3 border-t border-gray-200 bg-gray-50 flex items-center gap-3">
+                                <button
+                                    onClick={resetUpload}
+                                    className={`px-5 py-2 text-white rounded-lg font-medium text-sm transition-colors ${activeTab === 'booked'
+                                        ? 'bg-blue-600 hover:bg-blue-700'
+                                        : 'bg-rose-600 hover:bg-rose-700'
+                                        }`}
+                                >
+                                    Upload thêm file
+                                </button>
+                                <a
+                                    href="/data"
+                                    className="px-5 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg font-medium text-sm hover:bg-gray-50 transition-colors"
+                                >
+                                    Xem dữ liệu →
+                                </a>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Format Guide */}
+                {(!isDemo || isAdmin) && isIdle && (
                     <>
                         <div className="grid grid-cols-2 gap-4">
-                            {/* XML Format */}
                             <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
                                 <div className="flex items-center gap-2 mb-3">
                                     <FileCode className="w-5 h-5 text-blue-500" />
@@ -364,7 +458,6 @@ export default function UploadPage() {
                                 </div>
                             </div>
 
-                            {/* CSV Format */}
                             <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
                                 <div className="flex items-center gap-2 mb-3">
                                     <FileSpreadsheet className="w-5 h-5 text-emerald-500" />
@@ -383,11 +476,10 @@ export default function UploadPage() {
                             </div>
                         </div>
 
-                        {/* Note */}
                         <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
                             <p className="text-sm text-amber-700">
-                                <strong>Lưu ý:</strong> Với XML, <code className="bg-amber-100 px-1 rounded">GNetRate</code> là giá
-                                <em> per room per night</em>. Hệ thống sẽ tự tính: <code className="bg-amber-100 px-1 rounded">Revenue = Rate × Rooms × Nights</code>
+                                <strong>💡 Mẹo:</strong> Dùng Ctrl+A (chọn tất cả) hoặc Ctrl+Click để chọn nhiều file cùng lúc.
+                                Hệ thống sẽ tự động import từng file theo thứ tự.
                             </p>
                         </div>
                     </>
@@ -396,4 +488,3 @@ export default function UploadPage() {
         </div>
     );
 }
-

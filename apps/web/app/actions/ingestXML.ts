@@ -18,6 +18,19 @@ export async function ingestXML(formData: FormData) {
         return { success: false, message: "Missing file, hotelId, or reportType" };
     }
 
+    // 0. Validate hotel exists — fallback to Demo Hotel if not
+    let validHotelId = hotelId;
+    const hotelExists = await prisma.hotel.findUnique({
+        where: { hotel_id: hotelId },
+        select: { hotel_id: true },
+    });
+    if (!hotelExists) {
+        // Fallback to Demo Hotel
+        const { getOrCreateDemoHotel } = await import('../../lib/pricing/get-hotel');
+        validHotelId = await getOrCreateDemoHotel();
+        console.warn(`[Upload] Hotel ${hotelId} not found in DB, falling back to Demo Hotel: ${validHotelId}`);
+    }
+
     // 1. Compute Hash
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
@@ -26,7 +39,7 @@ export async function ingestXML(formData: FormData) {
     // 2. Check Idempotency
     const existingJob = await prisma.importJob.findFirst({
         where: {
-            hotel_id: hotelId,
+            hotel_id: validHotelId,
             file_hash: fileHash
         }
     });
@@ -38,7 +51,7 @@ export async function ingestXML(formData: FormData) {
     // 3. Create Job
     const job = await prisma.importJob.create({
         data: {
-            hotel_id: hotelId,
+            hotel_id: validHotelId,
             file_name: file.name,
             file_hash: fileHash,
             status: 'processing'
@@ -66,7 +79,7 @@ export async function ingestXML(formData: FormData) {
         const validRows = parseResult.reservations.map((r: ParsedReservation) => {
             const bookingDateStr = r.bookingDate || today;
             return {
-                hotel_id: hotelId,
+                hotel_id: validHotelId,
                 job_id: job.job_id,
                 reservation_id: r.confirmNum,
                 booking_date: new Date(bookingDateStr),
@@ -97,6 +110,7 @@ export async function ingestXML(formData: FormData) {
 
         try {
             revalidatePath('/dashboard');
+            revalidatePath('/data');
         } catch (e) {
             // Ignore revalidate error in script/test context
         }
