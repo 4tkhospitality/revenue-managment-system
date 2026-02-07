@@ -53,7 +53,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                         token.userId = user.id
                         token.role = user.role
                         token.isActive = user.is_active
-                        token.isAdmin = user.role === 'super_admin'
+                        token.isAdmin = user.role === 'super_admin' || token.email === ADMIN_EMAIL
+
+                        // SAFETY: Admin email can never be blocked
+                        if (token.email === ADMIN_EMAIL) {
+                            token.isActive = true
+                            token.isAdmin = true
+                        }
 
                         // Step 2: Find hotel assignments separately
                         const hotelUsers = await prisma.hotelUser.findMany({
