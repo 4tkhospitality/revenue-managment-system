@@ -59,7 +59,11 @@ export async function middleware(request: NextRequest) {
     }
 
     // 5. Blocked user check (Redline #7)
+    // Skip redirect if already on /blocked to prevent infinite redirect loop
     if (session.user.isActive === false) {
+        if (pathname.startsWith('/blocked')) {
+            return NextResponse.next()
+        }
         return NextResponse.redirect(new URL("/blocked", request.url))
     }
 
