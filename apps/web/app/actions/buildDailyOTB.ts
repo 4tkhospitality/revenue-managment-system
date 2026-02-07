@@ -220,10 +220,35 @@ export async function buildDailyOTB(params?: BuildOTBParams): Promise<BuildOTBRe
 }
 
 /**
- * Quick action to rebuild all OTB data for today
+ * Quick action to rebuild all OTB data
+ * Uses active hotel from cookie/session (no auto-detect)
  */
 export async function rebuildAllOTB() {
-    return buildDailyOTB();
+    // Get active hotel from context (cookie → session → fallback)
+    const { getActiveHotelId } = await import('../../lib/pricing/get-hotel');
+    const hotelId = await getActiveHotelId();
+
+    if (!hotelId) {
+        throw new Error('Không tìm thấy hotel đang active. Vui lòng chọn hotel trước.');
+    }
+
+    // Find latest booking date for this specific hotel
+    const latestBooking = await prisma.reservationsRaw.aggregate({
+        where: { hotel_id: hotelId },
+        _max: { booking_date: true },
+    });
+
+    const latestDate = latestBooking._max.booking_date;
+
+    if (latestDate) {
+        // Use end of the latest booking day as snapshot timestamp
+        const asOfTs = new Date(latestDate);
+        asOfTs.setHours(23, 59, 59, 999);
+        return buildDailyOTB({ hotelId, asOfTs });
+    }
+
+    // Hotel exists but has no reservation data yet
+    return buildDailyOTB({ hotelId });
 }
 
 /**

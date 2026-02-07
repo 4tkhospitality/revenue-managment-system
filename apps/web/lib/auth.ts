@@ -84,6 +84,35 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                             isPrimary: hu.is_primary,
                         }))
 
+                        // AUTO-ASSIGN: Existing user with 0 hotels → assign Demo Hotel
+                        if (hotelUsers.length === 0 && user.role !== 'super_admin') {
+                            const DEMO_HOTEL_NAME = 'Demo Hotel'
+                            let demoHotel = await prisma.hotel.findFirst({
+                                where: { name: DEMO_HOTEL_NAME },
+                                select: { hotel_id: true, name: true }
+                            })
+
+                            if (demoHotel) {
+                                // Create assignment
+                                await prisma.hotelUser.create({
+                                    data: {
+                                        user_id: user.id,
+                                        hotel_id: demoHotel.hotel_id,
+                                        role: 'viewer',
+                                        is_primary: true,
+                                    }
+                                })
+                                console.log(`[AUTH] Auto-assigned ${token.email} to Demo Hotel`)
+
+                                token.accessibleHotels = [{
+                                    hotelId: demoHotel.hotel_id,
+                                    hotelName: demoHotel.name,
+                                    role: 'viewer' as UserRole,
+                                    isPrimary: true,
+                                }]
+                            }
+                        }
+
 
                     } else {
                         // NEW USER: Auto-create and assign to Demo Hotel

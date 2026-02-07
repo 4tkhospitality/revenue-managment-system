@@ -48,68 +48,100 @@ export async function isDemoHotel(hotelId: string): Promise<boolean> {
 
 /**
  * Get active hotel ID from cookie or session
- * Priority: cookie > session's first accessible hotel > demo hotel
+ * 
+ * Fallback chain:
+ * 1. Cookie (validated: hotel exists + user has access)
+ * 2. Session's accessible hotels (primary > first)
+ * 3. Super Admin: first real hotel by created_at (skip Demo)
+ * 4. Normal user: Demo Hotel (onboarding)
+ * 5. Not logged in: null
+ * 
+ * NOTE: This function only READS, never sets cookies.
+ * Cookies are set via /api/user/switch-hotel POST only.
  */
 export async function getActiveHotelId(): Promise<string | null> {
-    // 1. Try cookie first
+    let session: any = null;
+
+    try {
+        session = await auth();
+    } catch (error) {
+        console.error('[Hotel] Error getting session:', error);
+        return null;
+    }
+
+    if (!session?.user) return null;
+
+    const isAdmin = session.user.isAdmin === true;
+    const accessibleHotels = session.user.accessibleHotels || [];
+
+    // 1. Try cookie first (cookie = preference, validated against permissions)
     const cookieStore = await cookies();
     const cookieHotelId = cookieStore.get(ACTIVE_HOTEL_COOKIE)?.value;
 
     if (cookieHotelId) {
-        // Validate the cookie hotel still exists in the database
+        // Check hotel exists in DB
         const hotelExists = await prisma.hotel.findUnique({
             where: { hotel_id: cookieHotelId },
             select: { hotel_id: true },
         });
+
         if (hotelExists) {
-            return cookieHotelId;
+            // Validate user has access: Super Admin can access any hotel
+            const hasAccess = isAdmin || accessibleHotels.some(
+                (h: any) => h.hotelId === cookieHotelId
+            );
+
+            if (hasAccess) {
+                return cookieHotelId;
+            }
+            // Cookie points to unauthorized hotel — ignore, fall through
+            console.warn('[Hotel] Cookie hotel not authorized for user, ignoring');
+        } else {
+            console.warn('[Hotel] Cookie hotel_id not found in DB:', cookieHotelId);
         }
-        // Cookie points to a deleted hotel — fall through to other methods
-        console.warn('[Pricing] Cookie hotel_id not found in DB:', cookieHotelId);
     }
 
     // 2. Fallback to session's accessible hotels
-    try {
-        const session = await auth();
-        const accessibleHotels = session?.user?.accessibleHotels || [];
+    if (accessibleHotels.length > 0) {
+        const primaryHotel = accessibleHotels.find((h: any) => h.isPrimary);
+        const candidateId = primaryHotel?.hotelId || accessibleHotels[0].hotelId;
 
-        if (accessibleHotels.length > 0) {
-            // Validate that session hotel IDs still exist in DB
-            const primaryHotel = accessibleHotels.find(h => h.isPrimary);
-            const candidateId = primaryHotel?.hotelId || accessibleHotels[0].hotelId;
+        const hotelExists = await prisma.hotel.findUnique({
+            where: { hotel_id: candidateId },
+            select: { hotel_id: true },
+        });
 
-            const hotelExists = await prisma.hotel.findUnique({
-                where: { hotel_id: candidateId },
+        if (hotelExists) {
+            return candidateId;
+        }
+
+        // Primary/first hotel deleted — try other hotels in the list
+        for (const h of accessibleHotels) {
+            if (h.hotelId === candidateId) continue;
+            const exists = await prisma.hotel.findUnique({
+                where: { hotel_id: h.hotelId },
                 select: { hotel_id: true },
             });
-
-            if (hotelExists) {
-                return candidateId;
-            }
-
-            // Primary/first hotel deleted — try other hotels in the list
-            for (const h of accessibleHotels) {
-                if (h.hotelId === candidateId) continue;
-                const exists = await prisma.hotel.findUnique({
-                    where: { hotel_id: h.hotelId },
-                    select: { hotel_id: true },
-                });
-                if (exists) return h.hotelId;
-            }
-
-            console.warn('[Pricing] All session hotels not found in DB, falling back to Demo Hotel');
+            if (exists) return h.hotelId;
         }
-
-        // 3. User is logged in but has no valid hotel assignment -> use Demo Hotel
-        if (session?.user) {
-            const demoHotelId = await getOrCreateDemoHotel();
-            return demoHotelId;
-        }
-    } catch (error) {
-        console.error('[Pricing] Error getting session:', error);
     }
 
-    return null;
+    // 3. Super Admin with no assigned hotels → first REAL hotel (not Demo)
+    if (isAdmin) {
+        const firstRealHotel = await prisma.hotel.findFirst({
+            where: { name: { not: DEMO_HOTEL_NAME } },
+            orderBy: { created_at: 'asc' },
+            select: { hotel_id: true },
+        });
+        if (firstRealHotel) {
+            return firstRealHotel.hotel_id;
+        }
+        // System only has Demo Hotel — fall through to Demo
+    }
+
+    // 4. Normal user with no valid hotels → Demo Hotel (onboarding)
+    const demoHotelId = await getOrCreateDemoHotel();
+    return demoHotelId;
 }
 
 /**

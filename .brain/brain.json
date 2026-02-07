@@ -2,7 +2,7 @@
   "meta": {
     "schema_version": "1.2.3",
     "awf_version": "4.1.2",
-    "last_updated": "2026-02-06T18:21:00+07:00"
+    "last_updated": "2026-02-07T12:33:00+07:00"
   },
   "project": {
     "name": "revenue-management-system",
@@ -340,7 +340,10 @@
     "All-time Cancellation Stats - Uses all data instead of 30-day filter for accurate display",
     "V01.2: Full 5-OTA Promotion Catalogs - Agoda(17), Booking(15), Traveloka(10), Trip.com(11), Expedia(8) = 61 total",
     "V01.2: OTA-Specific Validation Rules - Expedia ISOLATED, Trip.com ADDITIVE boxes, Booking Deep Deals no-stack",
-    "V01.2: Promotion Descriptions - Each promo has description field from OTA Partner Hubs"
+    "V01.2: Promotion Descriptions - Each promo has description field from OTA Partner Hubs",
+    "Auto-detect Hotel ID - Dashboard, Build OTB, Build Features, Forecast, Reset all auto-detect from reservation data",
+    "Super Admin Demo Hotel Bypass - Super Admin sees all features (Settings, Guide) even on Demo Hotel",
+    "Dashboard date-aware cancellation stats - uses OTB as_of_date instead of today for historical data"
   ],
   "cancellation_bridge_v011": {
     "status": "Implemented",
@@ -425,7 +428,10 @@
     "V01.2: Traveloka Channel Rate - applied before campaigns (Progressive mode)",
     "V01.2: Trip.com ADDITIVE mode - same box pick 1, different boxes stack additively (d₁+d₂+...)",
     "V01.2: Expedia ISOLATED mode - each promotion creates separate rate plan, no stacking",
-    "V01.2: Booking.com Deep Deals (Limited-time, Deal of the Day) - allow_stack=false"
+    "V01.2: Booking.com Deep Deals (Limited-time, Deal of the Day) - allow_stack=false",
+    "Auto-detect hotel_id from reservations_raw (groupBy most reservations) instead of env var DEFAULT_HOTEL_ID",
+    "Super Admin bypasses Demo Hotel restrictions (Settings page, Guide page)",
+    "Dashboard uses OTB as_of_date as reference date for cancellation stats and forecasts"
   ],
   "ui_design": {
     "theme": "SaaS Pro Light",
@@ -472,7 +478,10 @@
       "JWT callback: Only fetch user data on initial sign-in (when account is present), not every request",
       "Session stale: If user's hotel assignments changed, they must logout and login again to refresh JWT",
       "Cookie activeHotelId may point to invalid hotel - middleware clears it and redirects to /select-hotel",
-      "React hydration mismatch warnings from browser extensions (Liner) - safe to ignore"
+      "React hydration mismatch warnings from browser extensions (Liner) - safe to ignore",
+      "DEFAULT_HOTEL_ID env var may not match uploaded data - always auto-detect hotel_id from reservations_raw",
+      "Dashboard/cancellation queries using today's date will miss historical data - use OTB as_of_date",
+      "NEXT_PUBLIC_DEFAULT_HOTEL_ID removed from client components - use getActiveHotelData() server action instead"
     ],
     "formulas": {
       "rooms_otb": "SUM(num_rooms) from reservations for that stay_date",

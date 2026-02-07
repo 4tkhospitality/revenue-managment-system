@@ -4,8 +4,6 @@ import { useState, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 
-const ACTIVE_HOTEL_COOKIE = 'rms_active_hotel';
-
 interface HotelOption {
     hotelId: string;
     hotelName: string;
@@ -19,12 +17,14 @@ export function HotelSwitcher() {
     const [isOpen, setIsOpen] = useState(false);
     const [activeHotelId, setActiveHotelId] = useState<string | null>(null);
     const [switching, setSwitching] = useState(false);
+    const [allHotels, setAllHotels] = useState<{ id: string; name: string }[]>([]);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
-    const accessibleHotels = session?.user?.accessibleHotels || [];
+    const isAdmin = session?.user?.isAdmin === true;
+    const accessibleHotels: HotelOption[] = session?.user?.accessibleHotels || [];
 
+    // Get active hotel from cookie
     useEffect(() => {
-        // Get active hotel from cookie
         const fetchActiveHotel = async () => {
             try {
                 const res = await fetch('/api/user/switch-hotel', { credentials: 'include' });
@@ -37,6 +37,25 @@ export function HotelSwitcher() {
         fetchActiveHotel();
     }, []);
 
+    // Super Admin: fetch all hotels
+    useEffect(() => {
+        if (!isAdmin) return;
+
+        const fetchAllHotels = async () => {
+            try {
+                const res = await fetch('/api/admin/hotels', { credentials: 'include' });
+                if (res.ok) {
+                    const data = await res.json();
+                    setAllHotels(data.hotels || []);
+                }
+            } catch (error) {
+                console.error('Error fetching all hotels:', error);
+            }
+        };
+        fetchAllHotels();
+    }, [isAdmin]);
+
+    // Close on outside click
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -74,65 +93,91 @@ export function HotelSwitcher() {
         }
     };
 
-    // Super admin or single hotel - don't show switcher, show role badge instead
-    if (session?.user?.isAdmin || accessibleHotels.length <= 1) {
+    // Build hotel list depending on role
+    const hotelList: { id: string; name: string; role?: string; isPrimary?: boolean }[] = isAdmin
+        ? allHotels.map(h => ({ id: h.id, name: h.name }))
+        : accessibleHotels.map(h => ({ id: h.hotelId, name: h.hotelName, role: h.role, isPrimary: h.isPrimary }));
+
+    // Single hotel non-admin: show compact badge
+    if (!isAdmin && hotelList.length <= 1) {
+        const hotelName = accessibleHotels[0]?.hotelName || 'Dashboard';
         const userRole = accessibleHotels[0]?.role || 'viewer';
         const roleLabel = userRole === 'hotel_admin' ? 'Admin' : userRole === 'manager' ? 'Manager' : 'Viewer';
         return (
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-lg text-sm">
-                <span className="text-gray-500">🏨</span>
-                <span className="font-medium text-gray-700">Dashboard</span>
-                {session?.user?.isAdmin ? (
-                    <span className="px-1.5 py-0.5 bg-red-100 text-red-600 rounded text-xs">Super Admin</span>
-                ) : (
-                    <span className="px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded text-xs">{roleLabel}</span>
-                )}
+            <div className="flex items-center gap-2.5 px-3 py-2.5 bg-white/10 rounded-xl">
+                <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-sm">🏨</div>
+                <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-white truncate">{hotelName}</div>
+                    <div className="text-xs text-white/50">{roleLabel}</div>
+                </div>
             </div>
         );
     }
 
-    const activeHotel = accessibleHotels.find(h => h.hotelId === activeHotelId);
+    // Find active hotel name for display
+    const activeHotel = hotelList.find(h => h.id === activeHotelId);
+    const activeHotelName = activeHotel?.name || 'Chọn Hotel';
 
     return (
         <div className="relative" ref={dropdownRef}>
+            {/* Trigger button — dark sidebar style */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm transition-colors"
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 bg-white/10 hover:bg-white/15 rounded-xl transition-colors text-left"
             >
-                <span className="text-gray-500">🏨</span>
-                <span className="font-medium text-gray-700">
-                    {activeHotel?.hotelName || 'Chọn Hotel'}
-                </span>
-                <svg className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-sm flex-shrink-0">🏨</div>
+                <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-white truncate">{activeHotelName}</div>
+                    <div className="text-xs text-white/50 flex items-center gap-1">
+                        {isAdmin ? (
+                            <span className="text-rose-300">Super Admin</span>
+                        ) : (
+                            <span>{activeHotel?.role === 'hotel_admin' ? 'Admin' : activeHotel?.role === 'manager' ? 'Manager' : 'Viewer'}</span>
+                        )}
+                        <span>• {hotelList.length} KS</span>
+                    </div>
+                </div>
+                <svg className={`w-4 h-4 text-white/40 transition-transform flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
             </button>
 
+            {/* Dropdown — dark theme matching sidebar */}
             {isOpen && (
-                <div className="absolute top-full right-0 mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1">
-                    <div className="px-3 py-2 text-xs text-gray-500 border-b border-gray-100">
-                        Chọn khách sạn
+                <div className="absolute top-full left-0 right-0 mt-1 bg-[#0f1d36] border border-white/10 rounded-xl shadow-2xl z-50 py-1 max-h-64 overflow-y-auto">
+                    <div className="px-3 py-2 text-xs text-white/40 border-b border-white/5">
+                        {isAdmin ? `Tất cả khách sạn (${hotelList.length})` : 'Khách sạn của bạn'}
                     </div>
-                    {accessibleHotels.map((hotel) => (
-                        <button
-                            key={hotel.hotelId}
-                            onClick={() => switchHotel(hotel.hotelId)}
-                            disabled={switching}
-                            className={`w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center justify-between ${hotel.hotelId === activeHotelId ? 'bg-blue-50' : ''
-                                }`}
-                        >
-                            <div>
-                                <div className="font-medium text-gray-900 text-sm">{hotel.hotelName}</div>
-                                <div className="text-xs text-gray-500">
-                                    {hotel.role === 'hotel_admin' ? 'Admin' : hotel.role === 'manager' ? 'Manager' : 'Viewer'}
-                                    {hotel.isPrimary && ' • Primary'}
+                    {hotelList.map((hotel) => {
+                        const isActive = hotel.id === activeHotelId;
+                        return (
+                            <button
+                                key={hotel.id}
+                                onClick={() => switchHotel(hotel.id)}
+                                disabled={switching}
+                                className={`w-full px-3 py-2 text-left flex items-center gap-2.5 transition-colors ${isActive
+                                    ? 'bg-blue-500/20'
+                                    : 'hover:bg-white/5'
+                                    }`}
+                            >
+                                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isActive ? 'bg-blue-400' : 'bg-white/20'}`} />
+                                <div className="flex-1 min-w-0">
+                                    <div className={`text-sm truncate ${isActive ? 'text-white font-medium' : 'text-white/80'}`}>
+                                        {hotel.name}
+                                    </div>
+                                    {hotel.role && (
+                                        <div className="text-xs text-white/40">
+                                            {hotel.role === 'hotel_admin' ? 'Admin' : hotel.role === 'manager' ? 'Manager' : 'Viewer'}
+                                            {hotel.isPrimary && ' • Primary'}
+                                        </div>
+                                    )}
                                 </div>
-                            </div>
-                            {hotel.hotelId === activeHotelId && (
-                                <span className="text-blue-600">✓</span>
-                            )}
-                        </button>
-                    ))}
+                                {isActive && (
+                                    <span className="text-blue-400 text-xs flex-shrink-0">✓</span>
+                                )}
+                            </button>
+                        );
+                    })}
                 </div>
             )}
         </div>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { BookOpen, BarChart3, TrendingUp, DollarSign, CalendarDays, Upload, Database, Settings, HelpCircle, XCircle, Calculator, Percent, Tag, ArrowRightLeft, Lock } from 'lucide-react';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 
 type TabId = 'revenue' | 'pricing';
 
@@ -10,6 +11,11 @@ export default function GuidePage() {
     const [activeTab, setActiveTab] = useState<TabId>('pricing'); // Default to pricing
     const [isDemo, setIsDemo] = useState(false);
     const [loading, setLoading] = useState(true);
+    const { data: session } = useSession();
+
+    // Super Admin bypasses demo restrictions
+    const isSuperAdmin = (session?.user as any)?.role === 'super_admin';
+    const effectiveIsDemo = isDemo && !isSuperAdmin;
 
     // Check if Demo Hotel
     useEffect(() => {
@@ -18,8 +24,8 @@ export default function GuidePage() {
                 const res = await fetch('/api/is-demo-hotel');
                 const data = await res.json();
                 setIsDemo(data.isDemo || false);
-                // If NOT demo hotel, default to revenue tab
-                if (!data.isDemo) {
+                // If NOT demo hotel OR super admin, default to revenue tab
+                if (!data.isDemo || isSuperAdmin) {
                     setActiveTab('revenue');
                 }
             } catch (error) {
@@ -29,7 +35,7 @@ export default function GuidePage() {
             }
         };
         checkDemoHotel();
-    }, []);
+    }, [isSuperAdmin]);
 
     return (
         <div className="mx-auto max-w-[1400px] px-8 py-6 space-y-6">
@@ -49,7 +55,7 @@ export default function GuidePage() {
 
             {/* Tabs - only show Revenue tab if NOT Demo Hotel */}
             <div className="bg-white border border-gray-200 rounded-xl p-1 flex gap-1">
-                {!isDemo && (
+                {!effectiveIsDemo && (
                     <button
                         onClick={() => setActiveTab('revenue')}
                         className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${activeTab === 'revenue'
@@ -74,7 +80,7 @@ export default function GuidePage() {
             </div>
 
             {/* Demo Hotel Notice */}
-            {isDemo && (
+            {effectiveIsDemo && (
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
                     <Lock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
                     <div>
@@ -89,7 +95,7 @@ export default function GuidePage() {
 
             {/* Tab Content */}
             <div className="max-w-4xl mx-auto space-y-6">
-                {activeTab === 'revenue' && !isDemo && <RevenueGuide />}
+                {activeTab === 'revenue' && !effectiveIsDemo && <RevenueGuide />}
                 {activeTab === 'pricing' && <PricingGuide />}
             </div>
         </div>

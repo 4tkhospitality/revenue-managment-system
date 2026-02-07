@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { buildDailyOTB } from '../actions/buildDailyOTB';
+import { rebuildAllOTB } from '../actions/buildDailyOTB';
 import { useRouter } from 'next/navigation';
 
 export function BuildOtbButton() {
@@ -13,7 +13,7 @@ export function BuildOtbButton() {
         setIsBuilding(true);
         setResult(null);
         try {
-            const res = await buildDailyOTB();
+            const res = await rebuildAllOTB();
             setResult(res);
             if (res.success) {
                 // Refresh the page to show new data
@@ -32,8 +32,8 @@ export function BuildOtbButton() {
                 onClick={handleBuildOTB}
                 disabled={isBuilding}
                 className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${isBuilding
-                        ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
-                        : 'bg-blue-600 text-white hover:bg-blue-500'
+                    ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                    : 'bg-blue-600 text-white hover:bg-blue-500'
                     }`}
             >
                 {isBuilding ? (

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { resetDerivedData } from '../actions/resetDerivedData';
+import { getActiveHotelData } from '../actions/getActiveHotelData';
 import { useRouter } from 'next/navigation';
 
 export function ResetButton() {
@@ -14,9 +15,10 @@ export function ResetButton() {
         setIsResetting(true);
         setResult(null);
         try {
-            const hotelId = process.env.NEXT_PUBLIC_DEFAULT_HOTEL_ID;
+            // Auto-detect hotel from actual data
+            const { hotelId } = await getActiveHotelData();
             if (!hotelId) {
-                setResult({ success: false, message: 'NEXT_PUBLIC_DEFAULT_HOTEL_ID chưa được cấu hình' });
+                setResult({ success: false, message: 'Chưa có dữ liệu reservation. Vui lòng upload trước.' });
                 return;
             }
 

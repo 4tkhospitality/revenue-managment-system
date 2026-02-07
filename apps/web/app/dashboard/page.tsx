@@ -1,4 +1,5 @@
 import prisma from '@/lib/prisma';
+import { getActiveHotelId } from '@/lib/pricing/get-hotel';
 import { KpiCards } from '@/components/dashboard/KpiCards';
 import { OtbChart } from '@/components/dashboard/OtbChart';
 import { RecommendationTable } from '@/components/dashboard/RecommendationTable';
@@ -13,7 +14,8 @@ export default async function DashboardPage() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const hotelId = process.env.DEFAULT_HOTEL_ID;
+    // Get active hotel from cookie/session (deterministic, no auto-detect)
+    const hotelId = await getActiveHotelId();
 
     // Check if hotel is configured
     if (!hotelId) {
@@ -125,16 +127,19 @@ export default async function DashboardPage() {
         ? featuresData.reduce((sum, f) => sum + (f.pickup_t7 || 0), 0) / featuresData.length
         : 0; // Show 0 if no data yet
 
-    // V01.1: Calculate cancellation stats (next 30 days)
-    const thirtyDaysLater = new Date(today);
-    thirtyDaysLater.setDate(thirtyDaysLater.getDate() + 30);
+    // V01.1: Calculate cancellation stats (next 30 days from data reference date)
+    // Use the OTB as_of_date as reference instead of today (data may be from past)
+    const referenceDate = otbData.length > 0 ? new Date(otbData[0].as_of_date) : today;
+    referenceDate.setHours(0, 0, 0, 0);
+    const thirtyDaysFromRef = new Date(referenceDate);
+    thirtyDaysFromRef.setDate(thirtyDaysFromRef.getDate() + 30);
 
     // Get reservations that have been cancelled with cancel_time set
     const cancelledReservations = await prisma.reservationsRaw.findMany({
         where: {
             hotel_id: hotelId,
             cancel_time: { not: null },
-            arrival_date: { gte: today, lte: thirtyDaysLater }
+            arrival_date: { gte: referenceDate, lte: thirtyDaysFromRef }
         },
         select: {
             rooms: true,
@@ -242,7 +247,7 @@ export default async function DashboardPage() {
     // Get data timestamp for display
     const dataAsOf = otbData.length > 0
         ? DateUtils.format(otbData[0].as_of_date, 'MMM dd, yyyy')
-        : DateUtils.format(today, 'MMM dd, yyyy');
+        : null;
 
     return (
         <div className="mx-auto max-w-[1400px] px-8 py-6 space-y-6">
@@ -275,8 +280,8 @@ export default async function DashboardPage() {
                                     : 'Chưa có'}
                             </div>
                         </div>
-                        <div className="px-3 py-1.5 bg-white/10 rounded-lg text-sm backdrop-blur-sm">
-                            OTB: {dataAsOf}
+                        <div className={`px-3 py-1.5 rounded-lg text-sm backdrop-blur-sm ${dataAsOf ? 'bg-white/10' : 'bg-amber-500/20 text-amber-200'}`}>
+                            OTB: {dataAsOf || 'Chưa có dữ liệu'}
                         </div>
                     </div>
                 </div>

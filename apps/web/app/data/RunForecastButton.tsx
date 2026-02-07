@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { runForecast } from '../actions/runForecast';
+import { getActiveHotelData } from '../actions/getActiveHotelData';
 import { useRouter } from 'next/navigation';
 
 export function RunForecastButton() {
@@ -13,16 +14,17 @@ export function RunForecastButton() {
         setIsRunning(true);
         setResult(null);
         try {
-            const hotelId = process.env.NEXT_PUBLIC_DEFAULT_HOTEL_ID;
-            if (!hotelId) {
-                setResult({ success: false, error: 'NEXT_PUBLIC_DEFAULT_HOTEL_ID chưa được cấu hình' });
+            // Auto-detect hotel and date from actual data
+            const { hotelId, latestBookingDate } = await getActiveHotelData();
+            if (!hotelId || !latestBookingDate) {
+                setResult({ success: false, error: 'Chưa có dữ liệu reservation. Vui lòng upload trước.' });
                 return;
             }
 
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+            const asOfDate = new Date(latestBookingDate);
+            asOfDate.setHours(0, 0, 0, 0);
 
-            const res = await runForecast(hotelId, today);
+            const res = await runForecast(hotelId, asOfDate);
             setResult(res);
             if (res.success) {
                 router.refresh();

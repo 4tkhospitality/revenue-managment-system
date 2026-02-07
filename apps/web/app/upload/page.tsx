@@ -24,6 +24,7 @@ export default function UploadPage() {
     const [dragActive, setDragActive] = useState(false);
     const [fileResults, setFileResults] = useState<FileResult[]>([]);
     const [activeHotelId, setActiveHotelId] = useState<string | null>(null);
+    const [activeHotelName, setActiveHotelName] = useState<string | null>(null);
     const [isDemo, setIsDemo] = useState(false);
     const [isAdmin, setIsAdmin] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -36,8 +37,14 @@ export default function UploadPage() {
                 const data = await res.json();
                 if (data.activeHotelId) {
                     setActiveHotelId(data.activeHotelId);
+                    // Find hotel name from session
+                    const match = session?.user?.accessibleHotels?.find(
+                        (h: any) => h.hotelId === data.activeHotelId
+                    );
+                    if (match) setActiveHotelName(match.hotelName);
                 } else if (session?.user?.accessibleHotels?.length) {
                     setActiveHotelId(session.user.accessibleHotels[0].hotelId);
+                    setActiveHotelName(session.user.accessibleHotels[0].hotelName);
                 }
 
                 const demoRes = await fetch('/api/is-demo-hotel');
@@ -218,6 +225,16 @@ export default function UploadPage() {
             </header>
 
             <div className="max-w-3xl mx-auto space-y-6">
+                {/* Active Hotel Banner */}
+                {activeHotelName && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 flex items-center gap-2">
+                        <span className="text-blue-500">📦</span>
+                        <span className="text-sm text-blue-800">
+                            Đang upload dữ liệu cho: <strong>{activeHotelName}</strong>
+                        </span>
+                        <span className="text-xs text-blue-400 ml-auto font-mono">{activeHotelId?.slice(0, 8)}</span>
+                    </div>
+                )}
                 {/* Demo Hotel Warning */}
                 {isDemo && !isAdmin && (
                     <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
