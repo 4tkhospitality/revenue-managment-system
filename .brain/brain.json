@@ -1,8 +1,8 @@
 {
   "meta": {
-    "schema_version": "1.2.3",
+    "schema_version": "1.2.4",
     "awf_version": "4.1.2",
-    "last_updated": "2026-02-07T12:33:00+07:00"
+    "last_updated": "2026-02-07T16:03:00+07:00"
   },
   "project": {
     "name": "revenue-management-system",
@@ -343,7 +343,13 @@
     "V01.2: Promotion Descriptions - Each promo has description field from OTA Partner Hubs",
     "Auto-detect Hotel ID - Dashboard, Build OTB, Build Features, Forecast, Reset all auto-detect from reservation data",
     "Super Admin Demo Hotel Bypass - Super Admin sees all features (Settings, Guide) even on Demo Hotel",
-    "Dashboard date-aware cancellation stats - uses OTB as_of_date instead of today for historical data"
+    "Dashboard date-aware cancellation stats - uses OTB as_of_date instead of today for historical data",
+    "Multi-Hotel Active Context - getActiveHotelId() prioritizes cookie > session > fallback. All pages use active hotel instead of auto-detect",
+    "HotelSwitcher Dark Sidebar - Super Admin sees ALL hotels dropdown, dark theme matching sidebar, blue accent for active hotel",
+    "Auto Demo Hotel Assignment - New users auto-assigned to Demo Hotel on first login (auth.ts jwt callback)",
+    "OTB Date Display - Shows 'Chưa có dữ liệu' with amber styling when no OTB data exists",
+    "Upload Hotel Banner - Upload page shows active hotel name + ID for clarity",
+    "No-Hotel-Access Auto-Refresh - Page auto-refreshes session to trigger Demo Hotel assignment, Zalo support link"
   ],
   "cancellation_bridge_v011": {
     "status": "Implemented",
@@ -431,7 +437,12 @@
     "V01.2: Booking.com Deep Deals (Limited-time, Deal of the Day) - allow_stack=false",
     "Auto-detect hotel_id from reservations_raw (groupBy most reservations) instead of env var DEFAULT_HOTEL_ID",
     "Super Admin bypasses Demo Hotel restrictions (Settings page, Guide page)",
-    "Dashboard uses OTB as_of_date as reference date for cancellation stats and forecasts"
+    "Dashboard uses OTB as_of_date as reference date for cancellation stats and forecasts",
+    "Multi-Hotel Active Context: getActiveHotelId() uses cookie→session→fallback chain with permission validation",
+    "Super Admin fallback: first real hotel by created_at (skips Demo Hotel) for deterministic behavior",
+    "Cookie is a preference, not authorization: server validates user has access to cookie hotel_id",
+    "Auto-assign Demo Hotel: existing users with 0 hotel assignments get Demo Hotel automatically on login",
+    "signIn callback creates user, jwt callback assigns Demo Hotel if needed (race condition fix)"
   ],
   "ui_design": {
     "theme": "SaaS Pro Light",
@@ -481,7 +492,11 @@
       "React hydration mismatch warnings from browser extensions (Liner) - safe to ignore",
       "DEFAULT_HOTEL_ID env var may not match uploaded data - always auto-detect hotel_id from reservations_raw",
       "Dashboard/cancellation queries using today's date will miss historical data - use OTB as_of_date",
-      "NEXT_PUBLIC_DEFAULT_HOTEL_ID removed from client components - use getActiveHotelData() server action instead"
+      "NEXT_PUBLIC_DEFAULT_HOTEL_ID removed from client components - use getActiveHotelData() server action instead",
+      "signIn callback creates user → jwt callback sees user exists but 0 hotels → must auto-assign Demo Hotel in jwt",
+      "/api/debug-user endpoint doesn't exist → no-hotel-access page was calling it → JSON parse error (HTML 404)",
+      "OTB date used today's date as fallback when no data → misleading. Changed to null + 'Chưa có dữ liệu'",
+      "HotelSwitcher white dropdown clashes with dark sidebar → redesigned with dark theme (bg-[#0f1d36])"
     ],
     "formulas": {
       "rooms_otb": "SUM(num_rooms) from reservations for that stay_date",
