@@ -94,7 +94,9 @@ export async function ingestCancellationXml(
     try {
         // 4. Parse XML
         let step4Start = Date.now()
+        console.log(`[CANCEL] About to call parseCancellationXml...`)
         const { asOfDate, records } = parseCancellationXml(xmlContent)
+        console.log(`[CANCEL] parseCancellationXml returned ${records.length} records`)
         timings['4_parse_xml'] = Date.now() - step4Start
 
         if (records.length === 0) {

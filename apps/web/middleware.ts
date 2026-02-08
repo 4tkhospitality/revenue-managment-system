@@ -13,7 +13,7 @@ const publicRoutes = ["/auth/login", "/api/auth"]
 const apiBypassRoutes = ["/api/pricing"]
 
 // Routes that don't require hotel access
-const noHotelRoutes = ["/admin", "/api/admin", "/blocked", "/no-hotel-access", "/select-hotel", "/onboarding"]
+const noHotelRoutes = ["/admin", "/api/admin", "/blocked", "/no-hotel-access", "/select-hotel", "/onboarding", "/welcome", "/invite"]
 
 
 // Role hierarchy for permission checks
@@ -43,7 +43,8 @@ export async function middleware(request: NextRequest) {
         pathname.startsWith("/_next") ||
         pathname.startsWith("/static") ||
         pathname.startsWith("/api/auth") ||
-        pathname.startsWith("/api/public")
+        pathname.startsWith("/api/public") ||
+        pathname.match(/\.(png|jpg|jpeg|gif|svg|ico|webp|css|js|woff|woff2|ttf|eot)$/)
     ) {
         return NextResponse.next()
     }
@@ -93,9 +94,9 @@ export async function middleware(request: NextRequest) {
     if (requiresHotel) {
         const accessibleHotels = session.user.accessibleHotels || []
 
-        // Must have at least one hotel assigned
+        // Must have at least one hotel assigned - redirect to welcome for onboarding
         if (accessibleHotels.length === 0) {
-            return NextResponse.redirect(new URL("/no-hotel-access", request.url))
+            return NextResponse.redirect(new URL("/welcome", request.url))
         }
 
         // Get active hotel from cookie

@@ -11,6 +11,7 @@ datasource db {
 model Hotel {
   hotel_id              String                 @id @default(uuid()) @db.Uuid
   name                  String
+  slug                  String?                @unique
   timezone              String                 @default("Asia/Ho_Chi_Minh")
   capacity              Int
   currency              String                 @default("VND")
@@ -21,11 +22,18 @@ model Hotel {
   fiscal_start_day      Int                    @default(1)
   ladder_steps          String?
   company_email         String?
+
+  // Demo Hotel System
+  is_demo               Boolean                @default(false)
+  demo_owner_id         String?                @db.Uuid
+  expires_at            DateTime?
+
   cancellations_raw     CancellationRaw[]
   daily_otb             DailyOTB[]
   demand_forecast       DemandForecast[]
   features_daily        FeaturesDaily[]
   hotel_users           HotelUser[]
+  hotel_invites         HotelInvite[]
   import_jobs           ImportJob[]
   ota_channels          OTAChannel[]
   price_recommendations PriceRecommendations[]
@@ -69,14 +77,16 @@ model User {
 }
 
 model HotelUser {
-  id         String   @id @default(uuid()) @db.Uuid
-  user_id    String   @db.Uuid
-  hotel_id   String   @db.Uuid
-  role       UserRole @default(viewer)
-  is_primary Boolean  @default(false)
-  created_at DateTime @default(now())
-  hotel      Hotel    @relation(fields: [hotel_id], references: [hotel_id], onDelete: Cascade)
-  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  id           String    @id @default(uuid()) @db.Uuid
+  user_id      String    @db.Uuid
+  hotel_id     String    @db.Uuid
+  role         UserRole  @default(viewer)
+  is_primary   Boolean   @default(false)
+  is_active    Boolean   @default(true)
+  last_seen_at DateTime?
+  created_at   DateTime  @default(now())
+  hotel        Hotel     @relation(fields: [hotel_id], references: [hotel_id], onDelete: Cascade)
+  user         User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@unique([user_id, hotel_id])
   @@index([hotel_id])
@@ -419,6 +429,57 @@ enum UserRole {
   hotel_admin
   manager
   viewer
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Onboarding — Invite & Event Tracking
+// ════════════════════════════════════════════════════════════════════
+
+model HotelInvite {
+  invite_id  String    @id @default(uuid()) @db.Uuid
+  hotel_id   String    @db.Uuid
+  token_hash String    @unique
+  short_code String?
+  email      String?
+  role       UserRole  @default(viewer)
+  max_uses   Int       @default(5)
+  used_count Int       @default(0)
+  status     String    @default("active")
+  is_default Boolean   @default(false)
+  expires_at DateTime
+  created_by String    @db.Uuid
+  created_at DateTime  @default(now())
+  used_by    String?   @db.Uuid
+  used_at    DateTime?
+  hotel      Hotel     @relation(fields: [hotel_id], references: [hotel_id], onDelete: Cascade)
+
+  @@unique([hotel_id, short_code])
+  @@index([hotel_id])
+  @@map("hotel_invites")
+}
+
+model ProductEvent {
+  id         String   @id @default(uuid()) @db.Uuid
+  user_id    String   @db.Uuid
+  hotel_id   String?  @db.Uuid
+  event_type String
+  event_data Json?
+  created_at DateTime @default(now())
+
+  @@index([user_id, event_type, created_at])
+  @@index([hotel_id, event_type, created_at])
+  @@map("product_events")
+}
+
+// Rate limiting for Vercel serverless (no in-memory)
+model RateLimitHit {
+  id         String   @id @default(uuid()) @db.Uuid
+  ip         String
+  key        String   // e.g., "invite_redeem", "export"
+  created_at DateTime @default(now())
+
+  @@index([ip, key, created_at])
+  @@map("rate_limit_hits")
 }
 
 // ════════════════════════════════════════════════════════════════════

@@ -92,39 +92,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                             isPrimary: hu.is_primary,
                         }))
 
-                        // AUTO-ASSIGN: Existing user with 0 hotels → assign Demo Hotel
-                        if (hotelUsers.length === 0 && user.role !== 'super_admin') {
-                            const DEMO_HOTEL_NAME = 'Demo Hotel'
-                            let demoHotel = await prisma.hotel.findFirst({
-                                where: { name: DEMO_HOTEL_NAME },
-                                select: { hotel_id: true, name: true }
-                            })
-
-                            if (demoHotel) {
-                                // Create assignment
-                                await prisma.hotelUser.create({
-                                    data: {
-                                        user_id: user.id,
-                                        hotel_id: demoHotel.hotel_id,
-                                        role: 'viewer',
-                                        is_primary: true,
-                                    }
-                                })
-                                console.log(`[AUTH] Auto-assigned ${token.email} to Demo Hotel`)
-
-                                token.accessibleHotels = [{
-                                    hotelId: demoHotel.hotel_id,
-                                    hotelName: demoHotel.name,
-                                    role: 'viewer' as UserRole,
-                                    isPrimary: true,
-                                }]
-                            }
-                        }
+                        // NOTE: Removed AUTO-ASSIGN Demo Hotel logic
+                        // Users with 0 hotels will now be redirected to /welcome by middleware
 
 
                     } else {
-                        // NEW USER: Auto-create and assign to Demo Hotel
-                        const DEMO_HOTEL_ID = process.env.DEFAULT_HOTEL_ID || '159fe315-79a0-48a3-adac-f47d4f56b748'
+                        // NEW USER: Create user WITHOUT hotel assignment
+                        // Middleware will redirect to /welcome for onboarding choice
 
                         // Create new user
                         const newUser = await prisma.user.create({
@@ -135,29 +109,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                                 is_active: true,
                             }
                         })
-                        console.log(`[AUTH] Created New User: ${newUser.email}, ID: ${newUser.id}, IsActive: ${newUser.is_active}`)
+                        console.log(`[AUTH] Created New User: ${newUser.email}, ID: ${newUser.id} - No hotel assigned, will redirect to /welcome`)
 
-                        // Auto-assign to Demo Hotel with viewer role
-                        await prisma.hotelUser.create({
-                            data: {
-                                user_id: newUser.id,
-                                hotel_id: DEMO_HOTEL_ID,
-                                role: 'viewer',
-                                is_primary: true,
-                            }
-                        })
-
-                        // Set token values
+                        // Set token values - NO hotels assigned
                         token.userId = newUser.id
                         token.role = 'viewer'
                         token.isActive = true
                         token.isAdmin = token.email === ADMIN_EMAIL
-                        token.accessibleHotels = [{
-                            hotelId: DEMO_HOTEL_ID,
-                            hotelName: 'Demo Hotel',
-                            role: 'viewer',
-                            isPrimary: true,
-                        }]
+                        token.accessibleHotels = [] // Empty - triggers /welcome redirect
                     }
                 } catch (error) {
                     console.error('[AUTH] ERROR in JWT callback:', error)

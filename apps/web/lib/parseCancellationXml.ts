@@ -22,14 +22,37 @@ export interface ParseCancellationResult {
 /**
  * Parse H65 Crystal Reports Cancellation XML
  * 
- * Supports both FormattedReportObject and FormattedAreaPair structures
+ * Uses fast-xml-parser first, falls back to regex for large files
  */
 export function parseCancellationXml(xmlString: string): ParseCancellationResult {
+    // For large files (>500KB), skip fast-xml-parser entirely to avoid nesting limit
+    const fileSizeKB = xmlString.length / 1024;
+    console.log(`[CANCEL] Parsing file, size: ${fileSizeKB.toFixed(1)} KB`);
+
+    if (fileSizeKB > 500) {
+        console.log('[CANCEL] Large file detected, using regex parser directly');
+        return parseWithRegex(xmlString);
+    }
+
+    try {
+        return parseWithFastXml(xmlString);
+    } catch (error) {
+        // If fast-xml-parser fails (e.g., nesting limit), use regex fallback
+        console.log('[CANCEL] fast-xml-parser failed, using regex fallback:', error instanceof Error ? error.message : error);
+        return parseWithRegex(xmlString);
+    }
+}
+
+/**
+ * Fast XML parser method (original)
+ */
+function parseWithFastXml(xmlString: string): ParseCancellationResult {
     const parser = new XMLParser({
         ignoreAttributes: false,
         attributeNamePrefix: "@_",
         parseTagValue: true,
         trimValues: true,
+        processEntities: false,
     })
 
     const parsed = parser.parse(xmlString)
@@ -61,6 +84,54 @@ export function parseCancellationXml(xmlString: string): ParseCancellationResult
     const records = extractCancellationRecordsFromFields(allFields)
 
     return { asOfDate, records }
+}
+
+/**
+ * Regex-based fallback for large XML files that exceed nesting limits
+ */
+function parseWithRegex(xmlString: string): ParseCancellationResult {
+    console.log('[CANCEL] Using regex parser for large file');
+
+    // Extract report dates - FieldName is an ATTRIBUTE, Value is child element
+    // Example: <FormattedReportObject ... FieldName="{@fmFromDate}">...<Value>2025-11-25</Value>
+    const fromDateMatch = xmlString.match(/FieldName="\{@fmFromDate\}"[^>]*>[\s\S]*?<Value>([^<]+)<\/Value>/);
+    const toDateMatch = xmlString.match(/FieldName="\{@fmToDate\}"[^>]*>[\s\S]*?<Value>([^<]+)<\/Value>/);
+
+    if (!fromDateMatch || !toDateMatch) {
+        throw new Error("Cannot extract report dates from XML");
+    }
+
+    const fromDate = fromDateMatch[1].trim();
+    const toDate = toDateMatch[1].trim();
+
+    if (fromDate !== toDate) {
+        throw new Error(`Report date range not supported in V01. From: ${fromDate}, To: ${toDate}`);
+    }
+
+    const asOfDate = parseDate(fromDate);
+    if (!asOfDate) {
+        throw new Error(`Invalid report date: ${fromDate}`);
+    }
+
+    // Extract all FormattedReportObject elements with their FieldName and Value
+    // Pattern: FieldName="..." followed by <Value>...</Value>
+    const fieldPattern = /FieldName="([^"]+)"[^>]*>[\s\S]*?<Value>([^<]*)<\/Value>/g;
+    const fields: Array<{ fieldName: string, value: string }> = [];
+    let match;
+
+    while ((match = fieldPattern.exec(xmlString)) !== null) {
+        fields.push({
+            fieldName: match[1].trim(),
+            value: match[2].trim()
+        });
+    }
+
+    console.log(`[CANCEL] Regex extracted ${fields.length} fields`);
+
+    // Extract cancellation records
+    const records = extractCancellationRecordsFromFields(fields);
+
+    return { asOfDate, records };
 }
 
 interface FieldData {

@@ -196,17 +196,26 @@ export default function SettingsPage() {
                 <div className="max-w-2xl">
                     <div className="bg-amber-50 border border-amber-200 rounded-xl p-8 text-center">
                         <Lock className="w-12 h-12 text-amber-500 mx-auto mb-4" />
-                        <h2 className="text-xl font-semibold text-amber-800 mb-2">Demo Hotel - Truy cập bị giới hạn</h2>
+                        <h2 className="text-xl font-semibold text-amber-800 mb-2">Bạn đang sử dụng Demo Hotel</h2>
                         <p className="text-amber-700 mb-6">
-                            Bạn đang sử dụng Demo Hotel nên không thể truy cập Cài đặt.<br />
-                            Vui lòng liên hệ admin để được gán khách sạn thực.
+                            Demo Hotel giúp bạn khám phá hệ thống với dữ liệu mẫu.<br />
+                            Để sử dụng với dữ liệu thực, hãy tạo khách sạn riêng của bạn.
                         </p>
-                        <Link
-                            href="/pricing"
-                            className="inline-block px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
-                        >
-                            Đi tới Tính giá OTA
-                        </Link>
+                        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                            <Link
+                                href="/onboarding"
+                                className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                            >
+                                <Hotel className="w-4 h-4" />
+                                Tạo khách sạn riêng
+                            </Link>
+                            <Link
+                                href="/dashboard"
+                                className="inline-block px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
+                            >
+                                Tiếp tục dùng Demo
+                            </Link>
+                        </div>
                     </div>
                 </div>
             </div>

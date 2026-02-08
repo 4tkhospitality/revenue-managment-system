@@ -74,8 +74,17 @@ export default function UploadPage() {
             let result;
 
             if (activeTab === 'cancelled' && fileType === 'xml') {
-                const xmlContent = await file.text();
-                result = await ingestCancellationXml(hotelId, xmlContent, file.name);
+                // Use API Route instead of Server Action to handle large XML files
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('hotelId', hotelId);
+
+                const response = await fetch('/api/upload/cancellation', {
+                    method: 'POST',
+                    body: formData,
+                });
+                result = await response.json();
+
                 if (result.success) {
                     return { success: true, message: `${result.recordCount} cancellations`, count: result.recordCount };
                 } else {
