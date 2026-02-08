@@ -15,6 +15,9 @@ interface AnalyticsRow {
     is_weekend: boolean | null;
     rooms_otb: number;
     revenue_otb: number;
+    // D16: STLY fields
+    stly_rooms_otb: number | null;
+    stly_revenue_otb: number | null;
     pickup_t30: number | null;
     pickup_t15: number | null;
     pickup_t7: number | null;
@@ -38,6 +41,7 @@ interface AnalyticsData {
         pace7: number | null;
         pace30: number | null;
         totalPickup7d: number;
+        totalPickup1d: number;
     };
     quality: {
         totalRows: number;
@@ -45,8 +49,10 @@ interface AnalyticsData {
         withSTLY: number;
         approxSTLY: number;
         completeness: number;
+        stlyCoverage: number;
     };
 }
+
 
 const DOW_LABELS = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 
@@ -224,22 +230,24 @@ function DataQualityMini({ quality }: { quality: AnalyticsData['quality'] }) {
 function STLYChart({ rows, capacity, viewMode }: { rows: AnalyticsRow[]; capacity: number; viewMode: 'rooms' | 'revenue' }) {
     // Show max 60 days for readability
     const chartData = rows.slice(0, 60).map(r => {
-        // For STLY: rooms_otb + pace_vs_ly gives STLY value
-        // pace_vs_ly = currentRooms - stlyRooms → stlyRooms = currentRooms - pace_vs_ly
-        const stlyValue = r.pace_vs_ly != null
-            ? (viewMode === 'rooms' ? r.rooms_otb - r.pace_vs_ly : null)
-            : null;
+        // D16: Use actual STLY values from features_daily
+        const currentVal = viewMode === 'rooms'
+            ? r.rooms_otb
+            : Math.round(r.revenue_otb / 1000000);
+
+        const stlyVal = viewMode === 'rooms'
+            ? r.stly_rooms_otb
+            : (r.stly_revenue_otb ? Math.round(r.stly_revenue_otb / 1000000) : null);
 
         return {
             date: r.stay_date.slice(5), // MM-DD
-            current: viewMode === 'rooms' ? r.rooms_otb : Math.round(r.revenue_otb / 1000000),
-            stly: stlyValue != null
-                ? (viewMode === 'rooms' ? Math.round(stlyValue) : null)
-                : null,
+            current: currentVal,
+            stly: stlyVal,
             isWeekend: r.is_weekend,
             isApprox: r.stly_is_approx,
         };
     });
+
 
     return (
         <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
@@ -325,8 +333,18 @@ function SupplyChart({ rows, capacity }: { rows: AnalyticsRow[]; capacity: numbe
 
 // ─── Pace Table ──────────────────────────────────────────────
 function PaceTable({ rows }: { rows: AnalyticsRow[] }) {
-    // Show max 60 for table
+    // D24: Limit to 60 for table performance
     const tableRows = rows.slice(0, 60);
+
+    // D23: Grand Total calculation (sum in visible range)
+    const totals = {
+        t30: tableRows.reduce((s, r) => s + (r.pickup_t30 ?? 0), 0),
+        t15: tableRows.reduce((s, r) => s + (r.pickup_t15 ?? 0), 0),
+        t7: tableRows.reduce((s, r) => s + (r.pickup_t7 ?? 0), 0),
+        t5: tableRows.reduce((s, r) => s + (r.pickup_t5 ?? 0), 0),
+        t3: tableRows.reduce((s, r) => s + (r.pickup_t3 ?? 0), 0),
+        vsLY: tableRows.filter(r => r.pace_vs_ly !== null).reduce((s, r) => s + (r.pace_vs_ly ?? 0), 0),
+    };
 
     const formatPickup = (val: number | null, isApprox?: boolean | null) => {
         if (val === null || val === undefined) return { text: '—', color: 'text-slate-300' };
@@ -334,6 +352,7 @@ function PaceTable({ rows }: { rows: AnalyticsRow[] }) {
         const color = val > 0 ? 'text-emerald-600' : val < 0 ? 'text-rose-600' : 'text-slate-400';
         return { text: `${prefix}${val > 0 ? '+' : ''}${val}`, color };
     };
+
 
     return (
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
@@ -393,7 +412,37 @@ function PaceTable({ rows }: { rows: AnalyticsRow[] }) {
                             </tr>
                         )}
                     </tbody>
+                    {/* D23: Grand Total row */}
+                    {tableRows.length > 0 && (
+                        <tfoot className="bg-gray-100 border-t-2 border-gray-300">
+                            <tr>
+                                <td colSpan={3} className="px-3 py-2 text-xs font-semibold text-slate-700">
+                                    📊 Total ({tableRows.length} ngày)
+                                </td>
+                                <td className={`px-3 py-2 text-xs text-right font-mono font-semibold ${totals.t30 > 0 ? 'text-emerald-600' : totals.t30 < 0 ? 'text-rose-600' : 'text-slate-500'}`}>
+                                    {totals.t30 > 0 ? '+' : ''}{totals.t30}
+                                </td>
+                                <td className={`px-3 py-2 text-xs text-right font-mono font-semibold ${totals.t15 > 0 ? 'text-emerald-600' : totals.t15 < 0 ? 'text-rose-600' : 'text-slate-500'}`}>
+                                    {totals.t15 > 0 ? '+' : ''}{totals.t15}
+                                </td>
+                                <td className={`px-3 py-2 text-xs text-right font-mono font-semibold ${totals.t7 > 0 ? 'text-emerald-600' : totals.t7 < 0 ? 'text-rose-600' : 'text-slate-500'}`}>
+                                    {totals.t7 > 0 ? '+' : ''}{totals.t7}
+                                </td>
+                                <td className={`px-3 py-2 text-xs text-right font-mono font-semibold ${totals.t5 > 0 ? 'text-emerald-600' : totals.t5 < 0 ? 'text-rose-600' : 'text-slate-500'}`}>
+                                    {totals.t5 > 0 ? '+' : ''}{totals.t5}
+                                </td>
+                                <td className={`px-3 py-2 text-xs text-right font-mono font-semibold ${totals.t3 > 0 ? 'text-emerald-600' : totals.t3 < 0 ? 'text-rose-600' : 'text-slate-500'}`}>
+                                    {totals.t3 > 0 ? '+' : ''}{totals.t3}
+                                </td>
+                                <td className={`px-3 py-2 text-xs text-right font-mono font-semibold ${totals.vsLY > 0 ? 'text-emerald-600' : totals.vsLY < 0 ? 'text-rose-600' : 'text-slate-500'}`}>
+                                    {totals.vsLY > 0 ? '+' : ''}{Math.round(totals.vsLY)}
+                                </td>
+                                <td className="px-3 py-2 text-xs text-right text-slate-500">—</td>
+                            </tr>
+                        </tfoot>
+                    )}
                 </table>
+
             </div>
         </div>
     );

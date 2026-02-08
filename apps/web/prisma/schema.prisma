@@ -208,6 +208,10 @@ model FeaturesDaily {
   dow              Int?
   is_weekend       Boolean?
   month            Int?
+  // Revenue fields (D16: P0)
+  revenue_otb      Decimal? @db.Decimal
+  stly_revenue_otb Decimal? @db.Decimal
+  // Pickup fields
   pickup_t30       Int?
   pickup_t7        Int?
   pickup_t3        Int?
@@ -224,6 +228,7 @@ model FeaturesDaily {
   @@index([hotel_id, stay_date, as_of_date], map: "idx_features_stay_asof")
   @@map("features_daily")
 }
+
 
 model DemandForecast {
   hotel_id         String   @db.Uuid
@@ -384,12 +389,17 @@ model PricingSetting {
   currency         String   @default("VND")
   rounding_rule    String   @default("CEIL_1000")
   max_discount_cap Float    @default(80)
+  // D31: Step change limit (0.2 = 20%)
+  max_step_change_pct Float  @default(0.2)
+  // D25: Manual override bypasses guardrails by default
+  enforce_guardrails_on_manual Boolean @default(false)
   created_at       DateTime @default(now())
   updated_at       DateTime @updatedAt
   hotel            Hotel    @relation(fields: [hotel_id], references: [hotel_id], onDelete: Cascade)
 
   @@map("pricing_settings")
 }
+
 
 enum JobStatus {
   pending

@@ -188,7 +188,7 @@ async function buildForSingleAsOf(
         AND EXTRACT(DOW FROM stay_date) = EXTRACT(DOW FROM t.target_stay_ly)
         AND as_of_date <= t.target_asof_ly::date
       ORDER BY as_of_date DESC,
-        ABS(EXTRACT(EPOCH FROM (stay_date - t.target_stay_ly))) ASC
+        ABS(stay_date - t.target_stay_ly::date) ASC
       LIMIT 1
     ) ly ON TRUE;
   `;

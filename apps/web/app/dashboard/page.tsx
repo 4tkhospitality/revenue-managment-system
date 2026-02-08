@@ -15,14 +15,11 @@ export const dynamic = 'force-dynamic';
 async function fetchDashboardData(hotelId: string, today: Date) {
     const startTime = Date.now();
 
-    // BATCH 1: Independent queries - run in parallel
+    // BATCH 1: Get dates first - run in parallel
     const [
         hotel,
         latestReservation,
         latestCancellation,
-        otbToday,
-        forecastToday,
-        featuresData,
         latestOtbDate,
         latestForecastDate
     ] = await Promise.all([
@@ -43,30 +40,13 @@ async function fetchDashboardData(hotelId: string, today: Date) {
             orderBy: { cancel_time: 'desc' },
             select: { cancel_time: true, as_of_date: true }
         }),
-        // OTB for today
-        prisma.dailyOTB.findMany({
-            where: { hotel_id: hotelId, as_of_date: today },
-            orderBy: { stay_date: 'asc' },
-            take: 60,
-        }),
-        // Forecast for today
-        prisma.demandForecast.findMany({
-            where: { hotel_id: hotelId, as_of_date: today },
-            take: 60,
-        }),
-        // Features for pickup calculation
-        prisma.featuresDaily.findMany({
-            where: { hotel_id: hotelId },
-            select: { pickup_t7: true },
-            take: 30,
-        }),
-        // Latest OTB date (for fallback)
+        // Latest OTB date (query FIRST to use for subsequent queries)
         prisma.dailyOTB.findFirst({
             where: { hotel_id: hotelId },
             orderBy: { as_of_date: 'desc' },
             select: { as_of_date: true }
         }),
-        // Latest forecast date (for fallback)
+        // Latest forecast date
         prisma.demandForecast.findFirst({
             where: { hotel_id: hotelId },
             orderBy: { as_of_date: 'desc' },
@@ -76,37 +56,43 @@ async function fetchDashboardData(hotelId: string, today: Date) {
 
     console.log(`[Dashboard] Batch 1 queries: ${Date.now() - startTime}ms`);
 
-    // Determine actual OTB and forecast data (with fallback)
-    let otbData = otbToday;
-    let forecastData = forecastToday;
+    // Use latest as_of_date (NOT today) - fixes the data display issue
+    const actualOtbDate = latestOtbDate?.as_of_date || today;
+    const actualForecastDate = latestForecastDate?.as_of_date || today;
 
-    // BATCH 2: Fallback queries only if needed (conditional parallel)
+    // BATCH 2: Fetch data using actual latest dates
     const batch2Start = Date.now();
-    const fallbackPromises: Promise<any>[] = [];
-
-    if (otbData.length === 0 && latestOtbDate) {
-        fallbackPromises.push(
-            prisma.dailyOTB.findMany({
-                where: { hotel_id: hotelId, as_of_date: latestOtbDate.as_of_date },
-                orderBy: { stay_date: 'asc' },
-                take: 60,
-            }).then(data => { otbData = data; })
-        );
-    }
-
-    if (forecastData.length === 0 && latestForecastDate) {
-        fallbackPromises.push(
-            prisma.demandForecast.findMany({
-                where: { hotel_id: hotelId, as_of_date: latestForecastDate.as_of_date },
-                take: 60,
-            }).then(data => { forecastData = data; })
-        );
-    }
-
-    if (fallbackPromises.length > 0) {
-        await Promise.all(fallbackPromises);
-        console.log(`[Dashboard] Batch 2 fallback queries: ${Date.now() - batch2Start}ms`);
-    }
+    const [
+        otbData,
+        forecastData,
+        featuresData
+    ] = await Promise.all([
+        prisma.dailyOTB.findMany({
+            where: { hotel_id: hotelId, as_of_date: actualOtbDate },
+            orderBy: { stay_date: 'asc' },
+            take: 60,
+        }),
+        prisma.demandForecast.findMany({
+            where: { hotel_id: hotelId, as_of_date: actualForecastDate },
+            take: 60,
+        }),
+        // Features with STLY data
+        prisma.featuresDaily.findMany({
+            where: { hotel_id: hotelId, as_of_date: actualOtbDate },
+            select: {
+                stay_date: true,
+                pickup_t7: true,
+                pickup_t3: true,
+                pace_vs_ly: true,
+                remaining_supply: true,
+                stly_is_approx: true,
+            },
+            orderBy: { stay_date: 'asc' },
+            take: 60,
+        }),
+    ]);
+    console.log(`[Dashboard] Batch 2 data queries: ${Date.now() - batch2Start}ms`);
+    console.log(`[Dashboard DEBUG] actualOtbDate: ${actualOtbDate?.toISOString()}, otbData.length: ${otbData.length}, first stay_date: ${otbData[0]?.stay_date?.toISOString() || 'N/A'}`);
 
     // BATCH 3: Cancellation query (depends on OTB reference date)
     const batch3Start = Date.now();
@@ -221,12 +207,25 @@ export default async function DashboardPage({
         lostRevenue,
     };
 
-    // Fetch Chart Data (OTB This Year vs Last Year)
-    const chartData = otbData.slice(0, 14).map((d) => ({
-        date: DateUtils.format(d.stay_date, 'MMM dd'),
-        otbCurrent: d.rooms_otb,
-        otbLastYear: Math.floor(d.rooms_otb * (0.8 + Math.random() * 0.4)), // Mock LY
-    }));
+    // Build features lookup map
+    const featuresMap = new Map<string, typeof featuresData[0]>();
+    for (const f of featuresData) {
+        featuresMap.set(f.stay_date.toISOString(), f);
+    }
+
+    // Fetch Chart Data (OTB This Year vs Last Year using real features data)
+    const chartData = otbData.slice(0, 14).map((d) => {
+        const feature = featuresMap.get(d.stay_date.toISOString());
+        // STLY = current OTB - pace_vs_ly (if pace_vs_ly exists)
+        const stlyRooms = feature?.pace_vs_ly != null
+            ? d.rooms_otb - feature.pace_vs_ly
+            : null;
+        return {
+            date: DateUtils.format(d.stay_date, 'MMM dd'),
+            otbCurrent: d.rooms_otb,
+            otbLastYear: stlyRooms, // Real STLY data (null if not available)
+        };
+    });
 
     // Build table data directly from OTB with Pricing Engine
     const tableData = otbData.map((otb) => {

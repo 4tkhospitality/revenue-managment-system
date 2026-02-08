@@ -1,4 +1,4 @@
-// V01.2: Pricing Types
+// V01.3: Pricing Types (Phase 02 Update — D25-D36)
 // Types for OTA Pricing calculation engine
 
 export type CalcType = 'PROGRESSIVE' | 'ADDITIVE';
@@ -111,28 +111,67 @@ export interface PriceMatrixResponse {
     calculatedAt: string;
 }
 
-// ─── Guardrail Types (Phase 02) ──────────────────────────────
-export type GuardrailReasonCode =
-    | 'PASS'
-    | 'STEP_CAP'
-    | 'MIN_RATE'
-    | 'MAX_RATE'
-    | 'MISSING_BASE'
-    | 'INVALID_NET';
+// ─── Guardrail Types (Phase 02 v4 — D25-D36) ──────────────────────────────
 
+/**
+ * D28: Reason codes (array support)
+ * Used for audit trail and trace
+ */
+export type GuardrailReasonCode =
+    | 'PASS'               // No guardrail triggered
+    | 'MANUAL_OVERRIDE'    // D25: Manual price set by GM
+    | 'STEP_CAP'           // Step change exceeded
+    | 'MIN_RATE'           // Below floor
+    | 'MAX_RATE'           // Above ceiling
+    | 'MISSING_BASE'       // D35: Info only, no prev price (not error)
+    | 'INVALID_NET';       // D36: Hard stop (NET ≤ 0)
+
+/**
+ * D34: Warning codes for manual bypass
+ * When enforce_guardrails_on_manual = false, we don't block but warn
+ */
+export type GuardrailWarningCode =
+    | 'OUTSIDE_MIN'        // Manual price < min_rate
+    | 'OUTSIDE_MAX'        // Manual price > max_rate
+    | 'OUTSIDE_STEP';      // Manual price exceeds step change limit
+
+/**
+ * D28+D34+D35: Full guardrail result
+ */
 export interface GuardrailResult {
+    reason_codes: GuardrailReasonCode[];    // D28: Array (multi-trigger support)
+    primary_reason: GuardrailReasonCode;    // D35: First non-info code, or PASS
+    warnings: GuardrailWarningCode[];       // D34: For manual bypass
+    before_price: number;
+    after_price: number;
+    delta_pct: number;
+    clamped: boolean;
+    thresholds: {
+        min?: number;
+        max?: number;
+        max_step_pct?: number;             // D31: 0.2 = 20%
+    };
+}
+
+/**
+ * D25-D31: Guardrail config
+ */
+export interface GuardrailConfig {
+    min_rate: number;                      // VND (hotel-level, D26)
+    max_rate: number;                      // VND
+    max_step_change_pct: number;           // D31: 0-1 (0.2 = 20%)
+    previous_bar?: number | null;          // D27: From decision_log
+    rounding_rule: 'CEIL_1000' | 'ROUND_100' | 'NONE';
+    // D25: Manual override policy
+    is_manual?: boolean;                   // true if this is a manual override
+    enforce_guardrails_on_manual?: boolean; // D25: default false
+}
+
+// Legacy single-reason result (deprecated, for backward compat)
+export interface GuardrailResultLegacy {
     reason_code: GuardrailReasonCode;
     before_price: number;
     after_price: number;
     delta_pct: number;
     clamped: boolean;
 }
-
-export interface GuardrailConfig {
-    min_rate: number;             // VND
-    max_rate: number;             // VND
-    max_step_change_pct: number;  // % (e.g. 20 = ±20%)
-    previous_bar?: number;        // Last BAR for step-change comparison
-    rounding_rule: 'CEIL_1000' | 'ROUND_100' | 'NONE';
-}
-

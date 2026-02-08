@@ -2,8 +2,14 @@
 
 import prisma from '../../lib/prisma';
 import { getActiveHotelId } from '../../lib/pricing/get-hotel';
+import { auth } from '@/lib/auth';
 
-// ─── Types ──────────────────────────────────────────────────
+// ─── Constants (Phase 0.5 Locked Rules) ─────────────────────────
+const HORIZON_DAYS = 180;           // D8: Completeness window
+const MASS_JUMP_THRESHOLD = 0.3;    // >30% of stay_dates changed
+const ROOMS_CHANGE_THRESHOLD = 0.2; // ±20% change per stay_date
+const TOTAL_OTB_JUMP_THRESHOLD = 0.5; // 50% total jump
+const OVERBOOKING_THRESHOLD = 1.2;  // D9: >120% capacity
 export type ValidationSeverity = 'FAIL' | 'WARNING' | 'INFO';
 
 export interface ValidationIssue {
@@ -204,11 +210,11 @@ export async function auditReport(
             });
         }
 
-        if (row.rooms_otb > capacity) {
+        if (row.rooms_otb > capacity * OVERBOOKING_THRESHOLD) {
             issues.push({
                 severity: 'WARNING',
-                code: 'EXCEEDS_CAPACITY',
-                message: `rooms_otb ${row.rooms_otb} > capacity ${capacity} (overbooking?)`,
+                code: 'OVERBOOKING',
+                message: `rooms_otb ${row.rooms_otb} > ${Math.floor(capacity * OVERBOOKING_THRESHOLD)} (>120% capacity)`,
                 stay_date: stayStr,
                 as_of_date: asOfStr,
                 value: row.rooms_otb,
@@ -217,7 +223,7 @@ export async function auditReport(
         }
     }
 
-    // Pickup pattern analysis
+    // Pickup pattern analysis (original logic)
     if (!asOfDate) {
         const asOfDates = [...new Set(otbRows.map(r => r.as_of_date.toISOString().split('T')[0]))].sort();
         if (asOfDates.length >= 2) {
@@ -234,6 +240,45 @@ export async function auditReport(
                 if (asOfStr === prev) prevMap.set(stayStr, r.rooms_otb);
             }
 
+            // Phase 0.5: Mass jump detection (>30% stay_dates changed ±20%)
+            let changedCount = 0;
+            let totalComparable = 0;
+            for (const [stayStr, rooms] of latestMap) {
+                const prevRooms = prevMap.get(stayStr);
+                if (prevRooms !== undefined && prevRooms > 0) {
+                    totalComparable++;
+                    const changePct = Math.abs(rooms - prevRooms) / prevRooms;
+                    if (changePct > ROOMS_CHANGE_THRESHOLD) {
+                        changedCount++;
+                    }
+                }
+            }
+
+            if (totalComparable > 0 && changedCount / totalComparable > MASS_JUMP_THRESHOLD) {
+                issues.push({
+                    severity: 'WARNING',
+                    code: 'MASS_JUMP',
+                    message: `${Math.round(changedCount / totalComparable * 100)}% stay_dates thay đổi >±20% (nghi re-import/reset data)`,
+                });
+                anomalyCount++;
+            }
+
+            // Total OTB jump detection
+            const latestTotal = Array.from(latestMap.values()).reduce((a, b) => a + b, 0);
+            const prevTotal = Array.from(prevMap.values()).reduce((a, b) => a + b, 0);
+            if (prevTotal > 0) {
+                const totalChangePct = Math.abs(latestTotal - prevTotal) / prevTotal;
+                if (totalChangePct > TOTAL_OTB_JUMP_THRESHOLD) {
+                    issues.push({
+                        severity: 'WARNING',
+                        code: 'TOTAL_OTB_JUMP',
+                        message: `Tổng OTB thay đổi ${Math.round(totalChangePct * 100)}% so với snapshot trước`,
+                    });
+                    anomalyCount++;
+                }
+            }
+
+            // Original unusual pickup check
             for (const [stayStr, rooms] of latestMap) {
                 const prevRooms = prevMap.get(stayStr);
                 if (prevRooms !== undefined) {
@@ -254,7 +299,7 @@ export async function auditReport(
         }
     }
 
-    // Completeness check
+    // Completeness check (D8: 180-day horizon)
     const latestAsOf = otbRows[0].as_of_date;
     const latestRows = otbRows.filter(r => r.as_of_date.getTime() === latestAsOf.getTime());
     const stayDatesSet = new Set(latestRows.map(r => r.stay_date.toISOString().split('T')[0]));
@@ -264,7 +309,8 @@ export async function auditReport(
     let expectedDays = 0;
     let foundDays = 0;
 
-    for (let d = 0; d <= 365; d++) {
+    // Use HORIZON_DAYS instead of 365
+    for (let d = 0; d < HORIZON_DAYS; d++) {
         const dt = new Date(asOfMs + d * dayMs).toISOString().split('T')[0];
         expectedDays++;
         if (stayDatesSet.has(dt)) foundDays++;

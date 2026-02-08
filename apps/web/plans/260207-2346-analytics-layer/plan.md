@@ -21,13 +21,14 @@ Tận dụng **bảng `features_daily` đã có sẵn trong schema** (hiện đa
 
 ## Phases
 
-| Phase | Name | Status | Tasks |
-|-------|------|--------|-------|
-| 0.5 | Data Validation Guardrails | ⬜ Pending | 5 |
-| 01 | buildFeaturesDaily (STLY + Pace + RemSupply) | ⬜ Pending | 10 |
-| 02 | Guardrails in Pricing Engine | ⬜ Pending | 6 |
-| 03 | Dashboard UI (Analytics Panel) | ⬜ Pending | 8 |
-| 04 | Verify & Integration Test | ⬜ Pending | 6 |
+| Phase | Name | Status | Tasks | Exec Order |
+|-------|------|--------|-------|------------|
+| 0.5 | Data Validation Guardrails | ⬜ Pending | 6 | 1️⃣ |
+| 01 | buildFeaturesDaily (STLY + Pace + RemSupply) | ⬜ Pending | 10 | 2️⃣ |
+| 03 | Dashboard UI (Analytics Panel) | ⬜ Pending | 8 | 3️⃣ |
+| 02 | Guardrails in Pricing Engine | ⬜ Pending | 6 | 4️⃣ |
+| 04 | Verify & Integration Test | ⬜ Pending | 6 | 5️⃣ |
+
 
 **Tổng:** 35 tasks | Ước tính: 3-4 sessions
 
@@ -36,11 +37,35 @@ Tận dụng **bảng `features_daily` đã có sẵn trong schema** (hiện đa
 | # | Decision | Default |
 |---|----------|---------|
 | D1 | Schema Hướng B: migration nhỏ (`stly_is_approx` + `pickup_source` + index) | ✅ Làm migration |
-| D2 | `stay_date < as_of_date` = **WARNING** + exclude khỏi features build | ✅ Warning, không fail |
+| D2 | `stay_date < as_of_date` = **WARNING** + exclude khỏi runtime build (không exclude backfill) | ✅ Warning, không fail |
 | D3 | Missing pickup snapshot = **NULL** (tuyệt đối không COALESCE 0) | ✅ NULL |
 | D4 | STLY fallback = nearest `as_of ≤ target` + DOW window ±7d | ✅ Đúng SQL mẫu |
 | D5 | RemSupply V1 = `capacity - rooms_otb` (ooo_rooms để V1.1) | ✅ V1 trước |
 | D6 | Weekend default = Fri/Sat (configurable per hotel sau) | ✅ Fri/Sat |
+| D7 | Duplicate key = `(hotel_id, as_of_date, stay_date)` — snapshot identity | ✅ PK |
+| D8 | Completeness window = `as_of_date` → `as_of_date + 180 days` | ✅ 6 tháng |
+| D9 | Outlier: overbooking > 120% capacity, ADR > P99_30d | ✅ Concrete thresholds |
+| D10 | Field name = `revenue_otb` (đúng schema daily_otb) | ✅ Đồng bộ |
+| D11 | STLY date casting = `::date` explicit | ✅ Tránh implicit cast |
+| D12 | STLY ORDER BY = `as_of_date DESC` trước, stay_date sau | ✅ Snapshot đúng thời điểm |
+| D13 | Pace P0 = Strict exact T-x, NULL nếu thiếu | ✅ V1.1 nearest sau |
+| D14 | Upsert = `ON CONFLICT ... DO UPDATE` (race-safe) | ✅ Không cần advisory lock |
+| D15 | Backfill = 7 as_of_date/batch + resume | ✅ Tránh timeout |
+| D16 | Revenue trong features_daily = `revenue_otb` + `stly_revenue_otb` | ✅ P0 |
+| D17 | Pickup revenue = P1 (không làm P0) | ✅ Rooms only cho pace |
+| D25 | Manual override policy = `enforce_guardrails_on_manual = false` (default) | ✅ GM có quyền, UI cảnh báo |
+| D26 | Guardrails scope P0 = Hotel-level `min_rate`/`max_rate` | ✅ Đúng schema |
+| D27 | prev_price = Previous FINAL price (sau guardrails + rounding) | ✅ Tránh double-cap |
+| D28 | reason_codes = Array (không single string) | ✅ Multi-trigger support |
+| D29 | Badge cho STEP_CAP, MIN_RATE, MAX_RATE | ✅ Không chỉ min/max |
+| D30 | Tooltip = before → after + %delta + thresholds | ✅ Transparency |
+| D31 | step_pct unit = Float 0–1 (store 0.2, UI show 20%) | ✅ Code không chia 100 |
+| D32 | Clamp-after-rounding = luôn clamp lại sau rounding | ✅ Tránh phá max_rate |
+| D33 | Min/Max = hard constraint (luôn đúng cuối cùng) | ✅ Step-cap = soft |
+| D34 | warnings[] cho manual bypass (không thêm code mới) | ✅ Giữ 7 reason codes |
+| D35 | MISSING_BASE = info (không primary nếu giá không đổi) | ✅ Tránh UI nhầm |
+| D36 | INVALID_NET = hard stop (return error, không clamp) | ✅ Tránh 0→min sai |
+
 
 ## 🔧 Technical Rules (bắt buộc)
 

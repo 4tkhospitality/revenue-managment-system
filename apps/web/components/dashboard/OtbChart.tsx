@@ -13,7 +13,7 @@ import {
 interface OtbDataPoint {
     date: string;
     otbCurrent: number;
-    otbLastYear: number;
+    otbLastYear: number | null; // null when STLY data not available
 }
 
 interface OtbChartProps {
@@ -24,6 +24,9 @@ interface OtbChartProps {
 const surface = "rounded-2xl bg-white border border-slate-200/80 shadow-[0_1px_2px_rgba(16,24,40,0.06)]";
 
 export function OtbChart({ data }: OtbChartProps) {
+    // Check if any STLY data is available
+    const hasStlyData = data.some(d => d.otbLastYear !== null);
+
     return (
         <div className={`${surface} p-6`}>
             <div className="flex items-center justify-between mb-4">
@@ -37,7 +40,9 @@ export function OtbChart({ data }: OtbChartProps) {
                     </div>
                     <div className="flex items-center gap-2">
                         <div className="w-3 h-0.5 bg-gray-400 rounded" style={{ borderTop: '2px dashed' }} />
-                        <span className="text-gray-600">Năm trước</span>
+                        <span className={`${hasStlyData ? 'text-gray-600' : 'text-gray-400'}`}>
+                            Năm trước {!hasStlyData && '(chưa có dữ liệu)'}
+                        </span>
                     </div>
                 </div>
             </div>

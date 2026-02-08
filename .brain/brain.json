@@ -1,14 +1,14 @@
 {
   "meta": {
-    "schema_version": "1.3.0",
+    "schema_version": "1.4.0",
     "awf_version": "4.1.2",
-    "last_updated": "2026-02-08T21:40:00+07:00"
+    "last_updated": "2026-02-08T23:03:00+07:00"
   },
   "project": {
     "name": "revenue-management-system",
     "type": "SaaS Web App",
     "status": "Production - Deployed to Vercel",
-    "description": "RMS Version 01.2 - Revenue Management System with OTA Pricing Module + User Management + Cancellation Bridge. Full-stack TypeScript.",
+    "description": "RMS Version 01.4 - Revenue Management System with OTB Time-Travel + OTA Pricing + User Management. Full-stack TypeScript.",
     "github": "https://github.com/4tkhospitality/revenue-managment-system"
   },
   "tech_stack": {
@@ -342,6 +342,21 @@
       "path": "POST /api/invite/redeem",
       "explained": "V01.3: Redeem invite token with rate limiting and atomic transaction.",
       "v013_new": true
+    },
+    {
+      "path": "GET /api/otb/snapshots",
+      "explained": "V01.4: List available OTB snapshots with row count per as_of_date.",
+      "v014_new": true
+    },
+    {
+      "path": "POST /api/otb/snapshots/build",
+      "explained": "V01.4: Build single OTB snapshot with advisory lock. Supports rebuild flag.",
+      "v014_new": true
+    },
+    {
+      "path": "POST /api/otb/snapshots/backfill",
+      "explained": "V01.4: Batch backfill snapshots with generate_series, chunking (limit=3), missing_only.",
+      "v014_new": true
     }
   ],
   "features": [
@@ -402,7 +417,13 @@
     "V01.3: Paywall Modal - Feature gating for export, team, audit",
     "V01.3: Data Validation Split - basicValidation (free) + auditReport (paid)",
     "V01.3: AuditTeaser Component - Upsell to Pro for full audit report",
-    "V01.3: IP-based Rate Limiting - DB-backed, Vercel serverless safe"
+    "V01.3: IP-based Rate Limiting - DB-backed, Vercel serverless safe",
+    "V01.4: OTB Time-Travel Date Picker - Select historical as_of_date via URL (?as_of_date=YYYY-MM-DD)",
+    "V01.4: OTB Snapshot APIs - GET list, POST build (single), POST backfill (batch)",
+    "V01.4: Half-Open Cutoff Semantics - book_time < D+1 00:00, cancel_time >= D+1 00:00",
+    "V01.4: Backfill with generate_series - Continuous calendar months, no gaps",
+    "V01.4: Advisory Lock - pg_try_advisory_lock prevents concurrent builds",
+    "V01.4: Chunked Backfill - Limit 3 snapshots/request for Vercel timeout safety"
   ],
   "cancellation_bridge_v011": {
     "status": "Implemented",

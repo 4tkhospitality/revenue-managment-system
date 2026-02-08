@@ -83,6 +83,9 @@ export async function GET(request: NextRequest) {
             month: f.month,
             rooms_otb: otbData?.rooms_otb ?? 0,
             revenue_otb: otbData?.revenue_otb ?? 0,
+            // D16: STLY revenue fields from features_daily
+            stly_rooms_otb: f.pace_vs_ly !== null ? (otbData?.rooms_otb ?? 0) - (f.pace_vs_ly ?? 0) : null,
+            stly_revenue_otb: f.stly_revenue_otb ? Number(f.stly_revenue_otb) : null,
             pickup_t30: f.pickup_t30,
             pickup_t15: f.pickup_t15,
             pickup_t7: f.pickup_t7,
@@ -93,6 +96,7 @@ export async function GET(request: NextRequest) {
             stly_is_approx: f.stly_is_approx,
         };
     });
+
 
     // Available as_of_dates for selector
     const asOfDates = await prisma.dailyOTB.findMany({
@@ -141,6 +145,15 @@ export async function GET(request: NextRequest) {
     const completeness = rows.length > 0
         ? Math.round((totalWithT7 / rows.length) * 100)
         : 0;
+    const stlyCoverage = rows.length > 0
+        ? Math.round((totalWithSTLY / rows.length) * 100)
+        : 0;
+
+    // Pickup 1d (T-1 approximation using T-3 if no exact T-1)
+    const totalPickup1d = rows
+        .filter(r => r.pickup_t3 !== null)
+        .reduce((s, r) => s + (r.pickup_t3 ?? 0), 0);
+
 
     return NextResponse.json({
         hotelName: hotel.name,
@@ -155,6 +168,7 @@ export async function GET(request: NextRequest) {
             pace7: avgPace(next7),
             pace30: avgPace(next30),
             totalPickup7d,
+            totalPickup1d,
         },
         quality: {
             totalRows: rows.length,
@@ -162,6 +176,7 @@ export async function GET(request: NextRequest) {
             withSTLY: totalWithSTLY,
             approxSTLY: totalApprox,
             completeness,
+            stlyCoverage,
         },
     });
 }

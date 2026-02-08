@@ -285,83 +285,177 @@ export function parseVND(str: string): number {
 
 /**
  * Apply guardrails to a calculated BAR price.
- * Priority order:
- *   1. Raw recommendation (input)
- *   2. Step-change cap (|Δ%| > max_step_change → capped)
- *   3. Min/Max clamp (BAR < min → min, BAR > max → max)
- *   4. Rounding (CEIL_1000 / ROUND_100 / NONE)
+ * 
+ * D25-D36 Locked Decisions Applied:
+ * - D25: Manual override policy (enforce_guardrails_on_manual)
+ * - D31: step_pct unit = 0-1 (0.2 = 20%)
+ * - D32: Clamp-after-rounding
+ * - D33: Min/Max = hard constraint (always wins)
+ * - D34: warnings[] for manual bypass
+ * - D35: MISSING_BASE = info (not primary if no change)
+ * - D36: INVALID_NET = hard stop
+ * 
+ * Pipeline:
+ *   1. Check INVALID_NET (hard stop)
+ *   2. Manual bypass check
+ *   3. Initial clamp (min/max)
+ *   4. Step-cap (within min/max bounds)
+ *   5. Re-clamp
+ *   6. Rounding
+ *   7. Final clamp
  */
 export function applyGuardrails(
     bar: number,
     config: import('./types').GuardrailConfig
 ): import('./types').GuardrailResult {
-    let price = bar;
-    let reason_code: import('./types').GuardrailReasonCode = 'PASS';
-    let clamped = false;
+    const reason_codes: import('./types').GuardrailReasonCode[] = [];
+    const warnings: import('./types').GuardrailWarningCode[] = [];
 
-    // Handle invalid input
-    if (price <= 0) {
+    const thresholds = {
+        min: config.min_rate,
+        max: config.max_rate,
+        max_step_pct: config.max_step_change_pct, // D31: 0.2 = 20%
+    };
+
+    // D36: INVALID_NET = hard stop (return early, no clamp)
+    if (bar <= 0) {
         return {
-            reason_code: 'INVALID_NET',
+            reason_codes: ['INVALID_NET'],
+            primary_reason: 'INVALID_NET',
+            warnings: [],
             before_price: bar,
             after_price: 0,
             delta_pct: -100,
             clamped: true,
+            thresholds,
         };
     }
 
-    // Step 1: Step-change cap
-    if (config.previous_bar != null && config.previous_bar > 0) {
-        const deltaPct = ((price - config.previous_bar) / config.previous_bar) * 100;
-        const maxStep = config.max_step_change_pct;
+    let candidate = bar;
+    const isManual = config.is_manual ?? false;
+    const enforceOnManual = config.enforce_guardrails_on_manual ?? false; // D25 default
 
-        if (Math.abs(deltaPct) > maxStep) {
-            const direction = deltaPct > 0 ? 1 : -1;
-            price = config.previous_bar * (1 + direction * maxStep / 100);
-            reason_code = 'STEP_CAP';
-            clamped = true;
+    // D25: Manual bypass check
+    if (isManual && !enforceOnManual) {
+        // Check violations for warnings only (D34)
+        if (candidate < config.min_rate) warnings.push('OUTSIDE_MIN');
+        if (candidate > config.max_rate) warnings.push('OUTSIDE_MAX');
+
+        if (config.previous_bar != null && config.previous_bar > 0) {
+            const deltaPct = Math.abs((candidate - config.previous_bar) / config.previous_bar);
+            if (deltaPct > config.max_step_change_pct) {
+                warnings.push('OUTSIDE_STEP');
+            }
         }
-    } else if (config.previous_bar == null) {
-        // No previous price → can't check step change
-        // This is OK for first-time pricing, not an error
+
+        return {
+            reason_codes: ['MANUAL_OVERRIDE'],
+            primary_reason: 'MANUAL_OVERRIDE',
+            warnings,
+            before_price: bar,
+            after_price: candidate, // No modification for manual bypass
+            delta_pct: 0,
+            clamped: false,
+            thresholds,
+        };
     }
 
-    // Step 2: Min/Max clamp
-    if (price < config.min_rate) {
-        price = config.min_rate;
-        reason_code = 'MIN_RATE';
-        clamped = true;
-    } else if (price > config.max_rate) {
-        price = config.max_rate;
-        reason_code = 'MAX_RATE';
-        clamped = true;
+    // === PIPELINE START (D33: Min/Max always wins) ===
+
+    // Step 1: Initial clamp (D33)
+    if (candidate < config.min_rate) {
+        candidate = config.min_rate;
+        reason_codes.push('MIN_RATE');
+    }
+    if (candidate > config.max_rate) {
+        candidate = config.max_rate;
+        reason_codes.push('MAX_RATE');
     }
 
-    // Step 3: Rounding
+    // Step 2: Step-cap (soft constraint within min/max bounds)
+    if (config.previous_bar != null && config.previous_bar > 0) {
+        const stepPct = config.max_step_change_pct; // D31: 0.2 = 20%
+        const maxDelta = config.previous_bar * stepPct;
+        const lowerBound = Math.max(config.min_rate, config.previous_bar - maxDelta);
+        const upperBound = Math.min(config.max_rate, config.previous_bar + maxDelta);
+
+        if (candidate < lowerBound) {
+            candidate = lowerBound;
+            if (!reason_codes.includes('STEP_CAP')) reason_codes.push('STEP_CAP');
+        } else if (candidate > upperBound) {
+            candidate = upperBound;
+            if (!reason_codes.includes('STEP_CAP')) reason_codes.push('STEP_CAP');
+        }
+    } else {
+        // D35: No prev_price → info only (not error)
+        reason_codes.push('MISSING_BASE');
+    }
+
+    // Step 3: Re-clamp after step-cap (D33)
+    if (candidate < config.min_rate) {
+        candidate = config.min_rate;
+        if (!reason_codes.includes('MIN_RATE')) reason_codes.push('MIN_RATE');
+    }
+    if (candidate > config.max_rate) {
+        candidate = config.max_rate;
+        if (!reason_codes.includes('MAX_RATE')) reason_codes.push('MAX_RATE');
+    }
+
+    // Step 4: Rounding
     switch (config.rounding_rule) {
         case 'CEIL_1000':
-            price = Math.ceil(price / 1000) * 1000;
+            candidate = Math.ceil(candidate / 1000) * 1000;
             break;
         case 'ROUND_100':
-            price = Math.round(price / 100) * 100;
+            candidate = Math.round(candidate / 100) * 100;
             break;
         case 'NONE':
         default:
-            price = Math.round(price);
+            candidate = Math.round(candidate);
             break;
     }
 
-    // Final clamp after rounding (rounding could push past limits)
-    if (price < config.min_rate) price = config.min_rate;
-    if (price > config.max_rate) price = config.max_rate;
+    // Step 5: D32 — Final clamp after rounding
+    if (candidate < config.min_rate) {
+        candidate = config.min_rate;
+        if (!reason_codes.includes('MIN_RATE')) reason_codes.push('MIN_RATE');
+    }
+    if (candidate > config.max_rate) {
+        candidate = config.max_rate;
+        if (!reason_codes.includes('MAX_RATE')) reason_codes.push('MAX_RATE');
+    }
 
-    const delta_pct = bar > 0 ? ((price - bar) / bar) * 100 : 0;
+    // === PIPELINE END ===
+
+    const clamped = candidate !== bar;
+    const delta_pct = bar > 0 ? Math.round(((candidate - bar) / bar) * 10000) / 100 : 0;
+
+    // D35: Determine primary_reason
+    // If only MISSING_BASE and no price change → primary = PASS
+    const nonInfoCodes = reason_codes.filter(c => c !== 'MISSING_BASE');
+    let primary_reason: import('./types').GuardrailReasonCode;
+
+    if (nonInfoCodes.length === 0) {
+        primary_reason = 'PASS';
+        // Clean up reason_codes: if only MISSING_BASE and no actual change, show PASS
+        if (reason_codes.length === 1 && reason_codes[0] === 'MISSING_BASE') {
+            // Keep MISSING_BASE for info, but primary is PASS
+        } else if (reason_codes.length === 0) {
+            reason_codes.push('PASS');
+        }
+    } else {
+        primary_reason = nonInfoCodes[0];
+    }
 
     return {
-        reason_code,
+        reason_codes,
+        primary_reason,
+        warnings,
         before_price: bar,
-        after_price: price,
-        delta_pct: Math.round(delta_pct * 100) / 100,
+        after_price: candidate,
+        delta_pct,
         clamped,
+        thresholds,
     };
 }
+
