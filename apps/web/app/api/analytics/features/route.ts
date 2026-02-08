@@ -23,18 +23,22 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Hotel not found' }, { status: 404 });
     }
 
-    // Determine as_of_date
+    // Determine as_of_date - use latest from featuresDaily (not OTB) for consistency
     let asOfDate: Date;
     if (asOfParam) {
         asOfDate = new Date(asOfParam);
     } else {
-        const latest = await prisma.dailyOTB.findFirst({
+        // Query latest as_of_date from featuresDaily table (not OTB)
+        const latest = await prisma.featuresDaily.findFirst({
             where: { hotel_id: hotelId },
             orderBy: { as_of_date: 'desc' },
             select: { as_of_date: true },
         });
         if (!latest) {
-            return NextResponse.json({ error: 'No OTB data' }, { status: 404 });
+            return NextResponse.json({
+                error: 'No features data. Run Build Features first.',
+                hint: 'Go to /data page and click "Build Features"'
+            }, { status: 404 });
         }
         asOfDate = latest.as_of_date;
     }

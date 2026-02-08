@@ -68,7 +68,11 @@ async function fetchDashboardData(hotelId: string, today: Date) {
         featuresData
     ] = await Promise.all([
         prisma.dailyOTB.findMany({
-            where: { hotel_id: hotelId, as_of_date: actualOtbDate },
+            where: {
+                hotel_id: hotelId,
+                as_of_date: actualOtbDate,
+                stay_date: { gte: today }, // Only show FUTURE dates
+            },
             orderBy: { stay_date: 'asc' },
             take: 60,
         }),

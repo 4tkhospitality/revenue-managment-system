@@ -1,43 +1,59 @@
 {
-    "updated_at": "2026-02-08T13:55:00+07:00",
+    "updated_at": "2026-02-09T01:29:00+07:00",
     "working_on": {
-        "feature": "SMB60 Commercialization V1.2 (Tier Gating + Daily Assistant)",
-        "task": "Phase 1 Complete - Ready for Phase 2 (Daily Action Engine)",
-        "status": "phase_complete",
-        "plan_folder": "brain/19a85c2a-0ea3-4a14-95ad-a7f8c8db7422/",
+        "feature": "Analytics Layer + Dashboard Debug",
+        "task": "Debugging Dashboard Data Display Issues",
+        "status": "debug_complete",
+        "plan_folder": "plans/260207-2346-analytics-layer/",
         "files": [
-            "prisma/schema.prisma (Subscription model, PlanTier enum)",
-            "lib/tier/tierConfig.ts",
-            "lib/tier/checkFeature.ts",
-            "lib/tier/useTier.ts",
-            "components/UpgradeBanner.tsx"
+            "app/dashboard/page.tsx",
+            "app/api/analytics/features/route.ts",
+            "app/actions/submitDecision.ts",
+            "app/api/debug/otb-dates/route.ts"
         ],
         "blockers": [],
-        "notes": "Phase 1 done. Next: Daily Action Engine V0 (engine/dailyAction.ts + /daily page)"
+        "notes": "Fixed 3 bugs: Dashboard showing Sep 2025 dates, UUID validation error on Accept button, Analytics Dashboard showing 0 rows due to date mismatch"
     },
     "pending_tasks": [
         {
-            "task": "Phase 0.5: validateOTBData.ts (data validation before features)",
-            "priority": "high"
-        },
-        {
-            "task": "Phase 01: buildFeaturesDaily.ts (STLY + Pace + RemSupply)",
-            "priority": "high"
-        },
-        {
-            "task": "Phase 02: Guardrails in engine.ts (min/max/step + reason_codes)",
-            "priority": "high"
-        },
-        {
-            "task": "Phase 03: Dashboard Analytics UI (as-of selector, pace table, STLY chart)",
-            "priority": "medium"
+            "task": "Delete debug endpoints before production deploy",
+            "priority": "high",
+            "notes": "app/api/debug/otb-dates/route.ts and debug-otb.ts are temporary"
         },
         {
             "task": "Phase 04: Golden dataset + edge case tests",
             "priority": "medium"
+        },
+        {
+            "task": "Production deploy with all Analytics Layer fixes",
+            "priority": "medium"
         }
     ],
     "recent_changes": [
+        {
+            "timestamp": "2026-02-09T01:27:00+07:00",
+            "type": "bugfix",
+            "description": "Fixed Analytics Dashboard showing 0 rows: API was querying as_of_date from dailyOTB (02-07) but features were built for 02-06. Changed to query from featuresDaily table.",
+            "files": [
+                "app/api/analytics/features/route.ts"
+            ]
+        },
+        {
+            "timestamp": "2026-02-09T01:21:00+07:00",
+            "type": "bugfix",
+            "description": "Fixed UUID validation error when clicking Accept button: user_id was 'system_user' string but DB expects UUID format. Changed to '00000000-0000-0000-0000-000000000000' placeholder.",
+            "files": [
+                "app/actions/submitDecision.ts"
+            ]
+        },
+        {
+            "timestamp": "2026-02-09T01:17:00+07:00",
+            "type": "bugfix",
+            "description": "Fixed Dashboard showing Sep 2025 dates instead of Feb 2026: OTB query was missing stay_date >= today filter, so it fetched oldest dates first. Added filter to only show future dates.",
+            "files": [
+                "app/dashboard/page.tsx"
+            ]
+        },
         {
             "timestamp": "2026-02-08T12:35:00+07:00",
             "type": "security",
@@ -45,47 +61,31 @@
             "files": [
                 "app/api/debug-fix-user/route.ts (DELETED)",
                 "app/api/fix-users/route.ts (DELETED)",
-                "app/api/rate-shopper/scan/route.ts",
-                "app/api/rate-shopper/competitors/route.ts",
-                "app/api/rate-shopper/competitors/[id]/route.ts",
-                "app/api/rate-shopper/recommendations/route.ts",
-                "app/api/settings/route.ts",
-                "app/api/import-jobs/route.ts",
                 "middleware.ts",
-                "scripts/test-core-modules.ts",
-                "scripts/quick-test-audit-fixes.ts",
                 "docs/reports/audit_2026-02-08.md"
             ],
             "commit": "9843392 security: audit fixes + auth hardening + test suite"
-        },
-        {
-            "timestamp": "2026-02-07T23:30:00+07:00",
-            "type": "bugfix",
-            "description": "OTB Data Integrity: dedup (DISTINCT ON), cancel_date rejection, book_time/cancel_time timezone, retry policy, NONE rounding fix, 401 JSON for API",
-            "files": [
-                "app/actions/ingestCSV.ts",
-                "app/actions/buildDailyOTB.ts",
-                "prisma/schema.prisma",
-                "lib/pricing/engine.ts",
-                "middleware.ts"
-            ],
-            "commit": "c0db552 fix: OTB dedup + ingest hardening + pricing/middleware polish"
-        },
-        {
-            "timestamp": "2026-02-07T23:46:00+07:00",
-            "type": "planning",
-            "description": "Created Analytics Layer plan (v2): STLY, Pace, RemSupply, Guardrails with auditor refinements",
-            "files": [
-                "plans/260207-2346-analytics-layer/plan.md",
-                "plans/260207-2346-analytics-layer/phase-00-validation.md",
-                "plans/260207-2346-analytics-layer/phase-01-features.md",
-                "plans/260207-2346-analytics-layer/phase-02-guardrails.md",
-                "plans/260207-2346-analytics-layer/phase-03-dashboard.md",
-                "plans/260207-2346-analytics-layer/phase-04-verify.md"
-            ]
         }
     ],
     "errors_encountered": [
+        {
+            "error": "Dashboard chart showing Sep 2025 dates when OTB as_of_date is Feb 2026",
+            "solution": "OTB query was missing stay_date >= today filter. Fixed by adding { stay_date: { gte: today } } to the Prisma query in dashboard page.tsx",
+            "resolved": true,
+            "file": "app/dashboard/page.tsx"
+        },
+        {
+            "error": "PrismaClientKnownRequestError: Invalid UUID when clicking Accept button",
+            "solution": "user_id was set to 'system_user' string but DB column expects UUID. Changed to placeholder UUID '00000000-0000-0000-0000-000000000000'",
+            "resolved": true,
+            "file": "app/actions/submitDecision.ts"
+        },
+        {
+            "error": "Analytics Dashboard showing 0% complete and 0 rows despite features being built",
+            "solution": "API was querying as_of_date from dailyOTB (02-07) but features were built for 02-06. Fixed by querying as_of_date from featuresDaily table instead.",
+            "resolved": true,
+            "file": "app/api/analytics/features/route.ts"
+        },
         {
             "error": "prisma migrate dev wants to RESET database (all data lost) due to drift",
             "solution": "Use 'prisma db push' instead — applies schema changes without data loss",
@@ -95,55 +95,28 @@
             "error": "prisma generate DLL lock: query_engine-windows.dll.node locked by running process",
             "solution": "Kill all Node.js processes first, then retry prisma generate",
             "resolved": true
-        },
-        {
-            "error": "ts-node cannot resolve dynamic imports with .js extension for tsx runner",
-            "solution": "Switch to tsx with static imports at top of file, not dynamic imports",
-            "resolved": true
-        },
-        {
-            "error": "next build fails after deleting API routes due to stale .next/dev/types cache",
-            "solution": "Delete .next folder and rebuild: rm -rf .next && next build",
-            "resolved": true
-        },
-        {
-            "error": "git commit hangs on Windows (GPG signing prompt)",
-            "solution": "Use --no-gpg-sign flag: git commit --no-gpg-sign -m 'message'",
-            "resolved": true
         }
     ],
     "decisions_made": [
         {
-            "decision": "Use prisma db push instead of migrate dev for production DB",
-            "reason": "migrate dev detects drift and wants to reset — too dangerous for production data"
+            "decision": "Dashboard OTB query filters stay_date >= today",
+            "reason": "Without this filter, query returns oldest dates first (Sep 2025) instead of future dates user cares about"
         },
         {
-            "decision": "Pickup T-x uses NULL (not COALESCE 0) when snapshot missing",
-            "reason": "COALESCE(0) creates phantom pickup numbers that corrupt analysis"
+            "decision": "Analytics API queries as_of_date from featuresDaily, not dailyOTB",
+            "reason": "Features may be built for different as_of_date than OTB. Using featuresDaily ensures consistency between query and available data."
         },
         {
-            "decision": "STLY uses nearest-snapshot fallback with DOW ±7d window",
-            "reason": "PMS snapshots often have gaps — rigid 364-day offset yields too many NULLs"
+            "decision": "Use placeholder UUID for system actions (V01 - no auth)",
+            "reason": "user_id column requires UUID format. Using '00000000...' as placeholder until real auth is implemented."
         },
         {
-            "decision": "Batch SQL self-join for all T-x offsets in 1 query",
-            "reason": "N queries per stay_date will timeout on 2+ year backfill"
-        },
-        {
-            "decision": "Guardrail priority: Raw → Step-cap → Min/Max → Rounding",
-            "reason": "Explicit ordering prevents rule conflicts and makes audit trail clear"
+            "decision": "Created debug endpoint /api/debug/otb-dates for data investigation",
+            "reason": "Useful for diagnosing date range issues in reservations, OTB, and features_daily tables. Should be removed before production."
         },
         {
             "decision": "Server-side hotel resolution for all API routes (never trust client hotelId)",
             "reason": "Client-supplied hotelId enables tenant boundary bypass — always use getActiveHotelId()"
-        },
-        {
-            "decision": "Settings POST uses update (not upsert)",
-            "reason": "upsert could create arbitrary hotels via API; update ensures hotel exists first"
-        },
-        {
-            "decision": "tsx over Jest for test scripts",
-            "reason": "Lightweight test runner for pure utility tests — no framework overhead, direct TS execution"
         }
     ]
 }

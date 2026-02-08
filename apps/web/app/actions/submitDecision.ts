@@ -35,7 +35,7 @@ export async function submitDecision(
     await prisma.pricingDecision.create({
         data: {
             hotel_id: hotelId,
-            user_id: "system_user", // Placeholder for V01 Auth
+            user_id: "00000000-0000-0000-0000-000000000000", // System placeholder UUID (V01 - no auth)
             as_of_date: asOfDate,
             stay_date: stayDate,
             action: action, // Enum 'accept' | 'override'
