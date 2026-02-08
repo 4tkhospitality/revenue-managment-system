@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getActiveHotelId } from '@/lib/pricing/get-hotel';
+import { auth } from '@/lib/auth';
 import {
     getPendingRecommendations,
     acceptRecommendation,
@@ -33,6 +34,16 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
     try {
+        // Auth + role check: accepting/rejecting recommendations requires manager+
+        const session = await auth();
+        if (!session?.user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+        const role = session.user.role || 'viewer';
+        if (!session.user.isAdmin && !['manager', 'hotel_admin'].includes(role)) {
+            return NextResponse.json({ error: 'Forbidden — Manager role required' }, { status: 403 });
+        }
+
         const hotelId = await getActiveHotelId();
         if (!hotelId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

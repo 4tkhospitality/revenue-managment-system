@@ -1,0 +1,102 @@
+{
+    "updated_at": "2026-02-08T00:01:00+07:00",
+    "working_on": {
+        "feature": "RMS Analytics Layer (STLY + Pace + RemSupply + Guardrails)",
+        "task": "Plan approved (v2), ready to start Phase 0.5 Data Validation",
+        "status": "planning_complete",
+        "plan_folder": "plans/260207-2346-analytics-layer/",
+        "files": [],
+        "blockers": [],
+        "notes": "Schema tables features_daily/demand_forecast/price_recommendations already exist but are EMPTY. No migration needed — just pipeline code."
+    },
+    "pending_tasks": [
+        {
+            "task": "Phase 0.5: validateOTBData.ts (data validation before features)",
+            "priority": "high"
+        },
+        {
+            "task": "Phase 01: buildFeaturesDaily.ts (STLY + Pace + RemSupply)",
+            "priority": "high"
+        },
+        {
+            "task": "Phase 02: Guardrails in engine.ts (min/max/step + reason_codes)",
+            "priority": "high"
+        },
+        {
+            "task": "Phase 03: Dashboard Analytics UI (as-of selector, pace table, STLY chart)",
+            "priority": "medium"
+        },
+        {
+            "task": "Phase 04: Golden dataset + edge case tests",
+            "priority": "medium"
+        }
+    ],
+    "recent_changes": [
+        {
+            "timestamp": "2026-02-07T23:30:00+07:00",
+            "type": "bugfix",
+            "description": "OTB Data Integrity: dedup (DISTINCT ON), cancel_date rejection, book_time/cancel_time timezone, retry policy, NONE rounding fix, 401 JSON for API",
+            "files": [
+                "app/actions/ingestCSV.ts",
+                "app/actions/buildDailyOTB.ts",
+                "prisma/schema.prisma",
+                "lib/pricing/engine.ts",
+                "middleware.ts"
+            ],
+            "commit": "c0db552 fix: OTB dedup + ingest hardening + pricing/middleware polish"
+        },
+        {
+            "timestamp": "2026-02-07T23:46:00+07:00",
+            "type": "planning",
+            "description": "Created Analytics Layer plan (v2): STLY, Pace, RemSupply, Guardrails with auditor refinements",
+            "files": [
+                "plans/260207-2346-analytics-layer/plan.md",
+                "plans/260207-2346-analytics-layer/phase-00-validation.md",
+                "plans/260207-2346-analytics-layer/phase-01-features.md",
+                "plans/260207-2346-analytics-layer/phase-02-guardrails.md",
+                "plans/260207-2346-analytics-layer/phase-03-dashboard.md",
+                "plans/260207-2346-analytics-layer/phase-04-verify.md"
+            ]
+        },
+        {
+            "timestamp": "2026-02-07T23:40:00+07:00",
+            "type": "analysis",
+            "description": "RMS Comparison: 4T Hospitality vs Wilens hotel-revman-system. Identified 5 gaps (ML cancel, demand forecast, STLY, pace, remSupply). P0→P2 roadmap created.",
+            "files": []
+        }
+    ],
+    "errors_encountered": [
+        {
+            "error": "prisma migrate dev wants to RESET database (all data lost) due to drift",
+            "solution": "Use 'prisma db push' instead — applies schema changes without data loss",
+            "resolved": true
+        },
+        {
+            "error": "prisma generate DLL lock: query_engine-windows.dll.node locked by running process",
+            "solution": "Kill all Node.js processes first, then retry prisma generate",
+            "resolved": true
+        }
+    ],
+    "decisions_made": [
+        {
+            "decision": "Use prisma db push instead of migrate dev for production DB",
+            "reason": "migrate dev detects drift and wants to reset — too dangerous for production data"
+        },
+        {
+            "decision": "Pickup T-x uses NULL (not COALESCE 0) when snapshot missing",
+            "reason": "COALESCE(0) creates phantom pickup numbers that corrupt analysis"
+        },
+        {
+            "decision": "STLY uses nearest-snapshot fallback with DOW ±7d window",
+            "reason": "PMS snapshots often have gaps — rigid 364-day offset yields too many NULLs"
+        },
+        {
+            "decision": "Batch SQL self-join for all T-x offsets in 1 query",
+            "reason": "N queries per stay_date will timeout on 2+ year backfill"
+        },
+        {
+            "decision": "Guardrail priority: Raw → Step-cap → Min/Max → Rounding",
+            "reason": "Explicit ordering prevents rule conflicts and makes audit trail clear"
+        }
+    ]
+}

@@ -1,7 +1,14 @@
 import prisma from '@/lib/prisma';
 import { NextRequest, NextResponse } from 'next/server';
+import { getActiveHotelId } from '@/lib/pricing/get-hotel';
 
 export async function GET(request: NextRequest) {
+    // Auth + tenant isolation via getActiveHotelId
+    const hotelId = await getActiveHotelId();
+    if (!hotelId) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const searchParams = request.nextUrl.searchParams;
     const page = parseInt(searchParams.get('page') || '1');
     const pageSize = parseInt(searchParams.get('pageSize') || '10');
@@ -10,6 +17,7 @@ export async function GET(request: NextRequest) {
     try {
         const [jobs, total] = await Promise.all([
             prisma.importJob.findMany({
+                where: { hotel_id: hotelId },
                 orderBy: { created_at: 'desc' },
                 skip,
                 take: pageSize,
@@ -22,7 +30,9 @@ export async function GET(request: NextRequest) {
                     error_summary: true,
                 }
             }),
-            prisma.importJob.count()
+            prisma.importJob.count({
+                where: { hotel_id: hotelId },
+            })
         ]);
 
         return NextResponse.json({

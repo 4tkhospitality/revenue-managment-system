@@ -1,11 +1,19 @@
 import prisma from '@/lib/prisma';
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/lib/auth';
+import { getActiveHotelId } from '@/lib/pricing/get-hotel';
 
 export async function GET(request: NextRequest) {
-    const hotelId = request.nextUrl.searchParams.get('hotelId');
+    // Auth: require logged-in user
+    const session = await auth();
+    if (!session?.user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
+    // Tenant isolation: use active hotel, not client-supplied hotelId
+    const hotelId = await getActiveHotelId();
     if (!hotelId) {
-        return NextResponse.json({ error: 'hotelId required' }, { status: 400 });
+        return NextResponse.json({ error: 'No active hotel' }, { status: 403 });
     }
 
     try {
@@ -21,10 +29,25 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+    // Auth + role check: modifying settings requires manager+
+    const session = await auth();
+    if (!session?.user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const role = session.user.role || 'viewer';
+    if (!session.user.isAdmin && !['manager', 'hotel_admin'].includes(role)) {
+        return NextResponse.json({ error: 'Forbidden — Manager role required to modify settings' }, { status: 403 });
+    }
+
+    // Tenant isolation: use active hotel, ignore client-supplied hotelId
+    const hotelId = await getActiveHotelId();
+    if (!hotelId) {
+        return NextResponse.json({ error: 'No active hotel' }, { status: 403 });
+    }
+
     try {
         const body = await request.json();
         const {
-            hotelId,
             name,
             capacity,
             currency,
@@ -36,13 +59,9 @@ export async function POST(request: NextRequest) {
             ladderSteps
         } = body;
 
-        if (!hotelId) {
-            return NextResponse.json({ error: 'hotelId required' }, { status: 400 });
-        }
-
-        const hotel = await prisma.hotel.upsert({
+        const hotel = await prisma.hotel.update({
             where: { hotel_id: hotelId },
-            update: {
+            data: {
                 name,
                 capacity,
                 currency,
@@ -53,18 +72,6 @@ export async function POST(request: NextRequest) {
                 fiscal_start_day: fiscalStartDay || 1,
                 ladder_steps: ladderSteps || null,
             },
-            create: {
-                hotel_id: hotelId,
-                name,
-                capacity,
-                currency,
-                default_base_rate: defaultBaseRate,
-                min_rate: minRate,
-                max_rate: maxRate,
-                timezone: timezone || 'Asia/Ho_Chi_Minh',
-                fiscal_start_day: fiscalStartDay || 1,
-                ladder_steps: ladderSteps || null,
-            }
         });
 
         return NextResponse.json({ success: true, hotel });

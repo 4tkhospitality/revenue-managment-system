@@ -43,8 +43,7 @@ export async function middleware(request: NextRequest) {
         pathname.startsWith("/_next") ||
         pathname.startsWith("/static") ||
         pathname.startsWith("/api/auth") ||
-        pathname.startsWith("/api/public") ||
-        pathname.startsWith("/api/debug-fix-user") // Allow debug API
+        pathname.startsWith("/api/public")
     ) {
         return NextResponse.next()
     }

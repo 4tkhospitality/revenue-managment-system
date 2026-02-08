@@ -9,12 +9,23 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getActiveHotelId } from '@/lib/pricing/get-hotel';
+import { auth } from '@/lib/auth';
 import { manualScan } from '@/lib/rate-shopper/actions/manual-scan';
 import prisma from '@/lib/prisma';
 import type { OffsetDay } from '@/lib/rate-shopper/constants';
 
 export async function POST(request: NextRequest) {
     try {
+        // Auth + role check: scans cost credits, require manager+
+        const session = await auth();
+        if (!session?.user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+        const role = session.user.role || 'viewer';
+        if (!session.user.isAdmin && !['manager', 'hotel_admin'].includes(role)) {
+            return NextResponse.json({ error: 'Forbidden — Manager role required to trigger scans' }, { status: 403 });
+        }
+
         const hotelId = await getActiveHotelId();
         if (!hotelId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

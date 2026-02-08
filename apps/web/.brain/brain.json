@@ -1,0 +1,267 @@
+{
+    "meta": {
+        "schema_version": "1.1.0",
+        "awf_version": "4.0.2",
+        "last_updated": "2026-02-07T23:58:00+07:00"
+    },
+    "project": {
+        "name": "4T Hospitality Revenue Management System",
+        "type": "SaaS Web App",
+        "status": "Production (Vercel + Supabase)",
+        "repo": "https://github.com/4tkhospitality/revenue-managment-system",
+        "deploy_url": "Vercel (auto-deploy on push)"
+    },
+    "tech_stack": {
+        "framework": "Next.js 16.1.6 (Turbopack)",
+        "language": "TypeScript",
+        "orm": "Prisma 5.10.2",
+        "database": "PostgreSQL (Supabase, ap-northeast-2)",
+        "auth": "NextAuth.js (Google OAuth)",
+        "ui": "React + Custom CSS",
+        "charts": "Recharts",
+        "hosting": "Vercel",
+        "rate_shopper": "SerpApi (Google Hotels)"
+    },
+    "database_schema": {
+        "summary": "Multi-tenant hotel RMS: bookings → OTB snapshots → features → pricing → decisions",
+        "key_tables": [
+            {
+                "name": "hotels",
+                "purpose": "Hotel config: capacity, timezone, min/max rate, currency",
+                "key_cols": [
+                    "hotel_id",
+                    "capacity",
+                    "min_rate",
+                    "max_rate",
+                    "timezone"
+                ]
+            },
+            {
+                "name": "import_jobs",
+                "purpose": "CSV import tracking with snapshot_ts for dedup ordering",
+                "key_cols": [
+                    "job_id",
+                    "hotel_id",
+                    "file_hash",
+                    "snapshot_ts",
+                    "status"
+                ]
+            },
+            {
+                "name": "reservations_raw",
+                "purpose": "Raw booking records from PMS CSV exports",
+                "key_cols": [
+                    "reservation_id",
+                    "hotel_id",
+                    "booking_date",
+                    "arrival_date",
+                    "departure_date",
+                    "rooms",
+                    "revenue",
+                    "book_time",
+                    "cancel_time"
+                ]
+            },
+            {
+                "name": "daily_otb",
+                "purpose": "Aggregated OTB: rooms_otb + revenue_otb per (as_of_date, stay_date)",
+                "key_cols": [
+                    "hotel_id",
+                    "as_of_date",
+                    "stay_date",
+                    "rooms_otb",
+                    "revenue_otb"
+                ],
+                "pk": "(hotel_id, as_of_date, stay_date)"
+            },
+            {
+                "name": "features_daily",
+                "purpose": "Computed features: pickup pace T-30/T-15/T-7/T-5/T-3, pace_vs_ly, remaining_supply",
+                "key_cols": [
+                    "hotel_id",
+                    "as_of_date",
+                    "stay_date",
+                    "pickup_t30",
+                    "pickup_t15",
+                    "pickup_t7",
+                    "pickup_t5",
+                    "pickup_t3",
+                    "pace_vs_ly",
+                    "remaining_supply"
+                ],
+                "status": "EMPTY - pipeline not built yet"
+            },
+            {
+                "name": "demand_forecast",
+                "purpose": "ML demand predictions (P2 - future)",
+                "status": "EMPTY - awaiting ML pipeline"
+            },
+            {
+                "name": "price_recommendations",
+                "purpose": "Engine-generated price recommendations",
+                "status": "EMPTY - awaiting demand input"
+            },
+            {
+                "name": "pricing_decisions",
+                "purpose": "GM accepted/overridden final prices (audit log)",
+                "key_cols": [
+                    "hotel_id",
+                    "stay_date",
+                    "room_type_id",
+                    "final_price"
+                ]
+            },
+            {
+                "name": "ota_channels",
+                "purpose": "OTA config: commission %, calc type (PROGRESSIVE/ADDITIVE)",
+                "key_cols": [
+                    "hotel_id",
+                    "code",
+                    "commission"
+                ]
+            },
+            {
+                "name": "campaign_instances",
+                "purpose": "Promotional campaigns (discounts, early bird, mobile, etc.)",
+                "key_cols": [
+                    "hotel_id",
+                    "promo_id",
+                    "ota_channel_id",
+                    "pct"
+                ]
+            },
+            {
+                "name": "cancellations_raw",
+                "purpose": "Cancellation records for cancel forecasting (future)",
+                "status": "Has data - pipeline not connected to OTB yet"
+            }
+        ],
+        "relationships_explained": "1 Hotel → many ImportJobs → many ReservationsRaw. OTB is aggregated from ReservationsRaw using DISTINCT ON dedup. features_daily, demand_forecast, price_recommendations all keyed by (hotel_id, as_of_date, stay_date)."
+    },
+    "api_endpoints": [
+        {
+            "path": "/api/import-jobs",
+            "explained": "Upload CSV → ingestCSV action → reservations_raw"
+        },
+        {
+            "path": "/api/data/delete-by-month",
+            "explained": "Delete OTB data for a specific month"
+        },
+        {
+            "path": "/api/pricing/calc-matrix",
+            "explained": "Calculate BAR from NET for all channels × promos"
+        },
+        {
+            "path": "/api/pricing/room-types",
+            "explained": "CRUD room types with NET prices"
+        },
+        {
+            "path": "/api/pricing/ota-channels",
+            "explained": "CRUD OTA channel commission configs"
+        },
+        {
+            "path": "/api/pricing/campaigns",
+            "explained": "CRUD promotional campaigns"
+        },
+        {
+            "path": "/api/pricing/catalog",
+            "explained": "Read-only promotion catalog (templates)"
+        },
+        {
+            "path": "/api/rate-shopper/scan",
+            "explained": "Trigger competitor rate scraping via SerpApi"
+        },
+        {
+            "path": "/api/rate-shopper/competitors",
+            "explained": "CRUD competitor hotel configs"
+        },
+        {
+            "path": "/api/rate-shopper/recommendations",
+            "explained": "Get rate recommendations based on market"
+        },
+        {
+            "path": "/api/settings",
+            "explained": "Hotel settings (rounding, currency, fiscal start)"
+        },
+        {
+            "path": "/api/admin/hotels",
+            "explained": "Admin: manage hotels"
+        },
+        {
+            "path": "/api/admin/users",
+            "explained": "Admin: manage users + hotel assignments"
+        },
+        {
+            "path": "/api/auth/[...nextauth]",
+            "explained": "NextAuth.js Google OAuth handler"
+        },
+        {
+            "path": "/api/onboarding",
+            "explained": "Auto-assign new users to Demo Hotel"
+        },
+        {
+            "path": "/api/user/switch-hotel",
+            "explained": "Switch active hotel context"
+        }
+    ],
+    "business_rules": [
+        "OTB uses DISTINCT ON (reservation_id) ordered by snapshot_ts DESC — latest version wins",
+        "Cancelled bookings MUST have cancel_date — rejected at import if missing",
+        "book_time/cancel_time stored as UTC (local midnight VN → UTC)",
+        "Pricing: BAR = NET / (1 - commission) / Π(1 - discount_i) for PROGRESSIVE stacking",
+        "Pricing: BAR = NET / (1 - commission) / (1 - Σ discount_i) for ADDITIVE stacking",
+        "Rounding: VND → CEIL_1000, USD → ROUND_100, NONE = no rounding",
+        "Tenant isolation: all queries filter by hotel_id, OTB join includes j.hotel_id = r.hotel_id",
+        "New users auto-assigned to Demo Hotel on first login",
+        "Viewer role can access /pricing (read-only)",
+        "API routes return 401 JSON (not redirect) for unauthenticated requests"
+    ],
+    "features": {
+        "implemented": [
+            "CSV Import + Ingest (with dedup, cancel validation, retry)",
+            "OTB Builder (Raw SQL, DISTINCT ON dedup, time-travel)",
+            "Pricing Engine (NET→BAR, commission, promo stacking, validation)",
+            "OTA Channel Management (CRUD, commission config)",
+            "Campaign Management (CRUD, promo catalog)",
+            "Rate Shopper (SerpApi, competitor config, market snapshots)",
+            "Multi-tenant (hotel switching, role-based access)",
+            "Admin Panel (hotels, users, hotel assignments)",
+            "Dashboard (overview, monthly comparison)",
+            "Data Management (upload, delete by month)"
+        ],
+        "planned_p0": [
+            "Data Validation Guardrails (Phase 0.5)",
+            "buildFeaturesDaily: STLY + Pace T-x + RemSupply (Phase 01)",
+            "Pricing Guardrails: min/max rate, step change, reason codes (Phase 02)",
+            "Analytics Dashboard: as-of selector, STLY chart, pace table, supply card (Phase 03)"
+        ],
+        "planned_p1": [
+            "Cancel forecast (statistical: leadtime × DOW × season × channel)"
+        ],
+        "planned_p2": [
+            "Demand forecast (ML: RandomForest/XGBoost)",
+            "Dynamic price optimization (grid search / elasticity)"
+        ]
+    },
+    "knowledge_items": {
+        "patterns": [
+            "OTB dedup via DISTINCT ON + snapshot_ts DESC (PostgreSQL-specific)",
+            "Time-travel: book_time <= as_of_ts AND (cancel_time IS NULL OR cancel_time > as_of_ts)",
+            "Revenue per night: Math.floor(total/nights) + remainder on last night (VND-safe)",
+            "Promo stacking: PROGRESSIVE = multiply, ADDITIVE = sum"
+        ],
+        "gotchas": [
+            "prisma generate fails when query_engine DLL is locked by running dev server — kill Node first",
+            "prisma migrate dev may want to RESET database due to drift — use db push instead",
+            "COALESCE(prev.rooms_otb, 0) for pickup creates phantom data — use NULL instead",
+            "STLY offset must be 364 (not 365) to match same DOW, but still needs nearest-snapshot fallback",
+            "Raw SQL returns numeric types as strings — must cast with Number()"
+        ],
+        "conventions": [
+            "Server actions in app/actions/*.ts",
+            "Pricing engine in lib/pricing/engine.ts",
+            "Plans stored in plans/YYMMDD-HHMM-feature-name/",
+            "Specs stored in docs/specs/XX_name.md"
+        ]
+    }
+}
