@@ -1,8 +1,8 @@
 {
   "meta": {
-    "schema_version": "1.2.4",
+    "schema_version": "1.3.0",
     "awf_version": "4.1.2",
-    "last_updated": "2026-02-07T16:03:00+07:00"
+    "last_updated": "2026-02-08T21:40:00+07:00"
   },
   "project": {
     "name": "revenue-management-system",
@@ -131,6 +131,26 @@
         "name": "pricing_settings",
         "description": "V01.2: Hotel-specific pricing settings (currency, rounding, max discount).",
         "v012_new": true
+      },
+      {
+        "name": "hotel_invites",
+        "description": "V01.3: Team invite system. Token-based with hashed storage, expiration, rate limiting.",
+        "v013_new": true
+      },
+      {
+        "name": "product_events",
+        "description": "V01.3: Product analytics tracking. User actions, trial triggers, exports.",
+        "v013_new": true
+      },
+      {
+        "name": "rate_limit_hits",
+        "description": "V01.3: IP-based rate limiting table (Vercel-safe, no in-memory).",
+        "v013_new": true
+      },
+      {
+        "name": "subscriptions",
+        "description": "V01.3: Hotel subscription plans (FREE/STARTER/GROWTH/PRO) with feature limits.",
+        "v013_new": true
       }
     ],
     "enums": [
@@ -297,6 +317,31 @@
       "path": "GET /api/pricing/catalog",
       "explained": "V01.2: Get promotion catalog by vendor (agoda, booking, traveloka, ctrip, expedia).",
       "v012_updated": true
+    },
+    {
+      "path": "POST /api/onboarding",
+      "explained": "V01.3: Create hotel during onboarding wizard, auto-create subscription.",
+      "v013_new": true
+    },
+    {
+      "path": "POST /api/onboarding/complete",
+      "explained": "V01.3: Mark onboarding complete, extend trial by 7 bonus days.",
+      "v013_new": true
+    },
+    {
+      "path": "POST /api/trial/activate",
+      "explained": "V01.3: Trigger 7-day trial after quality import (≥10 reservations).",
+      "v013_new": true
+    },
+    {
+      "path": "POST /api/invite/create",
+      "explained": "V01.3: Create team invite with token, role, expiration.",
+      "v013_new": true
+    },
+    {
+      "path": "POST /api/invite/redeem",
+      "explained": "V01.3: Redeem invite token with rate limiting and atomic transaction.",
+      "v013_new": true
     }
   ],
   "features": [
@@ -349,7 +394,15 @@
     "Auto Demo Hotel Assignment - New users auto-assigned to Demo Hotel on first login (auth.ts jwt callback)",
     "OTB Date Display - Shows 'Chưa có dữ liệu' with amber styling when no OTB data exists",
     "Upload Hotel Banner - Upload page shows active hotel name + ID for clarity",
-    "No-Hotel-Access Auto-Refresh - Page auto-refreshes session to trigger Demo Hotel assignment, Zalo support link"
+    "No-Hotel-Access Auto-Refresh - Page auto-refreshes session to trigger Demo Hotel assignment, Zalo support link",
+    "V01.3: 4-Step Onboarding Wizard - Hotel Info → Pricing → Data Upload → Complete",
+    "V01.3: Trial System - 7 days base + 7 days bonus for completing onboarding",
+    "V01.3: Team Invite System - Token-based with rate limiting, expiration",
+    "V01.3: Quota Management - Export/Team seat limits per subscription tier",
+    "V01.3: Paywall Modal - Feature gating for export, team, audit",
+    "V01.3: Data Validation Split - basicValidation (free) + auditReport (paid)",
+    "V01.3: AuditTeaser Component - Upsell to Pro for full audit report",
+    "V01.3: IP-based Rate Limiting - DB-backed, Vercel serverless safe"
   ],
   "cancellation_bridge_v011": {
     "status": "Implemented",

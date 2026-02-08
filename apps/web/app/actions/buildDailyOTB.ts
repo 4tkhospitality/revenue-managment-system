@@ -90,6 +90,12 @@ export async function buildDailyOTB(params?: BuildOTBParams): Promise<BuildOTBRe
     const snapshotDate = new Date(asOfTs);
     snapshotDate.setHours(0, 0, 0, 0);
 
+    // V01.4: Half-open interval cutoff (exclusive end)
+    // as_of_date = D → cutoff_end_excl = (D + 1) 00:00:00
+    // This ensures all bookings during day D are included
+    const cutoffEndExcl = new Date(snapshotDate);
+    cutoffEndExcl.setDate(cutoffEndExcl.getDate() + 1);
+
     // Default stay date range: use very wide range to capture all data
     const stayDateFrom = params?.stayDateFrom || new Date('2020-01-01');
     const stayDateTo = params?.stayDateTo || new Date('2030-12-31');
@@ -113,10 +119,11 @@ export async function buildDailyOTB(params?: BuildOTBParams): Promise<BuildOTBRe
               ON j.job_id = r.job_id
               AND j.hotel_id = r.hotel_id
             WHERE r.hotel_id = ${hotelId}::uuid
-              -- Time-travel: booked before snapshot
-              AND COALESCE(r.book_time, r.booking_date::timestamp) <= ${asOfTs}
-              -- Time-travel: not cancelled before snapshot (event-time model)
-              AND (r.cancel_time IS NULL OR r.cancel_time > ${asOfTs})
+              -- V01.4: Half-open interval (exclusive end)
+              -- Include booking if book_time < cutoff (not <=)
+              AND COALESCE(r.book_time, r.booking_date::timestamp) < ${cutoffEndExcl}
+              -- Exclude if cancelled before cutoff
+              AND (r.cancel_time IS NULL OR r.cancel_time >= ${cutoffEndExcl})
               -- Performance: overlap filter
               AND r.arrival_date < ${stayDateTo}::date
               AND r.departure_date > ${stayDateFrom}::date
@@ -321,4 +328,121 @@ export async function backfillOTB(hotelId: string, days: number = 30): Promise<{
         daysProcessed: successCount,
         message: `Backfilled OTB for ${successCount}/${days} days`,
     };
+}
+
+// ============================================================
+// V01.4: New backfill with generate_series + advisory lock
+// ============================================================
+
+export interface BackfillOptions {
+    hotelId?: string;
+    from?: Date;
+    to?: Date;
+    freq?: 'monthly' | 'weekly';
+    missingOnly?: boolean;
+    limit?: number;
+}
+
+export interface BackfillResult {
+    success: boolean;
+    built: number;
+    skipped: number;
+    remaining: number;
+    message: string;
+}
+
+function hashCode(str: string): number {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash;
+    }
+    return Math.abs(hash);
+}
+
+/**
+ * V01.4: Backfill OTB snapshots using generate_series
+ */
+export async function backfillMonthlySnapshots(
+    options: BackfillOptions = {}
+): Promise<BackfillResult> {
+    const { getActiveHotelId } = await import('../../lib/pricing/get-hotel');
+    const hotelId = options.hotelId || await getActiveHotelId();
+
+    if (!hotelId) {
+        return { success: false, built: 0, skipped: 0, remaining: 0, message: 'No active hotel' };
+    }
+
+    const limit = options.limit || 3;
+    const missingOnly = options.missingOnly ?? true;
+
+    const lockKey = hashCode(`otb-backfill-${hotelId}`);
+    const lockResult = await prisma.$queryRaw<[{ locked: boolean }]>`
+        SELECT pg_try_advisory_lock(${lockKey}) as locked
+    `;
+
+    if (!lockResult[0].locked) {
+        return { success: false, built: 0, skipped: 0, remaining: 0, message: 'Build already running' };
+    }
+
+    try {
+        let from = options.from;
+        let to = options.to;
+
+        if (!from || !to) {
+            const range = await prisma.reservationsRaw.aggregate({
+                where: { hotel_id: hotelId },
+                _min: { booking_date: true },
+                _max: { booking_date: true }
+            });
+            from = from || range._min.booking_date || new Date();
+            to = to || range._max.booking_date || new Date();
+        }
+
+        const interval = options.freq === 'weekly' ? '1 week' : '1 month';
+        const months = await prisma.$queryRaw<{ eom: Date }[]>`
+            SELECT (date_trunc('month', d) + interval '1 month' - interval '1 day')::date as eom
+            FROM generate_series(${from}::date, ${to}::date, ${interval}::interval) d
+            ORDER BY d ASC
+        `;
+
+        let targets = months.map(m => m.eom);
+        if (missingOnly) {
+            const existing = await prisma.dailyOTB.findMany({
+                where: { hotel_id: hotelId },
+                select: { as_of_date: true },
+                distinct: ['as_of_date']
+            });
+            const existingSet = new Set(existing.map(e => e.as_of_date.toISOString().split('T')[0]));
+            targets = targets.filter(t => !existingSet.has(t.toISOString().split('T')[0]));
+        }
+
+        let built = 0, skipped = 0;
+        const toProcess = targets.slice(0, limit);
+
+        for (const eom of toProcess) {
+            try {
+                const result = await buildDailyOTB({ hotelId, asOfTs: eom });
+                if (result.success) built++;
+                else skipped++;
+            } catch {
+                skipped++;
+            }
+        }
+
+        const remaining = targets.length - toProcess.length;
+        revalidatePath('/dashboard');
+        revalidatePath('/data');
+
+        return {
+            success: true,
+            built,
+            skipped,
+            remaining,
+            message: remaining > 0 ? `Built ${built}, ${remaining} remaining` : `Complete. Built ${built}.`
+        };
+    } finally {
+        await prisma.$queryRaw`SELECT pg_advisory_unlock(${lockKey})`;
+    }
 }

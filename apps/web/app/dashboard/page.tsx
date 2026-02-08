@@ -6,6 +6,8 @@ import { RecommendationTable } from '@/components/dashboard/RecommendationTable'
 import { DateUtils } from '@/lib/date';
 import { PricingLogic } from '@/lib/pricing';
 import { PageHeader } from '@/components/shared/PageHeader';
+import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
+import { Suspense } from 'react';
 
 export const dynamic = 'force-dynamic';
 
@@ -138,11 +140,21 @@ async function fetchDashboardData(hotelId: string, today: Date) {
 }
 
 // Server Component - Direct DB Fetch
-export default async function DashboardPage() {
+export default async function DashboardPage({
+    searchParams
+}: {
+    searchParams: Promise<{ as_of_date?: string }>
+}) {
     const pageStart = Date.now();
+    const params = await searchParams;
 
-    // Normalize to midnight for date-only comparison
-    const today = new Date();
+    // Support time-travel via URL params
+    let today: Date;
+    if (params.as_of_date) {
+        today = new Date(params.as_of_date);
+    } else {
+        today = new Date();
+    }
     today.setHours(0, 0, 0, 0);
 
     // Get active hotel from cookie/session (deterministic, no auto-detect)
@@ -291,6 +303,11 @@ export default async function DashboardPage() {
 
     return (
         <div className="mx-auto max-w-[1400px] px-4 sm:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
+            {/* Time-Travel Date Picker */}
+            <Suspense fallback={<div className="h-12" />}>
+                <DashboardHeader currentAsOfDate={dataAsOf ? otbData[0]?.as_of_date?.toISOString().split('T')[0] : undefined} />
+            </Suspense>
+
             {/* Header */}
             <PageHeader
                 title={hotelName}
