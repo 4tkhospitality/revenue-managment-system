@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { RoomTypesTab, OTAConfigTab, PromotionsTab, OverviewTab } from '@/components/pricing';
+import { PageHeader } from '@/components/shared/PageHeader';
 
 const TABS = [
     { id: 'room-types', label: 'Hạng phòng' },
@@ -17,29 +18,22 @@ export default function PricingPage() {
 
     return (
         <div className="min-h-screen bg-[#F5F7FB]">
-            <div className="mx-auto max-w-[1400px] px-6 py-6 space-y-6">
+            <div className="mx-auto max-w-[1400px] px-4 sm:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
                 {/* Header */}
-                <header
-                    className="rounded-2xl px-6 py-5 text-white shadow-sm"
-                    style={{ background: 'linear-gradient(to right, #1E3A8A, #102A4C)' }}
-                >
-                    <h1 className="text-xl font-semibold flex items-center gap-2">
-                        💰 Tính giá OTA
-                    </h1>
-                    <p className="text-white/70 text-sm mt-1">
-                        Quản lý giá hiển thị trên các kênh OTA
-                    </p>
-                </header>
+                <PageHeader
+                    title="Tính giá OTA"
+                    subtitle="Quản lý giá hiển thị trên các kênh OTA"
+                />
 
-                {/* Tab Navigation */}
-                <div className="flex gap-1 border-b border-slate-200 bg-white rounded-t-xl px-2">
+                {/* Tab Navigation - horizontal scroll on mobile */}
+                <div className="flex gap-1 border-b border-slate-200 bg-white rounded-t-xl px-2 overflow-x-auto">
                     {TABS.map((tab) => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
-                            className={`px-5 py-3 text-sm font-medium transition-colors relative ${activeTab === tab.id
-                                    ? 'text-blue-600'
-                                    : 'text-slate-500 hover:text-slate-700'
+                            className={`px-4 sm:px-5 py-3 text-sm font-medium transition-colors relative whitespace-nowrap ${activeTab === tab.id
+                                ? 'text-blue-600'
+                                : 'text-slate-500 hover:text-slate-700'
                                 }`}
                         >
                             {tab.label}
@@ -51,7 +45,7 @@ export default function PricingPage() {
                 </div>
 
                 {/* Tab Content */}
-                <div className="bg-white border border-slate-200 rounded-b-xl rounded-tr-xl shadow-sm p-6">
+                <div className="bg-white border border-slate-200 rounded-b-xl rounded-tr-xl shadow-sm p-4 sm:p-6">
                     {activeTab === 'room-types' && <RoomTypesTab />}
                     {activeTab === 'ota-channels' && <OTAConfigTab />}
                     {activeTab === 'promotions' && <PromotionsTab />}

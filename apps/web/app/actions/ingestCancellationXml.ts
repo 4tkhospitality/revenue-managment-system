@@ -20,6 +20,11 @@ interface IngestCancellationResult {
         ambiguous: number
         conflicts: number
     }
+    // Performance timings
+    timings?: {
+        total: number
+        breakdown: Record<string, number>
+    }
 }
 
 export async function ingestCancellationXml(
@@ -27,7 +32,15 @@ export async function ingestCancellationXml(
     xmlContent: string,
     fileName: string
 ): Promise<IngestCancellationResult> {
+    const totalStart = Date.now()
+    const timings: Record<string, number> = {}
+
+    console.log(`\n========== [CANCEL] ${fileName} ==========`)
+    console.log(`[CANCEL] File size: ${(xmlContent.length / 1024).toFixed(1)} KB`)
+    console.log(`[CANCEL] Hotel ID: ${hotelId}`)
+
     // 0. Validate hotel exists — fallback to Demo Hotel if not
+    let step0Start = Date.now()
     let validHotelId = hotelId;
     const hotelExists = await prisma.hotel.findUnique({
         where: { hotel_id: hotelId },
@@ -36,13 +49,17 @@ export async function ingestCancellationXml(
     if (!hotelExists) {
         const { getOrCreateDemoHotel } = await import('@/lib/pricing/get-hotel');
         validHotelId = await getOrCreateDemoHotel();
-        console.warn(`[Upload] Hotel ${hotelId} not found in DB, falling back to Demo Hotel: ${validHotelId}`);
+        console.warn(`[CANCEL] Hotel ${hotelId} not found, fallback to Demo: ${validHotelId}`);
     }
+    timings['0_validate_hotel'] = Date.now() - step0Start
 
-    // Calculate file hash for idempotency
+    // 1. Calculate file hash for idempotency
+    let step1Start = Date.now()
     const fileHash = crypto.createHash("md5").update(xmlContent).digest("hex")
+    timings['1_compute_hash'] = Date.now() - step1Start
 
-    // Check for duplicate import
+    // 2. Check for duplicate import
+    let step2Start = Date.now()
     const existingJob = await prisma.importJob.findFirst({
         where: {
             hotel_id: validHotelId,
@@ -50,15 +67,19 @@ export async function ingestCancellationXml(
             import_type: "CANCELLATION",
         },
     })
+    timings['2_check_duplicate'] = Date.now() - step2Start
 
     if (existingJob) {
+        console.log(`[CANCEL] ⚠️ DUPLICATE FILE - already processed`)
+        console.log(`[CANCEL] Total time: ${Date.now() - totalStart}ms (rejected)`)
         return {
             success: false,
             error: `File này đã được import trước đó (Job ID: ${existingJob.job_id})`,
         }
     }
 
-    // Create import job
+    // 3. Create import job
+    let step3Start = Date.now()
     const job = await prisma.importJob.create({
         data: {
             hotel_id: validHotelId,
@@ -68,10 +89,13 @@ export async function ingestCancellationXml(
             status: "processing",
         },
     })
+    timings['3_create_job'] = Date.now() - step3Start
 
     try {
-        // Parse XML
+        // 4. Parse XML
+        let step4Start = Date.now()
         const { asOfDate, records } = parseCancellationXml(xmlContent)
+        timings['4_parse_xml'] = Date.now() - step4Start
 
         if (records.length === 0) {
             await prisma.importJob.update({
@@ -88,12 +112,15 @@ export async function ingestCancellationXml(
             }
         }
 
-        // Insert cancellation records with normalized keys (V01.1)
+        console.log(`[CANCEL] Parsed ${records.length} cancellations`)
+
+        // 5. Transform data
+        let step5Start = Date.now()
         const cancellationData = records.map((record) => ({
             hotel_id: validHotelId,
             job_id: job.job_id,
             folio_num: record.folioNum,
-            folio_num_norm: normalizeKey(record.folioNum), // V01.1: Normalized key
+            folio_num_norm: normalizeKey(record.folioNum),
             arrival_date: record.arrivalDate,
             cancel_time: record.cancelTime,
             as_of_date: asOfDate,
@@ -104,25 +131,32 @@ export async function ingestCancellationXml(
             sale_group: record.saleGroup,
             room_type: record.roomType,
             room_code: record.roomCode,
-            room_code_norm: normalizeKey(record.roomCode), // V01.1: Normalized key
+            room_code_norm: normalizeKey(record.roomCode),
             guest_name: record.guestName,
-            match_status: 'unmatched' as const, // V01.1: Default status
+            match_status: 'unmatched' as const,
         }))
+        timings['5_transform_data'] = Date.now() - step5Start
 
+        // 6. Insert to database
+        let step6Start = Date.now()
         await prisma.cancellationRaw.createMany({
             data: cancellationData,
             skipDuplicates: true,
         })
+        timings['6_db_insert'] = Date.now() - step6Start
 
-        // V01.1: Run bridge to match cancellations to reservations
+        // 7. V01.1: Run bridge to match cancellations to reservations
+        let step7Start = Date.now()
         const savedCancellations = await prisma.cancellationRaw.findMany({
             where: {
                 job_id: job.job_id
             }
         })
+        timings['7_fetch_saved'] = Date.now() - step7Start
 
         let bridgeResult: IngestCancellationResult['bridgeResult'] = undefined
         if (savedCancellations.length > 0) {
+            let step8Start = Date.now()
             const result = await bridgeCancellations(validHotelId, savedCancellations)
             bridgeResult = {
                 matched: result.matched,
@@ -130,9 +164,11 @@ export async function ingestCancellationXml(
                 ambiguous: result.ambiguous,
                 conflicts: result.conflicts
             }
+            timings['8_bridge_matching'] = Date.now() - step8Start
         }
 
-        // Update job status
+        // 9. Update job status
+        let step9Start = Date.now()
         await prisma.importJob.update({
             where: { job_id: job.job_id },
             data: {
@@ -141,12 +177,29 @@ export async function ingestCancellationXml(
                 finished_at: new Date(),
             },
         })
+        timings['9_complete_job'] = Date.now() - step9Start
 
-        // Invalidate stats cache and revalidate pages
+        // 10. Invalidate caches and revalidate
+        let step10Start = Date.now()
         invalidateStatsCache()
         const { revalidatePath } = await import('next/cache')
         revalidatePath('/data')
         revalidatePath('/dashboard')
+        timings['10_invalidate_cache'] = Date.now() - step10Start
+
+        // Log all timings
+        const totalTime = Date.now() - totalStart
+        console.log(`\n[CANCEL] ✅ SUCCESS - ${records.length} records`)
+        console.log(`[CANCEL] Bridge: ${bridgeResult?.matched || 0} matched, ${bridgeResult?.unmatched || 0} unmatched`)
+        console.log(`[CANCEL] -------- TIMING BREAKDOWN --------`)
+        Object.entries(timings).forEach(([step, ms]) => {
+            const pct = ((ms / totalTime) * 100).toFixed(1)
+            console.log(`[CANCEL]   ${step}: ${ms}ms (${pct}%)`)
+        })
+        console.log(`[CANCEL] --------------------------------`)
+        console.log(`[CANCEL] TOTAL: ${totalTime}ms`)
+        console.log(`[CANCEL] Speed: ${(records.length / (totalTime / 1000)).toFixed(1)} records/sec`)
+        console.log(`==========================================\n`)
 
         return {
             success: true,
@@ -154,6 +207,10 @@ export async function ingestCancellationXml(
             recordCount: records.length,
             asOfDate: asOfDate.toISOString().split("T")[0],
             bridgeResult,
+            timings: {
+                total: totalTime,
+                breakdown: timings
+            }
         }
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Unknown error"
@@ -166,6 +223,9 @@ export async function ingestCancellationXml(
                 finished_at: new Date(),
             },
         })
+
+        const totalTime = Date.now() - totalStart
+        console.log(`[CANCEL] ❌ FAILED after ${totalTime}ms: ${errorMessage}`)
 
         return {
             success: false,

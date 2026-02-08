@@ -38,7 +38,7 @@ export default function GuidePage() {
     }, [isSuperAdmin]);
 
     return (
-        <div className="mx-auto max-w-[1400px] px-8 py-6 space-y-6">
+        <div className="mx-auto max-w-[1400px] px-4 sm:px-8 py-4 sm:py-6 space-y-6">
             {/* Header */}
             <header
                 className="rounded-2xl px-6 py-4 text-white shadow-sm"
@@ -94,7 +94,7 @@ export default function GuidePage() {
             )}
 
             {/* Tab Content */}
-            <div className="max-w-4xl mx-auto space-y-6">
+            <div className="space-y-6">
                 {activeTab === 'revenue' && !effectiveIsDemo && <RevenueGuide />}
                 {activeTab === 'pricing' && <PricingGuide />}
             </div>
@@ -251,18 +251,138 @@ function RevenueGuide() {
             </section>
 
             {/* Section 4: Data Inspector */}
-            <section id="data-inspector" className="bg-white border border-gray-200 rounded-xl p-6 space-y-4 shadow-sm">
+            <section id="data-inspector" className="bg-white border border-gray-200 rounded-xl p-6 space-y-6 shadow-sm">
                 <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
                     <Database className="w-5 h-5 text-blue-600" />
-                    4. Data Inspector
+                    4. Data Inspector - Trung tâm xử lý dữ liệu
                 </h2>
                 <p className="text-gray-700">
-                    Trang này giúp bạn kiểm tra dữ liệu đã import và chạy các pipeline xử lý.
+                    Đây là nơi bạn kiểm tra dữ liệu đã nhập và chạy các bước xử lý để hệ thống có thể đưa ra khuyến nghị giá.
                 </p>
-                <div className="bg-gray-100 rounded-xl p-4">
-                    <p className="text-sm text-gray-700">
-                        <strong>💡 Quy trình:</strong> Upload → Build OTB → Build Features → Run Forecast → Dashboard
-                    </p>
+
+                {/* Pipeline Overview */}
+                <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
+                    <p className="text-sm text-blue-700 font-medium mb-2">💡 Quy trình xử lý dữ liệu:</p>
+                    <div className="flex flex-wrap items-center gap-2 text-sm">
+                        <span className="bg-white px-3 py-1 rounded-lg border border-blue-200">📤 Upload</span>
+                        <span className="text-blue-400">→</span>
+                        <span className="bg-white px-3 py-1 rounded-lg border border-blue-200">📊 Build OTB</span>
+                        <span className="text-blue-400">→</span>
+                        <span className="bg-white px-3 py-1 rounded-lg border border-blue-200">⚡ Build Features</span>
+                        <span className="text-blue-400">→</span>
+                        <span className="bg-white px-3 py-1 rounded-lg border border-blue-200">📈 Run Forecast</span>
+                        <span className="text-blue-400">→</span>
+                        <span className="bg-white px-3 py-1 rounded-lg border border-blue-200">🎯 Dashboard</span>
+                    </div>
+                </div>
+
+                {/* Detailed Explanations */}
+                <div className="space-y-4">
+                    {/* Build OTB */}
+                    <div className="border border-gray-200 rounded-xl p-4 bg-gradient-to-r from-blue-50 to-white">
+                        <div className="flex items-start gap-3">
+                            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center shrink-0">
+                                <span className="text-xl">📊</span>
+                            </div>
+                            <div className="space-y-2">
+                                <h4 className="font-semibold text-gray-900">Build OTB (On The Books)</h4>
+                                <div className="text-sm text-gray-700 space-y-2">
+                                    <p>
+                                        <strong>OTB là gì?</strong> Là số phòng đã được khách đặt trước (đã "ghi sổ").
+                                        Giống như khi bạn xem sổ đặt phòng, đếm xem ngày mai có bao nhiêu phòng đã có khách book.
+                                    </p>
+                                    <p>
+                                        <strong>Dữ liệu nguồn:</strong> Hệ thống đọc file XML bạn upload từ phần mềm quản lý
+                                        (Opera, RoomRaccoon...) chứa danh sách các booking: ai đặt, đặt phòng nào,
+                                        từ ngày nào đến ngày nào.
+                                    </p>
+                                    <p>
+                                        <strong>Tại sao cần?</strong> Đây là bước đầu tiên - biết được "đã bán bao nhiêu"
+                                        thì mới tính được "còn lại bao nhiêu" và "nên bán với giá nào".
+                                    </p>
+                                </div>
+                                <div className="bg-blue-100 rounded-lg p-2 text-sm text-blue-700">
+                                    <strong>👉 Kết quả:</strong> Bảng thống kê số phòng đã đặt cho từng ngày trong tương lai.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Build Features */}
+                    <div className="border border-gray-200 rounded-xl p-4 bg-gradient-to-r from-purple-50 to-white">
+                        <div className="flex items-start gap-3">
+                            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center shrink-0">
+                                <span className="text-xl">⚡</span>
+                            </div>
+                            <div className="space-y-2">
+                                <h4 className="font-semibold text-gray-900">Build Features (Xây dựng chỉ số)</h4>
+                                <div className="text-sm text-gray-700 space-y-2">
+                                    <p>
+                                        <strong>Features là gì?</strong> Là các "dấu hiệu" giúp AI hiểu tình hình booking đang tốt hay xấu.
+                                        Ví dụ: "7 ngày qua có thêm 10 booking mới" → demand đang cao.
+                                    </p>
+                                    <p>
+                                        <strong>Dữ liệu nguồn:</strong> Lấy từ bảng OTB vừa build, so sánh với:
+                                    </p>
+                                    <ul className="list-disc list-inside ml-4 space-y-1">
+                                        <li><strong>Pickup T-7/T-15/T-30:</strong> Số booking mới trong 7/15/30 ngày qua</li>
+                                        <li><strong>So với năm trước (STLY):</strong> Cùng kỳ năm ngoái có bao nhiêu booking?</li>
+                                        <li><strong>Remaining Supply:</strong> Còn bao nhiêu phòng trống có thể bán?</li>
+                                    </ul>
+                                    <p>
+                                        <strong>Tại sao cần?</strong> AI cần nhiều góc nhìn để quyết định đúng.
+                                        Chỉ biết "đã bán 50 phòng" thì chưa đủ - phải biết "năm ngoái cùng ngày bán được 70"
+                                        thì mới biết năm nay đang chậm hơn → cần giảm giá.
+                                    </p>
+                                </div>
+                                <div className="bg-purple-100 rounded-lg p-2 text-sm text-purple-700">
+                                    <strong>👉 Kết quả:</strong> Bảng các chỉ số phân tích cho từng ngày (pace, pickup, remaining supply...).
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Run Forecast */}
+                    <div className="border border-gray-200 rounded-xl p-4 bg-gradient-to-r from-emerald-50 to-white">
+                        <div className="flex items-start gap-3">
+                            <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center shrink-0">
+                                <span className="text-xl">📈</span>
+                            </div>
+                            <div className="space-y-2">
+                                <h4 className="font-semibold text-gray-900">Run Forecast (Dự báo nhu cầu)</h4>
+                                <div className="text-sm text-gray-700 space-y-2">
+                                    <p>
+                                        <strong>Forecast là gì?</strong> Là dự đoán "còn bao nhiêu khách NỮA sẽ đặt phòng" từ hôm nay đến ngày đó.
+                                        Giống như dự báo thời tiết - không chính xác 100% nhưng đủ để ra quyết định.
+                                    </p>
+                                    <p>
+                                        <strong>Dữ liệu nguồn:</strong> Dựa vào các Features (chỉ số) vừa tính:
+                                    </p>
+                                    <ul className="list-disc list-inside ml-4 space-y-1">
+                                        <li>Nếu pickup 7 ngày qua cao → Demand còn nhiều → Có thể tăng giá</li>
+                                        <li>Nếu pace chậm hơn năm trước → Demand yếu → Cần khuyến mãi</li>
+                                    </ul>
+                                    <p>
+                                        <strong>Tại sao cần?</strong> Đây là bước cuối cùng để AI tính ra "còn lại bao nhiêu nhu cầu chưa được đáp ứng"
+                                        → Từ đó đưa ra khuyến nghị giá phù hợp.
+                                    </p>
+                                </div>
+                                <div className="bg-emerald-100 rounded-lg p-2 text-sm text-emerald-700">
+                                    <strong>👉 Kết quả:</strong> Dự báo số phòng sẽ được đặt thêm + Giá khuyến nghị cho từng ngày.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Important Notes */}
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                    <p className="font-medium text-amber-700 mb-2">⚠️ Lưu ý quan trọng:</p>
+                    <ul className="text-sm text-gray-700 space-y-1">
+                        <li>• <strong>Thứ tự bắt buộc:</strong> Phải chạy Build OTB trước → rồi Build Features → rồi Run Forecast</li>
+                        <li>• <strong>Dữ liệu quá khứ:</strong> Bạn có thể upload dữ liệu từ nhiều tháng/năm trước để so sánh STLY</li>
+                        <li>• <strong>Tự động:</strong> Sau khi upload file mới, các bước này sẽ tự động chạy (hoặc bạn bấm thủ công)</li>
+                    </ul>
                 </div>
             </section>
 

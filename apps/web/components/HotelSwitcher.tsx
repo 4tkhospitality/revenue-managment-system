@@ -84,7 +84,8 @@ export function HotelSwitcher() {
             if (res.ok) {
                 setActiveHotelId(hotelId);
                 setIsOpen(false);
-                router.refresh();
+                // Force full page reload to ensure all client components get fresh data
+                window.location.reload();
             }
         } catch (error) {
             console.error('Error switching hotel:', error);

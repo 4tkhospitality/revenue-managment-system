@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
+import prisma from '@/lib/prisma'
 
 const ACTIVE_HOTEL_COOKIE = 'rms_active_hotel'
 
@@ -27,10 +28,17 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Access denied to this hotel' }, { status: 403 })
         }
 
+        // Get hotel name from DB
+        const hotel = await prisma.hotel.findUnique({
+            where: { hotel_id: hotelId },
+            select: { name: true }
+        })
+
         // Set httpOnly cookie
         const response = NextResponse.json({
             success: true,
-            activeHotelId: hotelId
+            activeHotelId: hotelId,
+            activeHotelName: hotel?.name || null
         })
 
         response.cookies.set(ACTIVE_HOTEL_COOKIE, hotelId, {
@@ -51,7 +59,22 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
     const activeHotelId = request.cookies.get(ACTIVE_HOTEL_COOKIE)?.value
 
+    if (!activeHotelId) {
+        return NextResponse.json({
+            activeHotelId: null,
+            activeHotelName: null
+        })
+    }
+
+    // Fetch hotel name from DB for consistency
+    const hotel = await prisma.hotel.findUnique({
+        where: { hotel_id: activeHotelId },
+        select: { name: true }
+    })
+
     return NextResponse.json({
-        activeHotelId: activeHotelId || null
+        activeHotelId,
+        activeHotelName: hotel?.name || null
     })
 }
+

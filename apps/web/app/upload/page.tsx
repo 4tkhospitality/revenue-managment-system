@@ -37,14 +37,10 @@ export default function UploadPage() {
                 const data = await res.json();
                 if (data.activeHotelId) {
                     setActiveHotelId(data.activeHotelId);
-                    // Find hotel name from session
-                    const match = session?.user?.accessibleHotels?.find(
-                        (h: any) => h.hotelId === data.activeHotelId
-                    );
-                    if (match) setActiveHotelName(match.hotelName);
-                } else if (session?.user?.accessibleHotels?.length) {
-                    setActiveHotelId(session.user.accessibleHotels[0].hotelId);
-                    setActiveHotelName(session.user.accessibleHotels[0].hotelName);
+                    // Use hotel name from API response (from DB) for consistency
+                    if (data.activeHotelName) {
+                        setActiveHotelName(data.activeHotelName);
+                    }
                 }
 
                 const demoRes = await fetch('/api/is-demo-hotel');
@@ -212,7 +208,7 @@ export default function UploadPage() {
     const isIdle = fileResults.length === 0;
 
     return (
-        <div className="mx-auto max-w-[1400px] px-8 py-6 space-y-6">
+        <div className="mx-auto max-w-[1400px] px-4 sm:px-8 py-4 sm:py-6 space-y-6">
             {/* Header */}
             <header
                 className="rounded-2xl px-6 py-4 text-white shadow-sm"
@@ -224,7 +220,7 @@ export default function UploadPage() {
                 </p>
             </header>
 
-            <div className="max-w-3xl mx-auto space-y-6">
+            <div className="space-y-6">
                 {/* Active Hotel Banner */}
                 {activeHotelName && (
                     <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 flex items-center gap-2">

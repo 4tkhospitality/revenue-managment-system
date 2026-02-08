@@ -1,125 +1,268 @@
-'use server'
+'use server';
 
 import prisma from '../../lib/prisma';
-import { DateUtils } from '../../lib/date';
-import { addDays } from 'date-fns';
+import { getActiveHotelId } from '../../lib/pricing/get-hotel';
+import { Prisma } from '@prisma/client';
 
-export async function buildFeatures(hotelId: string, asOfDate: Date) {
-    const windowEnd = addDays(asOfDate, 365);
+// ─── Types ──────────────────────────────────────────────────
+interface BuildFeaturesParams {
+    hotelId?: string;
+    asOfDate?: Date;      // specific as_of_date to build
+    backfillAll?: boolean; // rebuild for ALL as_of_dates
+}
 
-    // 1. Fetch History for T30, T15, T7, T5
-    // We need OTB snapshots at: asOfDate, T-5, T-7, T-15, T-30
-    // And Last Year (LY): asOfDate - 365
+interface BuildFeaturesResult {
+    success: boolean;
+    count?: number;
+    asOfDatesProcessed?: number;
+    error?: string;
+}
 
-    const dates = {
-        current: asOfDate,
-        t5: DateUtils.addDays(asOfDate, -5),
-        t7: DateUtils.addDays(asOfDate, -7),
-        t15: DateUtils.addDays(asOfDate, -15),
-        t30: DateUtils.addDays(asOfDate, -30),
-        ly: DateUtils.addDays(asOfDate, -365) // Approximation for LY
-    };
+// ─── Main: buildFeatures ────────────────────────────────────
+export async function buildFeatures(
+    hotelIdOrFirst?: string,
+    asOfDateParam?: Date
+): Promise<BuildFeaturesResult> {
+    return buildFeaturesDaily({
+        hotelId: hotelIdOrFirst ?? undefined,
+        asOfDate: asOfDateParam ?? undefined,
+    });
+}
 
-    // Helper: Fetch OTB map for a specific snapshot date
-    async function fetchSnapshot(snapshotDate: Date) {
-        const records = await prisma.dailyOTB.findMany({
-            where: {
-                hotel_id: hotelId,
-                as_of_date: snapshotDate,
-                stay_date: {
-                    gte: asOfDate, // Only care about future stay dates relative to current asOf
-                    lte: windowEnd
-                }
-            },
-            select: { stay_date: true, rooms_otb: true }
+export async function buildFeaturesDaily(
+    params: BuildFeaturesParams = {}
+): Promise<BuildFeaturesResult> {
+    try {
+        const hotelId = params.hotelId || await getActiveHotelId();
+        if (!hotelId) {
+            return { success: false, error: 'No active hotel found' };
+        }
+
+        // Get hotel capacity
+        const hotel = await prisma.hotel.findUnique({
+            where: { hotel_id: hotelId },
+            select: { capacity: true },
         });
+        if (!hotel) {
+            return { success: false, error: 'Hotel not found' };
+        }
+        const capacity = hotel.capacity;
 
-        const map = new Map<string, number>();
-        records.forEach(r => map.set(r.stay_date.toISOString().split('T')[0], r.rooms_otb));
-        return map;
+        // Determine which as_of_dates to process
+        let asOfDates: Date[];
+
+        if (params.backfillAll) {
+            // Get all distinct as_of_dates
+            const distinct = await prisma.dailyOTB.findMany({
+                where: { hotel_id: hotelId },
+                select: { as_of_date: true },
+                distinct: ['as_of_date'],
+                orderBy: { as_of_date: 'asc' },
+            });
+            asOfDates = distinct.map(d => d.as_of_date);
+        } else if (params.asOfDate) {
+            asOfDates = [params.asOfDate];
+        } else {
+            // Use latest as_of_date
+            const latest = await prisma.dailyOTB.findFirst({
+                where: { hotel_id: hotelId },
+                orderBy: { as_of_date: 'desc' },
+                select: { as_of_date: true },
+            });
+            if (!latest) {
+                return { success: false, error: 'No OTB data found' };
+            }
+            asOfDates = [latest.as_of_date];
+        }
+
+        let totalCount = 0;
+
+        for (const asOfDate of asOfDates) {
+            const count = await buildForSingleAsOf(hotelId, asOfDate, capacity);
+            totalCount += count;
+        }
+
+        return {
+            success: true,
+            count: totalCount,
+            asOfDatesProcessed: asOfDates.length,
+        };
+    } catch (err: any) {
+        console.error('❌ buildFeaturesDaily error:', err?.message);
+        return { success: false, error: err?.message || 'Unknown error' };
+    }
+}
+
+// ─── Build features for a single as_of_date ─────────────────
+async function buildForSingleAsOf(
+    hotelId: string,
+    asOfDate: Date,
+    capacity: number
+): Promise<number> {
+    const asOfStr = asOfDate.toISOString().split('T')[0];
+
+    // ── 1. Pickup T-30/T-15/T-7/T-5/T-3 (Batch Self-Join, NULL-safe) ──
+    // This single query computes all pickup values via LEFT JOINs.
+    // Missing snapshot → NULL (NOT 0 via COALESCE)
+    const pickupRows = await prisma.$queryRaw<Array<{
+        stay_date: Date;
+        rooms_otb: number;
+        pickup_t30: number | null;
+        pickup_t15: number | null;
+        pickup_t7: number | null;
+        pickup_t5: number | null;
+        pickup_t3: number | null;
+        has_t30: boolean;
+        has_t15: boolean;
+        has_t7: boolean;
+        has_t5: boolean;
+        has_t3: boolean;
+    }>>`
+    SELECT
+      cur.stay_date,
+      cur.rooms_otb,
+      CASE WHEN t30.rooms_otb IS NOT NULL THEN cur.rooms_otb - t30.rooms_otb ELSE NULL END AS pickup_t30,
+      CASE WHEN t15.rooms_otb IS NOT NULL THEN cur.rooms_otb - t15.rooms_otb ELSE NULL END AS pickup_t15,
+      CASE WHEN t7.rooms_otb IS NOT NULL THEN cur.rooms_otb - t7.rooms_otb ELSE NULL END AS pickup_t7,
+      CASE WHEN t5.rooms_otb IS NOT NULL THEN cur.rooms_otb - t5.rooms_otb ELSE NULL END AS pickup_t5,
+      CASE WHEN t3.rooms_otb IS NOT NULL THEN cur.rooms_otb - t3.rooms_otb ELSE NULL END AS pickup_t3,
+      (t30.rooms_otb IS NOT NULL) AS has_t30,
+      (t15.rooms_otb IS NOT NULL) AS has_t15,
+      (t7.rooms_otb IS NOT NULL) AS has_t7,
+      (t5.rooms_otb IS NOT NULL) AS has_t5,
+      (t3.rooms_otb IS NOT NULL) AS has_t3
+    FROM daily_otb cur
+    LEFT JOIN daily_otb t30 ON t30.hotel_id = cur.hotel_id
+      AND t30.stay_date = cur.stay_date
+      AND t30.as_of_date = (cur.as_of_date - INTERVAL '30 days')::date
+    LEFT JOIN daily_otb t15 ON t15.hotel_id = cur.hotel_id
+      AND t15.stay_date = cur.stay_date
+      AND t15.as_of_date = (cur.as_of_date - INTERVAL '15 days')::date
+    LEFT JOIN daily_otb t7 ON t7.hotel_id = cur.hotel_id
+      AND t7.stay_date = cur.stay_date
+      AND t7.as_of_date = (cur.as_of_date - INTERVAL '7 days')::date
+    LEFT JOIN daily_otb t5 ON t5.hotel_id = cur.hotel_id
+      AND t5.stay_date = cur.stay_date
+      AND t5.as_of_date = (cur.as_of_date - INTERVAL '5 days')::date
+    LEFT JOIN daily_otb t3 ON t3.hotel_id = cur.hotel_id
+      AND t3.stay_date = cur.stay_date
+      AND t3.as_of_date = (cur.as_of_date - INTERVAL '3 days')::date
+    WHERE cur.hotel_id = ${hotelId}::uuid
+      AND cur.as_of_date = ${asOfStr}::date
+      AND cur.stay_date >= cur.as_of_date
+    ORDER BY cur.stay_date;
+  `;
+
+    // ── 2. STLY with nearest-snapshot fallback (batch via LATERAL) ──
+    const stlyRows = await prisma.$queryRaw<Array<{
+        stay_date: Date;
+        stly_rooms_otb: number | null;
+        stly_revenue_otb: number | null;
+        stly_actual_date: Date | null;
+        stly_is_approx: boolean;
+    }>>`
+    WITH stly_targets AS (
+      SELECT
+        stay_date,
+        stay_date - INTERVAL '364 days' AS target_stay_ly,
+        as_of_date - INTERVAL '364 days' AS target_asof_ly
+      FROM daily_otb
+      WHERE hotel_id = ${hotelId}::uuid
+        AND as_of_date = ${asOfStr}::date
+        AND stay_date >= as_of_date
+    )
+    SELECT
+      t.stay_date,
+      ly.rooms_otb AS stly_rooms_otb,
+      ly.revenue_otb AS stly_revenue_otb,
+      ly.stay_date AS stly_actual_date,
+      CASE WHEN ly.stay_date IS NOT NULL AND ly.stay_date != t.target_stay_ly::date
+        THEN true ELSE false END AS stly_is_approx
+    FROM stly_targets t
+    LEFT JOIN LATERAL (
+      SELECT rooms_otb, revenue_otb, stay_date, as_of_date
+      FROM daily_otb
+      WHERE hotel_id = ${hotelId}::uuid
+        AND stay_date BETWEEN (t.target_stay_ly - INTERVAL '7 days')::date
+                         AND (t.target_stay_ly + INTERVAL '7 days')::date
+        AND EXTRACT(DOW FROM stay_date) = EXTRACT(DOW FROM t.target_stay_ly)
+        AND as_of_date <= t.target_asof_ly::date
+      ORDER BY as_of_date DESC,
+        ABS(EXTRACT(EPOCH FROM (stay_date - t.target_stay_ly))) ASC
+      LIMIT 1
+    ) ly ON TRUE;
+  `;
+
+    // ── 3. Build lookup maps ──
+    const stlyMap = new Map<string, {
+        stly_rooms_otb: number | null;
+        stly_is_approx: boolean;
+    }>();
+
+    for (const s of stlyRows) {
+        const key = s.stay_date.toISOString().split('T')[0];
+        stlyMap.set(key, {
+            stly_rooms_otb: s.stly_rooms_otb != null ? Number(s.stly_rooms_otb) : null,
+            stly_is_approx: s.stly_is_approx,
+        });
     }
 
-    // Parallel Fetch
-    const [otbCurrent, otbT5, otbT7, otbT15, otbT30, otbLY] = await Promise.all([
-        fetchSnapshot(dates.current),
-        fetchSnapshot(dates.t5),
-        fetchSnapshot(dates.t7),
-        fetchSnapshot(dates.t15),
-        fetchSnapshot(dates.t30),
-        fetchSnapshot(dates.ly)
-    ]);
+    // ── 4. Assemble features ──
+    const features: Prisma.FeaturesDailyCreateManyInput[] = [];
 
-    const features = [];
+    for (const row of pickupRows) {
+        const stayStr = row.stay_date.toISOString().split('T')[0];
+        const stly = stlyMap.get(stayStr);
+        const stlyRooms = stly?.stly_rooms_otb ?? null;
 
-    // Iterate through futureDates [asOfDate, windowEnd]
-    for (const stayDate of DateUtils.eachDay(asOfDate, windowEnd)) {
-        const key = stayDate.toISOString().split('T')[0];
+        // pace_vs_ly = current - STLY (NULL if no STLY data)
+        const pace_vs_ly = (stlyRooms != null && row.rooms_otb != null)
+            ? row.rooms_otb - stlyRooms
+            : null;
 
-        const current = otbCurrent.get(key) || 0;
+        // remaining_supply V1 = capacity - rooms_otb
+        const remaining_supply = capacity - row.rooms_otb;
 
-        // Calculate Pickups
-        const pickup_t5 = current - (otbT5.get(key) || 0); // V01: Simple subtraction? Or should it be aligned by lead time?
-        // Standard RMS: Pickup over last 5 days for the SAME stay date.
-        // Yes, OTB(Today, Stay) - OTB(Today-5, Stay). Correct.
-        const pickup_t7 = current - (otbT7.get(key) || 0);
-        const pickup_t15 = current - (otbT15.get(key) || 0);
-        const pickup_t30 = current - (otbT30.get(key) || 0);
+        const dow = row.stay_date.getDay();
+        const month = row.stay_date.getMonth() + 1;
+        const is_weekend = dow === 5 || dow === 6; // Fri/Sat (D6 decision)
 
-        // Calculate Pace vs LY
-        // Need to compare OTB(Today, Stay) vs OTB(LY_Today, LY_Stay)
-        // APPROX for V01: compare OTB(Today, Stay) vs OTB(Today-365, Stay-365) ?
-        // Wait, fetchSnapshot(dates.ly) gets OTB for snapshot=Today-365.
-        // But the stay_date likely won't match "Stay" (which is in 2026) vs LY stats (which was for 2025).
-        // COMPLEXITY: Generating pace_vs_ly requires mapping StayDate -> StayDateLY.
-        // V01 Simplification: We will skip Pace vs LY for now if data structure doesn't support easy LY mapping without massive query complexity.
-        // User Req (D): Guard pace_vs_ly if LY=0 -> 1.0. Let's assume we have LY data for same DOW or Date.
-        // Let's implement simple LY lookup: StayDate - 364 days (align DOW).
-        const lyKey = DateUtils.addDays(stayDate, -364).toISOString().split('T')[0];
-        // This assumes we have OTB data from a year ago. If not, LY=0.
-
-        // Since we don't have LY data in a fresh DB, this will likely be 0.
-        const lyVal = otbLY.get(lyKey) || 0;
-        const pace_vs_ly = lyVal === 0 ? 1.0 : (current / lyVal);
-
-        const dow = stayDate.getDay();
-        const month = stayDate.getMonth() + 1;
-        const is_weekend = dow === 0 || dow === 6;
+        // pickup_source trace
+        const pickup_source: Record<string, string> = {};
+        if (row.has_t30) pickup_source.t30 = 'exact';
+        if (row.has_t15) pickup_source.t15 = 'exact';
+        if (row.has_t7) pickup_source.t7 = 'exact';
+        if (row.has_t5) pickup_source.t5 = 'exact';
+        if (row.has_t3) pickup_source.t3 = 'exact';
 
         features.push({
             hotel_id: hotelId,
             as_of_date: asOfDate,
-            stay_date: stayDate,
+            stay_date: row.stay_date,
             dow,
             month,
             is_weekend,
-            pickup_t5,
-            pickup_t7,
-            pickup_t15,
-            pickup_t30,
+            pickup_t30: row.pickup_t30 != null ? Number(row.pickup_t30) : null,
+            pickup_t15: row.pickup_t15 != null ? Number(row.pickup_t15) : null,
+            pickup_t7: row.pickup_t7 != null ? Number(row.pickup_t7) : null,
+            pickup_t5: row.pickup_t5 != null ? Number(row.pickup_t5) : null,
+            pickup_t3: row.pickup_t3 != null ? Number(row.pickup_t3) : null,
             pace_vs_ly,
-            remaining_supply: 50 // Mock
+            remaining_supply,
+            stly_is_approx: stly?.stly_is_approx ?? null,
+            pickup_source: Object.keys(pickup_source).length > 0 ? pickup_source : Prisma.JsonNull,
         });
     }
 
-    // Save to DB (optional step if we want to debug features, but required per Plan "Module C -> Features")
-    // Let's assume we pass this data to Forecast Engine directly for efficiency in V01, 
-    // OR write to DB if user explicity requested a Feature Store.
-    // "Save into demand_forecast" is Phase 03 Output.
-    // "Feature engineering -> features_daily" found in schema?
+    // ── 5. Atomic DELETE + INSERT ──
+    await prisma.$transaction([
+        prisma.featuresDaily.deleteMany({
+            where: { hotel_id: hotelId, as_of_date: asOfDate },
+        }),
+        prisma.featuresDaily.createMany({
+            data: features,
+        }),
+    ]);
 
-    // Let's write to FeaturesDaily table
-    await prisma.featuresDaily.deleteMany({
-        where: { hotel_id: hotelId, as_of_date: asOfDate }
-    });
-
-    try {
-        await prisma.featuresDaily.createMany({
-            data: features
-        });
-    } catch (e: any) {
-        console.error("❌ Error saving features:", e?.message);
-        throw e;
-    }
-
-    return { success: true, count: features.length };
+    return features.length;
 }

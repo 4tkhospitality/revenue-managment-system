@@ -1,44 +1,144 @@
 import prisma from '../../lib/prisma';
 import { DateUtils } from '../../lib/date';
-import Link from 'next/link';
 import { BuildOtbButton } from './BuildOtbButton';
 import { BuildFeaturesButton } from './BuildFeaturesButton';
 import { RunForecastButton } from './RunForecastButton';
 import { ResetButton } from './ResetButton';
 import { DeleteByMonthButton } from './DeleteByMonthButton';
+import { ClearImportHistoryButton } from './ClearImportHistoryButton';
 import { PaginatedImportJobs } from './PaginatedImportJobs';
 import { CancellationSection } from './CancellationSection';
+import { DataValidationBadge } from './DataValidationBadge';
 import { getReservationStats30 } from '../../lib/cachedStats';
+import { PageHeader } from '@/components/shared/PageHeader';
 
 export const dynamic = 'force-dynamic';
 
+// Get active hotel
+import { getActiveHotelId } from '@/lib/pricing/get-hotel';
+
+// Performance: Parallel query helper - NOW FILTERS BY HOTEL_ID
+async function fetchDataInspectorData() {
+    const startTime = Date.now();
+
+    // STEP 0: Get active hotel first
+    const hotelId = await getActiveHotelId();
+    console.log(`[Data Inspector] Active hotelId: ${hotelId}`);
+    if (!hotelId) {
+        return {
+            hotelId: null,
+            importJobs: [],
+            reservationsByDate: [],
+            allCancellationsForGroup: [],
+            recentReservations: [],
+            dailyOtb: [],
+            totalReservations: 0,
+            totalJobs: 0,
+            totalOtbDays: 0,
+            dateRange: { _min: { booking_date: null }, _max: { booking_date: null } },
+            reservationStats: null,
+        };
+    }
+
+    // BATCH 1: All queries filtered by hotel_id
+    const [
+        importJobs,
+        reservationsByDate,
+        allCancellationsForGroup,
+        recentReservations,
+        dailyOtb,
+        totalReservations,
+        totalJobs,
+        totalOtbDays,
+        dateRange,
+        reservationStats,
+    ] = await Promise.all([
+        // Import jobs - FILTERED
+        prisma.importJob.findMany({
+            where: { hotel_id: hotelId },
+            orderBy: { created_at: 'desc' },
+            take: 10
+        }),
+        // Reservations by date - FILTERED
+        prisma.reservationsRaw.groupBy({
+            by: ['booking_date', 'status'],
+            where: { hotel_id: hotelId },
+            _count: { reservation_id: true },
+            _sum: { revenue: true, rooms: true },
+            orderBy: { booking_date: 'desc' },
+            take: 10
+        }),
+        // Cancellations - FILTERED
+        prisma.cancellationRaw.findMany({
+            where: { hotel_id: hotelId },
+            select: {
+                cancel_time: true,
+                nights: true,
+                total_revenue: true,
+            },
+            orderBy: { cancel_time: 'desc' },
+            take: 100,
+        }),
+        // Recent reservations - FILTERED
+        prisma.reservationsRaw.findMany({
+            where: { hotel_id: hotelId },
+            orderBy: { booking_date: 'desc' },
+            take: 10
+        }),
+        // Daily OTB - FILTERED
+        prisma.dailyOTB.findMany({
+            where: { hotel_id: hotelId },
+            orderBy: { stay_date: 'asc' },
+            take: 10
+        }),
+        // Total counts - FILTERED
+        prisma.reservationsRaw.count({ where: { hotel_id: hotelId } }),
+        prisma.importJob.count({ where: { hotel_id: hotelId } }),
+        prisma.dailyOTB.count({ where: { hotel_id: hotelId } }),
+        // Date range - FILTERED
+        prisma.reservationsRaw.aggregate({
+            where: { hotel_id: hotelId },
+            _min: { booking_date: true },
+            _max: { booking_date: true }
+        }),
+        // Cached stats
+        getReservationStats30(),
+    ]);
+
+    console.log(`[Data Inspector] All queries completed in: ${Date.now() - startTime}ms`);
+
+    return {
+        importJobs,
+        reservationsByDate,
+        allCancellationsForGroup,
+        recentReservations,
+        dailyOtb,
+        totalReservations,
+        totalJobs,
+        totalOtbDays,
+        dateRange,
+        reservationStats,
+    };
+}
+
 export default async function DataInspectorPage() {
-    // Get import jobs
-    const importJobs = await prisma.importJob.findMany({
-        orderBy: { created_at: 'desc' },
-        take: 10 // Reduced from 20 to 10
-    });
+    const pageStart = Date.now();
 
-    // Get reservation count by booking date - limit to 10 for faster loading
-    const reservationsByDate = await prisma.reservationsRaw.groupBy({
-        by: ['booking_date', 'status'],
-        _count: { reservation_id: true },
-        _sum: { revenue: true, rooms: true },
-        orderBy: { booking_date: 'desc' },
-        take: 10 // Reduced from 30 to 10
-    });
+    // Fetch all data in parallel
+    const {
+        importJobs,
+        reservationsByDate,
+        allCancellationsForGroup,
+        recentReservations,
+        dailyOtb,
+        totalReservations,
+        totalJobs,
+        totalOtbDays,
+        dateRange,
+        reservationStats,
+    } = await fetchDataInspectorData();
 
-    // Get cancellations grouped by cancel date (cancel_time is timestamp, group in JS)
-    const allCancellationsForGroup = await prisma.cancellationRaw.findMany({
-        select: {
-            cancel_time: true,
-            nights: true,
-            total_revenue: true,
-        },
-        orderBy: { cancel_time: 'desc' },
-    });
-
-    // Group cancellations by date (extract date from cancel_time)
+    // Process cancellations (fast in-memory operation)
     const cancelDateMap = new Map<string, { date: Date; count: number; nights: number; revenue: number }>();
     for (const c of allCancellationsForGroup) {
         const dateKey = DateUtils.format(c.cancel_time, 'yyyy-MM-dd');
@@ -60,83 +160,68 @@ export default async function DataInspectorPage() {
         .sort((a, b) => b.date.getTime() - a.date.getTime())
         .slice(0, 10);
 
-    // Get recent reservations - limit to 10 for faster loading
-    const recentReservations = await prisma.reservationsRaw.findMany({
-        orderBy: { booking_date: 'desc' },
-        take: 10 // Reduced from 50 to 10
-    });
-
-    // Get Daily OTB stats - limit to 10
-    const dailyOtb = await prisma.dailyOTB.findMany({
-        orderBy: { stay_date: 'asc' },
-        take: 10 // Reduced from 30 to 10
-    });
-
-    // Total counts
-    const totalReservations = await prisma.reservationsRaw.count();
-    const totalJobs = await prisma.importJob.count();
-    const totalOtbDays = await prisma.dailyOTB.count();
-
-    // Data Freshness - Get min/max booking dates
-    const dateRange = await prisma.reservationsRaw.aggregate({
-        _min: { booking_date: true },
-        _max: { booking_date: true }
-    });
     const latestBookingDate = dateRange._max.booking_date;
     const earliestBookingDate = dateRange._min.booking_date;
 
-    // Reservation summary stats (cached, 30 most recent)
-    const reservationStats = await getReservationStats30();
+    console.log(`[Data Inspector] Total page render: ${Date.now() - pageStart}ms`);
 
     return (
-        <div className="mx-auto max-w-[1400px] px-8 py-6 space-y-6">
-            {/* Header - lighter */}
-            <header
-                className="rounded-2xl px-6 py-4 text-white flex items-center justify-between shadow-sm"
-                style={{ background: 'linear-gradient(to right, #1E3A8A, #102A4C)' }}
-            >
-                <div>
-                    <h1 className="text-lg font-semibold">📊 Data Inspector</h1>
-                    <p className="text-white/70 text-sm mt-1">
-                        Xem dữ liệu đã import và trạng thái hệ thống
-                    </p>
-                </div>
-                <Link
-                    href="/dashboard"
-                    className="px-4 py-2 bg-white/15 text-white rounded-lg hover:bg-white/25 transition-colors backdrop-blur-sm text-sm"
-                >
-                    ← Quay lại Dashboard
-                </Link>
-            </header>
+        <div className="mx-auto max-w-[1400px] px-4 sm:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
+            {/* Header */}
+            <PageHeader
+                title="Data Inspector"
+                subtitle="Xem dữ liệu đã import và trạng thái hệ thống"
+                badges={[
+                    {
+                        label: 'Reservations',
+                        value: totalReservations.toLocaleString(),
+                        variant: 'info',
+                    },
+                    {
+                        label: 'Import Jobs',
+                        value: totalJobs.toString(),
+                        variant: 'neutral',
+                    },
+                    {
+                        label: 'OTB Days',
+                        value: totalOtbDays.toString(),
+                        variant: 'success',
+                    },
+                ]}
+            />
 
-            {/* Action Buttons */}
-            <div className="flex items-center gap-4 flex-wrap">
+            {/* Action Buttons - responsive */}
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4">
                 <BuildOtbButton />
                 <BuildFeaturesButton />
                 <RunForecastButton />
-                <div className="border-l border-gray-300 pl-4 flex gap-2">
+                <div className="w-full sm:w-auto sm:border-l sm:border-gray-300 sm:pl-4 flex flex-wrap gap-2 mt-2 sm:mt-0">
+                    <ClearImportHistoryButton />
                     <ResetButton />
                     <DeleteByMonthButton />
                 </div>
             </div>
 
-            {/* Summary Cards */}
-            <div className="grid grid-cols-4 gap-4">
-                <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-                    <div className="text-3xl font-bold text-blue-600">{totalReservations}</div>
+            {/* Data Quality Badge */}
+            <DataValidationBadge />
+
+            {/* Summary Cards - responsive grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                <div className="bg-white border border-gray-200 rounded-xl p-3 sm:p-4 shadow-sm">
+                    <div className="text-2xl sm:text-3xl font-bold text-blue-600">{totalReservations}</div>
                     <div className="text-sm text-gray-500">Tổng Reservations</div>
                 </div>
-                <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-                    <div className="text-3xl font-bold text-emerald-600">{totalJobs}</div>
-                    <div className="text-sm text-gray-500">Import Jobs</div>
+                <div className="bg-white border border-gray-200 rounded-xl p-3 sm:p-4 shadow-sm">
+                    <div className="text-2xl sm:text-3xl font-bold text-emerald-600">{totalJobs}</div>
+                    <div className="text-xs sm:text-sm text-gray-500">Import Jobs</div>
                 </div>
-                <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-                    <div className="text-3xl font-bold text-amber-600">{totalOtbDays}</div>
-                    <div className="text-sm text-gray-500">OTB Days Built</div>
+                <div className="bg-white border border-gray-200 rounded-xl p-3 sm:p-4 shadow-sm">
+                    <div className="text-2xl sm:text-3xl font-bold text-amber-600">{totalOtbDays}</div>
+                    <div className="text-xs sm:text-sm text-gray-500">OTB Days</div>
                 </div>
                 {/* Data Freshness Card */}
-                <div className="bg-white border border-emerald-300 rounded-xl p-4 shadow-sm">
-                    <div className="text-sm text-gray-500 mb-1">📅 Data Range (Booking Date)</div>
+                <div className="bg-white border border-emerald-300 rounded-xl p-3 sm:p-4 shadow-sm">
+                    <div className="text-xs sm:text-sm text-gray-500 mb-1">Data Range</div>
                     <div className="text-lg font-bold text-emerald-600">
                         {latestBookingDate
                             ? DateUtils.format(latestBookingDate, 'dd/MM/yyyy')
@@ -163,8 +248,8 @@ export default async function DataInspectorPage() {
                 totalCount={totalJobs}
             />
 
-            {/* 2-Column Layout: Recent Reservations + Cancellations */}
-            <div className="grid grid-cols-2 gap-6">
+            {/* 2-Column Layout: Recent Reservations + Cancellations - stack on mobile */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 {/* Recent Reservations */}
                 <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
                     <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
@@ -173,42 +258,46 @@ export default async function DataInspectorPage() {
                     </div>
 
                     {/* Summary Stats (30 most recent bookings) */}
-                    <div className="grid grid-cols-3 gap-3 p-4 bg-gradient-to-r from-blue-50 to-emerald-50 border-b border-gray-100">
-                        <div className="text-center">
-                            <div className="text-2xl font-bold text-blue-600">
-                                {reservationStats.count}
-                            </div>
-                            <div className="text-xs text-gray-500">Tổng lượt đặt</div>
-                        </div>
-                        <div className="text-center">
-                            <div className="text-2xl font-bold text-emerald-600">
-                                {reservationStats.rooms.toLocaleString()}
-                            </div>
-                            <div className="text-xs text-gray-500">Room-nights</div>
-                        </div>
-                        <div className="text-center">
-                            <div className="text-2xl font-bold text-amber-600">
-                                {(reservationStats.revenue / 1000000).toFixed(1)}M
-                            </div>
-                            <div className="text-xs text-gray-500">Doanh thu</div>
-                        </div>
-                    </div>
-
-                    {/* Top 3 Agents by Company Name */}
-                    {reservationStats.topAgents.length > 0 && (
-                        <div className="p-3 border-b border-gray-100">
-                            <h3 className="text-xs font-medium text-gray-700 mb-2">🏆 Top 3 đại lý đặt phòng</h3>
-                            <div className="flex flex-wrap gap-2">
-                                {reservationStats.topAgents.map((agent, idx) => (
-                                    <div key={idx} className="px-2 py-1 bg-blue-50 rounded text-xs">
-                                        <span className="text-gray-600">{agent.company_name || 'Trực tiếp'}</span>
-                                        <span className="text-blue-600 font-medium ml-1">
-                                            {(agent.revenue / 1000000).toFixed(1)}M
-                                        </span>
+                    {reservationStats && (
+                        <>
+                            <div className="grid grid-cols-3 gap-3 p-4 bg-gradient-to-r from-blue-50 to-emerald-50 border-b border-gray-100">
+                                <div className="text-center">
+                                    <div className="text-2xl font-bold text-blue-600">
+                                        {reservationStats.count}
                                     </div>
-                                ))}
+                                    <div className="text-xs text-gray-500">Tổng lượt đặt</div>
+                                </div>
+                                <div className="text-center">
+                                    <div className="text-2xl font-bold text-emerald-600">
+                                        {reservationStats.rooms.toLocaleString()}
+                                    </div>
+                                    <div className="text-xs text-gray-500">Room-nights</div>
+                                </div>
+                                <div className="text-center">
+                                    <div className="text-2xl font-bold text-amber-600">
+                                        {(reservationStats.revenue / 1000000).toFixed(1)}M
+                                    </div>
+                                    <div className="text-xs text-gray-500">Doanh thu</div>
+                                </div>
                             </div>
-                        </div>
+
+                            {/* Top 3 Agents by Company Name */}
+                            {reservationStats.topAgents.length > 0 && (
+                                <div className="p-3 border-b border-gray-100">
+                                    <h3 className="text-xs font-medium text-gray-700 mb-2">🏆 Top 3 đại lý đặt phòng</h3>
+                                    <div className="flex flex-wrap gap-2">
+                                        {reservationStats.topAgents.map((agent, idx) => (
+                                            <div key={idx} className="px-2 py-1 bg-blue-50 rounded text-xs">
+                                                <span className="text-gray-600">{agent.company_name || 'Trực tiếp'}</span>
+                                                <span className="text-blue-600 font-medium ml-1">
+                                                    {(agent.revenue / 1000000).toFixed(1)}M
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </>
                     )}
 
                     <div className="overflow-x-auto max-h-80">

@@ -110,3 +110,29 @@ export interface PriceMatrixResponse {
     matrix: Record<string, MatrixCell>; // key = "roomTypeId:channelId"
     calculatedAt: string;
 }
+
+// ─── Guardrail Types (Phase 02) ──────────────────────────────
+export type GuardrailReasonCode =
+    | 'PASS'
+    | 'STEP_CAP'
+    | 'MIN_RATE'
+    | 'MAX_RATE'
+    | 'MISSING_BASE'
+    | 'INVALID_NET';
+
+export interface GuardrailResult {
+    reason_code: GuardrailReasonCode;
+    before_price: number;
+    after_price: number;
+    delta_pct: number;
+    clamped: boolean;
+}
+
+export interface GuardrailConfig {
+    min_rate: number;             // VND
+    max_rate: number;             // VND
+    max_step_change_pct: number;  // % (e.g. 20 = ±20%)
+    previous_bar?: number;        // Last BAR for step-change comparison
+    rounding_rule: 'CEIL_1000' | 'ROUND_100' | 'NONE';
+}
+

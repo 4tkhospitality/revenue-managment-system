@@ -132,7 +132,7 @@ export default function AdminUsersPage() {
     }
 
     return (
-        <div className="mx-auto max-w-[1400px] px-8 py-6 space-y-6">
+        <div className="mx-auto max-w-[1400px] px-4 sm:px-8 py-4 sm:py-6 space-y-6">
             {/* Header - consistent with other pages */}
             <header
                 className="rounded-2xl px-6 py-4 text-white flex items-center justify-between shadow-sm"

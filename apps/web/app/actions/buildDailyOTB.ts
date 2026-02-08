@@ -231,6 +231,11 @@ export async function buildDailyOTB(params?: BuildOTBParams): Promise<BuildOTBRe
 /**
  * Quick action to rebuild all OTB data
  * Uses active hotel from cookie/session (no auto-detect)
+ * 
+ * V01.2.1: Auto-detect data range for historical imports
+ * - Finds min(arrival_date) and max(departure_date) to set stay date range
+ * - Uses max(booking_date) as snapshot timestamp
+ * - This ensures hotels onboarding with historical data see results immediately
  */
 export async function rebuildAllOTB() {
     // Get active hotel from context (cookie → session → fallback)
@@ -241,23 +246,47 @@ export async function rebuildAllOTB() {
         throw new Error('Không tìm thấy hotel đang active. Vui lòng chọn hotel trước.');
     }
 
-    // Find latest booking date for this specific hotel
-    const latestBooking = await prisma.reservationsRaw.aggregate({
+    // Find date ranges for this specific hotel
+    const dataRange = await prisma.reservationsRaw.aggregate({
         where: { hotel_id: hotelId },
-        _max: { booking_date: true },
+        _max: {
+            booking_date: true,
+            departure_date: true,
+        },
+        _min: {
+            arrival_date: true,
+        },
     });
 
-    const latestDate = latestBooking._max.booking_date;
+    const latestBookingDate = dataRange._max.booking_date;
+    const earliestArrival = dataRange._min.arrival_date;
+    const latestDeparture = dataRange._max.departure_date;
 
-    if (latestDate) {
-        // Use end of the latest booking day as snapshot timestamp
-        const asOfTs = new Date(latestDate);
-        asOfTs.setHours(23, 59, 59, 999);
-        return buildDailyOTB({ hotelId, asOfTs });
+    if (!latestBookingDate) {
+        // Hotel exists but has no reservation data yet
+        return buildDailyOTB({ hotelId });
     }
 
-    // Hotel exists but has no reservation data yet
-    return buildDailyOTB({ hotelId });
+    // Use end of the latest booking day as snapshot timestamp
+    const asOfTs = new Date(latestBookingDate);
+    asOfTs.setHours(23, 59, 59, 999);
+
+    // Use actual data range for stay dates (with some buffer)
+    // This ensures historical data imports work correctly
+    const stayDateFrom = earliestArrival
+        ? new Date(new Date(earliestArrival).setDate(new Date(earliestArrival).getDate() - 7))
+        : new Date('2020-01-01');
+
+    const stayDateTo = latestDeparture
+        ? new Date(new Date(latestDeparture).setDate(new Date(latestDeparture).getDate() + 7))
+        : new Date('2030-12-31');
+
+    return buildDailyOTB({
+        hotelId,
+        asOfTs,
+        stayDateFrom,
+        stayDateTo,
+    });
 }
 
 /**

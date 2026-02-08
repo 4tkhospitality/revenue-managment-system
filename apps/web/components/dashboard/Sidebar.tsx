@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, Upload, Database, Settings, BookOpen, Shield, Menu, X, LogOut, DollarSign, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, Upload, Database, Settings, BookOpen, Shield, Menu, X, LogOut, DollarSign, BarChart3, TrendingUp, CalendarCheck, Crown } from 'lucide-react';
 import { HotelSwitcher } from '@/components/HotelSwitcher';
 
 // Navigation items - Vietnamese
@@ -14,7 +14,10 @@ const navItems = [
     { href: '/upload', label: 'Tải lên', icon: Upload },
     { href: '/data', label: 'Dữ liệu', icon: Database },
     { href: '/pricing', label: 'Tính giá OTA', icon: DollarSign },
+    { href: '/daily', label: 'Daily Actions', icon: CalendarCheck },
     { href: '/rate-shopper', label: 'So sánh giá', icon: BarChart3 },
+    { href: '/analytics', label: 'Analytics', icon: TrendingUp },
+    { href: '/pricing-plans', label: 'Nâng cấp', icon: Crown },
     { href: '/settings', label: 'Cài đặt', icon: Settings, hideForDemo: true },
     { href: '/guide', label: 'Hướng dẫn', icon: BookOpen },
 ];
@@ -80,6 +83,8 @@ export function Sidebar() {
                     height={40}
                     className="object-contain"
                     style={{ maxHeight: '40px' }}
+                    unoptimized
+                    priority
                 />
                 <div className="w-10" /> {/* Spacer for centering */}
             </div>
@@ -114,6 +119,7 @@ export function Sidebar() {
                         height={180}
                         className="object-contain"
                         style={{ maxHeight: '100px' }}
+                        unoptimized
                         priority
                     />
                 </div>

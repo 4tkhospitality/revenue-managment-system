@@ -1,13 +1,19 @@
 {
-    "updated_at": "2026-02-08T00:01:00+07:00",
+    "updated_at": "2026-02-08T13:55:00+07:00",
     "working_on": {
-        "feature": "RMS Analytics Layer (STLY + Pace + RemSupply + Guardrails)",
-        "task": "Plan approved (v2), ready to start Phase 0.5 Data Validation",
-        "status": "planning_complete",
-        "plan_folder": "plans/260207-2346-analytics-layer/",
-        "files": [],
+        "feature": "SMB60 Commercialization V1.2 (Tier Gating + Daily Assistant)",
+        "task": "Phase 1 Complete - Ready for Phase 2 (Daily Action Engine)",
+        "status": "phase_complete",
+        "plan_folder": "brain/19a85c2a-0ea3-4a14-95ad-a7f8c8db7422/",
+        "files": [
+            "prisma/schema.prisma (Subscription model, PlanTier enum)",
+            "lib/tier/tierConfig.ts",
+            "lib/tier/checkFeature.ts",
+            "lib/tier/useTier.ts",
+            "components/UpgradeBanner.tsx"
+        ],
         "blockers": [],
-        "notes": "Schema tables features_daily/demand_forecast/price_recommendations already exist but are EMPTY. No migration needed — just pipeline code."
+        "notes": "Phase 1 done. Next: Daily Action Engine V0 (engine/dailyAction.ts + /daily page)"
     },
     "pending_tasks": [
         {
@@ -33,6 +39,26 @@
     ],
     "recent_changes": [
         {
+            "timestamp": "2026-02-08T12:35:00+07:00",
+            "type": "security",
+            "description": "Security audit + auth hardening: deleted debug-fix-user & fix-users endpoints, added manager+ role to rate-shopper writes, added auth+tenant isolation to settings & import-jobs, test suite (79/79 pass)",
+            "files": [
+                "app/api/debug-fix-user/route.ts (DELETED)",
+                "app/api/fix-users/route.ts (DELETED)",
+                "app/api/rate-shopper/scan/route.ts",
+                "app/api/rate-shopper/competitors/route.ts",
+                "app/api/rate-shopper/competitors/[id]/route.ts",
+                "app/api/rate-shopper/recommendations/route.ts",
+                "app/api/settings/route.ts",
+                "app/api/import-jobs/route.ts",
+                "middleware.ts",
+                "scripts/test-core-modules.ts",
+                "scripts/quick-test-audit-fixes.ts",
+                "docs/reports/audit_2026-02-08.md"
+            ],
+            "commit": "9843392 security: audit fixes + auth hardening + test suite"
+        },
+        {
             "timestamp": "2026-02-07T23:30:00+07:00",
             "type": "bugfix",
             "description": "OTB Data Integrity: dedup (DISTINCT ON), cancel_date rejection, book_time/cancel_time timezone, retry policy, NONE rounding fix, 401 JSON for API",
@@ -57,12 +83,6 @@
                 "plans/260207-2346-analytics-layer/phase-03-dashboard.md",
                 "plans/260207-2346-analytics-layer/phase-04-verify.md"
             ]
-        },
-        {
-            "timestamp": "2026-02-07T23:40:00+07:00",
-            "type": "analysis",
-            "description": "RMS Comparison: 4T Hospitality vs Wilens hotel-revman-system. Identified 5 gaps (ML cancel, demand forecast, STLY, pace, remSupply). P0→P2 roadmap created.",
-            "files": []
         }
     ],
     "errors_encountered": [
@@ -74,6 +94,21 @@
         {
             "error": "prisma generate DLL lock: query_engine-windows.dll.node locked by running process",
             "solution": "Kill all Node.js processes first, then retry prisma generate",
+            "resolved": true
+        },
+        {
+            "error": "ts-node cannot resolve dynamic imports with .js extension for tsx runner",
+            "solution": "Switch to tsx with static imports at top of file, not dynamic imports",
+            "resolved": true
+        },
+        {
+            "error": "next build fails after deleting API routes due to stale .next/dev/types cache",
+            "solution": "Delete .next folder and rebuild: rm -rf .next && next build",
+            "resolved": true
+        },
+        {
+            "error": "git commit hangs on Windows (GPG signing prompt)",
+            "solution": "Use --no-gpg-sign flag: git commit --no-gpg-sign -m 'message'",
             "resolved": true
         }
     ],
@@ -97,6 +132,18 @@
         {
             "decision": "Guardrail priority: Raw → Step-cap → Min/Max → Rounding",
             "reason": "Explicit ordering prevents rule conflicts and makes audit trail clear"
+        },
+        {
+            "decision": "Server-side hotel resolution for all API routes (never trust client hotelId)",
+            "reason": "Client-supplied hotelId enables tenant boundary bypass — always use getActiveHotelId()"
+        },
+        {
+            "decision": "Settings POST uses update (not upsert)",
+            "reason": "upsert could create arbitrary hotels via API; update ensures hotel exists first"
+        },
+        {
+            "decision": "tsx over Jest for test scripts",
+            "reason": "Lightweight test runner for pure utility tests — no framework overhead, direct TS execution"
         }
     ]
 }

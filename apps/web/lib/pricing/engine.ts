@@ -282,3 +282,86 @@ export function formatVND(amount: number): string {
 export function parseVND(str: string): number {
     return parseInt(str.replace(/\D/g, ''), 10) || 0;
 }
+
+/**
+ * Apply guardrails to a calculated BAR price.
+ * Priority order:
+ *   1. Raw recommendation (input)
+ *   2. Step-change cap (|Δ%| > max_step_change → capped)
+ *   3. Min/Max clamp (BAR < min → min, BAR > max → max)
+ *   4. Rounding (CEIL_1000 / ROUND_100 / NONE)
+ */
+export function applyGuardrails(
+    bar: number,
+    config: import('./types').GuardrailConfig
+): import('./types').GuardrailResult {
+    let price = bar;
+    let reason_code: import('./types').GuardrailReasonCode = 'PASS';
+    let clamped = false;
+
+    // Handle invalid input
+    if (price <= 0) {
+        return {
+            reason_code: 'INVALID_NET',
+            before_price: bar,
+            after_price: 0,
+            delta_pct: -100,
+            clamped: true,
+        };
+    }
+
+    // Step 1: Step-change cap
+    if (config.previous_bar != null && config.previous_bar > 0) {
+        const deltaPct = ((price - config.previous_bar) / config.previous_bar) * 100;
+        const maxStep = config.max_step_change_pct;
+
+        if (Math.abs(deltaPct) > maxStep) {
+            const direction = deltaPct > 0 ? 1 : -1;
+            price = config.previous_bar * (1 + direction * maxStep / 100);
+            reason_code = 'STEP_CAP';
+            clamped = true;
+        }
+    } else if (config.previous_bar == null) {
+        // No previous price → can't check step change
+        // This is OK for first-time pricing, not an error
+    }
+
+    // Step 2: Min/Max clamp
+    if (price < config.min_rate) {
+        price = config.min_rate;
+        reason_code = 'MIN_RATE';
+        clamped = true;
+    } else if (price > config.max_rate) {
+        price = config.max_rate;
+        reason_code = 'MAX_RATE';
+        clamped = true;
+    }
+
+    // Step 3: Rounding
+    switch (config.rounding_rule) {
+        case 'CEIL_1000':
+            price = Math.ceil(price / 1000) * 1000;
+            break;
+        case 'ROUND_100':
+            price = Math.round(price / 100) * 100;
+            break;
+        case 'NONE':
+        default:
+            price = Math.round(price);
+            break;
+    }
+
+    // Final clamp after rounding (rounding could push past limits)
+    if (price < config.min_rate) price = config.min_rate;
+    if (price > config.max_rate) price = config.max_rate;
+
+    const delta_pct = bar > 0 ? ((price - bar) / bar) * 100 : 0;
+
+    return {
+        reason_code,
+        before_price: bar,
+        after_price: price,
+        delta_pct: Math.round(delta_pct * 100) / 100,
+        clamped,
+    };
+}

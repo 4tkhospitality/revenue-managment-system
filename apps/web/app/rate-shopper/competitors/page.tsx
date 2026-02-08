@@ -141,7 +141,7 @@ export default function CompetitorManagementPage() {
     };
 
     return (
-        <div className="p-6 max-w-4xl mx-auto">
+        <div className="px-4 sm:px-8 py-4 sm:py-6">
             {/* Header */}
             <div className="mb-8">
                 <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: '#1e293b', marginBottom: '0.25rem' }}>

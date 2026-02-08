@@ -182,7 +182,7 @@ export default function SettingsPage() {
     // Demo Hotel access denied
     if (isDemo) {
         return (
-            <div className="mx-auto max-w-[1400px] px-8 py-6 space-y-6">
+            <div className="mx-auto max-w-[1400px] px-4 sm:px-8 py-4 sm:py-6 space-y-6">
                 <header
                     className="rounded-2xl px-6 py-4 text-white shadow-sm"
                     style={{ background: 'linear-gradient(to right, #1E3A8A, #102A4C)' }}
@@ -193,7 +193,7 @@ export default function SettingsPage() {
                     </div>
                 </header>
 
-                <div className="max-w-3xl mx-auto">
+                <div className="max-w-2xl">
                     <div className="bg-amber-50 border border-amber-200 rounded-xl p-8 text-center">
                         <Lock className="w-12 h-12 text-amber-500 mx-auto mb-4" />
                         <h2 className="text-xl font-semibold text-amber-800 mb-2">Demo Hotel - Truy cập bị giới hạn</h2>
@@ -215,7 +215,7 @@ export default function SettingsPage() {
 
     return (
 
-        <div className="mx-auto max-w-[1400px] px-8 py-6 space-y-6">
+        <div className="mx-auto max-w-[1400px] px-4 sm:px-8 py-4 sm:py-6 space-y-6">
             {/* Header - lighter */}
             <header
                 className="rounded-2xl px-6 py-4 text-white shadow-sm"
@@ -230,7 +230,7 @@ export default function SettingsPage() {
                 </p>
             </header>
 
-            <div className="max-w-3xl mx-auto space-y-6">
+            <div className="space-y-6">
                 {/* Message */}
                 {message && (
                     <div className={`p-4 rounded-xl flex items-center gap-3 ${message.type === 'success'

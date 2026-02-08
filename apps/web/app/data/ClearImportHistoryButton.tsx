@@ -1,27 +1,27 @@
 'use client';
 
 import { useState } from 'react';
-import { resetDerivedData } from '../actions/resetDerivedData';
+import { clearImportHistory } from '../actions/clearImportHistory';
 import { getActiveHotelData } from '../actions/getActiveHotelData';
 import { useRouter } from 'next/navigation';
 
-export function ResetButton() {
-    const [isResetting, setIsResetting] = useState(false);
+export function ClearImportHistoryButton() {
+    const [isClearing, setIsClearing] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
-    const [result, setResult] = useState<{ success: boolean; message?: string; deleted?: Record<string, number> } | null>(null);
+    const [result, setResult] = useState<{ success: boolean; message?: string } | null>(null);
     const router = useRouter();
 
-    const handleReset = async () => {
-        setIsResetting(true);
+    const handleClear = async () => {
+        setIsClearing(true);
         setResult(null);
         try {
             const { hotelId } = await getActiveHotelData();
             if (!hotelId) {
-                setResult({ success: false, message: 'Chưa có dữ liệu reservation' });
+                setResult({ success: false, message: 'Chưa chọn khách sạn' });
                 return;
             }
 
-            const res = await resetDerivedData(hotelId);
+            const res = await clearImportHistory(hotelId);
             setResult(res);
             if (res.success) {
                 router.refresh();
@@ -29,7 +29,7 @@ export function ResetButton() {
         } catch (err) {
             setResult({ success: false, message: String(err) });
         } finally {
-            setIsResetting(false);
+            setIsClearing(false);
             setShowConfirm(false);
         }
     };
@@ -38,13 +38,14 @@ export function ResetButton() {
         <>
             <button
                 onClick={() => setShowConfirm(true)}
-                disabled={isResetting}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 hover:border-red-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isClearing}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all border border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-100 hover:border-amber-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Xóa TOÀN BỘ dữ liệu để upload lại từ đầu"
             >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
-                Reset & Rebuild
+                Reset All Data
             </button>
 
             {result && (
@@ -58,48 +59,48 @@ export function ResetButton() {
                 <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
                     <div className="bg-white border border-gray-200 rounded-2xl p-6 max-w-md w-full mx-4 shadow-xl">
                         <div className="flex items-center gap-3 mb-4">
-                            <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
-                                <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+                                <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                 </svg>
                             </div>
                             <h3 className="text-lg font-semibold text-gray-900">
-                                Xác nhận Reset?
+                                ⚠️ Reset All Data?
                             </h3>
                         </div>
 
                         <p className="text-gray-600 mb-4">
-                            Hành động này sẽ <strong className="text-red-600">xóa toàn bộ</strong> dữ liệu đã tính toán:
+                            Hành động này sẽ xóa <strong className="text-red-600">TOÀN BỘ</strong> dữ liệu:
                         </p>
 
-                        <ul className="text-sm text-gray-500 mb-4 space-y-1 pl-4">
-                            <li>• Daily OTB (on-the-books)</li>
-                            <li>• Features Daily (pickup, pace)</li>
-                            <li>• Demand Forecast</li>
-                            <li>• Price Recommendations</li>
-                            <li>• Pricing Decisions</li>
-                        </ul>
+                        <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                            <ul className="text-sm text-red-700 space-y-1">
+                                <li>• ❌ Tất cả Reservations</li>
+                                <li>• ❌ Tất cả Cancellations</li>
+                                <li>• ❌ Lịch sử Import Jobs</li>
+                            </ul>
+                        </div>
 
-                        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 mb-6">
-                            <p className="text-sm text-emerald-700">
-                                ✓ <strong>Raw reservations</strong> sẽ được giữ lại an toàn.
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-6">
+                            <p className="text-sm text-amber-700">
+                                💡 <strong>Mục đích:</strong> Khi muốn bắt đầu lại từ đầu và upload file mới.
                             </p>
                         </div>
 
                         <div className="flex gap-3 justify-end">
                             <button
                                 onClick={() => setShowConfirm(false)}
-                                disabled={isResetting}
+                                disabled={isClearing}
                                 className="px-4 py-2 rounded-lg text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
                             >
                                 Hủy
                             </button>
                             <button
-                                onClick={handleReset}
-                                disabled={isResetting}
+                                onClick={handleClear}
+                                disabled={isClearing}
                                 className="px-4 py-2 rounded-lg text-sm bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 transition-colors"
                             >
-                                {isResetting ? (
+                                {isClearing ? (
                                     <span className="flex items-center gap-2">
                                         <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
                                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
@@ -108,7 +109,7 @@ export function ResetButton() {
                                         Đang xóa...
                                     </span>
                                 ) : (
-                                    'Xóa và Reset'
+                                    'Xóa lịch sử'
                                 )}
                             </button>
                         </div>

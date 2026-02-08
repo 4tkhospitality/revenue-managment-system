@@ -184,7 +184,7 @@ export default function RateShopperPage() {
     const selectedView = currentState?.data;
 
     return (
-        <div className="p-4 lg:p-6 space-y-6">
+        <div className="px-4 sm:px-8 py-4 sm:py-6 space-y-6">
             {/* Sub Navigation */}
             <div className="flex items-center justify-between border-b border-gray-200 pb-3 mb-2">
                 <div className="flex gap-1">
@@ -594,8 +594,8 @@ function CompetitorRow({
                                 </span>
                                 {priceDiff !== null && (
                                     <span className={`inline-flex items-center gap-0.5 text-xs font-medium px-1.5 py-0.5 rounded ${priceDiff > 0 ? 'bg-red-50 text-red-600'
-                                            : priceDiff < 0 ? 'bg-green-50 text-green-600'
-                                                : 'bg-gray-100 text-gray-500'
+                                        : priceDiff < 0 ? 'bg-green-50 text-green-600'
+                                            : 'bg-gray-100 text-gray-500'
                                         }`}>
                                         {priceDiff > 0 ? <TrendingUp className="w-3 h-3" /> : priceDiff < 0 ? <TrendingDown className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
                                         {priceDiff > 0 ? '+' : ''}{priceDiff.toFixed(0)}%

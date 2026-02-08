@@ -5,11 +5,142 @@ import { OtbChart } from '@/components/dashboard/OtbChart';
 import { RecommendationTable } from '@/components/dashboard/RecommendationTable';
 import { DateUtils } from '@/lib/date';
 import { PricingLogic } from '@/lib/pricing';
+import { PageHeader } from '@/components/shared/PageHeader';
 
 export const dynamic = 'force-dynamic';
 
+// Performance: Parallel query helper
+async function fetchDashboardData(hotelId: string, today: Date) {
+    const startTime = Date.now();
+
+    // BATCH 1: Independent queries - run in parallel
+    const [
+        hotel,
+        latestReservation,
+        latestCancellation,
+        otbToday,
+        forecastToday,
+        featuresData,
+        latestOtbDate,
+        latestForecastDate
+    ] = await Promise.all([
+        // Hotel settings
+        prisma.hotel.findUnique({
+            where: { hotel_id: hotelId },
+            select: { hotel_id: true, name: true, capacity: true }
+        }),
+        // Latest reservation date
+        prisma.reservationsRaw.findFirst({
+            where: { hotel_id: hotelId },
+            orderBy: { booking_date: 'desc' },
+            select: { booking_date: true }
+        }),
+        // Latest cancellation date
+        prisma.cancellationRaw.findFirst({
+            where: { hotel_id: hotelId },
+            orderBy: { cancel_time: 'desc' },
+            select: { cancel_time: true, as_of_date: true }
+        }),
+        // OTB for today
+        prisma.dailyOTB.findMany({
+            where: { hotel_id: hotelId, as_of_date: today },
+            orderBy: { stay_date: 'asc' },
+            take: 60,
+        }),
+        // Forecast for today
+        prisma.demandForecast.findMany({
+            where: { hotel_id: hotelId, as_of_date: today },
+            take: 60,
+        }),
+        // Features for pickup calculation
+        prisma.featuresDaily.findMany({
+            where: { hotel_id: hotelId },
+            select: { pickup_t7: true },
+            take: 30,
+        }),
+        // Latest OTB date (for fallback)
+        prisma.dailyOTB.findFirst({
+            where: { hotel_id: hotelId },
+            orderBy: { as_of_date: 'desc' },
+            select: { as_of_date: true }
+        }),
+        // Latest forecast date (for fallback)
+        prisma.demandForecast.findFirst({
+            where: { hotel_id: hotelId },
+            orderBy: { as_of_date: 'desc' },
+            select: { as_of_date: true }
+        }),
+    ]);
+
+    console.log(`[Dashboard] Batch 1 queries: ${Date.now() - startTime}ms`);
+
+    // Determine actual OTB and forecast data (with fallback)
+    let otbData = otbToday;
+    let forecastData = forecastToday;
+
+    // BATCH 2: Fallback queries only if needed (conditional parallel)
+    const batch2Start = Date.now();
+    const fallbackPromises: Promise<any>[] = [];
+
+    if (otbData.length === 0 && latestOtbDate) {
+        fallbackPromises.push(
+            prisma.dailyOTB.findMany({
+                where: { hotel_id: hotelId, as_of_date: latestOtbDate.as_of_date },
+                orderBy: { stay_date: 'asc' },
+                take: 60,
+            }).then(data => { otbData = data; })
+        );
+    }
+
+    if (forecastData.length === 0 && latestForecastDate) {
+        fallbackPromises.push(
+            prisma.demandForecast.findMany({
+                where: { hotel_id: hotelId, as_of_date: latestForecastDate.as_of_date },
+                take: 60,
+            }).then(data => { forecastData = data; })
+        );
+    }
+
+    if (fallbackPromises.length > 0) {
+        await Promise.all(fallbackPromises);
+        console.log(`[Dashboard] Batch 2 fallback queries: ${Date.now() - batch2Start}ms`);
+    }
+
+    // BATCH 3: Cancellation query (depends on OTB reference date)
+    const batch3Start = Date.now();
+    const referenceDate = otbData.length > 0 ? new Date(otbData[0].as_of_date) : today;
+    referenceDate.setHours(0, 0, 0, 0);
+    const thirtyDaysFromRef = new Date(referenceDate);
+    thirtyDaysFromRef.setDate(thirtyDaysFromRef.getDate() + 30);
+
+    const cancelledReservations = await prisma.reservationsRaw.findMany({
+        where: {
+            hotel_id: hotelId,
+            cancel_time: { not: null },
+            arrival_date: { gte: referenceDate, lte: thirtyDaysFromRef }
+        },
+        select: { rooms: true, revenue: true, arrival_date: true, departure_date: true }
+    });
+
+    console.log(`[Dashboard] Batch 3 cancellation query: ${Date.now() - batch3Start}ms`);
+    console.log(`[Dashboard] Total query time: ${Date.now() - startTime}ms`);
+
+    return {
+        hotel,
+        latestReservation,
+        latestCancellation,
+        otbData,
+        forecastData,
+        featuresData,
+        cancelledReservations,
+        referenceDate
+    };
+}
+
 // Server Component - Direct DB Fetch
 export default async function DashboardPage() {
+    const pageStart = Date.now();
+
     // Normalize to midnight for date-only comparison
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -34,120 +165,29 @@ export default async function DashboardPage() {
         );
     }
 
-    // Fetch hotel settings from database
-    const hotel = await prisma.hotel.findUnique({
-        where: { hotel_id: hotelId }
-    });
+    // Fetch all data in parallel batches
+    const {
+        hotel,
+        latestReservation,
+        latestCancellation,
+        otbData,
+        forecastData,
+        featuresData,
+        cancelledReservations,
+    } = await fetchDashboardData(hotelId, today);
 
     // Check if hotel exists and has capacity set
     const needsSetup = !hotel || !hotel.capacity;
     const hotelCapacity = hotel?.capacity || 0;
     const hotelName = hotel?.name || 'Chưa đặt tên';
 
-    // Fetch latest reservation date
-    const latestReservation = await prisma.reservationsRaw.findFirst({
-        where: { hotel_id: hotelId },
-        orderBy: { booking_date: 'desc' },
-        select: { booking_date: true }
-    });
-
-    // Fetch latest cancellation date
-    const latestCancellation = await prisma.cancellationRaw.findFirst({
-        where: { hotel_id: hotelId },
-        orderBy: { cancel_time: 'desc' },
-        select: { cancel_time: true, as_of_date: true }
-    });
-
-    // Fetch OTB Data - try today first, fallback to latest available
-    let otbData = await prisma.dailyOTB.findMany({
-        where: {
-            hotel_id: hotelId,
-            as_of_date: today,
-        },
-        orderBy: { stay_date: 'asc' },
-        take: 60, // Get 60 days for table filtering
-    });
-
-    // Fallback: if no OTB for today, get latest available OTB
-    if (otbData.length === 0) {
-        const latestOtb = await prisma.dailyOTB.findFirst({
-            where: { hotel_id: hotelId },
-            orderBy: { as_of_date: 'desc' },
-        });
-        if (latestOtb) {
-            otbData = await prisma.dailyOTB.findMany({
-                where: {
-                    hotel_id: hotelId,
-                    as_of_date: latestOtb.as_of_date,
-                },
-                orderBy: { stay_date: 'asc' },
-                take: 60,
-            });
-        }
-    }
-
+    // Calculate KPIs
     const totalOtb = otbData.reduce((sum, d) => sum + d.rooms_otb, 0);
     const remainingSupply = Math.max(0, hotelCapacity * 30 - totalOtb);
-
-    // Fetch Forecast Data - try today first, fallback to any available
-    let forecastData = await prisma.demandForecast.findMany({
-        where: {
-            hotel_id: hotelId,
-            as_of_date: today,
-        },
-        take: 60,
-    });
-
-    // Fallback: if no forecast for today, get latest available
-    if (forecastData.length === 0) {
-        const latestForecast = await prisma.demandForecast.findFirst({
-            where: { hotel_id: hotelId },
-            orderBy: { as_of_date: 'desc' },
-        });
-        if (latestForecast) {
-            forecastData = await prisma.demandForecast.findMany({
-                where: {
-                    hotel_id: hotelId,
-                    as_of_date: latestForecast.as_of_date,
-                },
-                take: 60,
-            });
-        }
-    }
-
     const totalForecast = forecastData.reduce((sum, d) => sum + (d.remaining_demand || 0), 0);
-
-    // Calculate Avg Pickup T7 from features_daily (if data exists)
-    const featuresData = await prisma.featuresDaily.findMany({
-        where: { hotel_id: hotelId },
-        select: { pickup_t7: true },
-        take: 30,
-    });
     const avgPickupT7 = featuresData.length > 0
         ? featuresData.reduce((sum, f) => sum + (f.pickup_t7 || 0), 0) / featuresData.length
-        : 0; // Show 0 if no data yet
-
-    // V01.1: Calculate cancellation stats (next 30 days from data reference date)
-    // Use the OTB as_of_date as reference instead of today (data may be from past)
-    const referenceDate = otbData.length > 0 ? new Date(otbData[0].as_of_date) : today;
-    referenceDate.setHours(0, 0, 0, 0);
-    const thirtyDaysFromRef = new Date(referenceDate);
-    thirtyDaysFromRef.setDate(thirtyDaysFromRef.getDate() + 30);
-
-    // Get reservations that have been cancelled with cancel_time set
-    const cancelledReservations = await prisma.reservationsRaw.findMany({
-        where: {
-            hotel_id: hotelId,
-            cancel_time: { not: null },
-            arrival_date: { gte: referenceDate, lte: thirtyDaysFromRef }
-        },
-        select: {
-            rooms: true,
-            revenue: true,
-            arrival_date: true,
-            departure_date: true
-        }
-    });
+        : 0;
 
     // Calculate cancelled room-nights and lost revenue
     let cancelledRooms = 0;
@@ -160,13 +200,11 @@ export default async function DashboardPage() {
         lostRevenue += Number(res.revenue || 0);
     }
 
-
     const kpiData = {
         roomsOtb: totalOtb,
         remainingSupply,
         avgPickupT7,
         forecastDemand: totalForecast,
-        // V01.1: Cancellation stats
         cancelledRooms,
         lostRevenue,
     };
@@ -249,43 +287,36 @@ export default async function DashboardPage() {
         ? DateUtils.format(otbData[0].as_of_date, 'MMM dd, yyyy')
         : null;
 
+    console.log(`[Dashboard] Total page render: ${Date.now() - pageStart}ms`);
+
     return (
-        <div className="mx-auto max-w-[1400px] px-8 py-6 space-y-6">
-            {/* Header Brand Card - lighter, thinner */}
-            <header
-                className="rounded-2xl px-6 py-4 text-white shadow-sm"
-                style={{ background: 'linear-gradient(to right, #1E3A8A, #102A4C)' }}
-            >
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-lg font-semibold">{hotelName}</h1>
-                        <p className="text-white/70 text-sm">
-                            Dashboard • {hotelCapacity} phòng
-                        </p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <div className="text-right">
-                            <div className="text-xs text-white/60 mb-1">Dữ liệu đặt phòng</div>
-                            <div className="px-2 py-1 bg-emerald-500/20 rounded text-sm text-emerald-200">
-                                📅 {latestReservation
-                                    ? DateUtils.format(latestReservation.booking_date, 'dd/MM/yyyy')
-                                    : 'Chưa có'}
-                            </div>
-                        </div>
-                        <div className="text-right">
-                            <div className="text-xs text-white/60 mb-1">Dữ liệu hủy phòng</div>
-                            <div className="px-2 py-1 bg-rose-500/20 rounded text-sm text-rose-200">
-                                📅 {latestCancellation
-                                    ? DateUtils.format(latestCancellation.as_of_date, 'dd/MM/yyyy')
-                                    : 'Chưa có'}
-                            </div>
-                        </div>
-                        <div className={`px-3 py-1.5 rounded-lg text-sm backdrop-blur-sm ${dataAsOf ? 'bg-white/10' : 'bg-amber-500/20 text-amber-200'}`}>
-                            OTB: {dataAsOf || 'Chưa có dữ liệu'}
-                        </div>
-                    </div>
-                </div>
-            </header>
+        <div className="mx-auto max-w-[1400px] px-4 sm:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
+            {/* Header */}
+            <PageHeader
+                title={hotelName}
+                subtitle={`Dashboard • ${hotelCapacity} phòng`}
+                badges={[
+                    {
+                        label: 'Dữ liệu đặt phòng',
+                        value: latestReservation
+                            ? DateUtils.format(latestReservation.booking_date, 'dd/MM/yyyy')
+                            : 'Chưa có',
+                        variant: latestReservation ? 'success' : 'warning',
+                    },
+                    {
+                        label: 'Dữ liệu hủy phòng',
+                        value: latestCancellation
+                            ? DateUtils.format(latestCancellation.as_of_date, 'dd/MM/yyyy')
+                            : 'Chưa có',
+                        variant: latestCancellation ? 'danger' : 'warning',
+                    },
+                    {
+                        label: 'OTB',
+                        value: dataAsOf || 'Chưa có dữ liệu',
+                        variant: dataAsOf ? 'neutral' : 'warning',
+                    },
+                ]}
+            />
 
             {/* Main Content - already on light bg from layout */}
             {/* Empty State */}

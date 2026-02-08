@@ -7,6 +7,7 @@ import { HashUtils } from '../../lib/hash';
 import { Prisma } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { invalidateStatsCache } from '../../lib/cachedStats';
+import { checkLimit } from '../../lib/tier/checkFeature';
 
 const STRICT_MODE = true; // Reject job on unknown status
 
@@ -30,6 +31,23 @@ export async function ingestCSV(formData: FormData) {
     if (!file || !hotelId) {
         throw new Error("Missing file or hotelId");
     }
+
+    // ═══ TIER GATING: Check import limit ═══
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+    const importsThisMonth = await prisma.importJob.count({
+        where: { hotel_id: hotelId, created_at: { gte: startOfMonth } },
+    });
+    const limitCheck = await checkLimit(hotelId, 'imports_month', importsThisMonth);
+    if (!limitCheck.allowed) {
+        return {
+            success: false,
+            message: `Đã đạt giới hạn import (${limitCheck.limit}/tháng). Nâng cấp gói để import thêm.`,
+            error: 'LIMIT_EXCEEDED',
+        };
+    }
+    // ═══ END TIER GATING ═══
 
     // 1. Compute Hash
     const arrayBuffer = await file.arrayBuffer();

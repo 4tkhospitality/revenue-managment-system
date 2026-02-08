@@ -2,7 +2,7 @@
     "meta": {
         "schema_version": "1.1.0",
         "awf_version": "4.0.2",
-        "last_updated": "2026-02-07T23:58:00+07:00"
+        "last_updated": "2026-02-08T12:39:00+07:00"
     },
     "project": {
         "name": "4T Hospitality Revenue Management System",
@@ -20,7 +20,8 @@
         "ui": "React + Custom CSS",
         "charts": "Recharts",
         "hosting": "Vercel",
-        "rate_shopper": "SerpApi (Google Hotels)"
+        "rate_shopper": "SerpApi (Google Hotels)",
+        "test_runner": "tsx (TypeScript test scripts, no Jest)"
     },
     "database_schema": {
         "summary": "Multi-tenant hotel RMS: bookings → OTB snapshots → features → pricing → decisions",
@@ -141,7 +142,8 @@
     "api_endpoints": [
         {
             "path": "/api/import-jobs",
-            "explained": "Upload CSV → ingestCSV action → reservations_raw"
+            "explained": "List import jobs (scoped to active hotel via getActiveHotelId)",
+            "auth": "getActiveHotelId() + tenant isolation"
         },
         {
             "path": "/api/data/delete-by-month",
@@ -181,7 +183,8 @@
         },
         {
             "path": "/api/settings",
-            "explained": "Hotel settings (rounding, currency, fiscal start)"
+            "explained": "Hotel settings (GET: auth+tenant, POST: manager+ only)",
+            "auth": "auth() + getActiveHotelId() + role check for POST"
         },
         {
             "path": "/api/admin/hotels",
@@ -214,7 +217,11 @@
         "Tenant isolation: all queries filter by hotel_id, OTB join includes j.hotel_id = r.hotel_id",
         "New users auto-assigned to Demo Hotel on first login",
         "Viewer role can access /pricing (read-only)",
-        "API routes return 401 JSON (not redirect) for unauthenticated requests"
+        "API routes return 401 JSON (not redirect) for unauthenticated requests",
+        "Rate Shopper write routes (scan, add/delete competitor, accept/reject recommendation) require manager+ role",
+        "Settings POST requires manager+ role; GET/POST both use server-side hotel resolution (no client-supplied hotelId)",
+        "Cron routes use CRON_SECRET Bearer token auth (not session-based)",
+        "DELETED endpoints: /api/debug-fix-user (critical vuln), /api/fix-users (temporary)"
     ],
     "features": {
         "implemented": [
@@ -248,20 +255,27 @@
             "OTB dedup via DISTINCT ON + snapshot_ts DESC (PostgreSQL-specific)",
             "Time-travel: book_time <= as_of_ts AND (cancel_time IS NULL OR cancel_time > as_of_ts)",
             "Revenue per night: Math.floor(total/nights) + remainder on last night (VND-safe)",
-            "Promo stacking: PROGRESSIVE = multiply, ADDITIVE = sum"
+            "Promo stacking: PROGRESSIVE = multiply, ADDITIVE = sum",
+            "Auth pattern: getActiveHotelId() for tenant isolation, auth() for session check, role check via session.user.role",
+            "API auth coverage: scan all route.ts files for auth()/getActiveHotelId()/getServerSession patterns"
         ],
         "gotchas": [
             "prisma generate fails when query_engine DLL is locked by running dev server — kill Node first",
             "prisma migrate dev may want to RESET database due to drift — use db push instead",
             "COALESCE(prev.rooms_otb, 0) for pickup creates phantom data — use NULL instead",
             "STLY offset must be 364 (not 365) to match same DOW, but still needs nearest-snapshot fallback",
-            "Raw SQL returns numeric types as strings — must cast with Number()"
+            "Raw SQL returns numeric types as strings — must cast with Number()",
+            "Never accept hotelId from client in API routes — always derive from getActiveHotelId() for tenant isolation",
+            "upsert in settings API could create arbitrary hotels — use update instead",
+            "git commit hangs on Windows when GPG signing is enabled — use --no-gpg-sign"
         ],
         "conventions": [
             "Server actions in app/actions/*.ts",
             "Pricing engine in lib/pricing/engine.ts",
             "Plans stored in plans/YYMMDD-HHMM-feature-name/",
-            "Specs stored in docs/specs/XX_name.md"
+            "Specs stored in docs/specs/XX_name.md",
+            "Test scripts in scripts/*.ts (run with: npx tsx --tsconfig tsconfig.json scripts/xxx.ts)",
+            "Audit reports in docs/reports/audit_YYYY-MM-DD.md"
         ]
     }
 }

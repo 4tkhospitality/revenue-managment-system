@@ -42,6 +42,9 @@ model Hotel {
   rate_shop_recommendations RateShopRecommendation[]
   rate_shop_usage_monthly   RateShopUsageTenantMonthly[]
 
+  // Commercialization
+  subscription              Subscription?
+
   @@map("hotels")
 }
 
@@ -203,9 +206,12 @@ model FeaturesDaily {
   created_at       DateTime @default(now())
   pickup_t15       Int?
   pickup_t5        Int?
+  stly_is_approx   Boolean?
+  pickup_source    Json?
   hotel            Hotel    @relation(fields: [hotel_id], references: [hotel_id])
 
   @@id([hotel_id, as_of_date, stay_date])
+  @@index([hotel_id, stay_date, as_of_date], map: "idx_features_stay_asof")
   @@map("features_daily")
 }
 
@@ -413,6 +419,53 @@ enum UserRole {
   hotel_admin
   manager
   viewer
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Commercialization — Enums & Model
+// ════════════════════════════════════════════════════════════════════
+
+enum PlanTier {
+  FREE
+  STARTER
+  GROWTH
+  PRO
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  TRIAL
+  PAST_DUE
+  CANCELLED
+}
+
+model Subscription {
+  id                        String             @id @default(uuid()) @db.Uuid
+  hotel_id                  String             @unique @db.Uuid
+  plan                      PlanTier           @default(FREE)
+  status                    SubscriptionStatus @default(ACTIVE)
+
+  // External payment (Sepay/Stripe) - optional for now
+  external_provider         String?
+  external_customer_id      String?
+  external_subscription_id  String?
+  current_period_start      DateTime?
+  current_period_end        DateTime?
+
+  // Feature Limits (Admin can override per hotel)
+  max_users                 Int                @default(1)
+  max_properties            Int                @default(1)
+  max_imports_month         Int                @default(3)
+  max_exports_day           Int                @default(1)
+  max_export_rows           Int                @default(30)
+  included_rate_shops_month Int                @default(0)
+  data_retention_months     Int                @default(6)
+
+  created_at                DateTime           @default(now())
+  updated_at                DateTime           @updatedAt
+  hotel                     Hotel              @relation(fields: [hotel_id], references: [hotel_id], onDelete: Cascade)
+
+  @@map("subscriptions")
 }
 
 // ════════════════════════════════════════════════════════════════════

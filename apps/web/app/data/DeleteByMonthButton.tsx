@@ -42,8 +42,9 @@ export function DeleteByMonthButton({ className }: DeleteByMonthButtonProps) {
             }
 
             setPreview(data);
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : 'Unknown error';
+            setError(message);
         } finally {
             setLoading(false);
         }
@@ -72,12 +73,12 @@ export function DeleteByMonthButton({ className }: DeleteByMonthButtonProps) {
             setPreview(null);
             setConfirmText('');
 
-            // Reload after 2 seconds
             setTimeout(() => {
                 window.location.reload();
             }, 2000);
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : 'Unknown error';
+            setError(message);
         } finally {
             setLoading(false);
         }
@@ -104,9 +105,12 @@ export function DeleteByMonthButton({ className }: DeleteByMonthButtonProps) {
         <>
             <button
                 onClick={() => setIsOpen(true)}
-                className={`px-3 py-1.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-1.5 ${className || ''}`}
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 hover:border-red-300 ${className || ''}`}
             >
-                🗑️ Xóa dữ liệu theo tháng
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Xóa theo tháng
             </button>
 
             {/* Modal Overlay */}
@@ -114,20 +118,23 @@ export function DeleteByMonthButton({ className }: DeleteByMonthButtonProps) {
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
                     <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
                         {/* Header */}
-                        <div className="px-6 py-4 bg-red-50 border-b border-red-200">
-                            <h2 className="text-lg font-bold text-red-700 flex items-center gap-2">
-                                ⚠️ Xóa dữ liệu theo tháng
-                            </h2>
-                            <p className="text-sm text-red-600 mt-1">
-                                Hành động này không thể hoàn tác!
-                            </p>
+                        <div className="px-6 py-4 bg-red-50 border-b border-red-100 flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
+                                <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-semibold text-gray-900">Xóa dữ liệu theo tháng</h2>
+                                <p className="text-sm text-red-600">Hành động này không thể hoàn tác</p>
+                            </div>
                         </div>
 
                         {/* Body */}
                         <div className="px-6 py-4 space-y-4">
                             {result ? (
-                                <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">
-                                    ✅ {result}
+                                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-700">
+                                    ✓ {result}
                                     <p className="text-sm mt-2">Đang tải lại trang...</p>
                                 </div>
                             ) : (
@@ -144,7 +151,7 @@ export function DeleteByMonthButton({ className }: DeleteByMonthButtonProps) {
                                                 setPreview(null);
                                                 setConfirmText('');
                                             }}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                         >
                                             <option value="">-- Chọn tháng --</option>
                                             {monthOptions.map(m => (
@@ -162,8 +169,8 @@ export function DeleteByMonthButton({ className }: DeleteByMonthButtonProps) {
                                         </label>
                                         <select
                                             value={dataType}
-                                            onChange={(e) => setDataType(e.target.value as any)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                                            onChange={(e) => setDataType(e.target.value as 'reservations' | 'cancellations' | 'all')}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                         >
                                             <option value="reservations">Chỉ đặt phòng</option>
                                             <option value="cancellations">Chỉ hủy phòng</option>
@@ -175,16 +182,16 @@ export function DeleteByMonthButton({ className }: DeleteByMonthButtonProps) {
                                     <button
                                         onClick={handlePreview}
                                         disabled={!month || loading}
-                                        className="w-full py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        className="w-full py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
                                     >
-                                        {loading ? 'Đang kiểm tra...' : '🔍 Xem trước số lượng'}
+                                        {loading ? 'Đang kiểm tra...' : 'Xem trước số lượng'}
                                     </button>
 
                                     {/* Preview Result */}
                                     {preview && (
                                         <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
                                             <p className="font-medium text-amber-800">
-                                                📊 Dữ liệu sẽ bị xóa:
+                                                Dữ liệu sẽ bị xóa:
                                             </p>
                                             <ul className="mt-2 space-y-1 text-sm text-amber-700">
                                                 <li>• Đặt phòng: <strong>{preview.reservationCount.toLocaleString()}</strong> bản ghi</li>
@@ -197,7 +204,7 @@ export function DeleteByMonthButton({ className }: DeleteByMonthButtonProps) {
                                     {preview && (preview.reservationCount > 0 || preview.cancellationCount > 0) && (
                                         <div>
                                             <label className="block text-sm font-medium text-red-700 mb-1">
-                                                Gõ <strong>"XÓA DỮ LIỆU"</strong> để xác nhận
+                                                Gõ <strong>&quot;XÓA DỮ LIỆU&quot;</strong> để xác nhận
                                             </label>
                                             <input
                                                 type="text"
@@ -212,7 +219,7 @@ export function DeleteByMonthButton({ className }: DeleteByMonthButtonProps) {
                                     {/* Error */}
                                     {error && (
                                         <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                                            ❌ {error}
+                                            ✗ {error}
                                         </div>
                                     )}
                                 </>
@@ -223,7 +230,7 @@ export function DeleteByMonthButton({ className }: DeleteByMonthButtonProps) {
                         <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3">
                             <button
                                 onClick={handleClose}
-                                className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
+                                className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                             >
                                 {result ? 'Đóng' : 'Hủy'}
                             </button>
@@ -234,7 +241,7 @@ export function DeleteByMonthButton({ className }: DeleteByMonthButtonProps) {
                                     disabled={confirmText !== 'XÓA DỮ LIỆU' || loading}
                                     className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                 >
-                                    {loading ? 'Đang xóa...' : '🗑️ Xóa vĩnh viễn'}
+                                    {loading ? 'Đang xóa...' : 'Xóa vĩnh viễn'}
                                 </button>
                             )}
                         </div>
