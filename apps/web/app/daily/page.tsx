@@ -154,6 +154,7 @@ export default function DailyPage() {
                         <span className="text-gray-700">
                             {data.base_rate_source === 'hotel_setting' && '⚙️ Cài đặt khách sạn'}
                             {data.base_rate_source === 'last_decision' && '📝 Quyết định gần nhất'}
+                            {data.base_rate_source === 'otb_derived' && '📊 Tính từ dữ liệu OTB'}
                             {data.base_rate_source === 'user_input' && '⚠️ Chưa có - cần nhập'}
                         </span>
                     </div>

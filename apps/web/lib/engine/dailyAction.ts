@@ -38,7 +38,7 @@ export interface DailyActionResult {
     hotel_id: string;
     generated_at: Date;
     base_rate: number;
-    base_rate_source: 'hotel_setting' | 'last_export' | 'last_decision' | 'user_input';
+    base_rate_source: 'hotel_setting' | 'last_export' | 'last_decision' | 'otb_derived' | 'user_input';
     actions: DailyAction[];
     summary: {
         total: number;
@@ -110,11 +110,11 @@ const DEFAULT_RULE = {
 
 /**
  * Get base rate with fallback chain
- * Order: Hotel.default_base_rate -> last export -> last decision -> null
+ * Order: Hotel.default_base_rate -> last decision -> OTB-derived avg rate -> null
  */
 export async function getBaseRate(hotelId: string): Promise<{
     rate: number | null;
-    source: 'hotel_setting' | 'last_export' | 'last_decision' | 'user_input';
+    source: 'hotel_setting' | 'last_export' | 'last_decision' | 'otb_derived' | 'user_input';
 }> {
     // 1. Hotel setting
     const hotel = await prisma.hotel.findUnique({
@@ -135,6 +135,26 @@ export async function getBaseRate(hotelId: string): Promise<{
 
     if (lastDecision?.final_price) {
         return { rate: Number(lastDecision.final_price), source: 'last_decision' };
+    }
+
+    // 3. Derive from OTB data (average revenue per room from recent data)
+    const recentOTB = await prisma.dailyOTB.findMany({
+        where: {
+            hotel_id: hotelId,
+            rooms_otb: { gt: 0 },
+        },
+        orderBy: { as_of_date: 'desc' },
+        take: 30,
+        select: { rooms_otb: true, revenue_otb: true },
+    });
+
+    if (recentOTB.length > 0) {
+        const totalRevenue = recentOTB.reduce((sum, o) => sum + Number(o.revenue_otb), 0);
+        const totalRooms = recentOTB.reduce((sum, o) => sum + o.rooms_otb, 0);
+        if (totalRooms > 0) {
+            const avgRate = Math.round(totalRevenue / totalRooms / 1000) * 1000; // Round to nearest 1000
+            return { rate: avgRate, source: 'otb_derived' };
+        }
     }
 
     // No base rate found
