@@ -37,7 +37,7 @@ const DEFAULT_OTA_CHANNELS = [
         name: 'CTRIP',
         code: 'ctrip',
         commission: 18,
-        calc_type: 'PROGRESSIVE' as CalcTypeValue, // Lũy tiến
+        calc_type: 'ADDITIVE' as CalcTypeValue, // Cộng dồn (Trip.com đổi sang Additive từ 1/1/2024)
         is_active: true,
     },
 ];

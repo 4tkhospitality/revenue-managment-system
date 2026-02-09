@@ -162,41 +162,54 @@ export async function getBaseRate(hotelId: string): Promise<{
 }
 
 /**
- * Calculate baseline pickup (median of same DOW over last 4-8 weeks)
+ * Pre-calculate baseline pickups for all DOWs (0-6) in one query
+ * Returns a Map: DOW -> median pickup value
  */
-async function calculateBaselinePickup(
+async function calculateAllBaselinePickups(
     hotelId: string,
-    stayDate: Date
-): Promise<number> {
-    const dow = stayDate.getDay();
-
-    // Get pickup values from features_daily for same DOW in last 8 weeks
+    referenceDate: Date
+): Promise<Map<number, number>> {
+    // Fetch all historical pickup data for last 8 weeks in ONE query
     const features = await prisma.featuresDaily.findMany({
         where: {
             hotel_id: hotelId,
             stay_date: {
-                gte: new Date(stayDate.getTime() - 56 * 24 * 60 * 60 * 1000), // 8 weeks
-                lt: stayDate,
+                gte: new Date(referenceDate.getTime() - 56 * 24 * 60 * 60 * 1000), // 8 weeks
+                lt: referenceDate,
             },
+            pickup_t7: { not: null },
         },
         select: { stay_date: true, pickup_t7: true },
     });
 
-    // Filter same DOW and get valid pickup values
-    const sameDowPickups = features
-        .filter((f) => f.stay_date.getDay() === dow && f.pickup_t7 !== null)
-        .map((f) => Number(f.pickup_t7));
-
-    if (sameDowPickups.length === 0) {
-        return 0; // No baseline available
+    // Group by DOW
+    const pickupsByDow: Map<number, number[]> = new Map();
+    for (let dow = 0; dow < 7; dow++) {
+        pickupsByDow.set(dow, []);
     }
 
-    // Calculate median
-    sameDowPickups.sort((a, b) => a - b);
-    const mid = Math.floor(sameDowPickups.length / 2);
-    return sameDowPickups.length % 2 !== 0
-        ? sameDowPickups[mid]
-        : (sameDowPickups[mid - 1] + sameDowPickups[mid]) / 2;
+    features.forEach((f) => {
+        const dow = f.stay_date.getDay();
+        const arr = pickupsByDow.get(dow)!;
+        arr.push(Number(f.pickup_t7));
+    });
+
+    // Calculate median for each DOW
+    const medianByDow: Map<number, number> = new Map();
+    pickupsByDow.forEach((pickups, dow) => {
+        if (pickups.length === 0) {
+            medianByDow.set(dow, 0);
+            return;
+        }
+        pickups.sort((a, b) => a - b);
+        const mid = Math.floor(pickups.length / 2);
+        const median = pickups.length % 2 !== 0
+            ? pickups[mid]
+            : (pickups[mid - 1] + pickups[mid]) / 2;
+        medianByDow.set(dow, median);
+    });
+
+    return medianByDow;
 }
 
 /**
@@ -296,6 +309,9 @@ export async function generateDailyActions(
     const otbMap = new Map(otbData.map((o) => [o.stay_date.toISOString().split('T')[0], o]));
     const featuresMap = new Map(features.map((f) => [f.stay_date.toISOString().split('T')[0], f]));
 
+    // Pre-calculate baseline pickups for all DOWs in ONE query (fixing N+1 problem)
+    const baselineByDow = await calculateAllBaselinePickups(hotelId, today);
+
     // Generate actions for each day
     const actions: DailyAction[] = [];
     let increases = 0, keeps = 0, decreases = 0;
@@ -312,9 +328,10 @@ export async function generateDailyActions(
         const roomsSold = otb?.rooms_otb ?? 0;
         const occ = capacity > 0 ? roomsSold / capacity : 0;
 
-        // Get pickup
+        // Get pickup (using cached baseline)
         const pickup7d = feature && feature.pickup_t7 !== null ? Number(feature.pickup_t7) : null;
-        const baseline = await calculateBaselinePickup(hotelId, stayDate);
+        const dow = stayDate.getDay();
+        const baseline = baselineByDow.get(dow) ?? 0;
         const pickupIndex = baseline > 0 && pickup7d !== null ? pickup7d / baseline : 1;
 
         // Apply rules
