@@ -5,10 +5,10 @@ import { BookOpen, BarChart3, TrendingUp, DollarSign, CalendarDays, Upload, Data
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 
-type TabId = 'revenue' | 'pricing';
+type TabId = 'quickstart' | 'revenue' | 'pricing';
 
 export default function GuidePage() {
-    const [activeTab, setActiveTab] = useState<TabId>('pricing'); // Default to pricing
+    const [activeTab, setActiveTab] = useState<TabId>('quickstart'); // Default to quickstart
     const [isDemo, setIsDemo] = useState(false);
     const [loading, setLoading] = useState(true);
     const { data: session } = useSession();
@@ -53,8 +53,18 @@ export default function GuidePage() {
                 </p>
             </header>
 
-            {/* Tabs - only show Revenue tab if NOT Demo Hotel */}
+            {/* Tabs */}
             <div className="bg-white border border-gray-200 rounded-xl p-1 flex gap-1">
+                <button
+                    onClick={() => setActiveTab('quickstart')}
+                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${activeTab === 'quickstart'
+                        ? 'bg-emerald-600 text-white'
+                        : 'text-gray-600 hover:bg-gray-50'
+                        }`}
+                >
+                    <HelpCircle className="w-4 h-4" />
+                    Bắt đầu nhanh
+                </button>
                 {!effectiveIsDemo && (
                     <button
                         onClick={() => setActiveTab('revenue')}
@@ -64,7 +74,7 @@ export default function GuidePage() {
                             }`}
                     >
                         <BarChart3 className="w-4 h-4" />
-                        Quản lý Doanh thu (Revenue)
+                        Quản lý Doanh thu
                     </button>
                 )}
                 <button
@@ -75,7 +85,7 @@ export default function GuidePage() {
                         }`}
                 >
                     <Calculator className="w-4 h-4" />
-                    Tính giá OTA (Pricing)
+                    Tính giá OTA
                 </button>
             </div>
 
@@ -95,10 +105,200 @@ export default function GuidePage() {
 
             {/* Tab Content */}
             <div className="space-y-6">
+                {activeTab === 'quickstart' && <QuickStartGuide />}
                 {activeTab === 'revenue' && !effectiveIsDemo && <RevenueGuide />}
                 {activeTab === 'pricing' && <PricingGuide />}
             </div>
         </div>
+    );
+}
+
+// ==================== QUICK START GUIDE ====================
+function QuickStartGuide() {
+    return (
+        <>
+            {/* Welcome Banner */}
+            <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl p-6 text-white">
+                <h2 className="text-xl font-semibold mb-2">🎉 Chào mừng đến với RMS!</h2>
+                <p className="text-white/90">
+                    Hệ thống Quản lý Doanh thu giúp bạn tối ưu hóa giá phòng và tăng doanh thu khách sạn.
+                    Làm theo 5 bước dưới đây để bắt đầu.
+                </p>
+            </div>
+
+            {/* Step 1: Login */}
+            <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center shrink-0">
+                        <span className="text-2xl font-bold text-blue-600">1</span>
+                    </div>
+                    <div className="space-y-2">
+                        <h3 className="text-lg font-semibold text-gray-900">Đăng nhập</h3>
+                        <p className="text-gray-600">
+                            Sử dụng tài khoản Google được admin cấp để đăng nhập vào hệ thống.
+                            Sau khi đăng nhập, bạn sẽ thấy khách sạn được gán trong sidebar.
+                        </p>
+                        <div className="bg-blue-50 rounded-lg p-3 text-sm text-blue-700">
+                            💡 Nếu chưa có quyền truy cập, liên hệ admin qua Zalo: 0778602953
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Step 2: Upload Data */}
+            <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center shrink-0">
+                        <span className="text-2xl font-bold text-purple-600">2</span>
+                    </div>
+                    <div className="space-y-2">
+                        <h3 className="text-lg font-semibold text-gray-900">Upload dữ liệu từ PMS</h3>
+                        <p className="text-gray-600">
+                            Vào menu <strong>Upload</strong> → Kéo thả file XML hoặc CSV từ phần mềm quản lý
+                            (Opera, RoomRaccoon, Cloudbeds...).
+                        </p>
+                        <div className="grid grid-cols-2 gap-3 mt-3">
+                            <div className="bg-gray-50 rounded-lg p-3">
+                                <div className="font-medium text-gray-800 mb-1">📄 File Reservations</div>
+                                <p className="text-xs text-gray-500">Danh sách booking hiện tại</p>
+                            </div>
+                            <div className="bg-gray-50 rounded-lg p-3">
+                                <div className="font-medium text-gray-800 mb-1">❌ File Cancellations</div>
+                                <p className="text-xs text-gray-500">Danh sách booking đã hủy</p>
+                            </div>
+                        </div>
+                        <div className="bg-amber-50 rounded-lg p-3 text-sm text-amber-700">
+                            ⚠️ Upload dữ liệu mỗi ngày (sáng) để có số liệu chính xác nhất
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Step 3: Build Data */}
+            <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center shrink-0">
+                        <span className="text-2xl font-bold text-emerald-600">3</span>
+                    </div>
+                    <div className="space-y-2">
+                        <h3 className="text-lg font-semibold text-gray-900">Build dữ liệu (tự động)</h3>
+                        <p className="text-gray-600">
+                            Vào menu <strong>Dữ liệu</strong> → Nhấn các nút theo thứ tự:
+                        </p>
+                        <div className="flex flex-wrap items-center gap-2 text-sm mt-2">
+                            <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-lg">📊 Build OTB</span>
+                            <span className="text-gray-400">→</span>
+                            <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-lg">⚡ Build Features</span>
+                            <span className="text-gray-400">→</span>
+                            <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-lg">📈 Run Forecast</span>
+                        </div>
+                        <div className="bg-emerald-50 rounded-lg p-3 text-sm text-emerald-700">
+                            ✅ Sau bước này, Dashboard sẽ hiển thị đầy đủ dữ liệu
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Step 4: View Dashboard */}
+            <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center shrink-0">
+                        <span className="text-2xl font-bold text-orange-600">4</span>
+                    </div>
+                    <div className="space-y-2">
+                        <h3 className="text-lg font-semibold text-gray-900">Xem Dashboard</h3>
+                        <p className="text-gray-600">
+                            Menu <strong>Dashboard</strong> hiển thị:
+                        </p>
+                        <ul className="space-y-2 mt-2 text-gray-600 text-sm">
+                            <li className="flex items-center gap-2">
+                                <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-xs">📊</span>
+                                <span><strong>KPI Cards:</strong> Rooms OTB, Remaining Supply, Pickup</span>
+                            </li>
+                            <li className="flex items-center gap-2">
+                                <span className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center text-xs">📈</span>
+                                <span><strong>Charts:</strong> Biểu đồ OTB theo ngày, so sánh năm trước</span>
+                            </li>
+                            <li className="flex items-center gap-2">
+                                <span className="w-6 h-6 bg-emerald-100 rounded-full flex items-center justify-center text-xs">💰</span>
+                                <span><strong>Price Table:</strong> Giá khuyến nghị cho từng ngày</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            {/* Step 5: Price Action */}
+            <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-rose-100 rounded-xl flex items-center justify-center shrink-0">
+                        <span className="text-2xl font-bold text-rose-600">5</span>
+                    </div>
+                    <div className="space-y-2">
+                        <h3 className="text-lg font-semibold text-gray-900">Ra Quyết định Giá</h3>
+                        <p className="text-gray-600">
+                            Với mỗi ngày, hệ thống đề xuất giá. Bạn có thể:
+                        </p>
+                        <div className="grid grid-cols-2 gap-3 mt-3">
+                            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-center">
+                                <div className="text-2xl mb-1">✅</div>
+                                <div className="font-medium text-emerald-700">Chấp nhận</div>
+                                <p className="text-xs text-gray-500 mt-1">Đồng ý với giá AI đề xuất</p>
+                            </div>
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
+                                <div className="text-2xl mb-1">✏️</div>
+                                <div className="font-medium text-blue-700">Override</div>
+                                <p className="text-xs text-gray-500 mt-1">Nhập giá theo ý mình</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Daily Workflow */}
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
+                <h3 className="text-lg font-semibold text-blue-800 mb-3">📅 Quy trình hàng ngày</h3>
+                <ol className="space-y-2 text-blue-700">
+                    <li className="flex items-center gap-2">
+                        <span className="w-6 h-6 bg-blue-200 rounded-full flex items-center justify-center text-xs font-bold">1</span>
+                        <span>Sáng: Export báo cáo từ PMS → Upload vào hệ thống</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                        <span className="w-6 h-6 bg-blue-200 rounded-full flex items-center justify-center text-xs font-bold">2</span>
+                        <span>Vào Dashboard xem tình hình booking hôm nay</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                        <span className="w-6 h-6 bg-blue-200 rounded-full flex items-center justify-center text-xs font-bold">3</span>
+                        <span>Review giá khuyến nghị, Accept hoặc Override</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                        <span className="w-6 h-6 bg-blue-200 rounded-full flex items-center justify-center text-xs font-bold">4</span>
+                        <span>Cập nhật giá lên Channel Manager / OTA</span>
+                    </li>
+                </ol>
+            </div>
+
+            {/* CTA */}
+            <div className="bg-white border border-gray-200 rounded-xl p-6 text-center">
+                <p className="text-gray-600 mb-4">Đã sẵn sàng? Bắt đầu ngay!</p>
+                <div className="flex flex-wrap justify-center gap-3">
+                    <Link
+                        href="/upload"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                    >
+                        <Upload className="w-4 h-4" />
+                        Upload dữ liệu
+                    </Link>
+                    <Link
+                        href="/dashboard"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+                    >
+                        <BarChart3 className="w-4 h-4" />
+                        Xem Dashboard
+                    </Link>
+                </div>
+            </div>
+        </>
     );
 }
 

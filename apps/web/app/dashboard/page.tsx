@@ -2,6 +2,7 @@ import prisma from '@/lib/prisma';
 import { getActiveHotelId } from '@/lib/pricing/get-hotel';
 import { KpiCards } from '@/components/dashboard/KpiCards';
 import { OtbChart } from '@/components/dashboard/OtbChart';
+import { AnalyticsPanel } from '@/components/dashboard';
 import { RecommendationTable } from '@/components/dashboard/RecommendationTable';
 import { DateUtils } from '@/lib/date';
 import { PricingLogic } from '@/lib/pricing';
@@ -365,6 +366,12 @@ export default async function DashboardPage({
 
                 {/* OTB Chart */}
                 <OtbChart data={chartData} />
+
+                {/* Analytics Panel - STLY, Pace, Pickup */}
+                <AnalyticsPanel
+                    hotelId={hotelId}
+                    asOfDate={otbData[0]?.as_of_date?.toISOString().split('T')[0]}
+                />
 
                 {/* Recommendation Table */}
                 <RecommendationTable
