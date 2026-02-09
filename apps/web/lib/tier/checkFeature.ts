@@ -1,11 +1,13 @@
 /**
  * Server-side Feature Gating Utilities
  * IMPORTANT: ALL Server Actions & API Routes must call requireFeature() to prevent bypass
+ * NOTE: Super Admins bypass all feature gates
  */
 
 import prisma from '@/lib/prisma';
 import { PlanTier } from '@prisma/client';
 import { TIER_CONFIGS, FeatureKey, tierHasFeature, getUpgradeTierName } from './tierConfig';
+import { auth } from '@/lib/auth';
 
 // ═══════════════════════════════════════════════════════════════════
 // Types
@@ -93,8 +95,15 @@ export async function hasFeature(hotelId: string, feature: FeatureKey): Promise<
 
 /**
  * Require a feature or throw FeatureGateError (use in Server Actions/APIs)
+ * NOTE: Super Admins bypass all feature gates
  */
 export async function requireFeature(hotelId: string, feature: FeatureKey): Promise<void> {
+    // Super Admin bypass - they get all features
+    const session = await auth();
+    if (session?.user?.role === 'super_admin') {
+        return; // Super Admin has access to everything
+    }
+
     const sub = await getHotelSubscription(hotelId);
     if (!tierHasFeature(sub.plan, feature)) {
         throw new FeatureGateError(feature, getUpgradeTierName(feature), sub.plan);
