@@ -7,6 +7,7 @@ import { DateUtils } from '@/lib/date';
 import { PricingLogic } from '@/lib/pricing';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
+import { DashboardPdfWrapper } from '@/components/dashboard/DashboardPdfWrapper';
 import { Suspense } from 'react';
 
 export const dynamic = 'force-dynamic';
@@ -74,7 +75,7 @@ async function fetchDashboardData(hotelId: string, today: Date) {
                 stay_date: { gte: today }, // Only show FUTURE dates
             },
             orderBy: { stay_date: 'asc' },
-            take: 60,
+            take: 90, // Support 14/30/60/90 day filters in OtbChart
         }),
         prisma.demandForecast.findMany({
             where: { hotel_id: hotelId, as_of_date: actualForecastDate },
@@ -218,7 +219,8 @@ export default async function DashboardPage({
     }
 
     // Fetch Chart Data (OTB This Year vs Last Year using real features data)
-    const chartData = otbData.slice(0, 14).map((d) => {
+    // Pass all data - OtbChart handles filtering internally with tabs (14/30/60/90 days)
+    const chartData = otbData.map((d) => {
         const feature = featuresMap.get(d.stay_date.toISOString());
         // STLY = current OTB - pace_vs_ly (if pace_vs_ly exists)
         const stlyRooms = feature?.pace_vs_ly != null
@@ -306,69 +308,71 @@ export default async function DashboardPage({
 
     return (
         <div className="mx-auto max-w-[1400px] px-4 sm:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
-            {/* Time-Travel Date Picker */}
-            <Suspense fallback={<div className="h-12" />}>
-                <DashboardHeader currentAsOfDate={dataAsOf ? otbData[0]?.as_of_date?.toISOString().split('T')[0] : undefined} />
+            {/* Unified Header - Hotel info + Data status + Time-travel picker */}
+            <Suspense fallback={<div className="h-20" />}>
+                <PageHeader
+                    title={hotelName}
+                    subtitle={`Dashboard • ${hotelCapacity} phòng`}
+                    badges={[
+                        {
+                            label: 'Dữ liệu đặt phòng',
+                            value: latestReservation
+                                ? DateUtils.format(latestReservation.booking_date, 'dd/MM/yyyy')
+                                : 'Chưa có',
+                            variant: latestReservation ? 'success' : 'warning',
+                        },
+                        {
+                            label: 'Dữ liệu hủy phòng',
+                            value: latestCancellation
+                                ? DateUtils.format(latestCancellation.as_of_date, 'dd/MM/yyyy')
+                                : 'Chưa có',
+                            variant: latestCancellation ? 'danger' : 'warning',
+                        },
+                        {
+                            label: 'OTB',
+                            value: dataAsOf || 'Chưa có dữ liệu',
+                            variant: dataAsOf ? 'neutral' : 'warning',
+                        },
+                    ]}
+                    rightContent={
+                        <DashboardHeader currentAsOfDate={dataAsOf ? otbData[0]?.as_of_date?.toISOString().split('T')[0] : undefined} />
+                    }
+                />
             </Suspense>
 
-            {/* Header */}
-            <PageHeader
-                title={hotelName}
-                subtitle={`Dashboard • ${hotelCapacity} phòng`}
-                badges={[
-                    {
-                        label: 'Dữ liệu đặt phòng',
-                        value: latestReservation
-                            ? DateUtils.format(latestReservation.booking_date, 'dd/MM/yyyy')
-                            : 'Chưa có',
-                        variant: latestReservation ? 'success' : 'warning',
-                    },
-                    {
-                        label: 'Dữ liệu hủy phòng',
-                        value: latestCancellation
-                            ? DateUtils.format(latestCancellation.as_of_date, 'dd/MM/yyyy')
-                            : 'Chưa có',
-                        variant: latestCancellation ? 'danger' : 'warning',
-                    },
-                    {
-                        label: 'OTB',
-                        value: dataAsOf || 'Chưa có dữ liệu',
-                        variant: dataAsOf ? 'neutral' : 'warning',
-                    },
-                ]}
-            />
+            {/* Main Content - wrapped for PDF export */}
+            <DashboardPdfWrapper hotelName={hotelName} asOfDate={dataAsOf || undefined}>
+                {/* Empty State */}
+                {otbData.length === 0 && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                        <p className="text-amber-700">
+                            ⚠️ Chưa có dữ liệu OTB. Vui lòng <a href="/upload" className="underline hover:text-amber-900">tải lên reservations</a> và <a href="/data" className="underline hover:text-amber-900">build OTB</a>.
+                        </p>
+                    </div>
+                )}
 
-            {/* Main Content - already on light bg from layout */}
-            {/* Empty State */}
-            {otbData.length === 0 && (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                    <p className="text-amber-700">
-                        ⚠️ Chưa có dữ liệu OTB. Vui lòng <a href="/upload" className="underline hover:text-amber-900">tải lên reservations</a> và <a href="/data" className="underline hover:text-amber-900">build OTB</a>.
-                    </p>
-                </div>
-            )}
+                {/* Setup Warning */}
+                {needsSetup && (
+                    <div className="bg-rose-50 border border-rose-200 rounded-lg p-4">
+                        <p className="text-rose-700">
+                            ⚠️ Chưa cấu hình khách sạn! <a href="/settings" className="underline hover:text-rose-900">Vào Cài đặt</a> để nhập Số phòng và các thông tin khác.
+                        </p>
+                    </div>
+                )}
 
-            {/* Setup Warning */}
-            {needsSetup && (
-                <div className="bg-rose-50 border border-rose-200 rounded-lg p-4">
-                    <p className="text-rose-700">
-                        ⚠️ Chưa cấu hình khách sạn! <a href="/settings" className="underline hover:text-rose-900">Vào Cài đặt</a> để nhập Số phòng và các thông tin khác.
-                    </p>
-                </div>
-            )}
+                {/* KPI Cards */}
+                <KpiCards data={kpiData} hotelCapacity={hotelCapacity} />
 
-            {/* KPI Cards */}
-            <KpiCards data={kpiData} hotelCapacity={hotelCapacity} />
+                {/* OTB Chart */}
+                <OtbChart data={chartData} />
 
-            {/* OTB Chart */}
-            <OtbChart data={chartData} />
-
-            {/* Recommendation Table */}
-            <RecommendationTable
-                data={tableData}
-                onAccept={handleAccept}
-                onOverride={handleOverride}
-            />
+                {/* Recommendation Table */}
+                <RecommendationTable
+                    data={tableData}
+                    onAccept={handleAccept}
+                    onOverride={handleOverride}
+                />
+            </DashboardPdfWrapper>
         </div>
     );
 }

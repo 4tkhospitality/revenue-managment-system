@@ -18,6 +18,7 @@ export default function AdminHotelsPage() {
     const { data: session } = useSession();
     const [hotels, setHotels] = useState<Hotel[]>([]);
     const [loading, setLoading] = useState(true);
+    const [search, setSearch] = useState('');
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [editingHotel, setEditingHotel] = useState<Hotel | null>(null);
 
@@ -37,6 +38,42 @@ export default function AdminHotelsPage() {
         }
     };
 
+    const deleteHotel = async (hotel: Hotel) => {
+        if (!confirm(`⚠️ XÓA VĨNH VIỄN hotel "${hotel.name}"?\n\nHành động này không thể hoàn tác!`)) return;
+
+        try {
+            const res = await fetch(`/api/admin/hotels/${hotel.id}`, {
+                method: 'DELETE'
+            });
+            if (res.ok) {
+                fetchHotels();
+            } else {
+                const data = await res.json();
+                alert(data.error || 'Có lỗi xảy ra khi xóa');
+            }
+        } catch (error) {
+            console.error('Error deleting hotel:', error);
+        }
+    };
+
+    const filteredHotels = hotels.filter(hotel =>
+        hotel.name.toLowerCase().includes(search.toLowerCase()) ||
+        hotel.timezone.toLowerCase().includes(search.toLowerCase())
+    );
+
+    const getCurrencyBadge = (currency: string) => {
+        const badges: Record<string, string> = {
+            VND: 'bg-amber-100 text-amber-700',
+            USD: 'bg-green-100 text-green-700',
+            THB: 'bg-purple-100 text-purple-700',
+        };
+        return (
+            <span className={`px-2 py-0.5 rounded text-xs font-medium ${badges[currency] || 'bg-gray-100 text-gray-600'}`}>
+                {currency}
+            </span>
+        );
+    };
+
     if (!session?.user?.isAdmin) {
         return (
             <div className="min-h-screen flex items-center justify-center">
@@ -52,7 +89,7 @@ export default function AdminHotelsPage() {
 
     return (
         <div className="mx-auto max-w-[1400px] px-4 sm:px-8 py-4 sm:py-6 space-y-6">
-            {/* Header - consistent with other pages */}
+            {/* Header - consistent with Users page */}
             <header
                 className="rounded-2xl px-6 py-4 text-white flex items-center justify-between shadow-sm"
                 style={{ background: 'linear-gradient(to right, #1E3A8A, #102A4C)' }}
@@ -79,47 +116,118 @@ export default function AdminHotelsPage() {
                 </div>
             </header>
 
-            {/* Hotels Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {loading ? (
-                    <div className="col-span-3 text-center py-12 text-gray-400">Đang tải...</div>
-                ) : hotels.length === 0 ? (
-                    <div className="col-span-3 text-center py-12 text-gray-400">Chưa có hotel nào</div>
-                ) : (
-                    hotels.map((hotel) => (
-                        <div
-                            key={hotel.id}
-                            className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow"
-                        >
-                            <div className="flex items-start justify-between mb-3">
-                                <div>
-                                    <h3 className="font-semibold text-lg text-gray-900">{hotel.name}</h3>
-                                    <p className="text-sm text-gray-500">{hotel.timezone}</p>
-                                </div>
-                                <button
-                                    onClick={() => setEditingHotel(hotel)}
-                                    className="text-gray-400 hover:text-blue-600"
-                                >
-                                    ✏️
-                                </button>
-                            </div>
-                            <div className="grid grid-cols-3 gap-3 mt-4">
-                                <div className="text-center p-2 bg-gray-50 rounded">
-                                    <div className="text-lg font-bold text-blue-600">{hotel.capacity}</div>
-                                    <div className="text-xs text-gray-500">Phòng</div>
-                                </div>
-                                <div className="text-center p-2 bg-gray-50 rounded">
-                                    <div className="text-lg font-bold text-emerald-600">{hotel.userCount}</div>
-                                    <div className="text-xs text-gray-500">Users</div>
-                                </div>
-                                <div className="text-center p-2 bg-gray-50 rounded">
-                                    <div className="text-lg font-bold text-amber-600">{hotel.currency}</div>
-                                    <div className="text-xs text-gray-500">Tiền tệ</div>
-                                </div>
-                            </div>
-                        </div>
-                    ))
-                )}
+            {/* Search */}
+            <div className="mb-4">
+                <input
+                    type="text"
+                    placeholder="Tìm theo tên hotel hoặc timezone..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="w-full max-w-md px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+            </div>
+
+            {/* Hotels Table - matching Users page style */}
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                            <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Hotel</th>
+                            <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Timezone</th>
+                            <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">Số phòng</th>
+                            <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">Users</th>
+                            <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">Tiền tệ</th>
+                            <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Ngày tạo</th>
+                            <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {loading ? (
+                            <tr>
+                                <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
+                                    Đang tải...
+                                </td>
+                            </tr>
+                        ) : filteredHotels.length === 0 ? (
+                            <tr>
+                                <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
+                                    {search ? 'Không tìm thấy hotel phù hợp' : 'Chưa có hotel nào'}
+                                </td>
+                            </tr>
+                        ) : (
+                            filteredHotels.map((hotel) => (
+                                <tr key={hotel.id} className="border-b border-gray-100 hover:bg-gray-50">
+                                    <td className="px-4 py-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold">
+                                                {hotel.name[0].toUpperCase()}
+                                            </div>
+                                            <div>
+                                                <div className="font-medium text-gray-900">{hotel.name}</div>
+                                                <div className="text-xs text-gray-400">ID: {hotel.id.slice(0, 8)}...</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        <span className="text-gray-700 text-sm">{hotel.timezone}</span>
+                                    </td>
+                                    <td className="px-4 py-3 text-center">
+                                        <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium">
+                                            {hotel.capacity}
+                                        </span>
+                                    </td>
+                                    <td className="px-4 py-3 text-center">
+                                        <span className={`px-2 py-1 rounded-lg text-sm font-medium ${hotel.userCount > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
+                                            {hotel.userCount}
+                                        </span>
+                                    </td>
+                                    <td className="px-4 py-3 text-center">
+                                        {getCurrencyBadge(hotel.currency)}
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        <span className="text-gray-500 text-sm">
+                                            {new Date(hotel.createdAt).toLocaleDateString('vi-VN')}
+                                        </span>
+                                    </td>
+                                    <td className="px-4 py-3 text-right">
+                                        <button
+                                            onClick={() => setEditingHotel(hotel)}
+                                            className="text-blue-600 hover:text-blue-800 text-sm mr-3"
+                                        >
+                                            Sửa
+                                        </button>
+                                        <button
+                                            onClick={() => deleteHotel(hotel)}
+                                            className="text-red-600 hover:text-red-800 text-sm"
+                                        >
+                                            Xóa
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </div>
+
+            {/* Summary Stats */}
+            <div className="grid grid-cols-3 gap-4">
+                <div className="bg-white rounded-xl border border-gray-200 p-4 text-center">
+                    <div className="text-2xl font-bold text-blue-600">{hotels.length}</div>
+                    <div className="text-sm text-gray-500">Tổng Hotels</div>
+                </div>
+                <div className="bg-white rounded-xl border border-gray-200 p-4 text-center">
+                    <div className="text-2xl font-bold text-emerald-600">
+                        {hotels.reduce((sum, h) => sum + h.capacity, 0)}
+                    </div>
+                    <div className="text-sm text-gray-500">Tổng số phòng</div>
+                </div>
+                <div className="bg-white rounded-xl border border-gray-200 p-4 text-center">
+                    <div className="text-2xl font-bold text-amber-600">
+                        {hotels.reduce((sum, h) => sum + h.userCount, 0)}
+                    </div>
+                    <div className="text-sm text-gray-500">Tổng Users được gán</div>
+                </div>
             </div>
 
             {/* Create Hotel Modal */}

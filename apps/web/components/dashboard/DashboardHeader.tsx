@@ -7,6 +7,10 @@ interface DashboardHeaderProps {
     currentAsOfDate?: string;
 }
 
+/**
+ * Time-travel date picker for Dashboard
+ * Rendered inside PageHeader.rightContent for unified header
+ */
 export function DashboardHeader({ currentAsOfDate }: DashboardHeaderProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -19,19 +23,9 @@ export function DashboardHeader({ currentAsOfDate }: DashboardHeaderProps) {
     };
 
     return (
-        <div className="flex items-center justify-between mb-4">
-            <div>
-                <h1 className="text-2xl font-bold">Dashboard</h1>
-                {currentAsOfDate && (
-                    <p className="text-sm text-muted-foreground">
-                        Dữ liệu OTB tính đến: {new Date(currentAsOfDate).toLocaleDateString('vi-VN')}
-                    </p>
-                )}
-            </div>
-            <DatePickerSnapshot
-                onDateChange={handleDateChange}
-                defaultDate={currentAsOfDate}
-            />
-        </div>
+        <DatePickerSnapshot
+            onDateChange={handleDateChange}
+            defaultDate={currentAsOfDate}
+        />
     );
 }

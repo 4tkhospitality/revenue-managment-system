@@ -75,3 +75,15 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--muted);
 }
+
+/* PDF Export - Elements hidden during PDF capture */
+/* Note: These elements are visible on screen, hidden only during export */
+/* The actual hiding is done programmatically in exportToPdf.ts */
+.pdf-hide {
+  /* Normal visibility on screen */
+}
+
+/* Alternative: html2canvas native ignore attribute */
+[data-html2canvas-ignore="true"] {
+  /* html2canvas automatically ignores these elements */
+}

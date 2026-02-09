@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useMemo } from 'react';
 import {
     LineChart,
     Line,
@@ -20,79 +21,129 @@ interface OtbChartProps {
     data: OtbDataPoint[];
 }
 
+type DayFilter = 14 | 30 | 60 | 90;
+
 // Surface styling - consistent with KpiCards
 const surface = "rounded-2xl bg-white border border-slate-200/80 shadow-[0_1px_2px_rgba(16,24,40,0.06)]";
 
 export function OtbChart({ data }: OtbChartProps) {
+    const [dayFilter, setDayFilter] = useState<DayFilter>(14);
+
+    // Filter data based on selected range
+    const filteredData = useMemo(() => {
+        return data.slice(0, dayFilter);
+    }, [data, dayFilter]);
+
     // Check if any STLY data is available
-    const hasStlyData = data.some(d => d.otbLastYear !== null);
+    const hasStlyData = filteredData.some(d => d.otbLastYear !== null);
+
+    const filterButtons: { value: DayFilter; label: string }[] = [
+        { value: 14, label: '14 ngày' },
+        { value: 30, label: '30 ngày' },
+        { value: 60, label: '60 ngày' },
+        { value: 90, label: '90 ngày' },
+    ];
 
     return (
-        <div className={`${surface} p-6`}>
-            <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">
-                    OTB so với năm trước
-                </h2>
-                <div className="flex items-center gap-4 text-xs">
-                    <div className="flex items-center gap-2">
-                        <div className="w-3 h-0.5 rounded" style={{ backgroundColor: '#2D4A8C' }} />
-                        <span className="text-gray-600">Năm nay</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-3 h-0.5 bg-gray-400 rounded" style={{ borderTop: '2px dashed' }} />
-                        <span className={`${hasStlyData ? 'text-gray-600' : 'text-gray-400'}`}>
-                            Năm trước {!hasStlyData && '(chưa có dữ liệu)'}
-                        </span>
+        <div className={`${surface} overflow-hidden`}>
+            {/* Header with Filter Tabs */}
+            <div className="px-5 py-4 border-b border-slate-100">
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                    <h2 className="text-lg font-semibold text-gray-900">
+                        OTB so với năm trước
+                    </h2>
+
+                    <div className="flex items-center gap-4">
+                        {/* Filter Tabs */}
+                        <div className="flex rounded-lg overflow-hidden" style={{ border: '1px solid #e2e8f0' }}>
+                            {filterButtons.map(({ value, label }) => (
+                                <button
+                                    key={value}
+                                    onClick={() => setDayFilter(value)}
+                                    className={`px-3 py-1.5 text-xs font-medium transition-colors ${dayFilter === value
+                                            ? 'text-white'
+                                            : 'text-gray-600 hover:text-gray-900'
+                                        }`}
+                                    style={{
+                                        backgroundColor: dayFilter === value ? '#2D4A8C' : '#f8fafc'
+                                    }}
+                                >
+                                    {label}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Legend */}
+                        <div className="flex items-center gap-4 text-xs">
+                            <div className="flex items-center gap-2">
+                                <div className="w-3 h-0.5 rounded" style={{ backgroundColor: '#2D4A8C' }} />
+                                <span className="text-gray-600">Năm nay</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <div className="w-3 h-0.5 bg-gray-400 rounded" style={{ borderTop: '2px dashed' }} />
+                                <span className={`${hasStlyData ? 'text-gray-600' : 'text-gray-400'}`}>
+                                    Năm trước {!hasStlyData && '(chưa có)'}
+                                </span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-            <ResponsiveContainer width="100%" height={350}>
-                <LineChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                    <XAxis
-                        dataKey="date"
-                        stroke="#64748b"
-                        fontSize={12}
-                        tickLine={false}
-                        axisLine={{ stroke: '#e2e8f0' }}
-                    />
-                    <YAxis
-                        stroke="#64748b"
-                        fontSize={12}
-                        tickLine={false}
-                        axisLine={{ stroke: '#e2e8f0' }}
-                    />
-                    <Tooltip
-                        contentStyle={{
-                            backgroundColor: '#ffffff',
-                            border: '1px solid #e2e8f0',
-                            borderRadius: '8px',
-                            color: '#1e293b',
-                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                        }}
-                        labelStyle={{ color: '#64748b' }}
-                    />
-                    <Line
-                        type="monotone"
-                        dataKey="otbCurrent"
-                        name="OTB Năm nay"
-                        stroke="#2D4A8C"
-                        strokeWidth={2}
-                        dot={false}
-                        activeDot={{ r: 4, fill: '#2D4A8C' }}
-                    />
-                    <Line
-                        type="monotone"
-                        dataKey="otbLastYear"
-                        name="Năm trước"
-                        stroke="#94a3b8"
-                        strokeWidth={2}
-                        strokeDasharray="5 5"
-                        dot={false}
-                        activeDot={{ r: 4, fill: '#94a3b8' }}
-                    />
-                </LineChart>
-            </ResponsiveContainer>
+
+            {/* Chart */}
+            <div className="p-6">
+                <ResponsiveContainer width="100%" height={350}>
+                    <LineChart data={filteredData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                        <XAxis
+                            dataKey="date"
+                            stroke="#64748b"
+                            fontSize={12}
+                            tickLine={false}
+                            axisLine={{ stroke: '#e2e8f0' }}
+                            interval={dayFilter <= 30 ? 0 : dayFilter <= 60 ? 2 : 4}
+                            angle={dayFilter > 30 ? -45 : 0}
+                            textAnchor={dayFilter > 30 ? "end" : "middle"}
+                            height={dayFilter > 30 ? 60 : 30}
+                        />
+                        <YAxis
+                            stroke="#64748b"
+                            fontSize={12}
+                            tickLine={false}
+                            axisLine={{ stroke: '#e2e8f0' }}
+                        />
+                        <Tooltip
+                            contentStyle={{
+                                backgroundColor: '#ffffff',
+                                border: '1px solid #e2e8f0',
+                                borderRadius: '8px',
+                                color: '#1e293b',
+                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                            }}
+                            labelStyle={{ color: '#64748b' }}
+                        />
+                        <Line
+                            type="monotone"
+                            dataKey="otbCurrent"
+                            name="OTB Năm nay"
+                            stroke="#2D4A8C"
+                            strokeWidth={2}
+                            dot={false}
+                            activeDot={{ r: 4, fill: '#2D4A8C' }}
+                        />
+                        <Line
+                            type="monotone"
+                            dataKey="otbLastYear"
+                            name="Năm trước"
+                            stroke="#94a3b8"
+                            strokeWidth={2}
+                            strokeDasharray="5 5"
+                            dot={false}
+                            activeDot={{ r: 4, fill: '#94a3b8' }}
+                        />
+                    </LineChart>
+                </ResponsiveContainer>
+            </div>
         </div>
     );
 }

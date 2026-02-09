@@ -7,6 +7,7 @@ import {
     Tooltip, Legend, ResponsiveContainer, Cell
 } from 'recharts';
 import { PageHeader } from '@/components/shared/PageHeader';
+import { ExportPdfButton } from '@/components/shared/ExportPdfButton';
 
 // ─── Types ──────────────────────────────────────────────────
 interface AnalyticsRow {
@@ -132,14 +133,23 @@ export default function AnalyticsPage() {
                 title="Analytics Dashboard"
                 subtitle="STLY • Booking Pace • Remaining Supply • KPIs"
                 rightContent={
-                    loading ? (
-                        <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
-                    ) : null
+                    <div className="flex items-center gap-3">
+                        {loading && (
+                            <span className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full"></span>
+                        )}
+                        <ExportPdfButton
+                            targetId="analytics-pdf-content"
+                            filename={`analytics-${selectedAsOf || 'latest'}`}
+                            pageType="analytics"
+                            hotelName={data?.hotelName}
+                            asOfDate={selectedAsOf}
+                        />
+                    </div>
                 }
             />
 
-            {/* As-Of Date Selector - responsive */}
-            <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+            {/* As-Of Date Selector - mark as pdf-hide */}
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4 pdf-hide">
                 <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 shadow-sm">
                     <span className="text-sm text-slate-500">📅 As-of:</span>
                     <select
@@ -172,27 +182,30 @@ export default function AnalyticsPage() {
                 <DataQualityMini quality={quality} />
             </div>
 
-            {/* KPI Cards - responsive */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
-                <KPICard label="Occ 7d" value={`${kpi.occ7}%`} color={kpi.occ7 > 80 ? '#10b981' : kpi.occ7 > 60 ? '#f59e0b' : '#ef4444'} />
-                <KPICard label="Occ 14d" value={`${kpi.occ14}%`} color={kpi.occ14 > 80 ? '#10b981' : kpi.occ14 > 60 ? '#f59e0b' : '#ef4444'} />
-                <KPICard label="Occ 30d" value={`${kpi.occ30}%`} color={kpi.occ30 > 80 ? '#10b981' : kpi.occ30 > 60 ? '#f59e0b' : '#ef4444'} />
-                <KPICard label="Pace 7d vs LY" value={kpi.pace7 != null ? `${kpi.pace7 > 0 ? '+' : ''}${kpi.pace7}` : '—'} color={kpi.pace7 != null ? (kpi.pace7 >= 0 ? '#10b981' : '#ef4444') : '#94a3b8'} />
-                <KPICard label="Pace 30d vs LY" value={kpi.pace30 != null ? `${kpi.pace30 > 0 ? '+' : ''}${kpi.pace30}` : '—'} color={kpi.pace30 != null ? (kpi.pace30 >= 0 ? '#10b981' : '#ef4444') : '#94a3b8'} />
-                <KPICard label="Pickup 7d" value={`${kpi.totalPickup7d > 0 ? '+' : ''}${kpi.totalPickup7d}`} color={kpi.totalPickup7d >= 0 ? '#10b981' : '#ef4444'} />
+            {/* PDF Content Container */}
+            <div id="analytics-pdf-content" className="space-y-4 sm:space-y-6">
+                {/* KPI Cards - responsive */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
+                    <KPICard label="Occ 7d" value={`${kpi.occ7}%`} color={kpi.occ7 > 80 ? '#10b981' : kpi.occ7 > 60 ? '#f59e0b' : '#ef4444'} />
+                    <KPICard label="Occ 14d" value={`${kpi.occ14}%`} color={kpi.occ14 > 80 ? '#10b981' : kpi.occ14 > 60 ? '#f59e0b' : '#ef4444'} />
+                    <KPICard label="Occ 30d" value={`${kpi.occ30}%`} color={kpi.occ30 > 80 ? '#10b981' : kpi.occ30 > 60 ? '#f59e0b' : '#ef4444'} />
+                    <KPICard label="Pace 7d vs LY" value={kpi.pace7 != null ? `${kpi.pace7 > 0 ? '+' : ''}${kpi.pace7}` : '—'} color={kpi.pace7 != null ? (kpi.pace7 >= 0 ? '#10b981' : '#ef4444') : '#94a3b8'} />
+                    <KPICard label="Pace 30d vs LY" value={kpi.pace30 != null ? `${kpi.pace30 > 0 ? '+' : ''}${kpi.pace30}` : '—'} color={kpi.pace30 != null ? (kpi.pace30 >= 0 ? '#10b981' : '#ef4444') : '#94a3b8'} />
+                    <KPICard label="Pickup 7d" value={`${kpi.totalPickup7d > 0 ? '+' : ''}${kpi.totalPickup7d}`} color={kpi.totalPickup7d >= 0 ? '#10b981' : '#ef4444'} />
+                </div>
+
+                {/* Charts Row - stack on mobile */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                    {/* OTB vs STLY Chart */}
+                    <STLYChart rows={rows} capacity={capacity} viewMode={viewMode} />
+
+                    {/* Remaining Supply Chart */}
+                    <SupplyChart rows={rows} capacity={capacity} />
+                </div>
+
+                {/* Pace Table */}
+                <PaceTable rows={rows} />
             </div>
-
-            {/* Charts Row - stack on mobile */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                {/* OTB vs STLY Chart */}
-                <STLYChart rows={rows} capacity={capacity} viewMode={viewMode} />
-
-                {/* Remaining Supply Chart */}
-                <SupplyChart rows={rows} capacity={capacity} />
-            </div>
-
-            {/* Pace Table */}
-            <PaceTable rows={rows} />
         </div>
     );
 }

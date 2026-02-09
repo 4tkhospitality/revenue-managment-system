@@ -22,8 +22,8 @@ const DEFAULT_OTA_CHANNELS = [
     {
         name: 'Traveloka',
         code: 'traveloka',
-        commission: 17,
-        calc_type: 'PROGRESSIVE' as CalcTypeValue, // Lũy tiến
+        commission: 15,
+        calc_type: 'ADDITIVE' as CalcTypeValue, // Cộng dồn (đã research: flat rate ~15%)
         is_active: true,
     },
     {
@@ -37,7 +37,7 @@ const DEFAULT_OTA_CHANNELS = [
         name: 'CTRIP',
         code: 'ctrip',
         commission: 18,
-        calc_type: 'ADDITIVE' as CalcTypeValue, // Cộng dồn (Trip.com đổi sang Additive từ 1/1/2024)
+        calc_type: 'ADDITIVE' as CalcTypeValue, // Cộng dồn (Trip.com)
         is_active: true,
     },
 ];
