@@ -18,8 +18,7 @@ export async function GET(request: NextRequest) {
         const limit = parseInt(searchParams.get('limit') || '20')
 
         const where = {
-            // By default, only show active users
-            ...(!showInactive && { is_active: true }),
+            // Show all users (including inactive/locked)
             ...(search && {
                 OR: [
                     { email: { contains: search, mode: 'insensitive' as const } },
