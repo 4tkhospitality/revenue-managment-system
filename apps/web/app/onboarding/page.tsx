@@ -59,8 +59,28 @@ export default function OnboardingPage() {
         priceCeiling: "",
     })
 
+    // Format number with thousands separator (Vietnamese style: 1.000.000)
+    const formatNumber = (value: string) => {
+        // Remove all non-digit characters
+        const digits = value.replace(/\D/g, '')
+        if (!digits) return ''
+        // Add dots as thousands separator
+        return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+    }
+
+    // Parse formatted number back to digits
+    const parseNumber = (value: string) => {
+        return value.replace(/\./g, '')
+    }
+
     const updateFormData = (field: string, value: string) => {
         setFormData(prev => ({ ...prev, [field]: value }))
+    }
+
+    // Special handler for price fields with formatting
+    const updatePriceField = (field: string, value: string) => {
+        const formatted = formatNumber(value)
+        setFormData(prev => ({ ...prev, [field]: formatted }))
     }
 
     // Step 1 & 2: Create hotel
@@ -76,9 +96,9 @@ export default function OnboardingPage() {
                     currency: formData.currency,
                     timezone: formData.timezone,
                     companyEmail: formData.companyEmail || null,
-                    basePrice: formData.basePrice ? parseFloat(formData.basePrice) : null,
-                    priceFloor: formData.priceFloor ? parseFloat(formData.priceFloor) : null,
-                    priceCeiling: formData.priceCeiling ? parseFloat(formData.priceCeiling) : null,
+                    basePrice: formData.basePrice ? parseFloat(parseNumber(formData.basePrice)) : null,
+                    priceFloor: formData.priceFloor ? parseFloat(parseNumber(formData.priceFloor)) : null,
+                    priceCeiling: formData.priceCeiling ? parseFloat(parseNumber(formData.priceCeiling)) : null,
                 }),
             })
 
@@ -327,11 +347,12 @@ export default function OnboardingPage() {
                                 <div>
                                     <label className={labelStyles}>Giá cơ sở / đêm</label>
                                     <input
-                                        type="number"
+                                        type="text"
+                                        inputMode="numeric"
                                         value={formData.basePrice}
-                                        onChange={(e) => updateFormData('basePrice', e.target.value)}
+                                        onChange={(e) => updatePriceField('basePrice', e.target.value)}
                                         className={inputStyles}
-                                        placeholder="VD: 1500000"
+                                        placeholder="VD: 1.500.000"
                                     />
                                 </div>
 
@@ -339,22 +360,24 @@ export default function OnboardingPage() {
                                     <div>
                                         <label className={labelStyles}>Giá sàn (tối thiểu)</label>
                                         <input
-                                            type="number"
-                                            value={formData.priceFloor}
-                                            onChange={(e) => updateFormData('priceFloor', e.target.value)}
+                                            type="text"
+                                            inputMode="numeric"
+                                            value={formatNumber(formData.priceFloor)}
+                                            onChange={(e) => updatePriceField('priceFloor', e.target.value)}
                                             className={inputStyles}
-                                            placeholder="VD: 800000"
+                                            placeholder="VD: 800.000"
                                         />
                                     </div>
 
                                     <div>
                                         <label className={labelStyles}>Giá trần (tối đa)</label>
                                         <input
-                                            type="number"
-                                            value={formData.priceCeiling}
-                                            onChange={(e) => updateFormData('priceCeiling', e.target.value)}
+                                            type="text"
+                                            inputMode="numeric"
+                                            value={formatNumber(formData.priceCeiling)}
+                                            onChange={(e) => updatePriceField('priceCeiling', e.target.value)}
                                             className={inputStyles}
-                                            placeholder="VD: 3000000"
+                                            placeholder="VD: 3.000.000"
                                         />
                                     </div>
                                 </div>
@@ -398,21 +421,44 @@ export default function OnboardingPage() {
 
                             <div className="space-y-4">
                                 {uploadStatus === 'idle' && (
-                                    <label className="block">
-                                        <div className="border-2 border-dashed border-white/30 rounded-2xl p-8 text-center cursor-pointer hover:border-white/50 transition-all">
-                                            <svg className="w-12 h-12 mx-auto mb-4 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                                            </svg>
-                                            <p className="text-white/80 font-medium mb-1">Kéo thả file hoặc click để chọn</p>
-                                            <p className="text-white/50 text-sm">Excel (.xlsx, .xls) hoặc CSV</p>
+                                    <>
+                                        <label className="block">
+                                            <div className="border-2 border-dashed border-white/30 rounded-2xl p-8 text-center cursor-pointer hover:border-white/50 transition-all">
+                                                <svg className="w-12 h-12 mx-auto mb-4 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                                </svg>
+                                                <p className="text-white/80 font-medium mb-1">Kéo thả file hoặc click để chọn</p>
+                                                <p className="text-white/50 text-sm">Excel (.xlsx, .xls) hoặc CSV</p>
+                                            </div>
+                                            <input
+                                                type="file"
+                                                accept=".xlsx,.xls,.csv"
+                                                onChange={handleFileUpload}
+                                                className="hidden"
+                                            />
+                                        </label>
+
+                                        {/* Sample file download */}
+                                        <div className="mt-4 p-4 bg-white/5 rounded-xl border border-white/10">
+                                            <p className="text-white/70 text-sm mb-2">📋 <strong>Các trường bắt buộc:</strong></p>
+                                            <ul className="text-white/50 text-xs space-y-1 mb-3">
+                                                <li>• <code className="bg-white/10 px-1 rounded">arrival_date</code> - Ngày nhận phòng (YYYY-MM-DD)</li>
+                                                <li>• <code className="bg-white/10 px-1 rounded">departure_date</code> - Ngày trả phòng (YYYY-MM-DD)</li>
+                                                <li>• <code className="bg-white/10 px-1 rounded">rooms</code> - Số phòng đặt</li>
+                                                <li>• <code className="bg-white/10 px-1 rounded">revenue</code> - Doanh thu (VND)</li>
+                                            </ul>
+                                            <a
+                                                href="/sample-reservations.csv"
+                                                download="sample-reservations.csv"
+                                                className="inline-flex items-center gap-2 text-blue-300 hover:text-white text-sm transition-colors"
+                                            >
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                                </svg>
+                                                Tải file mẫu (CSV)
+                                            </a>
                                         </div>
-                                        <input
-                                            type="file"
-                                            accept=".xlsx,.xls,.csv"
-                                            onChange={handleFileUpload}
-                                            className="hidden"
-                                        />
-                                    </label>
+                                    </>
                                 )}
 
                                 {uploadStatus === 'uploading' && (
@@ -512,9 +558,9 @@ export default function OnboardingPage() {
 
                 {/* Footer */}
                 <p className="text-center text-white/40 text-sm mt-6">
-                    Cần hỗ trợ? Liên hệ support@4tk.vn
+                    Cần hỗ trợ? Liên hệ Zalo: <a href="https://zalo.me/0947770022" className="text-white/60 hover:text-white underline" target="_blank" rel="noopener noreferrer">0947.770.022</a>
                 </p>
             </div>
-        </div>
+        </div >
     )
 }
