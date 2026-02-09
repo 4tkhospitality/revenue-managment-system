@@ -558,7 +558,7 @@ export default function OnboardingPage() {
 
                 {/* Footer */}
                 <p className="text-center text-white/40 text-sm mt-6">
-                    Cần hỗ trợ? Liên hệ Zalo: <a href="https://zalo.me/0947770022" className="text-white/60 hover:text-white underline" target="_blank" rel="noopener noreferrer">0947.770.022</a>
+                    Cần hỗ trợ? Liên hệ Zalo: <a href="https://zalo.me/0778602953" className="text-white/60 hover:text-white underline" target="_blank" rel="noopener noreferrer">0778.602.953</a>
                 </p>
             </div>
         </div >
