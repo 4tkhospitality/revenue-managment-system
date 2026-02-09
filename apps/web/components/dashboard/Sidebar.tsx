@@ -5,21 +5,53 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, Upload, Database, Settings, BookOpen, Shield, Menu, X, LogOut, DollarSign, BarChart3, TrendingUp, CalendarCheck, Crown } from 'lucide-react';
+import { LayoutDashboard, Upload, Database, Settings, BookOpen, Shield, Menu, X, LogOut, DollarSign, BarChart3, TrendingUp, CalendarCheck, Crown, Lock } from 'lucide-react';
 import { HotelSwitcher } from '@/components/HotelSwitcher';
 
-// Navigation items - Vietnamese
-const navItems = [
-    { href: '/dashboard', label: 'Tổng quan', icon: LayoutDashboard },
-    { href: '/upload', label: 'Tải lên', icon: Upload },
-    { href: '/data', label: 'Dữ liệu', icon: Database },
-    { href: '/pricing', label: 'Tính giá OTA', icon: DollarSign },
-    { href: '/daily', label: 'Daily Actions', icon: CalendarCheck },
-    { href: '/rate-shopper', label: 'So sánh giá', icon: BarChart3 },
-    { href: '/analytics', label: 'Analytics', icon: TrendingUp },
-    { href: '/pricing-plans', label: 'Nâng cấp', icon: Crown },
-    { href: '/settings', label: 'Cài đặt', icon: Settings, hideForDemo: true },
-    { href: '/guide', label: 'Hướng dẫn', icon: BookOpen },
+// Role levels for permission checks
+const ROLE_LEVELS: Record<string, number> = {
+    viewer: 0,
+    manager: 1,
+    hotel_admin: 2,
+    super_admin: 3,
+};
+
+// Navigation groups with items
+const navGroups = [
+    {
+        id: 'overview',
+        label: 'Tổng quan - Phân tích',
+        items: [
+            { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, minRole: 'viewer' },
+            { href: '/analytics', label: 'Pace & Pickup', icon: TrendingUp, minRole: 'viewer' },
+        ],
+    },
+    {
+        id: 'pricing',
+        label: 'Định giá',
+        items: [
+            { href: '/pricing', label: 'Tính giá OTA', icon: DollarSign, minRole: 'viewer' },
+            { href: '/daily', label: 'Daily Actions', icon: CalendarCheck, minRole: 'viewer' },
+            { href: '/rate-shopper', label: 'So sánh giá', icon: BarChart3, minRole: 'viewer' },
+        ],
+    },
+    {
+        id: 'data',
+        label: 'Quản lý dữ liệu',
+        items: [
+            { href: '/upload', label: 'Tải lên', icon: Upload, minRole: 'manager' },
+            { href: '/data', label: 'Dữ liệu', icon: Database, minRole: 'manager' },
+        ],
+    },
+    {
+        id: 'system',
+        label: 'Hệ thống',
+        items: [
+            { href: '/settings', label: 'Cài đặt', icon: Settings, minRole: 'hotel_admin', hideForDemo: true },
+            { href: '/guide', label: 'Hướng dẫn', icon: BookOpen, minRole: 'viewer' },
+            { href: '/pricing-plans', label: 'Nâng cấp', icon: Crown, minRole: 'viewer' },
+        ],
+    },
 ];
 
 // Brand blue from logo - exact color match
@@ -30,6 +62,28 @@ export function Sidebar() {
     const { data: session } = useSession();
     const [isOpen, setIsOpen] = useState(false);
     const [isDemo, setIsDemo] = useState(false);
+
+    // Get user's role level (hotelRole is dynamically added at runtime from hotel_access)
+    const userRole = (session?.user as { hotelRole?: string })?.hotelRole || session?.user?.role || 'viewer';
+    const userRoleLevel = ROLE_LEVELS[userRole] ?? 0;
+    const isAdmin = session?.user?.isAdmin;
+
+    // Check if user has permission for an item
+    const hasPermission = (minRole: string) => {
+        if (isAdmin) return true;
+        const requiredLevel = ROLE_LEVELS[minRole] ?? 0;
+        return userRoleLevel >= requiredLevel;
+    };
+
+    // Get role display name for tooltip
+    const getRoleName = (role: string) => {
+        switch (role) {
+            case 'manager': return 'Manager';
+            case 'hotel_admin': return 'Hotel Admin';
+            case 'super_admin': return 'Super Admin';
+            default: return role;
+        }
+    };
 
     // Check if Demo Hotel
     useEffect(() => {
@@ -58,9 +112,6 @@ export function Sidebar() {
         document.addEventListener('keydown', handleEscape);
         return () => document.removeEventListener('keydown', handleEscape);
     }, []);
-
-    // Filter nav items based on Demo Hotel status
-    const filteredNavItems = navItems.filter(item => !isDemo || !item.hideForDemo);
 
     return (
         <>
@@ -140,44 +191,96 @@ export function Sidebar() {
                     <HotelSwitcher />
                 </div>
 
-                {/* Navigation */}
+                {/* Navigation with Groups */}
                 <nav className="flex-1 py-2 overflow-y-auto">
-                    {filteredNavItems.map((item) => {
-                        const isActive = pathname === item.href ||
-                            (item.href !== '/dashboard' && pathname.startsWith(item.href));
-                        const Icon = item.icon;
+                    {navGroups.map((group, groupIndex) => {
+                        // Filter items based on Demo Hotel status
+                        const visibleItems = group.items.filter(item => !isDemo || !item.hideForDemo);
+                        if (visibleItems.length === 0) return null;
+
                         return (
-                            <Link
-                                key={item.href}
-                                href={item.href}
-                                className="flex items-center gap-3 px-6 py-3 text-sm font-medium transition-all duration-200 mx-2 rounded-lg mb-1"
-                                style={{
-                                    backgroundColor: isActive ? 'rgba(255,255,255,0.2)' : 'transparent',
-                                    color: '#ffffff',
-                                }}
-                                onClick={() => setIsOpen(false)}
-                            >
-                                <Icon className="w-5 h-5" />
-                                {item.label}
-                            </Link>
+                            <div key={group.id} className="mb-2">
+                                {/* Group divider (except first group) */}
+                                {groupIndex > 0 && (
+                                    <div className="mx-4 my-3 border-t border-white/10" />
+                                )}
+
+                                {/* Group label */}
+                                <div className="px-6 py-1 text-xs font-semibold text-white/50 uppercase tracking-wider">
+                                    {group.label}
+                                </div>
+
+                                {/* Group items */}
+                                {visibleItems.map((item) => {
+                                    const isActive = pathname === item.href ||
+                                        (item.href !== '/dashboard' && pathname.startsWith(item.href));
+                                    const Icon = item.icon;
+                                    const canAccess = hasPermission(item.minRole);
+
+                                    if (canAccess) {
+                                        // Normal clickable item
+                                        return (
+                                            <Link
+                                                key={item.href}
+                                                href={item.href}
+                                                className="flex items-center gap-3 px-6 py-2.5 text-sm font-medium transition-all duration-200 mx-2 rounded-lg"
+                                                style={{
+                                                    backgroundColor: isActive ? 'rgba(255,255,255,0.2)' : 'transparent',
+                                                    color: '#ffffff',
+                                                }}
+                                                onClick={() => setIsOpen(false)}
+                                            >
+                                                <Icon className="w-5 h-5" />
+                                                {item.label}
+                                            </Link>
+                                        );
+                                    } else {
+                                        // Disabled item (no permission)
+                                        return (
+                                            <div
+                                                key={item.href}
+                                                className="flex items-center gap-3 px-6 py-2.5 text-sm font-medium mx-2 rounded-lg cursor-not-allowed group relative"
+                                                style={{
+                                                    color: 'rgba(255,255,255,0.35)',
+                                                }}
+                                                title={`Cần quyền ${getRoleName(item.minRole)}`}
+                                            >
+                                                <Icon className="w-5 h-5" />
+                                                <span className="flex-1">{item.label}</span>
+                                                <Lock className="w-3.5 h-3.5 opacity-60" />
+
+                                                {/* Tooltip on hover */}
+                                                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
+                                                    Cần quyền {getRoleName(item.minRole)}
+                                                </div>
+                                            </div>
+                                        );
+                                    }
+                                })}
+                            </div>
                         );
                     })}
 
                     {/* Admin Link - Only for super_admin */}
-                    {session?.user?.isAdmin && (
-
-                        <Link
-                            href="/admin/users"
-                            className="flex items-center gap-3 px-6 py-3 text-sm font-medium transition-all duration-200 mx-2 rounded-lg mb-1 mt-4 border-t border-white/10 pt-4"
-                            style={{
-                                backgroundColor: pathname.startsWith('/admin') ? 'rgba(255,255,255,0.2)' : 'transparent',
-                                color: '#ffffff',
-                            }}
-                            onClick={() => setIsOpen(false)}
-                        >
-                            <Shield className="w-5 h-5" />
-                            Admin Panel
-                        </Link>
+                    {isAdmin && (
+                        <div className="mt-2">
+                            <div className="mx-4 my-3 border-t border-white/10" />
+                            <div className="px-6 py-1 text-xs font-semibold text-white/50 uppercase tracking-wider">
+                                Quản trị
+                            </div>
+                            <Link
+                                href="/admin/users"
+                                className="flex items-center gap-3 px-6 py-2.5 text-sm font-medium transition-all duration-200 mx-2 rounded-lg"
+                                style={{
+                                    backgroundColor: pathname.startsWith('/admin') ? 'rgba(255,255,255,0.2)' : 'transparent',
+                                    color: '#ffffff',
+                                }}
+                                onClick={() => setIsOpen(false)}
+                            >
+                                <Shield className="w-5 h-5" />
+                                Admin Panel
+                            </Link>
+                        </div>
                     )}
                 </nav>
 
@@ -189,6 +292,11 @@ export function Sidebar() {
                                 {session.user.name || session.user.email}
                             </p>
                             <p className="text-xs text-white/50 truncate">
+                                {userRole !== 'viewer' && (
+                                    <span className="inline-block bg-white/10 px-1.5 py-0.5 rounded text-[10px] mr-1">
+                                        {getRoleName(userRole)}
+                                    </span>
+                                )}
                                 {session.user.email}
                             </p>
                         </div>
@@ -208,3 +316,4 @@ export function Sidebar() {
         </>
     );
 }
+
