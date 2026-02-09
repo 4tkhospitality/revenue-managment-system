@@ -155,7 +155,7 @@ export default function InvitePage() {
                 {/* Logo */}
                 <div className="flex justify-center mb-8">
                     <img
-                        src="/logo.png"
+                        src="/logo.jpg"
                         alt="4TK Hospitality"
                         className="h-16 object-contain"
                     />
