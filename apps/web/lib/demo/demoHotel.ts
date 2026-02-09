@@ -141,7 +141,7 @@ export async function getSharedDemoHotel(): Promise<{
     const demoHotel = await prisma.hotel.findFirst({
         where: {
             name: 'Demo Hotel',
-            is_demo: false, // Shared demo is NOT marked as is_demo (it's real data for viewing)
+            // Note: We search by name only - is_demo flag is for personal demo hotels
         },
         select: {
             hotel_id: true,
