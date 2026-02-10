@@ -140,6 +140,29 @@ export default function PricingPlansPage() {
     // ═══════════════════════════════════════════════════════════════════
     const PricingContent = () => (
         <>
+            {/* Gradient Header — consistent with other pages (only when logged in) */}
+            {isLoggedIn && (
+                <header
+                    className="rounded-2xl px-4 sm:px-6 py-4 text-white shadow-sm mb-6"
+                    style={{ background: 'linear-gradient(to right, #1E3A8A, #102A4C)' }}
+                >
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <h1 className="text-lg font-semibold">Nâng cấp gói dịch vụ</h1>
+                            <p className="text-white/70 text-sm">Chọn gói phù hợp với nhu cầu khách sạn của bạn</p>
+                        </div>
+                        <a
+                            href="https://zalo.me/0778602953"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg text-sm font-medium transition-colors backdrop-blur-sm"
+                        >
+                            Nâng cấp qua Zalo
+                        </a>
+                    </div>
+                </header>
+            )}
+
             {/* Current Tier Banner */}
             {isLoggedIn && currentTier && (
                 <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-8 flex items-center justify-between">
@@ -152,14 +175,6 @@ export default function PricingPlansPage() {
                             </span>
                         </div>
                     </div>
-                    <a
-                        href="https://zalo.me/0778602953"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
-                    >
-                        Nâng cấp qua Zalo
-                    </a>
                 </div>
             )}
 

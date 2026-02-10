@@ -2,13 +2,13 @@
   "meta": {
     "schema_version": "1.4.0",
     "awf_version": "4.1.2",
-    "last_updated": "2026-02-08T23:03:00+07:00"
+    "last_updated": "2026-02-10T12:15:00+07:00"
   },
   "project": {
     "name": "revenue-management-system",
     "type": "SaaS Web App",
-    "status": "Production - Deployed to Vercel",
-    "description": "RMS Version 01.4 - Revenue Management System with OTB Time-Travel + OTA Pricing + User Management. Full-stack TypeScript.",
+    "status": "Production - Deployed to Vercel (icn1 region)",
+    "description": "RMS Version 01.4 - Revenue Management System with OTB Time-Travel + OTA Pricing + User Management + Performance Optimized. Full-stack TypeScript.",
     "github": "https://github.com/4tkhospitality/revenue-managment-system"
   },
   "tech_stack": {
@@ -43,6 +43,7 @@
         "framework": "Next.js",
         "build_command": "npm run build (auto)",
         "output_directory": "Next.js default",
+        "region": "icn1 (Seoul - same as Supabase DB ap-northeast-2)",
         "env_vars": [
           "DATABASE_URL",
           "DIRECT_URL",
@@ -423,7 +424,14 @@
     "V01.4: Half-Open Cutoff Semantics - book_time < D+1 00:00, cancel_time >= D+1 00:00",
     "V01.4: Backfill with generate_series - Continuous calendar months, no gaps",
     "V01.4: Advisory Lock - pg_try_advisory_lock prevents concurrent builds",
-    "V01.4: Chunked Backfill - Limit 3 snapshots/request for Vercel timeout safety"
+    "V01.4: Chunked Backfill - Limit 3 snapshots/request for Vercel timeout safety",
+    "Performance: Vercel Functions region icn1 (Seoul) matching Supabase DB region",
+    "Performance: Prisma query logging (dev: query+warn+error, prod: warn+error)",
+    "Performance: cachedStats.ts rewritten with aggregate/groupBy + hotel_id filter + 5-min TTL cache",
+    "Performance: CancellationSection Promise.all + hotel_id filter (was 3 sequential queries)",
+    "Performance: Dashboard batch merge 3→2 (cancellation query moved to batch 2)",
+    "UX: Loading skeletons for Dashboard, Data, Pace & Pickup, So sánh giá pages",
+    "Fix: Timezone bug in BuildFeatures - ISO string instead of Date object to prevent UTC+7 shift"
   ],
   "cancellation_bridge_v011": {
     "status": "Implemented",
@@ -516,7 +524,11 @@
     "Super Admin fallback: first real hotel by created_at (skips Demo Hotel) for deterministic behavior",
     "Cookie is a preference, not authorization: server validates user has access to cookie hotel_id",
     "Auto-assign Demo Hotel: existing users with 0 hotel assignments get Demo Hotel automatically on login",
-    "signIn callback creates user, jwt callback assigns Demo Hotel if needed (race condition fix)"
+    "signIn callback creates user, jwt callback assigns Demo Hotel if needed (race condition fix)",
+    "Performance: Vercel Functions must be in same region as DB (icn1=Seoul) to minimize query latency",
+    "Performance: cachedStats used findMany + JS reduce without hotel_id filter = full table scan",
+    "Performance: Dashboard had 3 sequential batches, batch 3 only needed actualOtbDate (known after batch 1)",
+    "Performance: CancellationSection had 3 sequential queries without hotel_id = full table scan x3"
   ],
   "ui_design": {
     "theme": "SaaS Pro Light",
@@ -570,7 +582,9 @@
       "signIn callback creates user → jwt callback sees user exists but 0 hotels → must auto-assign Demo Hotel in jwt",
       "/api/debug-user endpoint doesn't exist → no-hotel-access page was calling it → JSON parse error (HTML 404)",
       "OTB date used today's date as fallback when no data → misleading. Changed to null + 'Chưa có dữ liệu'",
-      "HotelSwitcher white dropdown clashes with dark sidebar → redesigned with dark theme (bg-[#0f1d36])"
+      "HotelSwitcher white dropdown clashes with dark sidebar → redesigned with dark theme (bg-[#0f1d36])",
+      "setHours(0,0,0,0) on Date object in client timezone (UTC+7) shifts date back 1 day when sent to server as UTC → use ISO string instead",
+      "Next.js loading.tsx convention auto-shows skeleton during server data fetch → prevents user clicking repeatedly"
     ],
     "formulas": {
       "rooms_otb": "SUM(num_rooms) from reservations for that stay_date",

@@ -185,6 +185,19 @@ export default function RateShopperPage() {
 
     return (
         <div className="px-4 sm:px-8 py-4 sm:py-6 space-y-6">
+            {/* Gradient Header — consistent with other pages */}
+            <header
+                className="rounded-2xl px-4 sm:px-6 py-4 text-white shadow-sm"
+                style={{ background: 'linear-gradient(to right, #1E3A8A, #102A4C)' }}
+            >
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h1 className="text-lg font-semibold">So sánh giá đối thủ</h1>
+                        <p className="text-white/70 text-sm">Rate Shopper • Nhấn &quot;Tìm giá&quot; để quét từng khung thời gian</p>
+                    </div>
+                </div>
+            </header>
+
             {/* Sub Navigation */}
             <div className="flex items-center justify-between border-b border-gray-200 pb-3 mb-2">
                 <div className="flex gap-1">
@@ -214,16 +227,6 @@ export default function RateShopperPage() {
                         Thêm đối thủ
                     </Link>
                 </div>
-            </div>
-
-            {/* Header */}
-            <div>
-                <h1 className="text-2xl font-bold" style={{ color: '#1A1A2E' }}>
-                    So sánh giá đối thủ
-                </h1>
-                <p className="text-sm text-gray-500 mt-1">
-                    Rate Shopper • Nhấn &quot;Tìm giá&quot; để quét từng khung thời gian
-                </p>
             </div>
 
             {/* Offset Tabs */}

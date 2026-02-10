@@ -142,15 +142,18 @@ export default function CompetitorManagementPage() {
 
     return (
         <div className="px-4 sm:px-8 py-4 sm:py-6">
-            {/* Header */}
-            <div className="mb-8">
-                <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: '#1e293b', marginBottom: '0.25rem' }}>
-                    Quản lý đối thủ
-                </h1>
-                <p style={{ color: '#64748b', fontSize: '0.95rem' }}>
-                    Thêm các khách sạn đối thủ để so sánh giá. Hệ thống sẽ tự động theo dõi giá của họ hàng ngày.
-                </p>
-            </div>
+            {/* Gradient Header — consistent with other pages */}
+            <header
+                className="rounded-2xl px-4 sm:px-6 py-4 text-white shadow-sm mb-6"
+                style={{ background: 'linear-gradient(to right, #1E3A8A, #102A4C)' }}
+            >
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h1 className="text-lg font-semibold">Quản lý đối thủ</h1>
+                        <p className="text-white/70 text-sm">Thêm các khách sạn đối thủ để so sánh giá tự động hàng ngày</p>
+                    </div>
+                </div>
+            </header>
 
             {/* Notification Toast */}
             {notification && (
