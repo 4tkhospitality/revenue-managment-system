@@ -5,6 +5,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { assignToSharedDemo } from '@/lib/demo/demoHotel'
+import prisma from '@/lib/prisma'
 
 export async function POST() {
     const session = await auth()
@@ -22,6 +23,25 @@ export async function POST() {
                 { status: 404 }
             )
         }
+
+        // Ensure Demo Hotel has a proper subscription for demo users
+        // GROWTH tier gives access to dashboard, analytics, daily actions, etc.
+        await prisma.subscription.upsert({
+            where: { hotel_id: result.hotelId },
+            create: {
+                hotel_id: result.hotelId,
+                plan: 'GROWTH',
+                status: 'ACTIVE',
+                max_users: 999,
+                max_properties: 1,
+                max_imports_month: 999,
+                max_exports_day: 999,
+                max_export_rows: 999,
+                included_rate_shops_month: 50,
+                data_retention_months: 24,
+            },
+            update: {}, // Don't override if already exists
+        })
 
         return NextResponse.json({
             success: true,

@@ -2,13 +2,13 @@
   "meta": {
     "schema_version": "1.4.0",
     "awf_version": "4.1.2",
-    "last_updated": "2026-02-10T12:15:00+07:00"
+    "last_updated": "2026-02-10T22:54:00+07:00"
   },
   "project": {
     "name": "revenue-management-system",
     "type": "SaaS Web App",
     "status": "Production - Deployed to Vercel (icn1 region)",
-    "description": "RMS Version 01.4 - Revenue Management System with OTB Time-Travel + OTA Pricing + User Management + Performance Optimized. Full-stack TypeScript.",
+    "description": "RMS Version 01.5 - Revenue Management System with OTB Time-Travel + OTA Pricing + OTA Growth Playbook + User Management + Performance Optimized. Full-stack TypeScript.",
     "github": "https://github.com/4tkhospitality/revenue-managment-system"
   },
   "tech_stack": {
@@ -432,13 +432,17 @@
     "Performance: Dashboard batch merge 3→2 (cancellation query moved to batch 2)",
     "UX: Loading skeletons for Dashboard, Data, Pace & Pickup, So sánh giá pages",
     "Fix: Timezone bug in BuildFeatures - ISO string instead of Date object to prevent UTC+7 shift",
-    "V01.5: OTA Growth Playbook - Premium-only checklist + Scorecard + ROI Engine for Booking.com & Agoda ranking optimization",
-    "V01.5: Booking.com ranking pillars = CTR → Gross Bookings → Net Bookings (confirmed from 'How we work' page)",
-    "V01.5: Agoda Content Score weights from Partner Hub (45% Property Photos, 25% Room Photos)",
-    "V01.5: Review Score Calculator 2 modes: Official (weighted, no published %) + Estimator (user input % with disclaimer)",
-    "V01.5: OTA Health Scorecard with separate Booking/Agoda weights (manual monthly input)",
-    "V01.5: ROI Engine with slider/input for program costs (no hard-coded rates)",
-    "V01.5: Phase B (Booking APIs) conditional on Connectivity Partner access (currently paused)"
+    "V01.5: OTA Growth Playbook - COMPLETE - 8 components integrated into Pricing page 'Tối ưu OTA' tab",
+    "V01.5: OTAPlaybookGuide orchestrator with 6 sub-tabs (Scorecard, Booking, Agoda, ROI, Review, Boost)",
+    "V01.5: BookingChecklist (411 lines) - 5 categories with localStorage persistence",
+    "V01.5: AgodaChecklist (338 lines) - Content Score weights from Partner Hub",
+    "V01.5: OTAHealthScorecard (223 lines) - Dual OTA weighted scoring with ScorecardInputModal",
+    "V01.5: ROICalculator (263 lines) - Slider+input with Recharts bar chart visualization",
+    "V01.5: ReviewCalculator (245 lines) - 2 modes: Official (no %) + Estimator (disclaimer)",
+    "V01.5: WhenToBoost (251 lines) - 5 scenarios + Decision Log with localStorage",
+    "V01.5: OTAGrowthPaywall - Premium gating for demo/non-paying users",
+    "V01.5: Phase B (Booking APIs) conditional on Connectivity Partner access (currently paused)",
+    "V01.5: Pricing page has 5 tabs: Hạng phòng, Kênh OTA, Khuyến mãi, Bảng giá, Tối ưu OTA"
   ],
   "cancellation_bridge_v011": {
     "status": "Implemented",
@@ -525,7 +529,8 @@
     "V01.2: Expedia ISOLATED mode - each promotion creates separate rate plan, no stacking",
     "V01.2: Booking.com Deep Deals (Limited-time, Deal of the Day) - allow_stack=false",
     "Auto-detect hotel_id from reservations_raw (groupBy most reservations) instead of env var DEFAULT_HOTEL_ID",
-    "Super Admin bypasses Demo Hotel restrictions (Settings page, Guide page)",
+    "Super Admin bypasses Demo Hotel restrictions (Settings page, Guide page, OTA Growth tab)",
+    "OTA Growth Playbook integrated into Pricing page (not Guide page) for logical grouping with OTA Pricing tabs",
     "Dashboard uses OTB as_of_date as reference date for cancellation stats and forecasts",
     "Multi-Hotel Active Context: getActiveHotelId() uses cookie→session→fallback chain with permission validation",
     "Super Admin fallback: first real hotel by created_at (skips Demo Hotel) for deterministic behavior",

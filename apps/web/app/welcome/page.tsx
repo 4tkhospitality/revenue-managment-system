@@ -2,10 +2,12 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import Image from 'next/image'
 
 export default function WelcomePage() {
     const router = useRouter()
+    const { update } = useSession()
     const [loading, setLoading] = useState<string | null>(null)
     const [showInviteInput, setShowInviteInput] = useState(false)
     const [inviteCode, setInviteCode] = useState('')
@@ -20,6 +22,8 @@ export default function WelcomePage() {
             const data = await res.json()
 
             if (res.ok) {
+                // Refresh JWT to pick up new hotel assignment
+                await update()
                 router.push('/dashboard')
                 router.refresh()
             } else {
@@ -51,6 +55,8 @@ export default function WelcomePage() {
             const data = await res.json()
 
             if (res.ok) {
+                // Refresh JWT to pick up new hotel assignment
+                await update()
                 router.push('/dashboard')
                 router.refresh()
             } else {

@@ -31,9 +31,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 token.picture = profile.picture
             }
 
-            // Only fetch from DB on initial sign in (not every request)
-            // This avoids edge runtime issues
-            if (account && token.email) {
+            // Fetch from DB on initial sign in OR when session is updated
+            // trigger === 'update' is called after demo hotel assignment, invite redeem, etc.
+            if ((account && token.email) || trigger === 'update') {
                 try {
 
 
