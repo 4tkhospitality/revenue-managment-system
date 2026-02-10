@@ -10,7 +10,7 @@ export const en: Translations = {
         cta: 'Book a Call',
     },
     hero: {
-        badge: '🏨 Revenue Growth Partner for Hotels & Resorts',
+        badge: 'Revenue Growth Partner for Hotels & Resorts',
         headline1: 'No fixed salary.',
         headline2: 'We earn a % of the revenue we bring in.',
         description: '4TK covers all staff costs, tools, technology (RMS, tracking, reporting). Your hotel focuses on operations and coordination.',
@@ -30,7 +30,7 @@ export const en: Translations = {
             {
                 number: '01',
                 title: 'Sign up for free RMS',
-                description: 'Upload CSV from your PMS → instantly see OTB, Pickup, Booking Pace and Daily Actions for your hotel.',
+                description: 'Upload CSV from your PMS — instantly see OTB, Pickup, Booking Pace and Daily Actions for your hotel.',
                 tag: 'Self-service · 5 minutes',
             },
             {
@@ -52,22 +52,18 @@ export const en: Translations = {
         subtitle: 'Revenue Share — No fixed salary, shared risk',
         pillars: [
             {
-                icon: '❌',
                 title: 'No fixed salary',
                 description: 'Hotels don\'t carry S&M payroll. Fixed cost = zero.',
             },
             {
-                icon: '💰',
                 title: '4TK earns % of revenue',
                 description: '% calculated on room revenue from channels 4TK manages. Monthly reconciliation.',
             },
             {
-                icon: '🛠️',
                 title: '4TK covers all costs',
                 description: 'Staff, tools, RMS, tracking, reporting — all invested by 4TK.',
             },
             {
-                icon: '🏨',
                 title: 'Hotel focuses on operations',
                 description: 'You only coordinate inventory, pricing policy, and receive leads.',
             },
@@ -82,7 +78,7 @@ export const en: Translations = {
         },
         mediaCost: {
             title: 'Media & advertising costs',
-            line1: '4TK covers: team + tools + tracking + RMS',
+            line1: '4TK covers: team + tools + tracking + RMS.',
             line2: 'Ad budget: hotel pays directly per pre-approved monthly budget, or 4TK advances within agreed limits.',
         },
     },
@@ -91,35 +87,35 @@ export const en: Translations = {
         headers: ['', 'Hire In-house', '4TK Revenue Share'],
         rows: [
             { label: 'Cost', inhouse: 'Fixed salary + tools + training', fourTK: '% of revenue (variable)' },
-            { label: 'Time to deploy', inhouse: '3-6 months', fourTK: '2-4 weeks' },
+            { label: 'Time to deploy', inhouse: '3–6 months', fourTK: '2–4 weeks' },
             { label: 'Risk', inhouse: 'Hotel bears all risk', fourTK: '4TK shares the risk' },
             { label: 'Tools', inhouse: 'Buy/build yourself', fourTK: 'RMS + CMS + CDP included' },
             { label: 'KPI tracking', inhouse: 'Hard to measure', fourTK: 'Real-time dashboard' },
-            { label: 'Team', inhouse: '1-2 multi-taskers', fourTK: 'Specialized team' },
+            { label: 'Team', inhouse: '1–2 multi-taskers', fourTK: 'Specialized team' },
         ],
     },
     technology: {
         title: 'Technology Ecosystem',
         subtitle: 'Included free when partnering — no separate fees',
         items: [
-            { icon: '💹', name: 'RMS', fullName: 'Revenue Management System', description: 'Smart revenue management with real-time pricing. Upload CSV → make decisions in 5 minutes.', metric: 'Revenue +15-25%', highlight: true },
-            { icon: '🏨', name: 'PMS', fullName: 'Property Management System', description: 'Automate 80% of hotel operations.', metric: '80% automated', highlight: false },
-            { icon: '🔗', name: 'CMS', fullName: 'Channel Manager', description: 'Sync 10+ distribution channels in real-time.', metric: 'Up to 90% occupancy', highlight: false },
-            { icon: '📋', name: 'CDP', fullName: 'Customer Data Platform', description: 'Analyze guest behavior, personalize services.', metric: 'Return rate +25%', highlight: false },
+            { name: 'RMS', fullName: 'Revenue Management System', description: 'Smart revenue management with real-time pricing. Upload CSV — make decisions in 5 minutes.', metric: 'Revenue +15–25%', highlight: true },
+            { name: 'PMS', fullName: 'Property Management System', description: 'Automate 80% of hotel operations.', metric: '80% automated', highlight: false },
+            { name: 'CMS', fullName: 'Channel Manager', description: 'Sync 10+ distribution channels in real-time.', metric: 'Up to 90% occupancy', highlight: false },
+            { name: 'CDP', fullName: 'Customer Data Platform', description: 'Analyze guest behavior, personalize services.', metric: 'Return rate +25%', highlight: false },
         ],
     },
     results: {
         title: 'Proven Results',
         items: [
             { value: '40%', label: 'Reduction in S&M operation time' },
-            { value: '15-25%', label: 'Room revenue increase' },
+            { value: '15–25%', label: 'Room revenue increase' },
             { value: '85%', label: 'Customer satisfaction index' },
             { value: '90%+', label: 'Clients rate highly' },
         ],
     },
     caseStudies: {
-        title: 'Case Studies With Numbers',
-        subtitle: 'Measurable results, not just promises',
+        title: 'Case Studies',
+        subtitle: 'Measurable results — not just promises',
         cases: [
             {
                 name: 'Sunset Sanato Resort & Villas',
@@ -129,7 +125,7 @@ export const en: Translations = {
                 results: [
                     { metric: 'OCC', before: '15%', after: '75%' },
                     { metric: 'Intl guests', before: '—', after: '+80%' },
-                    { metric: 'S&M costs', before: '—', after: '-30%' },
+                    { metric: 'S&M costs', before: '—', after: '−30%' },
                 ],
             },
             {
@@ -167,7 +163,7 @@ export const en: Translations = {
         ],
     },
     team: {
-        title: 'Our Team',
+        title: 'Leadership Team',
         members: [
             { name: 'Phan Le', role: 'CEO', bio: 'Founded VLeisure — Vietnam\'s first B2B travel platform. Expert in hotel tech & OTA distribution.' },
             { name: 'An Vince', role: 'Director of Sales', bio: '10+ years Travel & Business Development. Partner at Vingroup, Railway Tourism.' },
@@ -196,11 +192,11 @@ export const en: Translations = {
             },
             {
                 q: 'How long does deployment take?',
-                a: 'Initial setup: 2-4 weeks. 30-day pilot to evaluate results. Total from contract to impact: approximately 2 months.',
+                a: 'Initial setup: 2–4 weeks. 30-day pilot to evaluate results. Total from contract to impact: approximately 2 months.',
             },
             {
                 q: 'What is the minimum contract commitment?',
-                a: 'Typically 6-12 months after the pilot period. The 30-day pilot has no commitment — stop anytime if unsatisfied.',
+                a: 'Typically 6–12 months after the pilot period. The 30-day pilot has no commitment — stop anytime if unsatisfied.',
             },
             {
                 q: 'Is hotel data secure?',
@@ -224,7 +220,7 @@ export const en: Translations = {
             needs: 'What interests you most?',
         },
         submit: 'Book a Call',
-        success: '✓ Thank you! We\'ll be in touch within 24h.',
+        success: 'Thank you! We\'ll be in touch within 24 hours.',
         error: 'Something went wrong. Please try again or call Zalo 0778 602 953.',
     },
     contact: {

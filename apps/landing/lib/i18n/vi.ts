@@ -8,7 +8,7 @@ export const vi = {
         cta: 'Đặt lịch tư vấn',
     },
     hero: {
-        badge: '🏨 Đối tác tăng trưởng doanh thu cho khách sạn & resort',
+        badge: 'Đối tác tăng trưởng doanh thu cho khách sạn & resort',
         headline1: 'Không trả lương cứng.',
         headline2: 'Chúng tôi ăn % theo doanh thu đem về.',
         description: '4TK chịu toàn bộ chi phí nhân sự, công cụ, công nghệ (RMS, tracking, reporting). Khách sạn chỉ tập trung vận hành và phối hợp.',
@@ -28,7 +28,7 @@ export const vi = {
             {
                 number: '01',
                 title: 'Đăng ký RMS miễn phí',
-                description: 'Upload CSV từ PMS → xem ngay OTB, Pickup, Booking Pace và Daily Actions cho khách sạn của bạn.',
+                description: 'Upload CSV từ PMS — xem ngay OTB, Pickup, Booking Pace và Daily Actions cho khách sạn của bạn.',
                 tag: 'Self-service · 5 phút',
             },
             {
@@ -50,22 +50,18 @@ export const vi = {
         subtitle: 'Revenue Share — Không lương cứng, chia sẻ rủi ro',
         pillars: [
             {
-                icon: '❌',
                 title: 'Không lương cứng',
-                description: 'Khách sạn không gánh payroll Sales & Marketing. Chi phí cố định = 0.',
+                description: 'Khách sạn không gánh payroll Sales & Marketing. Chi phí cố định bằng không.',
             },
             {
-                icon: '💰',
                 title: '4TK ăn % doanh thu',
                 description: '% tính trên doanh thu phòng theo kênh 4TK phụ trách. Đối soát hàng tháng.',
             },
             {
-                icon: '🛠️',
                 title: '4TK chịu mọi chi phí',
                 description: 'Nhân sự, tools, RMS, tracking, reporting — tất cả do 4TK đầu tư.',
             },
             {
-                icon: '🏨',
                 title: 'KS tập trung vận hành',
                 description: 'Bạn chỉ cần phối hợp inventory, chính sách giá và tiếp nhận lead.',
             },
@@ -80,7 +76,7 @@ export const vi = {
         },
         mediaCost: {
             title: 'Chi phí media & quảng cáo',
-            line1: '4TK chịu: đội ngũ + tools + tracking + RMS',
+            line1: '4TK chịu: đội ngũ + tools + tracking + RMS.',
             line2: 'Ngân sách ads: KS thanh toán trực tiếp theo ngân sách duyệt trước, hoặc 4TK ứng trước trong hạn mức thỏa thuận.',
         },
     },
@@ -89,35 +85,35 @@ export const vi = {
         headers: ['', 'Tự tuyển In-house', '4TK Revenue Share'],
         rows: [
             { label: 'Chi phí', inhouse: 'Lương cứng + tools + đào tạo', fourTK: '% doanh thu (biến đổi)' },
-            { label: 'Thời gian triển khai', inhouse: '3-6 tháng', fourTK: '2-4 tuần' },
+            { label: 'Thời gian triển khai', inhouse: '3–6 tháng', fourTK: '2–4 tuần' },
             { label: 'Rủi ro', inhouse: 'KS gánh toàn bộ', fourTK: '4TK chia sẻ rủi ro' },
-            { label: 'Công cụ', inhouse: 'Tự mua/build', fourTK: 'RMS + CMS + CDP miễn phí' },
+            { label: 'Công cụ', inhouse: 'Tự mua / tự build', fourTK: 'RMS + CMS + CDP miễn phí' },
             { label: 'Đo lường KPI', inhouse: 'Khó đo, thiếu tool', fourTK: 'Dashboard realtime' },
-            { label: 'Đội ngũ', inhouse: '1-2 người đa nhiệm', fourTK: 'Team chuyên biệt' },
+            { label: 'Đội ngũ', inhouse: '1–2 người đa nhiệm', fourTK: 'Team chuyên biệt' },
         ],
     },
     technology: {
         title: 'Hệ Sinh Thái Công Nghệ',
         subtitle: 'Đi kèm miễn phí khi hợp tác — không tính phí riêng',
         items: [
-            { icon: '💹', name: 'RMS', fullName: 'Revenue Management System', description: 'Quản lý doanh thu thông minh, tối ưu giá phòng theo thời gian thực. Upload CSV → ra quyết định trong 5 phút.', metric: 'Tăng doanh thu 15-25%', highlight: true },
-            { icon: '🏨', name: 'PMS', fullName: 'Property Management System', description: 'Tự động hóa 80% quy trình vận hành khách sạn.', metric: 'Tự động 80% quy trình', highlight: false },
-            { icon: '🔗', name: 'CMS', fullName: 'Channel Manager', description: 'Đồng bộ 10+ kênh phân phối realtime.', metric: 'Lấp đầy lên 90%', highlight: false },
-            { icon: '📋', name: 'CDP', fullName: 'Customer Data Platform', description: 'Phân tích hành vi khách hàng, cá nhân hóa dịch vụ.', metric: 'Tỉ lệ quay lại +25%', highlight: false },
+            { name: 'RMS', fullName: 'Revenue Management System', description: 'Quản lý doanh thu thông minh, tối ưu giá phòng theo thời gian thực. Upload CSV — ra quyết định trong 5 phút.', metric: 'Tăng doanh thu 15–25%', highlight: true },
+            { name: 'PMS', fullName: 'Property Management System', description: 'Tự động hóa 80% quy trình vận hành khách sạn.', metric: 'Tự động 80% quy trình', highlight: false },
+            { name: 'CMS', fullName: 'Channel Manager', description: 'Đồng bộ 10+ kênh phân phối realtime.', metric: 'Lấp đầy lên 90%', highlight: false },
+            { name: 'CDP', fullName: 'Customer Data Platform', description: 'Phân tích hành vi khách hàng, cá nhân hóa dịch vụ.', metric: 'Tỉ lệ quay lại +25%', highlight: false },
         ],
     },
     results: {
         title: 'Kết Quả Thực Tế',
         items: [
             { value: '40%', label: 'Giảm thời gian vận hành S&M' },
-            { value: '15-25%', label: 'Tăng doanh thu phòng' },
+            { value: '15–25%', label: 'Tăng doanh thu phòng' },
             { value: '85%', label: 'Chỉ số hài lòng khách hàng' },
             { value: '90%+', label: 'Khách hàng đánh giá cao' },
         ],
     },
     caseStudies: {
-        title: 'Case Study Có Số Liệu',
-        subtitle: 'Kết quả đo lường được, không phải lời hứa',
+        title: 'Case Study',
+        subtitle: 'Kết quả đo lường được — không phải lời hứa',
         cases: [
             {
                 name: 'Sunset Sanato Resort & Villas',
@@ -127,14 +123,14 @@ export const vi = {
                 results: [
                     { metric: 'OCC', before: '15%', after: '75%' },
                     { metric: 'Khách quốc tế', before: '—', after: '+80%' },
-                    { metric: 'Chi phí S&M', before: '—', after: '-30%' },
+                    { metric: 'Chi phí S&M', before: '—', after: '−30%' },
                 ],
             },
             {
                 name: 'Sea Lion Beach Resort',
                 location: 'Mũi Né',
                 timeline: '4 tháng',
-                challenge: 'Công suất không ổn định giữa cao/thấp điểm',
+                challenge: 'Công suất không ổn định giữa cao / thấp điểm',
                 results: [
                     { metric: 'OCC cao điểm', before: '40%', after: '80%' },
                     { metric: 'OCC thấp điểm', before: '10%', after: '45%' },
@@ -165,7 +161,7 @@ export const vi = {
         ],
     },
     team: {
-        title: 'Đội Ngũ',
+        title: 'Đội Ngũ Điều Hành',
         members: [
             { name: 'Phan Le', role: 'CEO', bio: 'Sáng lập VLeisure — nền tảng B2B du lịch đầu tiên Việt Nam. Chuyên gia công nghệ quản lý khách sạn & kênh phân phối OTA.' },
             { name: 'An Vince', role: 'Director of Sales', bio: '10+ năm Lữ hành & Phát triển kinh doanh. Đối tác tại Vingroup, Du lịch Đường Sắt.' },
@@ -194,20 +190,20 @@ export const vi = {
             },
             {
                 q: 'Thời gian triển khai bao lâu?',
-                a: 'Setup ban đầu: 2-4 tuần. Pilot 30 ngày để đánh giá kết quả thực tế. Tổng cộng từ ký hợp đồng đến thấy hiệu quả: khoảng 2 tháng.',
+                a: 'Setup ban đầu: 2–4 tuần. Pilot 30 ngày để đánh giá kết quả thực tế. Tổng cộng từ ký hợp đồng đến thấy hiệu quả: khoảng 2 tháng.',
             },
             {
                 q: 'Cam kết hợp đồng tối thiểu là bao lâu?',
-                a: 'Thường từ 6-12 tháng sau giai đoạn pilot. Pilot 30 ngày không cam kết — nếu không hài lòng, có thể dừng ngay.',
+                a: 'Thường từ 6–12 tháng sau giai đoạn pilot. Pilot 30 ngày không cam kết — nếu không hài lòng, có thể dừng ngay.',
             },
             {
                 q: 'Dữ liệu khách sạn có được bảo mật không?',
-                a: 'Tuyệt đối. Dữ liệu được lưu trữ trên hạ tầng cloud security cao, NDA ký trước khi hợp tác. Khách sạn luôn là chủ sở hữu dữ liệu.',
+                a: 'Tuyệt đối. Dữ liệu được lưu trữ trên hạ tầng cloud bảo mật cao, NDA ký trước khi hợp tác. Khách sạn luôn là chủ sở hữu dữ liệu.',
             },
         ],
     },
     leadForm: {
-        title: 'Đặt Lịch Tư Vấn 15 Phút',
+        title: 'Đặt Lịch Tư Vấn',
         subtitle: 'Để chúng tôi đánh giá tiềm năng tăng trưởng cho khách sạn của bạn',
         fields: {
             name: 'Họ và tên',
@@ -222,7 +218,7 @@ export const vi = {
             needs: 'Bạn quan tâm điều gì nhất?',
         },
         submit: 'Đặt lịch tư vấn',
-        success: '✓ Cảm ơn! Chúng tôi sẽ liên hệ trong 24h.',
+        success: 'Cảm ơn! Chúng tôi sẽ liên hệ trong vòng 24 giờ.',
         error: 'Có lỗi xảy ra. Vui lòng thử lại hoặc gọi Zalo 0778 602 953.',
     },
     contact: {
