@@ -7,7 +7,8 @@ import { RecommendationTable } from '@/components/dashboard/RecommendationTable'
 import { DateUtils } from '@/lib/date';
 import { PricingLogic } from '@/lib/pricing';
 import { PageHeader } from '@/components/shared/PageHeader';
-import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
+import { ExportPdfButton } from '@/components/shared/ExportPdfButton';
+import { DashboardToolbarCard } from '@/components/dashboard/DashboardToolbarCard';
 import { DashboardPdfWrapper } from '@/components/dashboard/DashboardPdfWrapper';
 import { Suspense } from 'react';
 
@@ -323,34 +324,38 @@ export default async function DashboardPage({
 
     return (
         <div className="mx-auto max-w-[1400px] px-4 sm:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
-            {/* Unified Header - Hotel info + Data status + Time-travel picker */}
-            <Suspense fallback={<div className="h-20" />}>
-                <PageHeader
-                    title={hotelName}
-                    subtitle={`Dashboard • ${hotelCapacity} phòng`}
-                    badges={[
-                        {
-                            label: 'Dữ liệu đặt phòng',
-                            value: latestReservation
-                                ? DateUtils.format(latestReservation.booking_date, 'dd/MM/yyyy')
-                                : 'Chưa có',
-                            variant: latestReservation ? 'success' : 'warning',
-                        },
-                        {
-                            label: 'Dữ liệu hủy phòng',
-                            value: latestCancellation
-                                ? DateUtils.format(latestCancellation.as_of_date, 'dd/MM/yyyy')
-                                : 'Chưa có',
-                            variant: latestCancellation ? 'danger' : 'warning',
-                        },
-                        {
-                            label: 'OTB',
-                            value: dataAsOf || 'Chưa có dữ liệu',
-                            variant: dataAsOf ? 'neutral' : 'warning',
-                        },
-                    ]}
-                    rightContent={
-                        <DashboardHeader currentAsOfDate={dataAsOf ? otbData[0]?.as_of_date?.toISOString().split('T')[0] : undefined} />
+            {/* Row 1: Clean gradient header — title + PDF action */}
+            <PageHeader
+                title={hotelName}
+                subtitle={`Dashboard • ${hotelCapacity} phòng`}
+                rightContent={
+                    <ExportPdfButton
+                        targetId="dashboard-pdf-content"
+                        filename={`dashboard-${dataAsOf || 'latest'}`}
+                        pageType="dashboard"
+                        hotelName={hotelName}
+                        asOfDate={dataAsOf || undefined}
+                        variant="ghost"
+                    />
+                }
+            />
+
+            {/* Row 2: Toolbar — data status + time-travel picker */}
+            <Suspense fallback={<div className="h-16 bg-white rounded-xl animate-pulse" />}>
+                <DashboardToolbarCard
+                    latestReservationDate={
+                        latestReservation
+                            ? DateUtils.format(latestReservation.booking_date, 'dd/MM/yyyy')
+                            : null
+                    }
+                    latestCancellationDate={
+                        latestCancellation
+                            ? DateUtils.format(latestCancellation.as_of_date, 'dd/MM/yyyy')
+                            : null
+                    }
+                    otbAsOfDate={dataAsOf}
+                    currentAsOfDate={
+                        dataAsOf ? otbData[0]?.as_of_date?.toISOString().split('T')[0] : undefined
                     }
                 />
             </Suspense>

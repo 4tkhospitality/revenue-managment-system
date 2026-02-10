@@ -25,7 +25,7 @@ interface ExportPdfButtonProps {
     dateRange?: string;
     // Styling
     className?: string;
-    variant?: 'primary' | 'secondary';
+    variant?: 'primary' | 'secondary' | 'ghost';
 }
 
 export function ExportPdfButton({
@@ -71,6 +71,7 @@ export function ExportPdfButton({
     const variantStyles = {
         primary: 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800',
         secondary: 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 active:bg-gray-100',
+        ghost: 'bg-white/15 text-white/90 hover:bg-white/25 active:bg-white/30 backdrop-blur-sm border border-white/20',
     };
 
     return (
