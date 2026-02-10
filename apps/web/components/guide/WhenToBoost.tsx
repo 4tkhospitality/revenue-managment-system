@@ -119,9 +119,9 @@ export function WhenToBoost() {
                 <div className="mb-5">
                     <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                         <Zap className="w-5 h-5 text-blue-600" />
-                        Khi nào nên Boost?
+                        Khi nào nên Đẩy mạnh Tăng Ranking?
                     </h3>
-                    <p className="text-sm text-gray-500 mt-1">Nguyên tắc Boost hiệu quả dựa trên tình huống thực tế</p>
+                    <p className="text-sm text-gray-500 mt-1">Nguyên tắc tăng Ranking hiệu quả dựa trên tình huống thực tế</p>
                 </div>
 
                 <div className="space-y-3">

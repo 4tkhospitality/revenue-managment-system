@@ -85,10 +85,10 @@ export default function PricingPage() {
 
 function OTAGrowthPaywall() {
     const features = [
-        { icon: <BarChart3 className="w-4 h-4" />, label: 'Bảng điểm sức khỏe — Chấm điểm kênh OTA của bạn' },
-        { icon: <Calculator className="w-4 h-4" />, label: 'Hiệu quả Khuyến mãi — Tính lời/lỗ khi tham gia chương trình OTA' },
-        { icon: <Star className="w-4 h-4" />, label: 'Mô phỏng đánh giá — Xem review mới ảnh hưởng điểm số thế nào' },
-        { icon: <Zap className="w-4 h-4" />, label: 'Khi nào Boost — Hướng dẫn thời điểm đẩy ranking hiệu quả' },
+        { icon: <BarChart3 className="w-4 h-4" />, label: 'Kiểm tra chỉ số OTA — Tình trạng thứ hạng tốt/xấu trên kênh OTA' },
+        { icon: <Calculator className="w-4 h-4" />, label: 'Hiệu quả chương trình — Lời hay lỗ khi tham gia chương trình khuyến mãi OTA' },
+        { icon: <Star className="w-4 h-4" />, label: 'Điểm Review — Cách tính điểm đánh giá & mục tiêu cải thiện' },
+        { icon: <Zap className="w-4 h-4" />, label: 'Cách tăng Ranking — Hướng dẫn khi nào nên đẩy ranking trên OTA' },
         { icon: <TrendingUp className="w-4 h-4" />, label: 'Checklist Booking.com & Agoda — Tối ưu hóa chi tiết' },
     ];
 

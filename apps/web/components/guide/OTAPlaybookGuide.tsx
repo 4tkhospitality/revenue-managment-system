@@ -14,12 +14,12 @@ export function OTAPlaybookGuide() {
     const [activeOTA, setActiveOTA] = useState<OTATab>('scorecard');
 
     const tabs: { id: OTATab; label: string; desc: string }[] = [
-        { id: 'scorecard', label: 'Bảng điểm', desc: 'Chấm điểm sức khỏe kênh OTA của khách sạn' },
+        { id: 'scorecard', label: 'Kiểm tra chỉ số OTA', desc: 'Kiểm tra các chỉ số trên kênh OTA của khách sạn' },
         { id: 'booking', label: 'Booking.com', desc: 'Checklist tối ưu ranking trên Booking.com' },
         { id: 'agoda', label: 'Agoda', desc: 'Checklist tối ưu ranking trên Agoda' },
-        { id: 'roi', label: 'Hiệu quả KM', desc: 'Tính lời/lỗ khi tham gia chương trình khuyến mãi OTA' },
-        { id: 'review', label: 'Đánh giá', desc: 'Mô phỏng tác động của review đến điểm số' },
-        { id: 'boost', label: 'Khi nào Boost', desc: 'Hướng dẫn khi nào nên đẩy ranking trên OTA' },
+        { id: 'roi', label: 'Hiệu quả chương trình', desc: 'Hiệu quả chương trình khuyến mãi - Trả lời câu hỏi Lời hay lỗ khi tham gia một chương trình khuyến mãi OTA ?' },
+        { id: 'review', label: 'Điểm Review', desc: 'Mô phỏng tác động của review đến điểm số' },
+        { id: 'boost', label: 'Cách tăng Ranking', desc: 'Khi nào Boost tăng Ranking — Hướng dẫn offline và tự động khi nào nên đẩy ranking trên OTA và cách đẩy' },
     ];
 
     return (

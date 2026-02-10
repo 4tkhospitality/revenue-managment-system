@@ -51,9 +51,13 @@ export function ReviewCalculator() {
                 <div className="mb-6">
                     <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                         <Star className="w-5 h-5 text-blue-600" />
-                        Máy tính đánh giá
+                        Cách tính điểm đánh giá
                     </h3>
-                    <p className="text-sm text-gray-500 mt-1">Mô phỏng tác động review mới & tính mục tiêu điểm số</p>
+                    <p className="text-sm text-gray-500 mt-1">
+                        <strong>Mô phỏng tác động</strong>: Xem thêm review mới sẽ ảnh hưởng điểm số như thế nào (cần biết để chủ động xin review tốt).
+                        <br />
+                        <strong>Mục tiêu điểm số</strong>: Tính cần bao nhiêu review tốt để đạt điểm mong muốn (lên kế hoạch cải thiện).
+                    </p>
                 </div>
 
                 {/* Mode Toggle */}
@@ -63,14 +67,14 @@ export function ReviewCalculator() {
                         className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-all ${mode === 'simulator' ? 'bg-white shadow text-yellow-700' : 'text-gray-500 hover:text-gray-700'}`}
                     >
                         <Calculator className="w-4 h-4" />
-                        Impact Simulator
+                        Mô phỏng tác động
                     </button>
                     <button
                         onClick={() => setMode('target')}
                         className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-all ${mode === 'target' ? 'bg-white shadow text-yellow-700' : 'text-gray-500 hover:text-gray-700'}`}
                     >
                         <Target className="w-4 h-4" />
-                        Target Calculator
+                        Mục tiêu điểm số
                     </button>
                 </div>
 
