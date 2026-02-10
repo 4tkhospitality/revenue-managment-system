@@ -43,11 +43,22 @@ export async function POST() {
             update: {}, // Don't override if already exists
         })
 
-        return NextResponse.json({
+        const response = NextResponse.json({
             success: true,
             hotelId: result.hotelId,
             hotelName: result.hotelName,
         })
+
+        // Set active hotel cookie so middleware allows access before JWT refresh
+        response.cookies.set('rms_active_hotel', result.hotelId, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 60 * 60 * 24 * 30, // 30 days
+            path: '/',
+        })
+
+        return response
     } catch (error) {
         console.error('[API] Onboarding demo error:', error)
         return NextResponse.json(

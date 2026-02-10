@@ -95,8 +95,16 @@ export async function middleware(request: NextRequest) {
         const accessibleHotels = session.user.accessibleHotels || []
 
         // Must have at least one hotel assigned - redirect to welcome for onboarding
+        // UNLESS user was just assigned to a hotel (cookie set by onboarding API)
+        // In that case, the JWT hasn't been refreshed yet but the cookie is valid
         if (accessibleHotels.length === 0) {
-            return NextResponse.redirect(new URL("/welcome", request.url))
+            const activeHotelCookie = request.cookies.get(ACTIVE_HOTEL_COOKIE)?.value
+            if (!activeHotelCookie) {
+                return NextResponse.redirect(new URL("/welcome", request.url))
+            }
+            // Cookie exists - user was just assigned, allow through
+            // The page-level auth (getActiveHotelId) will handle hotel resolution
+            return NextResponse.next()
         }
 
         // Get active hotel from cookie

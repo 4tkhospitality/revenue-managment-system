@@ -2,12 +2,10 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useSession } from 'next-auth/react'
 import Image from 'next/image'
 
 export default function WelcomePage() {
     const router = useRouter()
-    const { update } = useSession()
     const [loading, setLoading] = useState<string | null>(null)
     const [showInviteInput, setShowInviteInput] = useState(false)
     const [inviteCode, setInviteCode] = useState('')
@@ -22,10 +20,10 @@ export default function WelcomePage() {
             const data = await res.json()
 
             if (res.ok) {
-                // Refresh JWT to pick up new hotel assignment
-                await update()
-                router.push('/dashboard')
-                router.refresh()
+                // Hard redirect - API response already set rms_active_hotel cookie
+                // Middleware bypass will allow access even before JWT refresh
+                window.location.href = '/dashboard'
+                return // Don't execute finally block to keep loading state
             } else {
                 setError(data.error || 'Có lỗi xảy ra')
             }
@@ -55,10 +53,9 @@ export default function WelcomePage() {
             const data = await res.json()
 
             if (res.ok) {
-                // Refresh JWT to pick up new hotel assignment
-                await update()
-                router.push('/dashboard')
-                router.refresh()
+                // Hard redirect - invite API should set rms_active_hotel cookie
+                window.location.href = '/dashboard'
+                return
             } else {
                 setError(data.error || 'Mã mời không hợp lệ')
             }
