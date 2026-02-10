@@ -150,3 +150,31 @@ tr:hover {
 2. **Contrast Matters** - Ensure text has sufficient contrast against dark backgrounds
 3. **Consistent Blues** - Use `--brand-primary` for all primary actions
 4. **Accent Colors** - Use success/warning/danger only for semantic meanings
+
+---
+
+## 🚀 OTA Growth Playbook Design
+
+### Tab Navigation
+| Tab | Label (VI) | Icon |
+|-----|------------|------|
+| scorecard | Kiểm tra chỉ số OTA | BarChart |
+| booking | Booking.com | ExternalLink |
+| agoda | Agoda | ExternalLink |
+| roi | Hiệu quả chương trình | Calculator |
+| review | Điểm Review | Star |
+| boost | Cách tăng Ranking | Zap |
+
+### Scorecard Color Scale
+| Score Range | Color | Hex | Meaning |
+|-------------|-------|-----|--------|
+| 80-100% | Green | `#10B981` | Tốt |
+| 60-79% | Yellow | `#F59E0B` | Cần cải thiện |
+| 0-59% | Red | `#EF4444` | Yếu |
+
+### Component Layout
+- **Tab bar**: Horizontal scroll on mobile, fixed on desktop
+- **Cards**: Light theme, rounded-2xl, subtle shadow
+- **Headers**: Gradient background `linear-gradient(to right, #1E3A8A, #102A4C)`
+- **Typography**: Inter font, consistent with main app
+- **Currency**: VND formatted with `Intl.NumberFormat`, 2 decimal places

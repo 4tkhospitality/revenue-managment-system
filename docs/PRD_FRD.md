@@ -1,8 +1,8 @@
 # Product Requirements Document (PRD) & Functional Requirements Document (FRD)
-## Revenue Management System (RMS) v01.4
+## Revenue Management System (RMS) v01.5
 
-**Document Version:** 1.4.0  
-**Last Updated:** 2026-02-09  
+**Document Version:** 1.5.0  
+**Last Updated:** 2026-02-10  
 **Status:** ✅ Production  
 **Product Owner:** 4TK Hospitality
 
@@ -30,6 +30,7 @@ RMS cung cấp:
 2. **Analytics** so sánh STLY, Pace, Pickup
 3. **Price Recommendations** dựa trên occupancy
 4. **OTA Pricing Calculator** tính giá hiển thị chính xác
+5. **OTA Growth Playbook** công cụ tối ưu ranking OTA (Premium)
 
 ### 1.4 Success Metrics
 
@@ -94,6 +95,7 @@ RMS cung cấp:
 | Time-Travel OTB | P1 | ✅ Done | Yes |
 | OTA Pricing Calculator | P1 | ✅ Done | Yes |
 | Multi-Hotel Support | P1 | ✅ Done | Yes |
+| OTA Growth Playbook | P1 | ✅ Done | Yes |
 | PDF Export | P2 | ✅ Done | No |
 | Rate Shopper | P2 | ⬜ Backlog | No |
 | ML Forecasting | P3 | ⬜ Future | No |
@@ -172,6 +174,30 @@ RMS cung cấp:
 - [US-P03] User can configure OTA channel commissions
 - [US-P04] User can add/remove promotion discounts
 - [US-P05] User can view Price Matrix for all room types + channels
+
+### 3.5 Feature: OTA Growth Playbook (Premium)
+
+**Epic:** As a Revenue Manager, I want to have tools to analyze and optimize my hotel's OTA ranking so I can increase visibility and bookings.
+
+**Sub-features:**
+
+| Tab | Label (VI) | Description |
+|-----|------------|-------------|
+| Kiểm tra chỉ số OTA | Health Scorecard | Chấm điểm sức khỏe kênh OTA (Booking.com + Agoda) |
+| Hiệu quả chương trình | ROI Calculator | Tính lời/lỗ khi tham gia chương trình khuyến mãi OTA |
+| Điểm Review | Review Calculator | Mô phỏng tác động review + Tính review cần để đạt mục tiêu |
+| Cách tăng Ranking | When to Boost | Hướng dẫn thời điểm và cách đẩy ranking hiệu quả |
+| Booking.com | Checklist | Checklist tối ưu ranking trên Booking.com |
+| Agoda | Checklist | Checklist tối ưu ranking trên Agoda |
+
+**User Stories:**
+- [US-G01] User (paid) can view OTA Health Scorecard for Booking.com and Agoda
+- [US-G02] User can calculate ROI/breakeven for OTA promotion programs
+- [US-G03] User can simulate review impact on overall rating
+- [US-G04] User can calculate reviews needed to reach target score
+- [US-G05] User can view scenario-based boost recommendations
+- [US-G06] User can follow interactive checklists for Booking.com and Agoda
+- [US-G07] Non-paid users see paywall with feature preview
 
 ### 3.4 Feature: Data Import
 
@@ -401,6 +427,18 @@ Morning (08:00)
 | HOTEL-05 | Switch active hotel | P1 | ✅ |
 | HOTEL-06 | Demo Hotel for testing | P1 | ✅ |
 
+### 6.10 Module: OTA Growth Playbook (PLAYBOOK)
+
+| ID | Requirement | Priority | Status |
+|----|-------------|----------|--------|
+| PLAYBOOK-01 | OTA Health Scorecard (Booking.com + Agoda) | P1 | ✅ |
+| PLAYBOOK-02 | ROI Calculator for OTA promotions | P1 | ✅ |
+| PLAYBOOK-03 | Review Impact Simulator | P1 | ✅ |
+| PLAYBOOK-04 | Target Score Calculator | P1 | ✅ |
+| PLAYBOOK-05 | When to Boost decision guide | P1 | ✅ |
+| PLAYBOOK-06 | Interactive checklists (Booking + Agoda) | P1 | ✅ |
+| PLAYBOOK-07 | Premium paywall gating | P1 | ✅ |
+
 ---
 
 ## 7. Data Validation Rules
@@ -510,6 +548,7 @@ const ERROR_MESSAGES = {
 | 1.2 | 2026-02-01 | PM | Added OTA Calculator |
 | 1.3 | 2026-02-05 | PM | Added User Management |
 | 1.4 | 2026-02-09 | PM | Added Analytics Layer, User Guide |
+| 1.5 | 2026-02-10 | PM | Added OTA Growth Playbook (Premium) |
 
 ### 10.3 Sign-off
 

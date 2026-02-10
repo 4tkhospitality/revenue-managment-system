@@ -1,4 +1,4 @@
-# 🎨 DESIGN: RMS Version 01 (MVP) - Final
+# 🎨 DESIGN: RMS Version 01.5 - Final
 
 > **Based on:** `docs/spec-v01.md` & **User Feedback (Critical Fixes + Fine-tuning)**
 > **Goal:** Executable Design for 14-day Pilot (SaaS-ready, Audit-ready).
@@ -246,3 +246,82 @@ Toàn bộ test phải chạy trong context của `hotel_id`.
 - [ ] **TC-03 Explode Nights**: Booking 2 đêm, 200$. OTB ngày 1 = 100$, ngày 2 = 100$. Guard `num_nights <= 0`.
 - [ ] **TC-04 Audit Decision**: Khi Override, phải lưu `system_price` cũ để so sánh.
 - [ ] **TC-05 Unique Recommendations**: Chạy job 2 lần cùng ngày, không sinh duplicates.
+
+---
+
+## 5. OTA GROWTH PLAYBOOK (Premium Module)
+
+### 5.1 Component Architecture
+
+```
+/guide (page)
+  └── OTAPlaybookGuide.tsx     ← Chứa tab controller
+        ├── Tab: Kiểm tra chỉ số OTA  → OTAHealthScorecard.tsx
+        ├── Tab: Booking.com           → BookingChecklist (inline)
+        ├── Tab: Agoda                 → AgodaChecklist (inline)
+        ├── Tab: Hiệu quả chương trình → ROICalculator.tsx
+        ├── Tab: Điểm Review           → ReviewCalculator.tsx
+        └── Tab: Cách tăng Ranking     → WhenToBoost.tsx
+
+/lib
+  └── ota-score-calculator.ts  ← Scoring engine
+```
+
+### 5.2 OTA Score Calculation (ota-score-calculator.ts)
+
+```typescript
+// Booking.com Scorecard: 7 metrics, weights sum = 100%
+const BOOKING_WEIGHTS = [
+    { metric: 'review_score', weight: 0.25 },
+    { metric: 'content_score', weight: 0.15 },
+    { metric: 'response_rate', weight: 0.10 },
+    { metric: 'commission', weight: 0.15 },
+    { metric: 'mobile_rate', weight: 0.10 },
+    { metric: 'genius_program', weight: 0.15 },
+    { metric: 'visibility_booster', weight: 0.10 },
+];
+
+// Agoda Scorecard: 7 metrics, weights sum = 100%
+const AGODA_WEIGHTS = [
+    { metric: 'review_score', weight: 0.25 },
+    { metric: 'photo_quality', weight: 0.15 },
+    { metric: 'vhp_program', weight: 0.15 },
+    { metric: 'commission', weight: 0.15 },
+    { metric: 'ycs_score', weight: 0.10 },
+    { metric: 'special_offers', weight: 0.10 },
+    { metric: 'payment_options', weight: 0.10 },
+];
+
+// Score = SUM(metric_score × weight) where metric_score ∈ [0, 100]
+```
+
+### 5.3 ROI Calculator Formula
+
+```typescript
+// Revenue WITHOUT program
+revWithout = BAR × (1 - commission) × rooms;
+
+// Revenue WITH program
+revWith = BAR × (1 - discount) × (1 - commission) × (rooms × (1 + increase%));
+
+// Profit = Revenue - Variable Cost × rooms
+// ROI = (profitWith - profitWithout) / profitWithout × 100
+// Currency format: VND with 2 decimal places
+```
+
+### 5.4 Review Calculator Formula
+
+```typescript
+// Impact Simulator
+newScore = (oldScore × totalReviews + newRating × newCount) / (totalReviews + newCount);
+
+// Target Calculator
+reviewsNeeded = Math.ceil((targetScore × totalReviews - oldScore × totalReviews) / (5 - targetScore));
+```
+
+### 5.5 Access Control
+
+- **Gated by** `OTAGrowthPaywall` component
+- **Free users**: See paywall with feature preview
+- **Paid users**: Full access to all 6 tabs
+- **Demo hotel**: Hidden from playbook

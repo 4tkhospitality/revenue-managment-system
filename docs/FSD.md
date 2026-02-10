@@ -1,8 +1,8 @@
 # Functional Specification Document (FSD)
-## Revenue Management System (RMS) v01.4
+## Revenue Management System (RMS) v01.5
 
-**Document Version:** 1.4.0  
-**Last Updated:** 2026-02-09  
+**Document Version:** 1.5.0  
+**Last Updated:** 2026-02-10  
 **Status:** ✅ Production  
 **Author:** 4TK Hospitality Engineering
 
@@ -677,6 +677,7 @@ viewer (Level 1)
 | **Bắt đầu nhanh** | New GMs | 5-step getting started |
 | **Quản lý Doanh thu** | Revenue Managers | OTB, Features, Forecast |
 | **Tính giá OTA** | All Users | NET → BAR calculation |
+| **OTA Growth Playbook** | Paid Users | OTA ranking optimization tools (Premium) |
 
 ### 9.2 QuickStart Steps
 
@@ -687,6 +688,100 @@ viewer (Level 1)
 | 3 | Build dữ liệu | OTB → Features → Forecast |
 | 4 | Xem Dashboard | KPI, Charts, Recommendations |
 | 5 | Ra quyết định giá | Accept / Override |
+
+### 9.3 OTA Growth Playbook (Premium Feature)
+
+**Access:** Paid plan only (gated by `OTAGrowthPaywall`)
+
+#### 9.3.1 Playbook Tabs
+
+| Tab ID | Label (VI) | Description |
+|--------|------------|-------------|
+| `scorecard` | **Kiểm tra chỉ số OTA** | Kiểm tra các chỉ số trên kênh OTA của khách sạn |
+| `booking` | **Booking.com** | Checklist tối ưu ranking trên Booking.com |
+| `agoda` | **Agoda** | Checklist tối ưu ranking trên Agoda |
+| `roi` | **Hiệu quả chương trình** | Hiệu quả chương trình khuyến mãi — Lời hay lỗ khi tham gia chương trình OTA |
+| `review` | **Điểm Review** | Mô phỏng tác động của review đến điểm số |
+| `boost` | **Cách tăng Ranking** | Khi nào Boost tăng Ranking — Hướng dẫn thời điểm và cách đẩy ranking trên OTA |
+
+#### 9.3.2 Tab: Kiểm tra chỉ số OTA (Health Scorecard)
+
+**Component:** `OTAHealthScorecard.tsx`
+**Header:** "Tình trạng thứ hạng tốt/xấu"
+**Subtitle:** "Kiểm tra xem ranking của khách sạn trên từng kênh OTA đang ở mức tốt hay cần cải thiện"
+
+**Scoring Metrics (Booking.com - Total 100%):**
+
+| Metric | Weight | Scoring |
+|--------|--------|---------|
+| Review Score | 25% | ≥8.5 = Full, 7.5–8.4 = Partial |
+| Content Score | 15% | ≥90% = Full |
+| Response Rate | 10% | ≥90% = Full |
+| Commission Level | 15% | 18%+ = Full |
+| Mobile Rate | 10% | Enabled = Full |
+| Genius Program | 15% | Level 2+ = Full |
+| Visibility Booster | 10% | Active = Full |
+
+**Scoring Metrics (Agoda - Total 100%):**
+
+| Metric | Weight | Scoring |
+|--------|--------|---------|
+| Review Score | 25% | ≥8.0 = Full |
+| Photo Quality | 15% | ≥20 HD photos = Full |
+| VHP Program | 15% | Active = Full |
+| Commission | 15% | 20%+ = Full |
+| YCS Score | 10% | ≥80% = Full |
+| Special Offers | 10% | Active = Full |
+| Payment Options | 10% | All enabled = Full |
+
+#### 9.3.3 Tab: Hiệu quả chương trình (ROI Calculator)
+
+**Component:** `ROICalculator.tsx`
+**Header:** "Hiệu quả chương trình"
+**Subtitle:** "Tính lợi nhuận khi tham gia chương trình khuyến mãi OTA"
+
+**Inputs:**
+
+| Field | Type | Default | Validation |
+|-------|------|---------|------------|
+| Giá phòng gốc (BAR) | Currency (VND) | 1,000,000 | > 0 |
+| Commission (%) | Percentage | 18% | 0–100 |
+| Discount (%) | Percentage | 10% | 0–99 |
+| Chi phí biến đổi/phòng | Currency (VND) | 200,000 | ≥ 0 |
+| Số phòng dự kiến | Number | 30 | ≥ 1 |
+| Increase % (boost) | Percentage | 20% | ≥ 0 |
+
+**Outputs:** Revenue comparison (with/without program), Profit/Loss, ROI %, Breakeven
+**Currency format:** VND with 2 decimal places
+
+#### 9.3.4 Tab: Điểm Review (Review Calculator)
+
+**Component:** `ReviewCalculator.tsx`
+**Header:** "Cách tính điểm đánh giá"
+**Subtitle:** "Impact Simulator — xem 1 review mới sẽ ảnh hưởng đến điểm tổng thế nào? Target Calculator — cần bao nhiêu review 5⭐ để đạt mục tiêu?"
+
+**Two Modes:**
+
+| Mode | Label (VI) | Function |
+|------|------------|----------|
+| Impact Simulator | **Mô phỏng tác động** | Calculate: `newScore = (oldScore × totalReviews + newRating × newCount) / (totalReviews + newCount)` |
+| Target Calculator | **Mục tiêu điểm số** | Calculate reviews needed to reach target score |
+
+#### 9.3.5 Tab: Cách tăng Ranking (When to Boost)
+
+**Component:** `WhenToBoost.tsx`
+**Header:** "Khi nào nên Đẩy mạnh Tăng Ranking?"
+**Subtitle:** "Nguyên tắc tăng Ranking hiệu quả dựa trên tình huống thực tế"
+
+**Scenario-Based Decision Guide:**
+
+| Scenario | Recommendation | Reason |
+|----------|---------------|--------|
+| Low season + high vacancy | ✅ Boost aggressively | More inventory to fill |
+| High season + low vacancy | ❌ Skip boost | Already selling well |
+| New listing (< 3 months) | ✅ Boost for visibility | Build initial ranking |
+| Post-renovation | ✅ Boost + new photos | Re-establish position |
+| Competitor price war | ⚠️ Boost cautiously | Avoid margin erosion |
 
 ---
 
@@ -756,3 +851,4 @@ viewer (Level 1)
 | 1.0 | 2026-01-20 | Eng | Initial FSD |
 | 1.2 | 2026-02-01 | Eng | Added OTA module |
 | 1.4 | 2026-02-09 | Eng | Added Analytics, Guide |
+| 1.5 | 2026-02-10 | Eng | Added OTA Growth Playbook module (6 tabs) |

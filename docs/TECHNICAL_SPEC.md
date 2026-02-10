@@ -1,8 +1,8 @@
 # Technical Specification
-## Revenue Management System (RMS) v01.4
+## Revenue Management System (RMS) v01.5
 
-**Document Version:** 1.4.0  
-**Last Updated:** 2026-02-09  
+**Document Version:** 1.5.0  
+**Last Updated:** 2026-02-10  
 **Status:** ✅ Production  
 **Author:** 4TK Hospitality Engineering
 
@@ -87,11 +87,18 @@ revenue-management-system/
 │       │   └── upload/         # Data upload
 │       ├── components/         # React components
 │       │   ├── dashboard/      # Dashboard widgets
+│       │   ├── guide/          # OTA Growth Playbook components
+│       │   │   ├── OTAPlaybookGuide.tsx    # Tab controller
+│       │   │   ├── OTAHealthScorecard.tsx  # Health scoring
+│       │   │   ├── ROICalculator.tsx       # ROI engine
+│       │   │   ├── ReviewCalculator.tsx    # Review simulator
+│       │   │   └── WhenToBoost.tsx         # Boost guide
 │       │   ├── pricing/        # Pricing components
 │       │   └── shared/         # Shared UI
 │       ├── lib/                # Business logic
 │       │   ├── pricing/        # Pricing engine
 │       │   ├── analytics/      # Analytics functions
+│       │   ├── ota-score-calculator.ts  # OTA scoring engine
 │       │   └── date.ts         # Date utilities
 │       ├── prisma/             # Database schema
 │       └── public/             # Static assets
@@ -509,6 +516,63 @@ function calculateBAR(
     
     // Round to nearest 1000 VND
     return Math.ceil(bar / 1000) * 1000;
+}
+```
+
+### 4.5 OTA Score Calculation
+
+```typescript
+/**
+ * Calculate weighted OTA health score
+ * Used by OTAHealthScorecard component
+ * Metrics defined in ota-score-calculator.ts
+ */
+interface ScoreMetric {
+    metric: string;
+    weight: number;
+    score: number; // 0-100
+}
+
+function calculateOTAScore(metrics: ScoreMetric[]): number {
+    return metrics.reduce(
+        (total, m) => total + (m.score * m.weight), 0
+    );
+}
+
+// Booking.com: 7 metrics (review 25%, content 15%, response 10%, 
+//              commission 15%, mobile 10%, genius 15%, visibility 10%)
+// Agoda: 7 metrics (review 25%, photo 15%, vhp 15%, 
+//        commission 15%, ycs 10%, offers 10%, payment 10%)
+```
+
+### 4.6 Review Impact Calculation
+
+```typescript
+/**
+ * Review Calculator - two modes:
+ * 1. Impact Simulator: How does a new review affect overall score?
+ * 2. Target Calculator: How many 5-star reviews needed to reach target?
+ */
+function calculateReviewImpact(
+    currentScore: number,
+    totalReviews: number,
+    newRating: number,
+    newCount: number = 1
+): number {
+    return (currentScore * totalReviews + newRating * newCount) 
+        / (totalReviews + newCount);
+}
+
+function reviewsNeededForTarget(
+    currentScore: number,
+    totalReviews: number,
+    targetScore: number
+): number {
+    if (targetScore <= currentScore) return 0;
+    return Math.ceil(
+        (targetScore * totalReviews - currentScore * totalReviews) 
+        / (5 - targetScore)
+    );
 }
 ```
 

@@ -1,8 +1,8 @@
 # Software Requirements Specification (SRS)
-## Revenue Management System (RMS) v01.4
+## Revenue Management System (RMS) v01.5
 
-**Document Version:** 1.4.0  
-**Last Updated:** 2026-02-09  
+**Document Version:** 1.5.0  
+**Last Updated:** 2026-02-10  
 **Status:** ✅ Production  
 **Author:** 4TK Hospitality
 
@@ -19,6 +19,7 @@ RMS bao gồm các module chính:
 - **OTA Pricing Calculator**: Tính giá hiển thị trên các kênh OTA
 - **Analytics Layer**: STLY comparison, Pace tracking, Pickup analytics
 - **User Management**: Multi-tenant RBAC với Google OAuth
+- **OTA Growth Playbook**: Công cụ tối ưu ranking OTA (Premium feature)
 
 ### 1.3 Definitions & Acronyms
 
@@ -214,6 +215,21 @@ RMS là hệ thống độc lập, tích hợp với:
 | **Title** | Data Export Capabilities |
 | **Priority** | P1 - Important |
 | **Formats** | PDF (Dashboard), Excel (OTB data, Price Matrix) |
+
+### 3.11 FR-011: OTA Growth Playbook
+
+| ID | FR-011 |
+|----|--------|
+| **Title** | OTA Growth Playbook (Premium) |
+| **Priority** | P1 - Important |
+| **Description** | Bộ công cụ tối ưu ranking trên các kênh OTA, chỉ cho người dùng trả phí |
+| **Actors** | Paid Users (Hotel Admin, Manager) |
+| **Preconditions** | User has active paid subscription |
+| **Tabs** | 1. Kiểm tra chỉ số OTA (Health Scorecard)<br>2. Booking.com Checklist<br>3. Agoda Checklist<br>4. Hiệu quả chương trình (ROI Calculator)<br>5. Điểm Review (Review Calculator)<br>6. Cách tăng Ranking (When to Boost) |
+| **Scoring** | Weighted formula for Booking.com (7 metrics) and Agoda (7 metrics), total 100% each |
+| **ROI Formula** | `Revenue = BAR × (1 - discount) × commission × rooms`, Compare with/without program |
+| **Review Formula** | `newScore = (oldScore × count + newRating × newCount) / (count + newCount)` |
+| **Paywall** | Non-paid users see `OTAGrowthPaywall` with feature preview |
 | **PDF Engine** | modern-screenshot + jsPDF |
 
 ---
@@ -322,6 +338,15 @@ Hotel (1) ──┬── (*) HotelUser ──── User
 - [ ] All 5 OTAs supported with correct commissions
 - [ ] Promotion stacking follows rules
 
+### 6.4 OTA Growth Playbook
+- [ ] Health Scorecard calculates correctly for Booking.com (7 metrics)
+- [ ] Health Scorecard calculates correctly for Agoda (7 metrics)
+- [ ] ROI Calculator shows profit/loss with 2 decimal VND formatting
+- [ ] Review Impact Simulator calculates new weighted average
+- [ ] Target Calculator shows reviews needed to reach goal
+- [ ] When to Boost shows scenario-based recommendations
+- [ ] Paywall blocks non-paid users with feature preview
+
 ---
 
 ## 7. Appendix
@@ -335,6 +360,7 @@ Hotel (1) ──┬── (*) HotelUser ──── User
 | 1.2.0 | 2026-02-01 | OTA Pricing Module |
 | 1.3.0 | 2026-02-05 | User Management |
 | 1.4.0 | 2026-02-09 | Analytics Layer + Time-Travel |
+| 1.5.0 | 2026-02-10 | OTA Growth Playbook (Premium) |
 
 ### 7.2 Sign-off
 
