@@ -1,11 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import Image from 'next/image'
 
 export default function WelcomePage() {
-    const router = useRouter()
     const [loading, setLoading] = useState<string | null>(null)
     const [showInviteInput, setShowInviteInput] = useState(false)
     const [inviteCode, setInviteCode] = useState('')
@@ -34,10 +31,6 @@ export default function WelcomePage() {
         }
     }
 
-    const handleCreateHotel = () => {
-        setLoading('create')
-        router.push('/onboarding')
-    }
 
     const handleInviteSubmit = async () => {
         if (!inviteCode.trim()) return
@@ -148,43 +141,6 @@ export default function WelcomePage() {
                                     stroke="currentColor" strokeWidth="2"
                                     style={{ color: 'var(--muted)' }}
                                     className="group-hover:translate-x-1 transition-transform"
-                                >
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                                </svg>
-                            </div>
-                        </button>
-
-                        {/* Create Hotel */}
-                        <button
-                            onClick={handleCreateHotel}
-                            disabled={loading !== null}
-                            className="w-full p-4 rounded-xl text-left transition-all hover:shadow-md disabled:opacity-50 group"
-                            style={{
-                                background: 'var(--brand-primary)',
-                                color: '#fff'
-                            }}
-                        >
-                            <div className="flex items-center gap-4">
-                                <div
-                                    className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-                                    style={{ background: 'rgba(255,255,255,0.2)' }}
-                                >
-                                    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                                    </svg>
-                                </div>
-                                <div className="flex-1">
-                                    <div className="font-medium">
-                                        {loading === 'create' ? 'Đang chuyển...' : 'Tạo khách sạn mới'}
-                                    </div>
-                                    <div className="text-sm opacity-80">
-                                        Dành cho chủ khách sạn hoặc quản lý
-                                    </div>
-                                </div>
-                                <svg
-                                    width="20" height="20" fill="none" viewBox="0 0 24 24"
-                                    stroke="currentColor" strokeWidth="2"
-                                    className="opacity-80 group-hover:translate-x-1 transition-transform"
                                 >
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                                 </svg>
