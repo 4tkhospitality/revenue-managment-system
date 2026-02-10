@@ -3,127 +3,120 @@
 /**
  * /pricing-plans - Pricing Page
  * Shows with Sidebar when logged in, otherwise public layout
- * Displays current tier when logged in
+ * Implements 4-Tier x 4-Room-Band Matrix Strategy
  */
 
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { Check, X, HelpCircle, AlertCircle, Zap } from 'lucide-react';
 import { Sidebar } from '@/components/dashboard/Sidebar';
 
 // ═══════════════════════════════════════════════════════════════════
-// Tier Data
+// Data & Constants
 // ═══════════════════════════════════════════════════════════════════
 
-const tiers = [
+type RoomBand = 'small' | 'medium' | 'large' | 'xlarge';
+type BillingCycle = 'monthly' | '3-months';
+
+const ROOM_BANDS = [
+    { id: 'small', label: '≤ 30 phòng', max: 30 },
+    { id: 'medium', label: '31 - 80 phòng', max: 80 },
+    { id: 'large', label: '81 - 150 phòng', max: 150 },
+    { id: 'xlarge', label: '151 - 300+ phòng', max: 300 },
+] as const;
+
+// Base Monthly Prices (VND)
+const PRICING_MATRIX: Record<string, Record<RoomBand, number>> = {
+    FREE: { small: 0, medium: 0, large: 0, xlarge: 0 },
+    SUPERIOR: { small: 990000, medium: 1490000, large: 1990000, xlarge: 2490000 },
+    DELUXE: { small: 1990000, medium: 2990000, large: 3990000, xlarge: 4990000 },
+    SUITE: { small: 3490000, medium: 4990000, large: 6990000, xlarge: 8990000 },
+};
+
+const TIERS = [
     {
+        id: 'FREE',
         name: 'Tiêu chuẩn',
-        tier: 'FREE',
-        price: 0,
-        description: 'Tính giá NET → BAR nhanh chóng',
+        description: 'Tính giá OTA nhanh chóng',
         features: [
-            '✅ Tính giá OTA với commission',
-            '✅ Ghép khuyến mãi (Stacking)',
-            '✅ 3 lần import/tháng',
-            '✅ 1 lần export/ngày (30 dòng)',
-            '❌ Daily Actions',
-            '❌ Guardrails',
-            '❌ Analytics',
+            { text: 'Tính giá NET → BAR', included: true },
+            { text: '5 kênh OTA cơ bản', included: true },
+            { text: '1 người dùng', included: true },
+            { text: 'Tối ưu OTA (Demo)', included: true, hint: 'Xem giao diện demo, không nhập dữ liệu thật' },
+            { text: 'Dashboard & Analytics', included: false },
+            { text: 'Quản lý nhiều KS', included: false },
         ],
-        cta: 'Bắt đầu miễn phí',
+        cta: 'Dùng miễn phí',
         ctaLink: '/auth/login',
         highlight: false,
-        badge: null,
     },
     {
+        id: 'SUPERIOR',
         name: 'Superior',
-        tier: 'STARTER',
-        price: 990000,
-        description: 'Gợi ý giá hàng ngày + Export Excel',
+        description: 'Tối ưu Ranking OTA',
         features: [
-            '✅ Tất cả tính năng Tiêu chuẩn',
-            '✅ Daily Actions (Gợi ý giá)',
-            '✅ Lịch giá 30 ngày',
-            '✅ Export Excel không giới hạn',
-            '✅ 60 lần import/tháng',
-            '✅ 2 người dùng',
-            '❌ Guardrails',
-            '❌ Analytics',
+            { text: 'Tất cả tính năng Free', included: true },
+            { text: 'Full Tối ưu OTA (6 tools)', included: true, hint: 'Scorecard, Checklist, ROI, Review Simulator...' },
+            { text: 'Khuyến mãi Stacking', included: true },
+            { text: 'Export Price Matrix', included: true },
+            { text: '2 người dùng', included: true },
+            { text: 'Dashboard & Analytics', included: false },
         ],
-        cta: 'Liên hệ Zalo',
+        cta: 'Liên hệ Ngay',
         ctaLink: 'https://zalo.me/0778602953',
         highlight: true,
-        badge: '🔥 PHỔ BIẾN',
+        badge: 'BÁN CHẠY',
     },
     {
+        id: 'DELUXE',
         name: 'Deluxe',
-        tier: 'GROWTH',
-        price: 2490000,
-        description: 'Guardrails + Analytics cho khách sạn 31-60 phòng',
+        description: 'Analytics & Dữ liệu',
         features: [
-            '✅ Tất cả tính năng Superior',
-            '✅ Guardrails (Cảnh báo giá)',
-            '✅ Lịch sử quyết định',
-            '✅ Analytics cơ bản',
-            '✅ 50 rate shops/tháng',
-            '✅ 200 imports/tháng',
-            '✅ 5 người dùng',
-            '✅ Lưu dữ liệu 24 tháng',
+            { text: 'Tất cả tính năng Superior', included: true },
+            { text: 'Dashboard & KPI', included: true },
+            { text: 'OTB Analytics', included: true },
+            { text: 'Daily Actions', included: true },
+            { text: 'Upload dữ liệu (CSV)', included: true },
+            { text: '3 người dùng', included: true },
         ],
         cta: 'Liên hệ Zalo',
         ctaLink: 'https://zalo.me/0778602953',
         highlight: false,
-        badge: null,
     },
     {
+        id: 'SUITE',
         name: 'Suite',
-        tier: 'PRO',
-        price: 4990000,
-        description: 'Multi-property + Advanced Analytics',
+        description: 'Enterprise & Chuỗi',
         features: [
-            '✅ Tất cả tính năng Deluxe',
-            '✅ Quản lý nhiều khách sạn (5)',
-            '✅ Advanced Analytics',
-            '✅ API Import tự động',
-            '✅ 300 rate shops/tháng',
-            '✅ 10 người dùng',
-            '✅ Lưu dữ liệu 5 năm',
-            '✅ Hỗ trợ ưu tiên',
+            { text: 'Tất cả tính năng Deluxe', included: true },
+            { text: 'Quản lý nhiều khách sạn', included: true },
+            { text: 'Không giới hạn Users', included: true },
+            { text: 'Phân quyền (RBAC)', included: true },
+            { text: 'Hỗ trợ 1-1 ưu tiên', included: true },
+            { text: 'Setup tận nơi', included: true },
         ],
         cta: 'Liên hệ Zalo',
         ctaLink: 'https://zalo.me/0778602953',
         highlight: false,
-        badge: null,
     },
 ];
 
-const formatVND = (n: number) =>
-    n === 0 ? 'Miễn phí' : new Intl.NumberFormat('vi-VN').format(n) + 'đ/tháng';
-
-const tierColors: Record<string, string> = {
-    FREE: 'bg-gray-100 text-gray-700',
-    STARTER: 'bg-blue-100 text-blue-700',
-    GROWTH: 'bg-purple-100 text-purple-700',
-    PRO: 'bg-amber-100 text-amber-700',
-};
-
-const tierLabels: Record<string, string> = {
-    FREE: 'Tiêu chuẩn',
-    STARTER: 'Superior',
-    GROWTH: 'Deluxe',
-    PRO: 'Suite',
-};
+const formatVND = (n: number) => new Intl.NumberFormat('vi-VN').format(n);
 
 // ═══════════════════════════════════════════════════════════════════
-// Component
+// Main Component
 // ═══════════════════════════════════════════════════════════════════
 
 export default function PricingPlansPage() {
     const { data: session, status } = useSession();
     const [currentTier, setCurrentTier] = useState<string | null>(null);
 
-    // Fetch current tier if logged in
+    // State for pricing calculator
+    const [roomBand, setRoomBand] = useState<RoomBand>('small');
+    const [cycle, setCycle] = useState<BillingCycle>('3-months');
+
     useEffect(() => {
         if (status === 'authenticated') {
             fetch('/api/subscription')
@@ -135,92 +128,115 @@ export default function PricingPlansPage() {
 
     const isLoggedIn = status === 'authenticated';
 
+    const getPrice = (tierId: string) => {
+        const basePrice = PRICING_MATRIX[tierId][roomBand];
+        if (cycle === '3-months') {
+            return basePrice * 0.5; // 50% discount
+        }
+        return basePrice;
+    };
+
     // ═══════════════════════════════════════════════════════════════════
-    // Pricing Content (shared between layouts)
+    // Render Content
     // ═══════════════════════════════════════════════════════════════════
     const PricingContent = () => (
-        <>
-            {/* Gradient Header — consistent with other pages (only when logged in) */}
-            {isLoggedIn && (
-                <header
-                    className="rounded-2xl px-4 sm:px-6 py-4 text-white shadow-sm mb-6"
-                    style={{ background: 'linear-gradient(to right, #1E3A8A, #102A4C)' }}
-                >
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                            <h1 className="text-lg font-semibold">Nâng cấp gói dịch vụ</h1>
-                            <p className="text-white/70 text-sm">Chọn gói phù hợp với nhu cầu khách sạn của bạn</p>
-                        </div>
-                        <a
-                            href="https://zalo.me/0778602953"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg text-sm font-medium transition-colors backdrop-blur-sm"
-                        >
-                            Nâng cấp qua Zalo
-                        </a>
-                    </div>
-                </header>
-            )}
+        <div className="w-full max-w-7xl mx-auto">
+            {/* Header Section */}
+            <div className="text-center mb-12">
+                <h1 className="text-3xl md:text-5xl font-bold text-gray-900 mb-6">
+                    Bảng giá linh hoạt cho mọi quy mô
+                </h1>
+                <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+                    Chọn gói phù hợp với số lượng phòng của bạn.<br />
+                    <span className="text-blue-600 font-semibold">Tiết kiệm 50%</span> khi thanh toán 3 tháng ngay hôm nay!
+                </p>
+            </div>
 
-            {/* Current Tier Banner */}
-            {isLoggedIn && currentTier && (
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-8 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <span className="text-blue-600 text-lg">📋</span>
-                        <div>
-                            <span className="text-gray-600">Gói hiện tại của bạn:</span>
-                            <span className={`ml-2 px-3 py-1 rounded-full text-sm font-medium ${tierColors[currentTier]}`}>
-                                {tierLabels[currentTier] || currentTier}
-                            </span>
+            {/* Controls Section */}
+            <div className="bg-white rounded-2xl shadow-xl shadow-gray-200/50 p-6 md:p-8 mb-12 border border-gray-100">
+                <div className="grid md:grid-cols-2 gap-12 items-center">
+                    {/* 1. Room Band Slider / Selector */}
+                    <div>
+                        <label className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 block">
+                            Khách sạn của bạn có:
+                        </label>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                            {ROOM_BANDS.map((band) => (
+                                <button
+                                    key={band.id}
+                                    onClick={() => setRoomBand(band.id as RoomBand)}
+                                    className={`py-3 px-2 rounded-xl text-sm font-medium transition-all border-2 ${roomBand === band.id
+                                        ? 'border-blue-600 bg-blue-50 text-blue-700 shadow-sm'
+                                        : 'border-transparent bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                        }`}
+                                >
+                                    {band.label}
+                                </button>
+                            ))}
                         </div>
+                    </div>
+
+                    {/* 2. Billing Cycle Toggle */}
+                    <div className="flex flex-col items-center md:items-start">
+                        <label className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 block">
+                            Chu kỳ thanh toán
+                        </label>
+                        <div className="flex items-center bg-gray-100 p-1 rounded-xl relative">
+                            <button
+                                onClick={() => setCycle('monthly')}
+                                className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${cycle === 'monthly'
+                                    ? 'bg-white text-gray-900 shadow-sm'
+                                    : 'text-gray-500 hover:text-gray-900'
+                                    }`}
+                            >
+                                Tháng
+                            </button>
+                            <button
+                                onClick={() => setCycle('3-months')}
+                                className={`px-6 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${cycle === '3-months'
+                                    ? 'bg-white text-blue-700 shadow-sm ring-1 ring-blue-100'
+                                    : 'text-gray-500 hover:text-gray-900'
+                                    }`}
+                            >
+                                3 Tháng
+                                <span className="bg-red-100 text-red-600 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                    -50%
+                                </span>
+                            </button>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-3">
+                            {cycle === '3-months'
+                                ? '🔥 Khuyên dùng: Giảm giá 50% giai đoạn ra mắt!'
+                                : 'Thanh toán linh hoạt từng tháng.'}
+                        </p>
                     </div>
                 </div>
-            )}
-
-            {/* Hero */}
-            <div className="text-center mb-12">
-                <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-                    {isLoggedIn ? 'Nâng cấp gói dịch vụ' : (
-                        <>Revenue Management cho <span className="text-blue-600">Khách sạn SMB</span></>
-                    )}
-                </h1>
-                <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                    5 phút mỗi ngày. Không cần Revenue Manager.<br />
-                    Gợi ý giá tự động dựa trên dữ liệu thực tế của bạn.
-                </p>
-                {!isLoggedIn && (
-                    <div className="flex flex-wrap justify-center gap-4 text-sm text-gray-500 mt-6">
-                        <span className="flex items-center gap-1">✓ Không cần card</span>
-                        <span className="flex items-center gap-1">✓ Hủy bất kỳ lúc nào</span>
-                        <span className="flex items-center gap-1">✓ Hỗ trợ qua Zalo</span>
-                    </div>
-                )}
             </div>
 
             {/* Pricing Cards */}
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
-                {tiers.map((tier) => {
-                    const isCurrentTier = currentTier === tier.tier;
+            <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-6 mb-16">
+                {TIERS.map((tier) => {
+                    const monthlyPrice = getPrice(tier.id);
+                    const isCurrentTier = currentTier === tier.id;
+
                     return (
                         <div
-                            key={tier.tier}
-                            className={`relative bg-white rounded-2xl border-2 p-6 flex flex-col ${isCurrentTier
-                                ? 'border-green-500 shadow-xl shadow-green-100'
+                            key={tier.id}
+                            className={`relative flex flex-col p-6 rounded-2xl bg-white border-2 transition-all duration-300 hover:-translate-y-1 ${isCurrentTier
+                                ? 'border-green-500 shadow-2xl shadow-green-100 ring-4 ring-green-50 z-20 scale-105'
                                 : tier.highlight
-                                    ? 'border-blue-500 shadow-xl shadow-blue-100'
-                                    : 'border-gray-200'
+                                    ? 'border-blue-500 shadow-2xl shadow-blue-100 z-10'
+                                    : 'border-gray-100 hover:border-blue-200 shadow-lg shadow-gray-100'
                                 }`}
                         >
-                            {/* Current Tier Badge */}
+                            {/* Badge */}
                             {isCurrentTier && (
-                                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-600 text-white text-xs font-bold px-3 py-1 rounded-full">
-                                    ✓ GÓI HIỆN TẠI
+                                <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-green-600 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg flex items-center gap-1">
+                                    <Check className="w-3 h-3" /> GÓI HIỆN TẠI
                                 </div>
                             )}
-                            {/* Highlight Badge */}
-                            {tier.badge && !isCurrentTier && (
-                                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full">
+                            {!isCurrentTier && tier.badge && (
+                                <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg">
                                     {tier.badge}
                                 </div>
                             )}
@@ -228,102 +244,105 @@ export default function PricingPlansPage() {
                             {/* Header */}
                             <div className="mb-6">
                                 <h3 className="text-xl font-bold text-gray-900">{tier.name}</h3>
-                                <p className="text-sm text-gray-500 mt-1">{tier.description}</p>
+                                <p className="text-sm text-gray-500 mt-2 min-h-[40px]">{tier.description}</p>
                             </div>
 
                             {/* Price */}
                             <div className="mb-6">
-                                <span className="text-3xl font-bold text-gray-900">{formatVND(tier.price)}</span>
+                                {tier.id === 'FREE' ? (
+                                    <div className="text-4xl font-bold text-gray-900">0₫</div>
+                                ) : (
+                                    <>
+                                        <div className="flex items-end gap-2 mb-1">
+                                            <span className="text-4xl font-bold text-gray-900">
+                                                {formatVND(monthlyPrice)}
+                                            </span>
+                                            <span className="text-gray-500 text-sm mb-1">/tháng</span>
+                                        </div>
+                                        {cycle === '3-months' && (
+                                            <div className="text-xs text-gray-400 line-through">
+                                                {formatVND(PRICING_MATRIX[tier.id][roomBand])}/tháng
+                                            </div>
+                                        )}
+                                    </>
+                                )}
                             </div>
 
                             {/* Features */}
-                            <ul className="space-y-3 mb-8 flex-1">
+                            <div className="flex-1 space-y-4 mb-8">
                                 {tier.features.map((feature, i) => (
-                                    <li key={i} className="text-sm text-gray-600">
-                                        {feature}
-                                    </li>
+                                    <div key={i} className="flex items-start gap-3 text-sm">
+                                        {feature.included ? (
+                                            <Check className={`w-5 h-5 shrink-0 ${tier.highlight ? 'text-blue-600' : 'text-gray-600'}`} />
+                                        ) : (
+                                            <X className="w-5 h-5 shrink-0 text-gray-300" />
+                                        )}
+                                        <div className="flex items-center">
+                                            <span className={feature.included ? 'text-gray-700' : 'text-gray-400'}>
+                                                {feature.text}
+                                            </span>
+                                            {feature.hint && (
+                                                <div title={feature.hint} className="ml-1 inline-flex cursor-help text-gray-400 hover:text-gray-600">
+                                                    <HelpCircle className="w-3 h-3" />
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
                                 ))}
-                            </ul>
+                            </div>
 
                             {/* CTA */}
-                            {isCurrentTier ? (
-                                <div className="block w-full text-center py-3 rounded-xl font-medium bg-green-100 text-green-700">
-                                    Đang sử dụng
-                                </div>
-                            ) : (
-                                <a
-                                    href={tier.ctaLink}
-                                    target={tier.ctaLink.startsWith('http') ? '_blank' : undefined}
-                                    rel={tier.ctaLink.startsWith('http') ? 'noopener noreferrer' : undefined}
-                                    className={`block w-full text-center py-3 rounded-xl font-medium transition-colors ${tier.highlight
-                                        ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                                        : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
-                                        }`}
-                                >
-                                    {tier.cta}
-                                </a>
-                            )}
+                            <a
+                                href={tier.ctaLink}
+                                className={`w-full py-3 px-4 rounded-xl font-medium text-center transition-colors ${tier.highlight
+                                    ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200'
+                                    : 'bg-gray-50 text-gray-900 hover:bg-gray-100 border border-gray-200'
+                                    }`}
+                            >
+                                {isCurrentTier ? 'Gói hiện tại' : tier.cta}
+                            </a>
                         </div>
                     );
                 })}
             </div>
 
-            {/* FAQ */}
-            <div className="max-w-3xl mx-auto">
-                <h2 className="text-2xl font-bold text-gray-900 text-center mb-8">Câu hỏi thường gặp</h2>
-                <div className="space-y-4">
-                    <details className="bg-white border rounded-xl p-4 group">
-                        <summary className="font-medium text-gray-900 cursor-pointer">
-                            Daily Actions là gì?
-                        </summary>
-                        <p className="mt-3 text-gray-600 text-sm">
-                            Daily Actions là hệ thống gợi ý giá hàng ngày dựa trên dữ liệu OTB (On-The-Book) thực tế của bạn.
-                            Mỗi sáng, bạn chỉ cần mở app, xem gợi ý, và nhấn &quot;Accept&quot; - mất khoảng 5 phút.
-                        </p>
-                    </details>
-                    <details className="bg-white border rounded-xl p-4 group">
-                        <summary className="font-medium text-gray-900 cursor-pointer">
-                            Thanh toán như thế nào?
-                        </summary>
-                        <p className="mt-3 text-gray-600 text-sm">
-                            Hiện tại chúng tôi hỗ trợ thanh toán chuyển khoản ngân hàng.
-                            Liên hệ Zalo để được hướng dẫn chi tiết và kích hoạt gói.
-                        </p>
-                    </details>
-                    <details className="bg-white border rounded-xl p-4 group">
-                        <summary className="font-medium text-gray-900 cursor-pointer">
-                            Có thể nâng/hạ gói không?
-                        </summary>
-                        <p className="mt-3 text-gray-600 text-sm">
-                            Có. Bạn có thể nâng hoặc hạ gói bất kỳ lúc nào. Chúng tôi sẽ tính theo ngày sử dụng thực tế.
-                        </p>
-                    </details>
-                    <details className="bg-white border rounded-xl p-4 group">
-                        <summary className="font-medium text-gray-900 cursor-pointer">
-                            Dữ liệu có an toàn không?
-                        </summary>
-                        <p className="mt-3 text-gray-600 text-sm">
-                            Dữ liệu được mã hóa và lưu trữ trên Supabase (PostgreSQL).
-                            Mỗi khách sạn chỉ có thể truy cập dữ liệu của chính mình.
-                        </p>
-                    </details>
+            {/* FAQ / Trust Section */}
+            <div className="grid md:grid-cols-3 gap-8 border-t border-gray-200 pt-12">
+                <div className="text-center">
+                    <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-600">
+                        <Zap className="w-6 h-6" />
+                    </div>
+                    <h4 className="font-semibold text-gray-900 mb-2">Setup trong 5 phút</h4>
+                    <p className="text-sm text-gray-600">Không cần cài đặt phức tạp. Đăng nhập và bắt đầu sử dụng ngay lập tức.</p>
+                </div>
+                <div className="text-center">
+                    <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4 text-green-600">
+                        <Check className="w-6 h-6" />
+                    </div>
+                    <h4 className="font-semibold text-gray-900 mb-2">Hỗ trợ 24/7</h4>
+                    <p className="text-sm text-gray-600">Đội ngũ hỗ trợ qua Zalo luôn sẵn sàng giải đáp mọi thắc mắc của bạn.</p>
+                </div>
+                <div className="text-center">
+                    <div className="w-12 h-12 bg-purple-50 rounded-full flex items-center justify-center mx-auto mb-4 text-purple-600">
+                        <AlertCircle className="w-6 h-6" />
+                    </div>
+                    <h4 className="font-semibold text-gray-900 mb-2">Hoàn tiền 30 ngày</h4>
+                    <p className="text-sm text-gray-600">Nếu bạn không hài lòng, chúng tôi hoàn tiền 100% trong 30 ngày đầu.</p>
                 </div>
             </div>
-        </>
+        </div>
     );
 
     // ═══════════════════════════════════════════════════════════════════
-    // Logged-in Layout (with Sidebar)
+    // Layout Handling (LoggedIn vs Public)
     // ═══════════════════════════════════════════════════════════════════
+
     if (isLoggedIn) {
         return (
             <div className="min-h-screen flex">
                 <Sidebar />
-                <main
-                    className="lg:ml-64 flex-1 min-h-screen pt-14 lg:pt-0"
-                    style={{ backgroundColor: '#F5F7FB' }}
-                >
-                    <div className="mx-auto max-w-[1400px] px-4 sm:px-8 py-4 sm:py-6">
+                <main className="lg:ml-64 flex-1 min-h-screen bg-[#F5F7FB] pt-14 lg:pt-0">
+                    <div className="p-4 sm:p-8">
                         <PricingContent />
                     </div>
                 </main>
@@ -335,49 +354,32 @@ export default function PricingPlansPage() {
     // Public Layout (no Sidebar)
     // ═══════════════════════════════════════════════════════════════════
     return (
-        <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-            {/* Header */}
-            <header className="bg-white border-b">
-                <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-                    <Link href="/" className="flex items-center gap-2">
-                        <Image
-                            src="/logo.jpg"
-                            alt="4TK Hospitality"
-                            width={150}
-                            height={40}
-                            className="h-10 w-auto"
-                            unoptimized
-                            priority
-                        />
+        <div className="min-h-screen bg-slate-50">
+            {/* Simple Public Header */}
+            <header className="bg-white border-b sticky top-0 z-50">
+                <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+                    <Link href="/" className="flex items-center gap-2 font-bold text-xl text-blue-900">
+                        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white">4</div>
+                        TK Hospitality
                     </Link>
                     <Link
                         href="/auth/login"
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                        className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors text-sm"
                     >
                         Đăng nhập
                     </Link>
                 </div>
             </header>
 
-            {/* Main Content */}
-            <section className="max-w-7xl mx-auto px-4 py-16">
+            <section className="py-16 px-4">
                 <PricingContent />
             </section>
 
-            {/* Footer */}
-            <footer className="bg-gray-900 text-white py-12">
+            <footer className="bg-gray-900 text-white py-12 border-t border-gray-800">
                 <div className="max-w-7xl mx-auto px-4 text-center">
-                    <Image
-                        src="/logo.jpg"
-                        alt="4TK Hospitality"
-                        width={120}
-                        height={32}
-                        className="h-8 w-auto mx-auto mb-4 brightness-200"
-                        unoptimized
-                    />
                     <p className="text-gray-400 text-sm">© 2026 4TK Hospitality. All rights reserved.</p>
                     <p className="text-gray-500 text-xs mt-2">
-                        Liên hệ: <a href="https://zalo.me/0778602953" className="text-blue-400 hover:underline">Zalo 0778602953</a>
+                        Liên hệ Zalo: <a href="https://zalo.me/0778602953" className="text-blue-400 hover:underline">0778602953</a>
                     </p>
                 </div>
             </footer>
