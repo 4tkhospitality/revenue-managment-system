@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { BookOpen, BarChart3, TrendingUp, DollarSign, CalendarDays, Upload, Database, Settings, HelpCircle, XCircle, Calculator, Percent, Tag, ArrowRightLeft, Lock } from 'lucide-react';
+import { BookOpen, BarChart3, TrendingUp, DollarSign, CalendarDays, Upload, Database, Settings, HelpCircle, XCircle, Calculator, Percent, Tag, ArrowRightLeft, Lock, AlertTriangle } from 'lucide-react';
+import { validateOTBData, type ValidationResult } from '../actions/validateOTBData';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 
@@ -115,6 +116,19 @@ export default function GuidePage() {
 
 // ==================== QUICK START GUIDE ====================
 function QuickStartGuide() {
+    const [dqStats, setDqStats] = useState<ValidationResult | null>(null);
+
+    useEffect(() => {
+        validateOTBData().then(setDqStats).catch(() => { });
+    }, []);
+
+    // Dynamic values from hotel data
+    const warningCount = dqStats?.stats.warningCount ?? 0;
+    const totalRows = dqStats?.stats.totalRows ?? 0;
+    const completeness = dqStats?.stats.completeness ?? 0;
+    const pastCount = dqStats?.issues.filter(i => i.code === 'PAST_STAY_DATE').length ?? 0;
+    const pastPct = totalRows > 0 ? Math.round((pastCount / totalRows) * 100) : 0;
+
     return (
         <>
             {/* Welcome Banner */}
@@ -278,7 +292,84 @@ function QuickStartGuide() {
                 </ol>
             </div>
 
-            {/* CTA */}
+            {/* FAQ: Câu hỏi thường gặp */}
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-6">
+                <h3 className="text-lg font-semibold text-amber-800 mb-4 flex items-center gap-2">
+                    <HelpCircle className="w-5 h-5" />
+                    Câu hỏi thường gặp
+                </h3>
+                <div className="space-y-4">
+                    {/* FAQ 1: Data Quality warnings */}
+                    <div className="bg-white border border-amber-100 rounded-lg p-4">
+                        <h4 className="font-semibold text-gray-900 mb-2">
+                            ⚠️ &quot;Data Quality: {warningCount > 0 ? `${warningCount.toLocaleString()} cảnh báo` : 'Không có cảnh báo'}&quot;
+                        </h4>
+                        <p className="text-gray-600 text-sm mb-2">
+                            <strong>{warningCount > 0 ? 'Không sao cả!' : 'Dữ liệu sạch!'}</strong>{' '}
+                            {warningCount > 0 ? (
+                                <>Phần lớn cảnh báo là <code className="bg-gray-100 px-1 rounded">PAST_STAY_DATE</code> — hệ thống thông báo rằng dữ liệu có các ngày lưu trú <strong>đã qua</strong>.{' '}
+                                    Đây là bình thường khi bạn upload dữ liệu lịch sử.</>
+                            ) : (
+                                'Tất cả dữ liệu đều hợp lệ và sẵn sàng sử dụng.'
+                            )}
+                        </p>
+                        {totalRows > 0 && (
+                            <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-600">
+                                <p className="mb-1">📊 <strong>Khách sạn của bạn:</strong> {totalRows.toLocaleString()} dòng OTB
+                                    {pastCount > 0 && <>, trong đó {pastCount.toLocaleString()} dòng có ngày lưu trú đã qua = <strong>{pastPct}% là dữ liệu lịch sử</strong></>}
+                                    . Độ hoàn thiện: <strong>{completeness}%</strong>.</p>
+                                <p>✅ Dữ liệu lịch sử vẫn hữu ích cho phân tích xu hướng và so sánh cùng kỳ năm trước (STLY).</p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* FAQ 2: Pickup N/A */}
+                    <div className="bg-white border border-amber-100 rounded-lg p-4">
+                        <h4 className="font-semibold text-gray-900 mb-2">
+                            📊 &quot;Pickup TB: N/A&quot; — Tại sao không hiện số?
+                        </h4>
+                        <p className="text-gray-600 text-sm mb-2">
+                            <strong>Pickup</strong> = So sánh số phòng đặt <strong>hôm nay</strong> với <strong>7 ngày trước</strong>.
+                            Vì vậy cần ít nhất 2 lần upload cách nhau <strong>≥ 7 ngày</strong> để hệ thống tính được.
+                        </p>
+                        <div className="bg-gray-50 rounded-lg p-3 text-sm">
+                            <p className="text-gray-600 mb-2">📅 <strong>Ví dụ timeline:</strong></p>
+                            <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                                <div className="bg-blue-100 text-blue-700 rounded p-2">
+                                    <div className="font-bold">Upload #1</div>
+                                    <div>01/02</div>
+                                </div>
+                                <div className="bg-gray-200 text-gray-500 rounded p-2">
+                                    <div>⏳ Chờ 7 ngày...</div>
+                                </div>
+                                <div className="bg-emerald-100 text-emerald-700 rounded p-2">
+                                    <div className="font-bold">Upload #2</div>
+                                    <div>08/02 → Pickup ✅</div>
+                                </div>
+                            </div>
+                        </div>
+                        <p className="text-gray-500 text-xs mt-2 italic">
+                            💡 Mẹo: Upload dữ liệu đều đặn mỗi ngày để có pickup chính xác nhất.
+                        </p>
+                    </div>
+
+                    {/* FAQ 3: Dự báo Ước lượng */}
+                    <div className="bg-white border border-amber-100 rounded-lg p-4">
+                        <h4 className="font-semibold text-gray-900 mb-2">
+                            ⚠️ Dự báo nhu cầu hiện &quot;Ước lượng&quot; — Có chính xác không?
+                        </h4>
+                        <p className="text-gray-600 text-sm mb-2">
+                            Khi chưa có đủ dữ liệu pickup, hệ thống sử dụng <strong>ước lượng sơ bộ</strong> (dựa trên tỷ lệ phòng còn trống).
+                            Con số này chỉ mang tính tham khảo.
+                        </p>
+                        <p className="text-gray-600 text-sm">
+                            Sau khi có <strong>≥ 2 lần upload cách nhau ≥ 7 ngày</strong>, hệ thống sẽ tự động chuyển sang dự báo dựa trên pickup thực tế — chính xác hơn nhiều.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+
             <div className="bg-white border border-gray-200 rounded-xl p-6 text-center">
                 <p className="text-gray-600 mb-4">Đã sẵn sàng? Bắt đầu ngay!</p>
                 <div className="flex flex-wrap justify-center gap-3">

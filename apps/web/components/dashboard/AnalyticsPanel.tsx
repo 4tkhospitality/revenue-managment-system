@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, Minus, Calendar, Users, DollarSign, AlertCircle } from 'lucide-react';
+import Link from 'next/link';
+import { TrendingUp, TrendingDown, Minus, Calendar, Users, DollarSign, AlertCircle, ArrowRight } from 'lucide-react';
 
 /**
  * Analytics Panel Component
@@ -35,6 +36,8 @@ export default function AnalyticsPanel({ hotelId, asOfDate }: AnalyticsPanelProp
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [data, setData] = useState<AnalyticsData[]>([]);
+    const [emptyReason, setEmptyReason] = useState<'api_error' | 'no_features' | 'no_features_for_date' | null>(null);
+    const [emptyHint, setEmptyHint] = useState<string | null>(null);
     const [summary, setSummary] = useState<{
         totalRooms: number;
         stlyRooms: number;
@@ -49,12 +52,25 @@ export default function AnalyticsPanel({ hotelId, asOfDate }: AnalyticsPanelProp
 
     const fetchAnalytics = async () => {
         setLoading(true);
+        setEmptyReason(null);
+        setEmptyHint(null);
         try {
             const dateParam = asOfDate ? `&asOf=${asOfDate}` : '';
             const res = await fetch(`/api/analytics/features?hotelId=${hotelId}${dateParam}`);
 
             if (!res.ok) {
-                // Fallback: API not yet implemented, show placeholder
+                // API returned error — distinguish no-features vs server error
+                try {
+                    const errJson = await res.json();
+                    if (errJson.error?.includes('No features data')) {
+                        setEmptyReason('no_features');
+                    } else {
+                        setEmptyReason('api_error');
+                    }
+                    setEmptyHint(errJson.hint || null);
+                } catch {
+                    setEmptyReason('api_error');
+                }
                 setData([]);
                 setSummary(null);
                 setLoading(false);
@@ -63,6 +79,18 @@ export default function AnalyticsPanel({ hotelId, asOfDate }: AnalyticsPanelProp
 
             const json = await res.json();
             const rows = json.rows || [];
+
+            // Check for API warning (features empty for explicit date)
+            if (json.warning === 'NO_FEATURES_FOR_DATE') {
+                setEmptyReason('no_features_for_date');
+                setEmptyHint(json.latestAvailable
+                    ? `Ngày gần nhất có sẵn: ${json.latestAvailable}`
+                    : null);
+                setData([]);
+                setSummary(null);
+                setLoading(false);
+                return;
+            }
 
             // Map API response to component format
             setData(rows.map((r: any) => ({
@@ -89,9 +117,13 @@ export default function AnalyticsPanel({ hotelId, asOfDate }: AnalyticsPanelProp
                     : 0;
 
                 setSummary({ totalRooms, stlyRooms, paceVsLy, avgPickup7, avgRemSupply });
+            } else {
+                // API returned 200 but 0 rows (shouldn't happen now, but safety)
+                setEmptyReason('no_features_for_date');
             }
         } catch (err) {
-            setError('Failed to load analytics');
+            setError('Lỗi tải dữ liệu phân tích');
+            setEmptyReason('api_error');
         } finally {
             setLoading(false);
         }
@@ -131,20 +163,49 @@ export default function AnalyticsPanel({ hotelId, asOfDate }: AnalyticsPanelProp
         );
     }
 
-    // Placeholder when no data/API not ready
+    // Placeholder when no data — show reason-specific Vietnamese message
     if (!summary) {
+        let message: string;
+        let showDataLink = false;
+
+        switch (emptyReason) {
+            case 'api_error':
+                message = 'Lỗi tải dữ liệu phân tích. Vui lòng thử lại sau.';
+                break;
+            case 'no_features':
+                message = 'Chưa có dữ liệu phân tích.';
+                showDataLink = true;
+                break;
+            case 'no_features_for_date':
+                message = `Chưa có dữ liệu phân tích cho ngày ${asOfDate || 'hiện tại'}.`;
+                showDataLink = true;
+                break;
+            default:
+                message = 'Chưa có dữ liệu phân tích.';
+                showDataLink = true;
+        }
+
         return (
             <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <div className="flex items-center gap-2 mb-4">
                     <Calendar className="w-5 h-5 text-blue-600" />
                     <h3 className="text-lg font-semibold text-gray-800">Analytics Insights</h3>
-                    <span className="ml-auto text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded">
-                        Coming Soon
-                    </span>
                 </div>
                 <div className="text-center py-8 text-gray-500">
                     <AlertCircle className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-                    <p>Chạy <code className="bg-gray-100 px-2 py-1 rounded text-sm">buildFeaturesDaily</code> để xem analytics</p>
+                    <p className="mb-1">{message}</p>
+                    {emptyHint && (
+                        <p className="text-xs text-gray-400 mb-3">{emptyHint}</p>
+                    )}
+                    {showDataLink && (
+                        <Link
+                            href="/data"
+                            className="inline-flex items-center gap-1 mt-2 text-sm text-blue-600 hover:text-blue-800 font-medium"
+                        >
+                            Vào Quản lý dữ liệu → Build Features
+                            <ArrowRight className="w-4 h-4" />
+                        </Link>
+                    )}
                 </div>
             </div>
         );

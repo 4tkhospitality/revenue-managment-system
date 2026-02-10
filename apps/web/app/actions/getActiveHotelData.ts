@@ -29,3 +29,29 @@ export async function getActiveHotelData(): Promise<{
         latestBookingDate: latestBooking._max.booking_date || null,
     };
 }
+
+/**
+ * v2: Get latest OTB snapshot date for Build Features.
+ * Features MUST build against daily_otb.as_of_date, not reservations_raw.booking_date.
+ * Reason: booking_date = when guest booked, as_of_date = when OTB snapshot was created.
+ */
+export async function getLatestOtbDate(): Promise<{
+    hotelId: string | null;
+    latestAsOfDate: Date | null;
+}> {
+    const hotelId = await getActiveHotelId();
+
+    if (!hotelId) {
+        return { hotelId: null, latestAsOfDate: null };
+    }
+
+    const latestOtb = await prisma.dailyOTB.aggregate({
+        where: { hotel_id: hotelId },
+        _max: { as_of_date: true },
+    });
+
+    return {
+        hotelId,
+        latestAsOfDate: latestOtb._max.as_of_date || null,
+    };
+}

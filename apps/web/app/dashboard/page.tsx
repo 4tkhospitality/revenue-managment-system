@@ -63,11 +63,18 @@ async function fetchDashboardData(hotelId: string, today: Date) {
     const actualForecastDate = latestForecastDate?.as_of_date || today;
 
     // BATCH 2: Fetch data using actual latest dates
+    // Merged: cancellation query moved here (was batch 3) since referenceDate = actualOtbDate
     const batch2Start = Date.now();
+    const referenceDate = new Date(actualOtbDate);
+    referenceDate.setHours(0, 0, 0, 0);
+    const thirtyDaysFromRef = new Date(referenceDate);
+    thirtyDaysFromRef.setDate(thirtyDaysFromRef.getDate() + 30);
+
     const [
         otbData,
         forecastData,
-        featuresData
+        featuresData,
+        cancelledReservations
     ] = await Promise.all([
         prisma.dailyOTB.findMany({
             where: {
@@ -96,27 +103,17 @@ async function fetchDashboardData(hotelId: string, today: Date) {
             orderBy: { stay_date: 'asc' },
             take: 60,
         }),
+        // Cancellations (was batch 3, now parallel)
+        prisma.reservationsRaw.findMany({
+            where: {
+                hotel_id: hotelId,
+                cancel_time: { not: null },
+                arrival_date: { gte: referenceDate, lte: thirtyDaysFromRef }
+            },
+            select: { rooms: true, revenue: true, arrival_date: true, departure_date: true }
+        }),
     ]);
-    console.log(`[Dashboard] Batch 2 data queries: ${Date.now() - batch2Start}ms`);
-    console.log(`[Dashboard DEBUG] actualOtbDate: ${actualOtbDate?.toISOString()}, otbData.length: ${otbData.length}, first stay_date: ${otbData[0]?.stay_date?.toISOString() || 'N/A'}`);
-
-    // BATCH 3: Cancellation query (depends on OTB reference date)
-    const batch3Start = Date.now();
-    const referenceDate = otbData.length > 0 ? new Date(otbData[0].as_of_date) : today;
-    referenceDate.setHours(0, 0, 0, 0);
-    const thirtyDaysFromRef = new Date(referenceDate);
-    thirtyDaysFromRef.setDate(thirtyDaysFromRef.getDate() + 30);
-
-    const cancelledReservations = await prisma.reservationsRaw.findMany({
-        where: {
-            hotel_id: hotelId,
-            cancel_time: { not: null },
-            arrival_date: { gte: referenceDate, lte: thirtyDaysFromRef }
-        },
-        select: { rooms: true, revenue: true, arrival_date: true, departure_date: true }
-    });
-
-    console.log(`[Dashboard] Batch 3 cancellation query: ${Date.now() - batch3Start}ms`);
+    console.log(`[Dashboard] Batch 2 (merged) queries: ${Date.now() - batch2Start}ms`);
     console.log(`[Dashboard] Total query time: ${Date.now() - startTime}ms`);
 
     return {
@@ -185,13 +182,28 @@ export default async function DashboardPage({
     const hotelCapacity = hotel?.capacity || 0;
     const hotelName = hotel?.name || 'Chưa đặt tên';
 
-    // Calculate KPIs
+    // Calculate KPIs — v2: NULL-safe, never coalesce pickup to 0
     const totalOtb = otbData.reduce((sum, d) => sum + d.rooms_otb, 0);
     const remainingSupply = Math.max(0, hotelCapacity * 30 - totalOtb);
     const totalForecast = forecastData.reduce((sum, d) => sum + (d.remaining_demand || 0), 0);
-    const avgPickupT7 = featuresData.length > 0
-        ? featuresData.reduce((sum, f) => sum + (f.pickup_t7 || 0), 0) / featuresData.length
-        : 0;
+
+    // Pickup: only average non-null values, require ≥2 for "computed" status
+    const pickupValues = featuresData
+        .map(f => f.pickup_t7)
+        .filter((v): v is number => v != null);
+    const pickupHistoryCount = pickupValues.length;
+    const avgPickupT7 = pickupHistoryCount >= 2
+        ? pickupValues.reduce((a, b) => a + b, 0) / pickupHistoryCount
+        : null;
+
+    // Forecast source: check model_version of first forecast row
+    const forecastSource = forecastData.length > 0
+        ? (forecastData[0].model_version?.includes('fallback') || forecastData[0].model_version?.includes('no_supply')
+            ? 'fallback'
+            : forecastData[0].model_version?.includes('pickup_single')
+                ? 'single'
+                : 'computed')
+        : 'none';
 
     // Calculate cancelled room-nights and lost revenue
     let cancelledRooms = 0;
@@ -209,6 +221,8 @@ export default async function DashboardPage({
         remainingSupply,
         avgPickupT7,
         forecastDemand: totalForecast,
+        pickupHistoryCount,
+        forecastSource,
         cancelledRooms,
         lostRevenue,
     };

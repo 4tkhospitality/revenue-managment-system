@@ -101,9 +101,8 @@ async function buildForSingleAsOf(
 ): Promise<number> {
     const asOfStr = asOfDate.toISOString().split('T')[0];
 
-    // ── 1. Pickup T-30/T-15/T-7/T-5/T-3 (Batch Self-Join, NULL-safe) ──
-    // This single query computes all pickup values via LEFT JOINs.
-    // Missing snapshot → NULL (NOT 0 via COALESCE)
+    // ── 1. Pickup v2: LATERAL nearest-neighbor + deltaDays scale (NULL-safe) ──
+    // BA rules: exact-first ORDER BY, ::numeric cast, NULLIF(delta,0), no future leakage
     const pickupRows = await prisma.$queryRaw<Array<{
         stay_date: Date;
         rooms_otb: number;
@@ -112,41 +111,106 @@ async function buildForSingleAsOf(
         pickup_t7: number | null;
         pickup_t5: number | null;
         pickup_t3: number | null;
-        has_t30: boolean;
-        has_t15: boolean;
-        has_t7: boolean;
-        has_t5: boolean;
-        has_t3: boolean;
+        t30_src: string | null; t30_delta: number | null; t30_snap: string | null;
+        t15_src: string | null; t15_delta: number | null; t15_snap: string | null;
+        t7_src: string | null; t7_delta: number | null; t7_snap: string | null;
+        t5_src: string | null; t5_delta: number | null; t5_snap: string | null;
+        t3_src: string | null; t3_delta: number | null; t3_snap: string | null;
     }>>`
     SELECT
       cur.stay_date,
       cur.rooms_otb,
-      CASE WHEN t30.rooms_otb IS NOT NULL THEN cur.rooms_otb - t30.rooms_otb ELSE NULL END AS pickup_t30,
-      CASE WHEN t15.rooms_otb IS NOT NULL THEN cur.rooms_otb - t15.rooms_otb ELSE NULL END AS pickup_t15,
-      CASE WHEN t7.rooms_otb IS NOT NULL THEN cur.rooms_otb - t7.rooms_otb ELSE NULL END AS pickup_t7,
-      CASE WHEN t5.rooms_otb IS NOT NULL THEN cur.rooms_otb - t5.rooms_otb ELSE NULL END AS pickup_t5,
-      CASE WHEN t3.rooms_otb IS NOT NULL THEN cur.rooms_otb - t3.rooms_otb ELSE NULL END AS pickup_t3,
-      (t30.rooms_otb IS NOT NULL) AS has_t30,
-      (t15.rooms_otb IS NOT NULL) AS has_t15,
-      (t7.rooms_otb IS NOT NULL) AS has_t7,
-      (t5.rooms_otb IS NOT NULL) AS has_t5,
-      (t3.rooms_otb IS NOT NULL) AS has_t3
+      -- T-30: scale to 30-day equiv
+      CASE WHEN t30.rooms_otb IS NOT NULL AND t30.delta_days > 0 THEN
+        ROUND(((cur.rooms_otb - t30.rooms_otb)::numeric / NULLIF(t30.delta_days, 0)) * 30)
+      ELSE NULL END AS pickup_t30,
+      t30.src AS t30_src, t30.delta_days AS t30_delta, t30.snap_date::text AS t30_snap,
+      -- T-15
+      CASE WHEN t15.rooms_otb IS NOT NULL AND t15.delta_days > 0 THEN
+        ROUND(((cur.rooms_otb - t15.rooms_otb)::numeric / NULLIF(t15.delta_days, 0)) * 15)
+      ELSE NULL END AS pickup_t15,
+      t15.src AS t15_src, t15.delta_days AS t15_delta, t15.snap_date::text AS t15_snap,
+      -- T-7
+      CASE WHEN t7.rooms_otb IS NOT NULL AND t7.delta_days > 0 THEN
+        ROUND(((cur.rooms_otb - t7.rooms_otb)::numeric / NULLIF(t7.delta_days, 0)) * 7)
+      ELSE NULL END AS pickup_t7,
+      t7.src AS t7_src, t7.delta_days AS t7_delta, t7.snap_date::text AS t7_snap,
+      -- T-5
+      CASE WHEN t5.rooms_otb IS NOT NULL AND t5.delta_days > 0 THEN
+        ROUND(((cur.rooms_otb - t5.rooms_otb)::numeric / NULLIF(t5.delta_days, 0)) * 5)
+      ELSE NULL END AS pickup_t5,
+      t5.src AS t5_src, t5.delta_days AS t5_delta, t5.snap_date::text AS t5_snap,
+      -- T-3
+      CASE WHEN t3.rooms_otb IS NOT NULL AND t3.delta_days > 0 THEN
+        ROUND(((cur.rooms_otb - t3.rooms_otb)::numeric / NULLIF(t3.delta_days, 0)) * 3)
+      ELSE NULL END AS pickup_t3,
+      t3.src AS t3_src, t3.delta_days AS t3_delta, t3.snap_date::text AS t3_snap
     FROM daily_otb cur
-    LEFT JOIN daily_otb t30 ON t30.hotel_id = cur.hotel_id
-      AND t30.stay_date = cur.stay_date
-      AND t30.as_of_date = (cur.as_of_date - INTERVAL '30 days')::date
-    LEFT JOIN daily_otb t15 ON t15.hotel_id = cur.hotel_id
-      AND t15.stay_date = cur.stay_date
-      AND t15.as_of_date = (cur.as_of_date - INTERVAL '15 days')::date
-    LEFT JOIN daily_otb t7 ON t7.hotel_id = cur.hotel_id
-      AND t7.stay_date = cur.stay_date
-      AND t7.as_of_date = (cur.as_of_date - INTERVAL '7 days')::date
-    LEFT JOIN daily_otb t5 ON t5.hotel_id = cur.hotel_id
-      AND t5.stay_date = cur.stay_date
-      AND t5.as_of_date = (cur.as_of_date - INTERVAL '5 days')::date
-    LEFT JOIN daily_otb t3 ON t3.hotel_id = cur.hotel_id
-      AND t3.stay_date = cur.stay_date
-      AND t3.as_of_date = (cur.as_of_date - INTERVAL '3 days')::date
+    -- T-30: window ±5 days (25-35)
+    LEFT JOIN LATERAL (
+        SELECT rooms_otb,
+               (cur.as_of_date::date - as_of_date::date) AS delta_days,
+               as_of_date AS snap_date,
+               CASE WHEN as_of_date = (cur.as_of_date - INTERVAL '30 days')::date THEN 'exact' ELSE 'nearest' END AS src
+        FROM daily_otb
+        WHERE hotel_id = cur.hotel_id AND stay_date = cur.stay_date
+          AND as_of_date BETWEEN (cur.as_of_date - INTERVAL '35 days')::date AND (cur.as_of_date - INTERVAL '25 days')::date
+        ORDER BY (as_of_date = (cur.as_of_date - INTERVAL '30 days')::date) DESC,
+                 ABS(as_of_date - (cur.as_of_date - INTERVAL '30 days')::date) ASC
+        LIMIT 1
+    ) t30 ON TRUE
+    -- T-15: window ±4 days (11-19)
+    LEFT JOIN LATERAL (
+        SELECT rooms_otb,
+               (cur.as_of_date::date - as_of_date::date) AS delta_days,
+               as_of_date AS snap_date,
+               CASE WHEN as_of_date = (cur.as_of_date - INTERVAL '15 days')::date THEN 'exact' ELSE 'nearest' END AS src
+        FROM daily_otb
+        WHERE hotel_id = cur.hotel_id AND stay_date = cur.stay_date
+          AND as_of_date BETWEEN (cur.as_of_date - INTERVAL '19 days')::date AND (cur.as_of_date - INTERVAL '11 days')::date
+        ORDER BY (as_of_date = (cur.as_of_date - INTERVAL '15 days')::date) DESC,
+                 ABS(as_of_date - (cur.as_of_date - INTERVAL '15 days')::date) ASC
+        LIMIT 1
+    ) t15 ON TRUE
+    -- T-7: window ±3 days (4-10)
+    LEFT JOIN LATERAL (
+        SELECT rooms_otb,
+               (cur.as_of_date::date - as_of_date::date) AS delta_days,
+               as_of_date AS snap_date,
+               CASE WHEN as_of_date = (cur.as_of_date - INTERVAL '7 days')::date THEN 'exact' ELSE 'nearest' END AS src
+        FROM daily_otb
+        WHERE hotel_id = cur.hotel_id AND stay_date = cur.stay_date
+          AND as_of_date BETWEEN (cur.as_of_date - INTERVAL '10 days')::date AND (cur.as_of_date - INTERVAL '4 days')::date
+        ORDER BY (as_of_date = (cur.as_of_date - INTERVAL '7 days')::date) DESC,
+                 ABS(as_of_date - (cur.as_of_date - INTERVAL '7 days')::date) ASC
+        LIMIT 1
+    ) t7 ON TRUE
+    -- T-5: window ±2 days (3-7)
+    LEFT JOIN LATERAL (
+        SELECT rooms_otb,
+               (cur.as_of_date::date - as_of_date::date) AS delta_days,
+               as_of_date AS snap_date,
+               CASE WHEN as_of_date = (cur.as_of_date - INTERVAL '5 days')::date THEN 'exact' ELSE 'nearest' END AS src
+        FROM daily_otb
+        WHERE hotel_id = cur.hotel_id AND stay_date = cur.stay_date
+          AND as_of_date BETWEEN (cur.as_of_date - INTERVAL '7 days')::date AND (cur.as_of_date - INTERVAL '3 days')::date
+        ORDER BY (as_of_date = (cur.as_of_date - INTERVAL '5 days')::date) DESC,
+                 ABS(as_of_date - (cur.as_of_date - INTERVAL '5 days')::date) ASC
+        LIMIT 1
+    ) t5 ON TRUE
+    -- T-3: window ±1 day (2-4)
+    LEFT JOIN LATERAL (
+        SELECT rooms_otb,
+               (cur.as_of_date::date - as_of_date::date) AS delta_days,
+               as_of_date AS snap_date,
+               CASE WHEN as_of_date = (cur.as_of_date - INTERVAL '3 days')::date THEN 'exact' ELSE 'nearest' END AS src
+        FROM daily_otb
+        WHERE hotel_id = cur.hotel_id AND stay_date = cur.stay_date
+          AND as_of_date BETWEEN (cur.as_of_date - INTERVAL '4 days')::date AND (cur.as_of_date - INTERVAL '2 days')::date
+        ORDER BY (as_of_date = (cur.as_of_date - INTERVAL '3 days')::date) DESC,
+                 ABS(as_of_date - (cur.as_of_date - INTERVAL '3 days')::date) ASC
+        LIMIT 1
+    ) t3 ON TRUE
     WHERE cur.hotel_id = ${hotelId}::uuid
       AND cur.as_of_date = ${asOfStr}::date
       AND cur.stay_date >= cur.as_of_date
@@ -227,13 +291,13 @@ async function buildForSingleAsOf(
         const month = row.stay_date.getMonth() + 1;
         const is_weekend = dow === 5 || dow === 6; // Fri/Sat (D6 decision)
 
-        // pickup_source trace
-        const pickup_source: Record<string, string> = {};
-        if (row.has_t30) pickup_source.t30 = 'exact';
-        if (row.has_t15) pickup_source.t15 = 'exact';
-        if (row.has_t7) pickup_source.t7 = 'exact';
-        if (row.has_t5) pickup_source.t5 = 'exact';
-        if (row.has_t3) pickup_source.t3 = 'exact';
+        // pickup_source trace — rich metadata from LATERAL
+        const pickup_source: Record<string, any> = {};
+        if (row.t30_src) pickup_source.t30 = { src: row.t30_src, delta: Number(row.t30_delta), as_of: row.t30_snap };
+        if (row.t15_src) pickup_source.t15 = { src: row.t15_src, delta: Number(row.t15_delta), as_of: row.t15_snap };
+        if (row.t7_src) pickup_source.t7 = { src: row.t7_src, delta: Number(row.t7_delta), as_of: row.t7_snap };
+        if (row.t5_src) pickup_source.t5 = { src: row.t5_src, delta: Number(row.t5_delta), as_of: row.t5_snap };
+        if (row.t3_src) pickup_source.t3 = { src: row.t3_src, delta: Number(row.t3_delta), as_of: row.t3_snap };
 
         features.push({
             hotel_id: hotelId,

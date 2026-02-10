@@ -13,8 +13,10 @@ const surface = "rounded-2xl bg-white border border-slate-200/80 shadow-[0_1px_2
 interface KpiData {
     roomsOtb: number;
     remainingSupply: number;
-    avgPickupT7: number;
+    avgPickupT7: number | null;  // null = insufficient history
     forecastDemand: number;
+    pickupHistoryCount: number;  // need >= 2 for "computed"
+    forecastSource: string;      // 'computed' | 'single' | 'fallback' | 'no_supply' | 'none'
     // V01.1: Cancellation stats
     cancelledRooms?: number;
     lostRevenue?: number;
@@ -81,8 +83,19 @@ function generateInsights(data: KpiData, hotelCapacity: number): Insight[] {
     const totalSupply = hotelCapacity * 30;
     const occupancyRate = (data.roomsOtb / totalSupply) * 100;
 
-    // Insight 1: Pickup Analysis
-    if (data.avgPickupT7 > 5) {
+    // Insight 1: Pickup Analysis — distinguish "insufficient data" from "low pickup"
+    if (data.pickupHistoryCount < 2) {
+        // Not enough history — DON'T say "pickup low"
+        insights.push({
+            icon: AlertTriangle,
+            iconColor: 'text-gray-500',
+            bgColor: 'bg-gray-50',
+            borderColor: 'border-gray-200',
+            title: '📊 Chưa đủ dữ liệu Pickup',
+            description: 'Cần ít nhất 2 lần upload dữ liệu cách nhau ≥3 ngày để tính pickup chính xác.',
+            action: '💡 Upload dữ liệu thường xuyên hơn để hệ thống phân tích tốt hơn'
+        });
+    } else if (data.avgPickupT7 != null && data.avgPickupT7 > 5) {
         insights.push({
             icon: TrendingUp,
             iconColor: 'text-emerald-600',
@@ -92,7 +105,7 @@ function generateInsights(data: KpiData, hotelCapacity: number): Insight[] {
             description: `Trung bình +${nf1.format(data.avgPickupT7)} phòng/ngày trong 7 ngày qua. Khách đang đặt phòng nhiều.`,
             action: '💡 Gợi ý: Có thể TĂNG GIÁ để tối ưu doanh thu'
         });
-    } else if (data.avgPickupT7 < 2) {
+    } else if (data.avgPickupT7 != null && data.avgPickupT7 < 2) {
         insights.push({
             icon: TrendingDown,
             iconColor: 'text-amber-600',
@@ -102,7 +115,7 @@ function generateInsights(data: KpiData, hotelCapacity: number): Insight[] {
             description: `Chỉ +${nf1.format(data.avgPickupT7)} phòng/ngày trong 7 ngày qua. Khách đặt ít hơn bình thường.`,
             action: '💡 Gợi ý: Cân nhắc GIẢM GIÁ hoặc chạy khuyến mãi'
         });
-    } else {
+    } else if (data.avgPickupT7 != null) {
         insights.push({
             icon: Minus,
             iconColor: 'text-blue-600',
@@ -192,17 +205,29 @@ export function KpiCards({ data, hotelCapacity }: KpiCardsProps) {
                 />
                 <KpiCard
                     title="Pickup TB (7 ngày)"
-                    value={`+${nf1.format(data.avgPickupT7)}`}
-                    trend={data.avgPickupT7}
-                    trendLabel={`+${nf1.format((data.avgPickupT7 / data.roomsOtb) * 100)}%`}
-                    formula="AVG pickup 30 ngày gần nhất"
+                    value={data.pickupHistoryCount >= 2 && data.avgPickupT7 != null
+                        ? `+${nf1.format(data.avgPickupT7)}`
+                        : 'N/A'}
+                    trend={data.avgPickupT7 ?? undefined}
+                    trendLabel={data.pickupHistoryCount >= 2 && data.avgPickupT7 != null && data.roomsOtb > 0
+                        ? `+${nf1.format((data.avgPickupT7 / data.roomsOtb) * 100)}%`
+                        : 'Chưa đủ dữ liệu'}
+                    formula={data.pickupHistoryCount < 2
+                        ? 'Cần ≥2 snapshots để tính'
+                        : 'AVG pickup 30 ngày gần nhất'}
                 />
                 <KpiCard
                     title="Dự báo nhu cầu"
-                    value={`+${nf0.format(data.forecastDemand)}`}
-                    trend={data.forecastDemand}
-                    trendLabel="phòng"
-                    formula="SUM(remaining_demand)"
+                    value={data.forecastSource === 'no_supply' || data.forecastSource === 'none'
+                        ? '—'
+                        : `+${nf0.format(data.forecastDemand)}`}
+                    trend={data.forecastDemand > 0 ? data.forecastDemand : undefined}
+                    trendLabel={data.forecastSource === 'fallback'
+                        ? '⚠️ Ước lượng'
+                        : data.forecastSource === 'single'
+                            ? '⚠️ 1 điểm'
+                            : 'phòng'}
+                    formula={`SUM(remaining_demand) — ${data.forecastSource}`}
                 />
             </div>
 

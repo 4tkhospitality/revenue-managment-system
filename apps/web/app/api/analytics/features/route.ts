@@ -58,6 +58,25 @@ export async function GET(request: NextRequest) {
         orderBy: { stay_date: 'asc' },
     });
 
+    // If explicit date requested but no features built for that date — warn clearly
+    if (features.length === 0 && asOfParam) {
+        const latestFeat = await prisma.featuresDaily.findFirst({
+            where: { hotel_id: hotelId },
+            orderBy: { as_of_date: 'desc' },
+            select: { as_of_date: true },
+        });
+
+        return NextResponse.json({
+            rows: [],
+            warning: 'NO_FEATURES_FOR_DATE',
+            hint: `Chưa build features cho ngày ${asOfParam}. Vào /data → Build Features.`,
+            asOfDate: asOfParam,
+            latestAvailable: latestFeat?.as_of_date?.toISOString().split('T')[0] || null,
+            kpi: { occ7: 0, occ14: 0, occ30: 0, pace7: null, pace30: null, totalPickup7d: 0, totalPickup1d: 0 },
+            quality: { totalRows: 0, withT7: 0, withSTLY: 0, approxSTLY: 0, completeness: 0, stlyCoverage: 0 },
+        });
+    }
+
     const otb = await prisma.dailyOTB.findMany({
         where: {
             hotel_id: hotelId,

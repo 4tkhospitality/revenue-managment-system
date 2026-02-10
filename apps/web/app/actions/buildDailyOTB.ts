@@ -259,6 +259,7 @@ export async function rebuildAllOTB() {
         _max: {
             booking_date: true,
             departure_date: true,
+            loaded_at: true,   // v2: actual upload timestamp
         },
         _min: {
             arrival_date: true,
@@ -266,6 +267,7 @@ export async function rebuildAllOTB() {
     });
 
     const latestBookingDate = dataRange._max.booking_date;
+    const latestLoadedAt = dataRange._max.loaded_at;
     const earliestArrival = dataRange._min.arrival_date;
     const latestDeparture = dataRange._max.departure_date;
 
@@ -274,8 +276,11 @@ export async function rebuildAllOTB() {
         return buildDailyOTB({ hotelId });
     }
 
-    // Use end of the latest booking day as snapshot timestamp
-    const asOfTs = new Date(latestBookingDate);
+    // v2: Use loaded_at (upload date) as snapshot timestamp, NOT booking_date
+    // booking_date = when guest booked (could be days ago)
+    // loaded_at = when hotel uploaded data = true "as of" date
+    const snapshotDate = latestLoadedAt || latestBookingDate;
+    const asOfTs = new Date(snapshotDate);
     asOfTs.setHours(23, 59, 59, 999);
 
     // Use actual data range for stay dates (with some buffer)

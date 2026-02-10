@@ -11,29 +11,52 @@ export async function runForecast(hotelId: string, asOfDate: Date) {
     });
 
     const forecasts = features.map(f => {
-        // Heuristic Logic
-        // avg(t30, t15, t5)
-        const avgPickup = ((f.pickup_t30 || 0) + (f.pickup_t15 || 0) + (f.pickup_t5 || 0)) / 3.0;
+        // v2: Convert N-day equivalents → per-day rate, average only non-null values
+        // BA rules: Option A scaling, countNonNull avg, clamp negative, days_to_arrival
+        const rates: number[] = [];
+        if (f.pickup_t30 != null) rates.push(f.pickup_t30 / 30);
+        if (f.pickup_t15 != null) rates.push(f.pickup_t15 / 15);
+        if (f.pickup_t7 != null) rates.push(f.pickup_t7 / 7);
+        if (f.pickup_t5 != null) rates.push(f.pickup_t5 / 5);
+        if (f.pickup_t3 != null) rates.push(f.pickup_t3 / 3);
 
-        // max(avg, t7)
-        const baseDemand = Math.max(avgPickup, f.pickup_t7 || 0);
+        const countNonNull = rates.length;
 
-        // Apply Factor
-        // Note: Demand cannot be negative
-        let remaining_demand = Math.max(0, baseDemand * lead_time_factor);
+        // days_to_arrival = stay_date - as_of_date (in days)
+        const daysToArrival = Math.max(1, Math.ceil(
+            (new Date(f.stay_date).getTime() - new Date(f.as_of_date).getTime()) / (1000 * 60 * 60 * 24)
+        ));
 
-        // Capacity Guard (Optional V01?)
-        // remaining_demand <= remaining_supply * multiplier?
-        // Not strictly enforcing yet, let's keep it raw demand.
+        let remaining_demand: number;
+        let forecast_source: string;
+
+        if (countNonNull >= 2) {
+            // Enough history: true average of per-day rates
+            const avgRate = rates.reduce((a, b) => a + b, 0) / countNonNull;
+            // Clamp negative rates (due to cancellations) to 0 for forecast
+            const safeRate = Math.max(0, avgRate);
+            remaining_demand = Math.max(0, Math.round(safeRate * lead_time_factor * daysToArrival));
+            forecast_source = 'pickup_avg';
+        } else if (countNonNull === 1) {
+            // Single data point: use it but flag
+            const safeRate = Math.max(0, rates[0]);
+            remaining_demand = Math.max(0, Math.round(safeRate * lead_time_factor * daysToArrival));
+            forecast_source = 'pickup_single';
+        } else {
+            // No pickup history → supply-based fallback
+            // BA rule: clamp to supply, no forced >=1 when supply=0
+            const supply = Math.max(0, f.remaining_supply || 0);
+            const est = Math.round(supply * 0.2);
+            remaining_demand = Math.min(supply, Math.max(0, est));
+            forecast_source = supply > 0 ? 'fallback' : 'no_supply';
+        }
 
         return {
             hotel_id: hotelId,
             as_of_date: asOfDate,
             stay_date: f.stay_date,
             remaining_demand: remaining_demand,
-            model_version: 'heuristic_v01',
-            // Explainability Log (stored in DB? Schema might need Json field)
-            // `demand_forecast` schema check needed. Assuming strict columns for now.
+            model_version: `heuristic_v02:${forecast_source}`,
         };
     });
 

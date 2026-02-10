@@ -2,28 +2,34 @@ import prisma from '../../lib/prisma';
 import { DateUtils } from '../../lib/date';
 import { getCancellationStats30Days } from '../../lib/cachedStats';
 
-export async function CancellationSection() {
-    // Get cancellation stats for last 30 days (cached)
-    const stats = await getCancellationStats30Days();
+export async function CancellationSection({ hotelId }: { hotelId?: string }) {
+    // Parallel: all 3 queries at once (was sequential → ~300ms saved)
+    const whereHotel = hotelId ? { hotel_id: hotelId } : {};
 
-    // V01.1: Match status breakdown (still all-time for matching purposes)
-    const matchStatusStats = await prisma.cancellationRaw.groupBy({
-        by: ['match_status'],
-        _count: { id: true }
-    });
+    const [stats, matchStatusStats, recentCancellations] = await Promise.all([
+        // Stats (cached, with hotel filter)
+        getCancellationStats30Days(hotelId),
+        // Match status breakdown (hotel filtered)
+        prisma.cancellationRaw.groupBy({
+            by: ['match_status'],
+            where: whereHotel,
+            _count: { id: true }
+        }),
+        // Recent cancellations (hotel filtered, limit 10)
+        prisma.cancellationRaw.findMany({
+            where: whereHotel,
+            orderBy: { cancel_time: 'desc' },
+            take: 10
+        }),
+    ]);
 
+    // Compute match stats from groupBy result
     const matchedCount = matchStatusStats.find(s => s.match_status === 'matched')?._count.id || 0;
     const unmatchedCount = matchStatusStats.find(s => s.match_status === 'unmatched')?._count.id || 0;
     const ambiguousCount = matchStatusStats.find(s => s.match_status === 'ambiguous')?._count.id || 0;
     const pendingCount = matchStatusStats.find(s => s.match_status === 'pending' || !s.match_status)?._count.id || 0;
     const totalMatchCount = matchedCount + unmatchedCount + ambiguousCount + pendingCount;
     const matchRate = totalMatchCount > 0 ? Math.round((matchedCount / totalMatchCount) * 100) : 0;
-
-    // Recent cancellations - limit to 10 for faster loading
-    const recentCancellations = await prisma.cancellationRaw.findMany({
-        orderBy: { cancel_time: 'desc' },
-        take: 10
-    });
 
     return (
         <div className="bg-white border border-rose-200 rounded-xl overflow-hidden shadow-sm">

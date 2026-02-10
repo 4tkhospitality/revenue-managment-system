@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { buildFeaturesDaily, backfillFeatures, BuildFeaturesResult, BackfillResult } from '../actions/buildFeaturesDaily';
-import { getActiveHotelData } from '../actions/getActiveHotelData';
+import { getLatestOtbDate } from '../actions/getActiveHotelData';
 import { useRouter } from 'next/navigation';
 
 export function BuildFeaturesButton() {
@@ -14,16 +14,25 @@ export function BuildFeaturesButton() {
         setIsBuilding(true);
         setResult(null);
         try {
-            const { hotelId, latestBookingDate } = await getActiveHotelData();
-            if (!hotelId || !latestBookingDate) {
-                setResult({ success: false, message: 'Chưa có dữ liệu reservation' });
+            // v2: Use MAX(as_of_date) from daily_otb — not booking_date!
+            const { hotelId, latestAsOfDate } = await getLatestOtbDate();
+            if (!hotelId) {
+                setResult({ success: false, message: 'Chưa chọn hotel' });
+                return;
+            }
+            if (!latestAsOfDate) {
+                setResult({ success: false, message: '⚠️ Chưa có OTB snapshot. Vui lòng Build OTB trước!' });
                 return;
             }
 
-            const asOfDate = new Date(latestBookingDate);
-            asOfDate.setHours(0, 0, 0, 0);
+            // Fix timezone: extract ISO string BEFORE any Date conversion
+            // latestAsOfDate from server is UTC midnight, converting to local timezone
+            // in Vietnam (UTC+7) shifts it back 1 day via setHours(0,0,0,0)
+            const asOfDateStr = latestAsOfDate instanceof Date
+                ? latestAsOfDate.toISOString().split('T')[0]
+                : String(latestAsOfDate).split('T')[0];
 
-            const res = await buildFeaturesDaily(hotelId, asOfDate);
+            const res = await buildFeaturesDaily(hotelId, asOfDateStr);
             setResult(res);
             if (res.success) {
                 router.refresh();
@@ -97,7 +106,7 @@ export function BackfillFeaturesButton() {
         setIsRunning(true);
         setResult(null);
         try {
-            const { hotelId } = await getActiveHotelData();
+            const { hotelId } = await getLatestOtbDate();
             if (!hotelId) {
                 setResult({ success: false, totalProcessed: 0, totalChunks: 0, message: 'Không tìm thấy hotel' });
                 return;

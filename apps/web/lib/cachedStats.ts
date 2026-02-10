@@ -1,68 +1,125 @@
-// Data stats - always fresh (no cache to avoid stale data issues)
+// Data stats - filtered by hotel, with in-memory cache
 import prisma from './prisma';
+
+// ─── In-memory cache ────────────────────────────────
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+interface CacheEntry<T> {
+    data: T;
+    timestamp: number;
+}
+
+const reservationCache = new Map<string, CacheEntry<ReservationStats>>();
+const cancellationCache = new Map<string, CacheEntry<CancellationStats>>();
+
+function getCached<T>(cache: Map<string, CacheEntry<T>>, key: string): T | null {
+    const entry = cache.get(key);
+    if (entry && Date.now() - entry.timestamp < CACHE_TTL_MS) {
+        return entry.data;
+    }
+    cache.delete(key);
+    return null;
+}
+
+function setCache<T>(cache: Map<string, CacheEntry<T>>, key: string, data: T): void {
+    cache.set(key, { data, timestamp: Date.now() });
+}
 
 // Keep this export for backward compatibility (called by ingest actions)
 export function invalidateStatsCache(): void {
-    // No-op: cache removed, stats are always fresh
+    reservationCache.clear();
+    cancellationCache.clear();
 }
 
-// Reservation stats: ALL booked reservations
-export async function getReservationStats30() {
-    const recent = await prisma.reservationsRaw.findMany({
-        where: {
-            status: 'booked',
-        },
-        select: {
-            rooms: true,
-            revenue: true,
-            company_name: true,
-        }
-    });
-
-    const count = recent.length;
-    const rooms = recent.reduce((sum, r) => sum + r.rooms, 0);
-    const revenue = recent.reduce((sum, r) => sum + Number(r.revenue), 0);
-
-    // Group by company_name for top 3 agents
-    const agentMap = new Map<string, number>();
-    for (const r of recent) {
-        const agent = r.company_name || 'Khác';
-        agentMap.set(agent, (agentMap.get(agent) || 0) + Number(r.revenue));
-    }
-
-    const topAgents = Array.from(agentMap.entries())
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 3)
-        .map(([company_name, revenue]) => ({ company_name, revenue }));
-
-    return { count, rooms, revenue, topAgents };
+// ─── Types ───────────────────────────────────────────
+interface ReservationStats {
+    count: number;
+    rooms: number;
+    revenue: number;
+    topAgents: Array<{ company_name: string; revenue: number }>;
 }
 
-// Cancellation stats: ALL data
-export async function getCancellationStats30Days() {
-    const allCancellations = await prisma.cancellationRaw.findMany({
-        select: {
-            nights: true,
-            total_revenue: true,
-            channel: true,
-        }
-    });
+interface CancellationStats {
+    count: number;
+    nights: number;
+    revenue: number;
+    topChannels: Array<{ channel: string; revenue: number }>;
+}
 
-    const count = allCancellations.length;
-    const nights = allCancellations.reduce((sum, c) => sum + (c.nights || 0), 0);
-    const revenue = allCancellations.reduce((sum, c) => sum + Number(c.total_revenue || 0), 0);
+// ─── Reservation stats: SQL aggregate + hotel filter ─
+export async function getReservationStats30(hotelId?: string): Promise<ReservationStats> {
+    const cacheKey = hotelId || '__all__';
+    const cached = getCached(reservationCache, cacheKey);
+    if (cached) return cached;
 
-    // Group by channel for top 3
-    const channelMap = new Map<string, number>();
-    for (const c of allCancellations) {
-        const ch = c.channel || 'Khác';
-        channelMap.set(ch, (channelMap.get(ch) || 0) + Number(c.total_revenue || 0));
-    }
+    const whereClause = hotelId
+        ? { hotel_id: hotelId, status: 'booked' as const }
+        : { status: 'booked' as const };
 
-    const topChannels = Array.from(channelMap.entries())
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 3)
-        .map(([channel, revenue]) => ({ channel, revenue }));
+    // Parallel: aggregate + groupBy instead of findMany + JS reduce
+    const [agg, topAgentsRaw] = await Promise.all([
+        prisma.reservationsRaw.aggregate({
+            where: whereClause,
+            _count: true,
+            _sum: { rooms: true, revenue: true },
+        }),
+        prisma.reservationsRaw.groupBy({
+            by: ['company_name'],
+            where: whereClause,
+            _sum: { revenue: true },
+            orderBy: { _sum: { revenue: 'desc' } },
+            take: 3,
+        }),
+    ]);
 
-    return { count, nights, revenue, topChannels };
+    const result: ReservationStats = {
+        count: agg._count,
+        rooms: agg._sum.rooms || 0,
+        revenue: Number(agg._sum.revenue || 0),
+        topAgents: topAgentsRaw.map(a => ({
+            company_name: a.company_name || 'Khác',
+            revenue: Number(a._sum.revenue || 0),
+        })),
+    };
+
+    setCache(reservationCache, cacheKey, result);
+    return result;
+}
+
+// ─── Cancellation stats: SQL aggregate + hotel filter ─
+export async function getCancellationStats30Days(hotelId?: string): Promise<CancellationStats> {
+    const cacheKey = hotelId || '__all__';
+    const cached = getCached(cancellationCache, cacheKey);
+    if (cached) return cached;
+
+    const whereClause = hotelId ? { hotel_id: hotelId } : {};
+
+    // Parallel: aggregate + groupBy instead of findMany + JS reduce
+    const [agg, topChannelsRaw] = await Promise.all([
+        prisma.cancellationRaw.aggregate({
+            where: whereClause,
+            _count: true,
+            _sum: { nights: true, total_revenue: true },
+        }),
+        prisma.cancellationRaw.groupBy({
+            by: ['channel'],
+            where: whereClause,
+            _sum: { total_revenue: true },
+            orderBy: { _sum: { total_revenue: 'desc' } },
+            take: 3,
+        }),
+    ]);
+
+    const result: CancellationStats = {
+        count: agg._count,
+        nights: agg._sum.nights || 0,
+        revenue: Number(agg._sum.total_revenue || 0),
+        topChannels: topChannelsRaw.map(c => ({
+            channel: c.channel || 'Khác',
+            revenue: Number(c._sum.total_revenue || 0),
+        })),
+    };
+
+    setCache(cancellationCache, cacheKey, result);
+    return result;
 }

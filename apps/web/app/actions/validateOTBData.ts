@@ -383,12 +383,26 @@ export interface ValidationResult {
     };
 }
 
+// ─── Cache layer (5-minute TTL) ─────────────────────────────────
+// Prevents heavy audit queries from running on every page visit
+const validationCache = new Map<string, { data: ValidationResult; expiry: number }>();
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
 export async function validateOTBData(
     hotelId?: string,
     asOfDate?: Date
 ): Promise<ValidationResult> {
+    const resolvedHotelId = hotelId || await getActiveHotelId();
+    const cacheKey = `${resolvedHotelId || 'none'}_${asOfDate?.toISOString() || 'latest'}`;
+
+    // Check cache
+    const cached = validationCache.get(cacheKey);
+    if (cached && Date.now() < cached.expiry) {
+        return cached.data;
+    }
+
     const result = await auditReport(hotelId, asOfDate);
-    return {
+    const data: ValidationResult = {
         valid: result.valid,
         issues: result.issues,
         stats: {
@@ -400,4 +414,9 @@ export async function validateOTBData(
             dateRange: result.stats.dateRange,
         },
     };
+
+    // Store in cache
+    validationCache.set(cacheKey, { data, expiry: Date.now() + CACHE_TTL_MS });
+
+    return data;
 }

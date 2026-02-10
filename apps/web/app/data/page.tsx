@@ -102,12 +102,13 @@ async function fetchDataInspectorData() {
             _max: { booking_date: true }
         }),
         // Cached stats
-        getReservationStats30(),
+        getReservationStats30(hotelId),
     ]);
 
     console.log(`[Data Inspector] All queries completed in: ${Date.now() - startTime}ms`);
 
     return {
+        hotelId,
         importJobs,
         reservationsByDate,
         allCancellationsForGroup,
@@ -126,6 +127,7 @@ export default async function DataInspectorPage() {
 
     // Fetch all data in parallel
     const {
+        hotelId,
         importJobs,
         reservationsByDate,
         allCancellationsForGroup,
@@ -352,7 +354,7 @@ export default async function DataInspectorPage() {
                 </div>
 
                 {/* Cancellations */}
-                <CancellationSection />
+                <CancellationSection hotelId={hotelId ?? undefined} />
             </div>
 
             {/* Reservations by Booking Date */}
