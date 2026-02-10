@@ -32,7 +32,7 @@ const navGroups = [
         items: [
             { href: '/pricing', label: 'Tính giá OTA', icon: DollarSign, minRole: 'viewer' },
             { href: '/daily', label: 'Daily Actions', icon: CalendarCheck, minRole: 'viewer' },
-            { href: '/rate-shopper', label: 'So sánh giá', icon: BarChart3, minRole: 'viewer' },
+            { href: '/rate-shopper', label: 'So sánh giá', icon: BarChart3, minRole: 'viewer', requiredTier: 'SUITE' as const },
         ],
     },
     {
@@ -62,6 +62,7 @@ export function Sidebar() {
     const { data: session } = useSession();
     const [isOpen, setIsOpen] = useState(false);
     const [isDemo, setIsDemo] = useState(false);
+    const [currentPlan, setCurrentPlan] = useState<string>('STANDARD');
 
     // Get user's role level (hotelRole is dynamically added at runtime from hotel_access)
     const userRole = (session?.user as { hotelRole?: string })?.hotelRole || session?.user?.role || 'viewer';
@@ -85,7 +86,7 @@ export function Sidebar() {
         }
     };
 
-    // Check if Demo Hotel
+    // Check if Demo Hotel + fetch subscription plan
     useEffect(() => {
         const checkDemoHotel = async () => {
             try {
@@ -96,7 +97,17 @@ export function Sidebar() {
                 console.error('Error checking demo hotel:', error);
             }
         };
+        const fetchPlan = async () => {
+            try {
+                const res = await fetch('/api/subscription');
+                if (res.ok) {
+                    const data = await res.json();
+                    setCurrentPlan(data.plan || 'STANDARD');
+                }
+            } catch { /* keep default */ }
+        };
         checkDemoHotel();
+        fetchPlan();
     }, []);
 
     // Close sidebar when route changes (mobile)
@@ -195,7 +206,7 @@ export function Sidebar() {
                 <nav className="flex-1 py-2 overflow-y-auto">
                     {navGroups.map((group, groupIndex) => {
                         // Filter items based on Demo Hotel status
-                        const visibleItems = group.items.filter(item => !isDemo || !item.hideForDemo);
+                        const visibleItems = group.items.filter(item => !isDemo || !('hideForDemo' in item && item.hideForDemo));
                         if (visibleItems.length === 0) return null;
 
                         return (
@@ -216,9 +227,11 @@ export function Sidebar() {
                                         (item.href !== '/dashboard' && pathname.startsWith(item.href));
                                     const Icon = item.icon;
                                     const canAccess = hasPermission(item.minRole);
+                                    const needsTier = 'requiredTier' in item && item.requiredTier;
+                                    const hasTier = !needsTier || isDemo || currentPlan === needsTier;
 
                                     if (canAccess) {
-                                        // Normal clickable item
+                                        // Normal clickable item (still links to page; page handles paywall)
                                         return (
                                             <Link
                                                 key={item.href}
@@ -231,7 +244,13 @@ export function Sidebar() {
                                                 onClick={() => setIsOpen(false)}
                                             >
                                                 <Icon className="w-5 h-5" />
-                                                {item.label}
+                                                <span className="flex-1">{item.label}</span>
+                                                {needsTier && !hasTier && (
+                                                    <span className="flex items-center gap-1 text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded-full font-semibold">
+                                                        <Lock className="w-2.5 h-2.5" />
+                                                        Suite
+                                                    </span>
+                                                )}
                                             </Link>
                                         );
                                     } else {

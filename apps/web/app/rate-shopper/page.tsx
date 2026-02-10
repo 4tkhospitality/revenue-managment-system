@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { RefreshCw, Search, TrendingUp, TrendingDown, Minus, AlertCircle, Clock, Wifi, Plus, Building2, Zap } from 'lucide-react';
 import Link from 'next/link';
+import { RateShopperPaywall } from '@/components/paywall/RateShopperPaywall';
 
 // Types (inline to avoid server/client boundary issues)
 interface IntradayRate {
@@ -106,6 +107,48 @@ function timeAgo(isoStr: string | null): string {
 // ──────────────────────────────────────────────────
 
 export default function RateShopperPage() {
+    const [tierStatus, setTierStatus] = useState<'loading' | 'allowed' | 'blocked'>('loading');
+
+    useEffect(() => {
+        async function checkAccess() {
+            try {
+                // Check if demo hotel (demo always has access)
+                const demoRes = await fetch('/api/is-demo-hotel');
+                const demoData = await demoRes.json();
+                if (demoData.isDemo) {
+                    setTierStatus('allowed');
+                    return;
+                }
+
+                // Check subscription tier
+                const subRes = await fetch('/api/subscription');
+                if (!subRes.ok) { setTierStatus('blocked'); return; }
+                const subData = await subRes.json();
+                const plan = subData.plan || 'STANDARD';
+                setTierStatus(plan === 'SUITE' ? 'allowed' : 'blocked');
+            } catch {
+                setTierStatus('blocked');
+            }
+        }
+        checkAccess();
+    }, []);
+
+    if (tierStatus === 'loading') {
+        return (
+            <div className="flex items-center justify-center py-20">
+                <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+            </div>
+        );
+    }
+
+    if (tierStatus === 'blocked') {
+        return <RateShopperPaywall />;
+    }
+
+    return <RateShopperContent />;
+}
+
+function RateShopperContent() {
     const [selectedOffset, setSelectedOffset] = useState<number>(7);
     const [offsetStates, setOffsetStates] = useState<Record<number, OffsetState>>(() => {
         const init: Record<number, OffsetState> = {};
