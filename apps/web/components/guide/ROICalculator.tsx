@@ -96,9 +96,9 @@ export function ROICalculator() {
                 <div className="mb-6">
                     <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                         <DollarSign className="w-5 h-5 text-blue-600" />
-                        Máy tính ROI
+                        Hiệu quả Khuyến mãi
                     </h3>
-                    <p className="text-sm text-gray-500 mt-1">Tính toán hiệu quả khi tham gia chương trình (Genius, Preferred, AGP)</p>
+                    <p className="text-sm text-gray-500 mt-1">Nhập chi phí chương trình (Genius, Preferred, AGP...) để xem khách sạn lời hay lỗ</p>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

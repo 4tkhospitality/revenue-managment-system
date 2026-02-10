@@ -13,13 +13,13 @@ type OTATab = 'scorecard' | 'booking' | 'agoda' | 'roi' | 'review' | 'boost';
 export function OTAPlaybookGuide() {
     const [activeOTA, setActiveOTA] = useState<OTATab>('scorecard');
 
-    const tabs: { id: OTATab; label: string }[] = [
-        { id: 'scorecard', label: 'Bảng điểm' },
-        { id: 'booking', label: 'Booking.com' },
-        { id: 'agoda', label: 'Agoda' },
-        { id: 'roi', label: 'Tính ROI' },
-        { id: 'review', label: 'Đánh giá' },
-        { id: 'boost', label: 'Hướng dẫn Boost' },
+    const tabs: { id: OTATab; label: string; desc: string }[] = [
+        { id: 'scorecard', label: 'Bảng điểm', desc: 'Chấm điểm sức khỏe kênh OTA của khách sạn' },
+        { id: 'booking', label: 'Booking.com', desc: 'Checklist tối ưu ranking trên Booking.com' },
+        { id: 'agoda', label: 'Agoda', desc: 'Checklist tối ưu ranking trên Agoda' },
+        { id: 'roi', label: 'Hiệu quả KM', desc: 'Tính lời/lỗ khi tham gia chương trình khuyến mãi OTA' },
+        { id: 'review', label: 'Đánh giá', desc: 'Mô phỏng tác động của review đến điểm số' },
+        { id: 'boost', label: 'Khi nào Boost', desc: 'Hướng dẫn khi nào nên đẩy ranking trên OTA' },
     ];
 
     return (
@@ -39,6 +39,15 @@ export function OTAPlaybookGuide() {
                     </button>
                 ))}
             </div>
+
+            {/* Tab intro */}
+            {tabs.map(tab => tab.id === activeOTA && (
+                <div key={tab.id} className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 mb-4">
+                    <p className="text-sm text-blue-800">
+                        <span className="font-semibold">{tab.label}</span> — {tab.desc}
+                    </p>
+                </div>
+            ))}
 
             {/* Content */}
             {activeOTA === 'scorecard' && <OTAHealthScorecard />}

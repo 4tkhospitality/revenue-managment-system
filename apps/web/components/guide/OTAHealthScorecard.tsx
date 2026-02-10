@@ -95,8 +95,8 @@ export function OTAHealthScorecard() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h3 className="text-lg font-semibold text-gray-900">OTA Health Scorecard</h3>
-                    <p className="text-sm text-gray-500">Đánh giá sức khỏe kênh bán dựa trên trọng số & KPIs.</p>
+                    <h3 className="text-lg font-semibold text-gray-900">Bảng điểm sức khỏe OTA</h3>
+                    <p className="text-sm text-gray-500">Chấm điểm kênh bán của khách sạn dựa trên các chỉ số quan trọng.</p>
                 </div>
                 <button
                     onClick={() => setIsModalOpen(true)}
