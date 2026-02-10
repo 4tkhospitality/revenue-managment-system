@@ -257,7 +257,7 @@ function QuickStartGuide() {
                             <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-center">
                                 <div className="text-2xl mb-1">✅</div>
                                 <div className="font-medium text-emerald-700">Chấp nhận</div>
-                                <p className="text-xs text-gray-500 mt-1">Đồng ý với giá AI đề xuất</p>
+                                <p className="text-xs text-gray-500 mt-1">Đồng ý với giá hệ thống đề xuất</p>
                             </div>
                             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
                                 <div className="text-2xl mb-1">✏️</div>
@@ -609,7 +609,7 @@ function RevenueGuide() {
                                 <h4 className="font-semibold text-gray-900">Build Features (Xây dựng chỉ số)</h4>
                                 <div className="text-sm text-gray-700 space-y-2">
                                     <p>
-                                        <strong>Features là gì?</strong> Là các "dấu hiệu" giúp AI hiểu tình hình booking đang tốt hay xấu.
+                                        <strong>Features là gì?</strong> Là các "dấu hiệu" giúp thuật toán 4TK Hospitality phân tích tình hình booking đang tốt hay xấu.
                                         Ví dụ: "7 ngày qua có thêm 10 booking mới" → demand đang cao.
                                     </p>
                                     <p>
@@ -621,7 +621,7 @@ function RevenueGuide() {
                                         <li><strong>Remaining Supply:</strong> Còn bao nhiêu phòng trống có thể bán?</li>
                                     </ul>
                                     <p>
-                                        <strong>Tại sao cần?</strong> AI cần nhiều góc nhìn để quyết định đúng.
+                                        <strong>Tại sao cần?</strong> Thuật toán cần nhiều góc nhìn để đưa ra khuyến nghị chính xác.
                                         Chỉ biết "đã bán 50 phòng" thì chưa đủ - phải biết "năm ngoái cùng ngày bán được 70"
                                         thì mới biết năm nay đang chậm hơn → cần giảm giá.
                                     </p>
@@ -654,8 +654,8 @@ function RevenueGuide() {
                                         <li>Nếu pace chậm hơn năm trước → Demand yếu → Cần khuyến mãi</li>
                                     </ul>
                                     <p>
-                                        <strong>Tại sao cần?</strong> Đây là bước cuối cùng để AI tính ra "còn lại bao nhiêu nhu cầu chưa được đáp ứng"
-                                        → Từ đó đưa ra khuyến nghị giá phù hợp.
+                                        <strong>Tại sao cần?</strong> Đây là bước cuối cùng để thuật toán 4TK Hospitality tính ra "còn lại bao nhiêu nhu cầu chưa được đáp ứng"
+                                        → Từ đó đưa ra khuyến nghị giá tối ưu doanh thu.
                                     </p>
                                 </div>
                                 <div className="bg-emerald-100 rounded-lg p-2 text-sm text-emerald-700">
