@@ -7,6 +7,7 @@ import { auth } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import { cookies } from 'next/headers'
 import crypto from 'crypto'
+import { checkSeatAvailability, tierLimitError } from '@/lib/seats'
 
 const ACTIVE_HOTEL_COOKIE = 'rms_active_hotel'
 
@@ -52,6 +53,12 @@ export async function POST(request: NextRequest) {
 
         // Set expires_at at API (not DB default)
         const expiresAt = new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000)
+
+        // Check seat limit before creating invite
+        const seats = await checkSeatAvailability(activeHotelId)
+        if (!seats.available) {
+            return NextResponse.json(tierLimitError(seats.plan, seats.maxSeats), { status: 403 })
+        }
 
         // Create invite
         const invite = await prisma.hotelInvite.create({

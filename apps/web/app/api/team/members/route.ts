@@ -6,6 +6,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import { cookies } from 'next/headers'
+import { checkSeatAvailability } from '@/lib/seats'
 
 const ACTIVE_HOTEL_COOKIE = 'rms_active_hotel'
 
@@ -31,28 +32,39 @@ export async function GET() {
             return NextResponse.json({ error: 'No access to this hotel' }, { status: 403 })
         }
 
-        const members = await prisma.hotelUser.findMany({
-            where: {
-                hotel_id: activeHotelId,
-                is_active: true,
-            },
-            include: {
-                user: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
+        const [members, seats] = await Promise.all([
+            prisma.hotelUser.findMany({
+                where: {
+                    hotel_id: activeHotelId,
+                    is_active: true,
+                },
+                include: {
+                    user: {
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true,
+                        },
                     },
                 },
-            },
-            orderBy: [
-                { is_primary: 'desc' },
-                { role: 'asc' },
-                { created_at: 'asc' },
-            ],
-        })
+                orderBy: [
+                    { is_primary: 'desc' },
+                    { role: 'asc' },
+                    { created_at: 'asc' },
+                ],
+            }),
+            checkSeatAvailability(activeHotelId),
+        ])
 
-        return NextResponse.json({ members })
+        return NextResponse.json({
+            members,
+            seats: {
+                current: seats.currentSeats,
+                max: seats.maxSeats,
+                available: seats.available,
+                plan: seats.plan,
+            },
+        })
     } catch (error) {
         console.error('[API] Team members error:', error)
         return NextResponse.json(

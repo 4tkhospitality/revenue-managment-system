@@ -112,14 +112,6 @@ export default function RateShopperPage() {
     useEffect(() => {
         async function checkAccess() {
             try {
-                // Check if demo hotel (demo always has access)
-                const demoRes = await fetch('/api/is-demo-hotel');
-                const demoData = await demoRes.json();
-                if (demoData.isDemo) {
-                    setTierStatus('allowed');
-                    return;
-                }
-
                 // Check subscription tier
                 const subRes = await fetch('/api/subscription');
                 if (!subRes.ok) { setTierStatus('blocked'); return; }

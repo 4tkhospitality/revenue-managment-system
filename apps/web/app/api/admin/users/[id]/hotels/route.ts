@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import { UserRole } from '@prisma/client'
+import { checkSeatAvailability, tierLimitError } from '@/lib/seats'
 
 interface RouteParams {
     params: Promise<{ id: string }>
@@ -53,6 +54,23 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
         if (!Array.isArray(assignments)) {
             return NextResponse.json({ error: 'Assignments must be an array' }, { status: 400 })
+        }
+
+        // Check seat limits for each target hotel (excluding current user's existing seats)
+        const existingAssignments = await prisma.hotelUser.findMany({
+            where: { user_id: id },
+            select: { hotel_id: true }
+        })
+        const existingHotelIds = new Set(existingAssignments.map(a => a.hotel_id))
+
+        for (const a of assignments as { hotelId: string; role: string; isPrimary?: boolean }[]) {
+            // Only check limit for newly assigned hotels
+            if (!existingHotelIds.has(a.hotelId)) {
+                const seats = await checkSeatAvailability(a.hotelId)
+                if (!seats.available) {
+                    return NextResponse.json(tierLimitError(seats.plan, seats.maxSeats), { status: 403 })
+                }
+            }
         }
 
         // Delete all existing assignments
@@ -119,6 +137,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
         if (existing) {
             return NextResponse.json({ error: 'Assignment already exists' }, { status: 409 })
+        }
+
+        // Check seat limit
+        const seats = await checkSeatAvailability(hotelId)
+        if (!seats.available) {
+            return NextResponse.json(tierLimitError(seats.plan, seats.maxSeats), { status: 403 })
         }
 
         const hotelUser = await prisma.hotelUser.create({

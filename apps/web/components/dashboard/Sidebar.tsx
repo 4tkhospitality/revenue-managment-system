@@ -242,7 +242,7 @@ export function Sidebar() {
                                     const Icon = item.icon;
                                     const canAccess = hasPermission(item.minRole);
                                     const needsTier = 'requiredTier' in item && item.requiredTier;
-                                    const hasTier = !needsTier || isDemo || (TIER_LEVELS[currentPlan] ?? 0) >= (TIER_LEVELS[needsTier as string] ?? 0);
+                                    const hasTier = !needsTier || (TIER_LEVELS[currentPlan] ?? 0) >= (TIER_LEVELS[needsTier as string] ?? 0);
 
                                     if (canAccess) {
                                         // Normal clickable item (still links to page; page handles paywall)

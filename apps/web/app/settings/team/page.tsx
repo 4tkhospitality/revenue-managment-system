@@ -31,10 +31,13 @@ export default function TeamSettingsPage() {
     const [invite, setInvite] = useState<InviteData | null>(null)
     const [error, setError] = useState('')
     const [copied, setCopied] = useState(false)
+    const [seats, setSeats] = useState<{ current: number; max: number; available: boolean; plan: string | null } | null>(null)
 
     const isAdmin = session?.user?.accessibleHotels?.some(
         (h) => h.role === 'hotel_admin'
     ) || session?.user?.isAdmin
+
+    const atLimit = seats ? !seats.available : false
 
     useEffect(() => {
         loadMembers()
@@ -46,6 +49,7 @@ export default function TeamSettingsPage() {
             if (res.ok) {
                 const data = await res.json()
                 setMembers(data.members || [])
+                if (data.seats) setSeats(data.seats)
             }
         } catch (err) {
             console.error('Failed to load members:', err)
@@ -76,7 +80,11 @@ export default function TeamSettingsPage() {
                     role: 'viewer',
                 })
             } else {
-                setError(data.error || 'Không thể tạo mã mời')
+                if (data.error === 'TIER_LIMIT_REACHED') {
+                    setError(data.message || 'Đã đạt giới hạn thành viên cho gói hiện tại.')
+                } else {
+                    setError(data.error || 'Không thể tạo mã mời')
+                }
             }
         } catch (err) {
             setError('Có lỗi xảy ra')
@@ -125,7 +133,22 @@ export default function TeamSettingsPage() {
             {/* Invite Section */}
             {isAdmin && (
                 <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6">
-                    <h2 className="font-semibold text-gray-900 mb-4">🎟️ Mời thành viên</h2>
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="font-semibold text-gray-900">🎟️ Mời thành viên</h2>
+                        {seats && seats.max > 0 && (
+                            <span className={`text-sm font-medium px-3 py-1 rounded-full ${atLimit ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'
+                                }`}>
+                                {seats.current}/{seats.max >= 999 ? '∞' : seats.max} thành viên
+                            </span>
+                        )}
+                    </div>
+
+                    {atLimit && (
+                        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                            ⚠️ Đã đạt giới hạn thành viên cho gói <strong>{seats?.plan}</strong>.
+                            <a href="/pricing-plans" className="ml-1 text-blue-600 hover:underline font-medium">Nâng cấp gói →</a>
+                        </div>
+                    )}
 
                     {invite ? (
                         <div className="space-y-4">
@@ -157,10 +180,11 @@ export default function TeamSettingsPage() {
                     ) : (
                         <button
                             onClick={createInvite}
-                            disabled={inviteLoading}
-                            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl disabled:opacity-50 transition-colors"
+                            disabled={inviteLoading || atLimit}
+                            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            title={atLimit ? 'Đã đạt giới hạn thành viên' : ''}
                         >
-                            {inviteLoading ? 'Đang tạo...' : '+ Tạo mã mời mới'}
+                            {inviteLoading ? 'Đang tạo...' : atLimit ? '🔒 Đã đạt giới hạn' : '+ Tạo mã mời mới'}
                         </button>
                     )}
                 </div>

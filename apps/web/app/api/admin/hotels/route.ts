@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 
-// GET /api/admin/hotels - List all hotels
+// GET /api/admin/hotels - List all hotels with subscription data
 export async function GET(request: NextRequest) {
     try {
         const session = await auth()
@@ -12,12 +12,24 @@ export async function GET(request: NextRequest) {
 
         const hotels = await prisma.hotel.findMany({
             include: {
+                subscription: true,
                 _count: {
-                    select: { hotel_users: true, users: true }
+                    select: { hotel_users: true }
                 }
             },
             orderBy: { name: 'asc' }
         })
+
+        // Get pending invites count per hotel
+        const pendingInvites = await prisma.hotelInvite.groupBy({
+            by: ['hotel_id'],
+            where: {
+                status: 'active',
+                expires_at: { gt: new Date() },
+            },
+            _count: { invite_id: true }
+        })
+        const pendingMap = new Map(pendingInvites.map(p => [p.hotel_id, p._count.invite_id]))
 
         return NextResponse.json({
             hotels: hotels.map(h => ({
@@ -27,7 +39,13 @@ export async function GET(request: NextRequest) {
                 capacity: h.capacity,
                 currency: h.currency,
                 userCount: h._count.hotel_users,
+                pendingInvites: pendingMap.get(h.hotel_id) ?? 0,
                 createdAt: h.created_at,
+                // Subscription data
+                plan: h.subscription?.plan ?? null,
+                subscriptionStatus: h.subscription?.status ?? null,
+                periodEnd: h.subscription?.current_period_end ?? null,
+                maxUsers: h.subscription?.max_users ?? null,
             }))
         })
     } catch (error) {

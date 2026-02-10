@@ -46,7 +46,7 @@ export function useTierAccess(requiredTier: string): TierAccessResult {
 
     const userLevel = TIER_LEVELS[currentPlan] ?? 0;
     const requiredLevel = TIER_LEVELS[requiredTier] ?? 0;
-    const hasAccess = isDemo || userLevel >= requiredLevel;
+    const hasAccess = userLevel >= requiredLevel;
 
     return { currentPlan, isDemo, hasAccess, loading };
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import prisma from '@/lib/prisma'
+import { checkSeatAvailability, tierLimitError } from '@/lib/seats'
 
 // GET /api/admin/users - List all users
 export async function GET(request: NextRequest) {
@@ -91,6 +92,14 @@ export async function POST(request: NextRequest) {
         const existing = await prisma.user.findUnique({ where: { email } })
         if (existing) {
             return NextResponse.json({ error: 'User with this email already exists' }, { status: 409 })
+        }
+
+        // Check seat limits for each target hotel
+        for (const ha of hotelAssignments as { hotelId: string; role: string; isPrimary?: boolean }[]) {
+            const seats = await checkSeatAvailability(ha.hotelId)
+            if (!seats.available) {
+                return NextResponse.json(tierLimitError(seats.plan, seats.maxSeats), { status: 403 })
+            }
         }
 
         // Create user with hotel assignments
