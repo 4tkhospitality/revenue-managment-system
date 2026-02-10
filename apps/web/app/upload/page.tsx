@@ -6,6 +6,8 @@ import { useSession } from 'next-auth/react';
 import { ingestCSV } from '../actions/ingestCSV';
 import { ingestXML } from '../actions/ingestXML';
 import { ingestCancellationXml } from '../actions/ingestCancellationXml';
+import { TierPaywall } from '@/components/paywall/TierPaywall';
+import { useTierAccess } from '@/hooks/useTierAccess';
 
 type ReportType = 'booked' | 'cancelled';
 type FileType = 'csv' | 'xml';
@@ -18,6 +20,7 @@ interface FileResult {
 }
 
 export default function UploadPage() {
+    const { hasAccess, loading: tierLoading } = useTierAccess('SUPERIOR');
     const { data: session } = useSession();
     const [activeTab, setActiveTab] = useState<ReportType>('booked');
     const [isProcessing, setIsProcessing] = useState(false);
@@ -28,6 +31,24 @@ export default function UploadPage() {
     const [isDemo, setIsDemo] = useState(false);
     const [isAdmin, setIsAdmin] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
+
+    // Tier gate: show paywall for non-SUPERIOR users
+    if (!tierLoading && !hasAccess) {
+        return (
+            <TierPaywall
+                title="Tải lên Reservations"
+                subtitle="Import báo cáo đặt phòng từ PMS"
+                tierDisplayName="Superior"
+                colorScheme="blue"
+                features={[
+                    { icon: <Upload className="w-4 h-4" />, label: 'Upload nhiều file CSV/XML cùng lúc' },
+                    { icon: <FileSpreadsheet className="w-4 h-4" />, label: 'Import báo cáo đặt phòng & huỷ phòng' },
+                    { icon: <FileCode className="w-4 h-4" />, label: 'Hỗ trợ Crystal Reports XML' },
+                    { icon: <CheckCircle className="w-4 h-4" />, label: 'Tự động xử lý & validate dữ liệu' },
+                ]}
+            />
+        );
+    }
 
     // Fetch active hotel and check if Demo Hotel
     useEffect(() => {

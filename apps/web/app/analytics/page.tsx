@@ -6,8 +6,11 @@ import {
     LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
     Tooltip, Legend, ResponsiveContainer, Cell
 } from 'recharts';
+import { TrendingUp, BarChart3, CalendarDays, Database as DbIcon } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { ExportPdfButton } from '@/components/shared/ExportPdfButton';
+import { TierPaywall } from '@/components/paywall/TierPaywall';
+import { useTierAccess } from '@/hooks/useTierAccess';
 
 // ─── Types ──────────────────────────────────────────────────
 interface AnalyticsRow {
@@ -59,11 +62,30 @@ const DOW_LABELS = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 
 // ─── Main Page ──────────────────────────────────────────────
 export default function AnalyticsPage() {
+    const { hasAccess, loading: tierLoading } = useTierAccess('SUPERIOR');
     const [data, setData] = useState<AnalyticsData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedAsOf, setSelectedAsOf] = useState<string>('');
     const [viewMode, setViewMode] = useState<'rooms' | 'revenue'>('rooms');
+
+    // Tier gate: show paywall for non-SUPERIOR users
+    if (!tierLoading && !hasAccess) {
+        return (
+            <TierPaywall
+                title="Pace & Pickup Analytics"
+                subtitle="Phân tích STLY, Booking Pace, Remaining Supply"
+                tierDisplayName="Superior"
+                colorScheme="blue"
+                features={[
+                    { icon: <TrendingUp className="w-4 h-4" />, label: 'So sánh cùng kỳ năm trước (STLY)' },
+                    { icon: <BarChart3 className="w-4 h-4" />, label: 'Booking Pace — theo dõi tốc độ đặt phòng' },
+                    { icon: <CalendarDays className="w-4 h-4" />, label: 'Pickup T-3/T-7/T-15/T-30 chi tiết' },
+                    { icon: <DbIcon className="w-4 h-4" />, label: 'Remaining Supply — phòng còn trống' },
+                ]}
+            />
+        );
+    }
 
     const fetchData = useCallback(async (asOf?: string) => {
         setLoading(true);

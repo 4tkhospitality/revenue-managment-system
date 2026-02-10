@@ -16,6 +16,20 @@ const ROLE_LEVELS: Record<string, number> = {
     super_admin: 3,
 };
 
+// Tier hierarchy for comparison
+const TIER_LEVELS: Record<string, number> = {
+    STANDARD: 0,
+    SUPERIOR: 1,
+    DELUXE: 2,
+    SUITE: 3,
+};
+
+const TIER_DISPLAY: Record<string, string> = {
+    SUPERIOR: 'Superior',
+    DELUXE: 'Deluxe',
+    SUITE: 'Suite',
+};
+
 // Navigation groups with items
 const navGroups = [
     {
@@ -23,7 +37,7 @@ const navGroups = [
         label: 'Tổng quan - Phân tích',
         items: [
             { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, minRole: 'viewer' },
-            { href: '/analytics', label: 'Pace & Pickup', icon: TrendingUp, minRole: 'viewer' },
+            { href: '/analytics', label: 'Pace & Pickup', icon: TrendingUp, minRole: 'viewer', requiredTier: 'SUPERIOR' as const },
         ],
     },
     {
@@ -31,7 +45,7 @@ const navGroups = [
         label: 'Định giá',
         items: [
             { href: '/pricing', label: 'Tính giá OTA', icon: DollarSign, minRole: 'viewer' },
-            { href: '/daily', label: 'Daily Actions', icon: CalendarCheck, minRole: 'viewer' },
+            { href: '/daily', label: 'Daily Actions', icon: CalendarCheck, minRole: 'viewer', requiredTier: 'SUPERIOR' as const },
             { href: '/rate-shopper', label: 'So sánh giá', icon: BarChart3, minRole: 'viewer', requiredTier: 'SUITE' as const },
         ],
     },
@@ -39,8 +53,8 @@ const navGroups = [
         id: 'data',
         label: 'Quản lý dữ liệu',
         items: [
-            { href: '/upload', label: 'Tải lên', icon: Upload, minRole: 'manager' },
-            { href: '/data', label: 'Dữ liệu', icon: Database, minRole: 'manager' },
+            { href: '/upload', label: 'Tải lên', icon: Upload, minRole: 'manager', requiredTier: 'SUPERIOR' as const },
+            { href: '/data', label: 'Dữ liệu', icon: Database, minRole: 'manager', requiredTier: 'SUPERIOR' as const },
         ],
     },
     {
@@ -228,7 +242,7 @@ export function Sidebar() {
                                     const Icon = item.icon;
                                     const canAccess = hasPermission(item.minRole);
                                     const needsTier = 'requiredTier' in item && item.requiredTier;
-                                    const hasTier = !needsTier || isDemo || currentPlan === needsTier;
+                                    const hasTier = !needsTier || isDemo || (TIER_LEVELS[currentPlan] ?? 0) >= (TIER_LEVELS[needsTier as string] ?? 0);
 
                                     if (canAccess) {
                                         // Normal clickable item (still links to page; page handles paywall)
@@ -248,7 +262,7 @@ export function Sidebar() {
                                                 {needsTier && !hasTier && (
                                                     <span className="flex items-center gap-1 text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded-full font-semibold">
                                                         <Lock className="w-2.5 h-2.5" />
-                                                        Suite
+                                                        {TIER_DISPLAY[needsTier as string] || needsTier}
                                                     </span>
                                                 )}
                                             </Link>

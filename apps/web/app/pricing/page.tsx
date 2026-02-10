@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { Lock, TrendingUp, BarChart3, Star, Zap, Calculator } from 'lucide-react';
 import { RoomTypesTab, OTAConfigTab, PromotionsTab, OverviewTab } from '@/components/pricing';
 import { OTAPlaybookGuide } from '@/components/guide/OTAPlaybookGuide';
 import { PageHeader } from '@/components/shared/PageHeader';
+import { useTierAccess } from '@/hooks/useTierAccess';
 
 const TABS = [
     { id: 'room-types', label: 'Hạng phòng' },
@@ -20,21 +20,7 @@ type TabId = typeof TABS[number]['id'];
 
 export default function PricingPage() {
     const [activeTab, setActiveTab] = useState<TabId>('room-types');
-    const [isDemo, setIsDemo] = useState(false);
-    const { data: session } = useSession();
-    const isSuperAdmin = (session?.user as any)?.role === 'super_admin';
-    const effectiveIsDemo = isDemo && !isSuperAdmin;
-
-    useEffect(() => {
-        const checkDemo = async () => {
-            try {
-                const res = await fetch('/api/is-demo-hotel');
-                const data = await res.json();
-                setIsDemo(data.isDemo || false);
-            } catch { /* ignore */ }
-        };
-        checkDemo();
-    }, []);
+    const { hasAccess: hasOtaAccess, loading: tierLoading } = useTierAccess('SUPERIOR');
 
     return (
         <div className="min-h-screen bg-[#F5F7FB]">
@@ -47,21 +33,25 @@ export default function PricingPage() {
 
                 {/* Tab Navigation - horizontal scroll on mobile */}
                 <div className="flex gap-1 border-b border-slate-200 bg-white rounded-t-xl px-2 overflow-x-auto">
-                    {TABS.map((tab) => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
-                            className={`px-4 sm:px-5 py-3 text-sm font-medium transition-colors relative whitespace-nowrap ${activeTab === tab.id
-                                ? 'text-blue-600'
-                                : 'text-slate-500 hover:text-slate-700'
-                                }`}
-                        >
-                            {tab.label}
-                            {activeTab === tab.id && (
-                                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full" />
-                            )}
-                        </button>
-                    ))}
+                    {TABS.map((tab) => {
+                        const isGated = tab.id === 'ota-growth' && !tierLoading && !hasOtaAccess;
+                        return (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={`px-4 sm:px-5 py-3 text-sm font-medium transition-colors relative whitespace-nowrap flex items-center gap-1.5 ${activeTab === tab.id
+                                    ? 'text-blue-600'
+                                    : 'text-slate-500 hover:text-slate-700'
+                                    }`}
+                            >
+                                {tab.label}
+                                {isGated && <Lock className="w-3 h-3 text-amber-500" />}
+                                {activeTab === tab.id && (
+                                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full" />
+                                )}
+                            </button>
+                        );
+                    })}
                 </div>
 
                 {/* Tab Content */}
@@ -71,7 +61,7 @@ export default function PricingPage() {
                     {activeTab === 'promotions' && <PromotionsTab />}
                     {activeTab === 'overview' && <OverviewTab />}
                     {activeTab === 'ota-growth' && (
-                        effectiveIsDemo ? (
+                        (!tierLoading && !hasOtaAccess) ? (
                             <OTAGrowthPaywall />
                         ) : (
                             <OTAPlaybookGuide />

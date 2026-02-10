@@ -6,9 +6,12 @@
  */
 
 import { useEffect, useState } from 'react';
+import { CalendarCheck, TrendingUp, DollarSign, BarChart3 } from 'lucide-react';
 import { UpgradeBanner } from '@/components/UpgradeBanner';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { ExportPdfButton } from '@/components/shared/ExportPdfButton';
+import { TierPaywall } from '@/components/paywall/TierPaywall';
+import { useTierAccess } from '@/hooks/useTierAccess';
 
 interface DailyAction {
     stay_date: string;
@@ -44,11 +47,30 @@ interface DailyResult {
 }
 
 export default function DailyPage() {
+    const { hasAccess, loading: tierLoading } = useTierAccess('SUPERIOR');
     const [data, setData] = useState<DailyResult | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [upgradeRequired, setUpgradeRequired] = useState(false);
     const [acceptedDates, setAcceptedDates] = useState<Set<string>>(new Set());
+
+    // Tier gate: show paywall for non-SUPERIOR users
+    if (!tierLoading && !hasAccess) {
+        return (
+            <TierPaywall
+                title="Daily Actions"
+                subtitle="Gợi ý giá hàng ngày • 5 phút/ngày để ra quyết định"
+                tierDisplayName="Superior"
+                colorScheme="blue"
+                features={[
+                    { icon: <CalendarCheck className="w-4 h-4" />, label: 'Gợi ý tăng/giữ/giảm giá cho 30 ngày tới' },
+                    { icon: <TrendingUp className="w-4 h-4" />, label: 'Phân tích OCC, Pickup, Supply tự động' },
+                    { icon: <DollarSign className="w-4 h-4" />, label: 'Mức giá đề xuất dựa trên thuật toán AI' },
+                    { icon: <BarChart3 className="w-4 h-4" />, label: 'Accept/Override — ra quyết định nhanh' },
+                ]}
+            />
+        );
+    }
 
     useEffect(() => {
         const fetchData = async () => {

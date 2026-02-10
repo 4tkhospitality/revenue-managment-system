@@ -97,3 +97,58 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
 }
+
+// DELETE /api/admin/hotels/[id] - Delete hotel and all related data
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
+    try {
+        const session = await auth()
+        if (!session?.user?.isAdmin) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+        }
+
+        const { id } = await params
+
+        // Check hotel exists
+        const hotel = await prisma.hotel.findUnique({ where: { hotel_id: id } })
+        if (!hotel) {
+            return NextResponse.json({ error: 'Hotel not found' }, { status: 404 })
+        }
+
+        // Delete all related data in a transaction
+        await prisma.$transaction([
+            // Rate Shopper data
+            prisma.rateShopRecommendation.deleteMany({ where: { hotel_id: id } }),
+            prisma.marketSnapshot.deleteMany({ where: { hotel_id: id } }),
+            prisma.rateShopRequest.deleteMany({ where: { hotel_id: id } }),
+            prisma.competitor.deleteMany({ where: { hotel_id: id } }),
+            prisma.rateShopUsageTenantMonthly.deleteMany({ where: { hotel_id: id } }),
+            // Analytics & Forecast
+            prisma.demandForecast.deleteMany({ where: { hotel_id: id } }),
+            prisma.featuresDaily.deleteMany({ where: { hotel_id: id } }),
+            prisma.priceRecommendations.deleteMany({ where: { hotel_id: id } }),
+            // Pricing
+            prisma.pricingDecision.deleteMany({ where: { hotel_id: id } }),
+            prisma.pricingSetting.deleteMany({ where: { hotel_id: id } }),
+            prisma.oTAChannel.deleteMany({ where: { hotel_id: id } }),
+            prisma.roomType.deleteMany({ where: { hotel_id: id } }),
+            // Data
+            prisma.dailyOTB.deleteMany({ where: { hotel_id: id } }),
+            prisma.cancellationRaw.deleteMany({ where: { hotel_id: id } }),
+            prisma.reservationsRaw.deleteMany({ where: { hotel_id: id } }),
+            prisma.importJob.deleteMany({ where: { hotel_id: id } }),
+            // Access & Billing
+            prisma.hotelInvite.deleteMany({ where: { hotel_id: id } }),
+            prisma.hotelUser.deleteMany({ where: { hotel_id: id } }),
+            prisma.subscription.deleteMany({ where: { hotel_id: id } }),
+            // Detach users who have this hotel as their active hotel
+            prisma.user.updateMany({ where: { hotel_id: id }, data: { hotel_id: null } }),
+            // Finally the hotel itself
+            prisma.hotel.delete({ where: { hotel_id: id } }),
+        ])
+
+        return NextResponse.json({ success: true, deletedHotel: hotel.name })
+    } catch (error) {
+        console.error('Error deleting hotel:', error)
+        return NextResponse.json({ error: 'Lỗi khi xóa hotel. Vui lòng thử lại.' }, { status: 500 })
+    }
+}

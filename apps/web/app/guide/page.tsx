@@ -4,40 +4,22 @@ import { useState, useEffect } from 'react';
 import { BookOpen, BarChart3, TrendingUp, DollarSign, CalendarDays, Upload, Database, Settings, HelpCircle, XCircle, Calculator, Percent, Tag, ArrowRightLeft, Lock, AlertTriangle } from 'lucide-react';
 import { validateOTBData, type ValidationResult } from '../actions/validateOTBData';
 import Link from 'next/link';
-import { useSession } from 'next-auth/react';
+import { useTierAccess } from '@/hooks/useTierAccess';
+import { TierPaywall } from '@/components/paywall/TierPaywall';
 
 
 type TabId = 'quickstart' | 'revenue' | 'pricing';
 
 export default function GuidePage() {
-    const [activeTab, setActiveTab] = useState<TabId>('quickstart'); // Default to quickstart
-    const [isDemo, setIsDemo] = useState(false);
-    const [loading, setLoading] = useState(true);
-    const { data: session } = useSession();
+    const [activeTab, setActiveTab] = useState<TabId>('quickstart');
+    const { hasAccess: hasRevenueAccess, loading: tierLoading } = useTierAccess('SUPERIOR');
 
-    // Super Admin bypasses demo restrictions
-    const isSuperAdmin = (session?.user as any)?.role === 'super_admin';
-    const effectiveIsDemo = isDemo && !isSuperAdmin;
-
-    // Check if Demo Hotel
+    // Default to revenue tab if user has access
     useEffect(() => {
-        const checkDemoHotel = async () => {
-            try {
-                const res = await fetch('/api/is-demo-hotel');
-                const data = await res.json();
-                setIsDemo(data.isDemo || false);
-                // If NOT demo hotel OR super admin, default to revenue tab
-                if (!data.isDemo || isSuperAdmin) {
-                    setActiveTab('revenue');
-                }
-            } catch (error) {
-                console.error('Error checking demo hotel:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
-        checkDemoHotel();
-    }, [isSuperAdmin]);
+        if (!tierLoading && hasRevenueAccess) {
+            setActiveTab('revenue');
+        }
+    }, [tierLoading, hasRevenueAccess]);
 
     return (
         <div className="mx-auto max-w-[1400px] px-4 sm:px-8 py-4 sm:py-6 space-y-6">
@@ -67,18 +49,17 @@ export default function GuidePage() {
                     <HelpCircle className="w-4 h-4" />
                     Bắt đầu nhanh
                 </button>
-                {!effectiveIsDemo && (
-                    <button
-                        onClick={() => setActiveTab('revenue')}
-                        className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${activeTab === 'revenue'
-                            ? 'bg-blue-600 text-white'
-                            : 'text-gray-600 hover:bg-gray-50'
-                            }`}
-                    >
-                        <BarChart3 className="w-4 h-4" />
-                        Quản lý Doanh thu
-                    </button>
-                )}
+                <button
+                    onClick={() => setActiveTab('revenue')}
+                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${activeTab === 'revenue'
+                        ? 'bg-blue-600 text-white'
+                        : 'text-gray-600 hover:bg-gray-50'
+                        }`}
+                >
+                    <BarChart3 className="w-4 h-4" />
+                    Quản lý Doanh thu
+                    {!tierLoading && !hasRevenueAccess && <Lock className="w-3 h-3 text-amber-500" />}
+                </button>
                 <button
                     onClick={() => setActiveTab('pricing')}
                     className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${activeTab === 'pricing'
@@ -92,24 +73,27 @@ export default function GuidePage() {
 
             </div>
 
-            {/* Demo Hotel Notice */}
-            {effectiveIsDemo && (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
-                    <Lock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                    <div>
-                        <p className="text-amber-800 font-medium">Demo Hotel - Chế độ giới hạn</p>
-                        <p className="text-amber-700 text-sm">
-                            Bạn đang sử dụng Demo Hotel nên chỉ xem được hướng dẫn Tính giá OTA.
-                            Liên hệ admin để được gán khách sạn và truy cập đầy đủ.
-                        </p>
-                    </div>
-                </div>
-            )}
-
             {/* Tab Content */}
             <div className="space-y-6">
                 {activeTab === 'quickstart' && <QuickStartGuide />}
-                {activeTab === 'revenue' && !effectiveIsDemo && <RevenueGuide />}
+                {activeTab === 'revenue' && (
+                    (!tierLoading && !hasRevenueAccess) ? (
+                        <TierPaywall
+                            title="Quản lý Doanh thu"
+                            subtitle="Hướng dẫn phân tích OTB, Pickup, Forecast và Revenue Management"
+                            tierDisplayName="Superior"
+                            colorScheme="blue"
+                            features={[
+                                { icon: <BarChart3 className="w-4 h-4" />, label: 'Hiểu OTB (On The Books) và Pickup' },
+                                { icon: <TrendingUp className="w-4 h-4" />, label: 'Phân tích Booking Pace & Remaining Supply' },
+                                { icon: <DollarSign className="w-4 h-4" />, label: 'Chiến lược định giá theo demand' },
+                                { icon: <CalendarDays className="w-4 h-4" />, label: 'Daily Actions workflow hàng ngày' },
+                            ]}
+                        />
+                    ) : (
+                        <RevenueGuide />
+                    )
+                )}
                 {activeTab === 'pricing' && <PricingGuide />}
 
             </div>
