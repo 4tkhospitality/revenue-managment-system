@@ -6,6 +6,7 @@ import { validateOTBData, type ValidationResult } from '../actions/validateOTBDa
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 
+
 type TabId = 'quickstart' | 'revenue' | 'pricing';
 
 export default function GuidePage() {
@@ -59,7 +60,7 @@ export default function GuidePage() {
                 <button
                     onClick={() => setActiveTab('quickstart')}
                     className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${activeTab === 'quickstart'
-                        ? 'bg-emerald-600 text-white'
+                        ? 'bg-blue-600 text-white'
                         : 'text-gray-600 hover:bg-gray-50'
                         }`}
                 >
@@ -88,6 +89,7 @@ export default function GuidePage() {
                     <Calculator className="w-4 h-4" />
                     Tính giá OTA
                 </button>
+
             </div>
 
             {/* Demo Hotel Notice */}
@@ -109,6 +111,7 @@ export default function GuidePage() {
                 {activeTab === 'quickstart' && <QuickStartGuide />}
                 {activeTab === 'revenue' && !effectiveIsDemo && <RevenueGuide />}
                 {activeTab === 'pricing' && <PricingGuide />}
+
             </div>
         </div>
     );
@@ -131,137 +134,127 @@ function QuickStartGuide() {
 
     return (
         <>
-            {/* Welcome Banner */}
-            <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl p-6 text-white">
-                <h2 className="text-xl font-semibold mb-2">🎉 Chào mừng đến với RMS!</h2>
-                <p className="text-white/90">
+            {/* Welcome */}
+            <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                    <HelpCircle className="w-5 h-5 text-blue-600" />
+                    Bắt đầu sử dụng RMS
+                </h2>
+                <p className="text-gray-700 mt-2">
                     Hệ thống Quản lý Doanh thu giúp bạn tối ưu hóa giá phòng và tăng doanh thu khách sạn.
                     Làm theo 5 bước dưới đây để bắt đầu.
                 </p>
             </div>
 
-            {/* Step 1: Login */}
-            <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+            {/* Steps */}
+            <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-6 shadow-sm">
+                {/* Step 1 */}
                 <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center shrink-0">
-                        <span className="text-2xl font-bold text-blue-600">1</span>
+                    <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center shrink-0">
+                        <span className="text-sm font-bold text-blue-600">1</span>
                     </div>
-                    <div className="space-y-2">
-                        <h3 className="text-lg font-semibold text-gray-900">Đăng nhập</h3>
-                        <p className="text-gray-600">
-                            Sử dụng tài khoản Google được admin cấp để đăng nhập vào hệ thống.
-                            Sau khi đăng nhập, bạn sẽ thấy khách sạn được gán trong sidebar.
+                    <div>
+                        <h3 className="text-base font-semibold text-gray-900">Đăng nhập</h3>
+                        <p className="text-sm text-gray-600 mt-1">
+                            Sử dụng tài khoản Google được admin cấp. Sau khi đăng nhập, bạn sẽ thấy khách sạn được gán trong sidebar.
                         </p>
-                        <div className="bg-blue-50 rounded-lg p-3 text-sm text-blue-700">
-                            💡 Nếu chưa có quyền truy cập, liên hệ admin qua Zalo: 0778602953
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700 mt-2">
+                            Nếu chưa có quyền truy cập, liên hệ admin qua Zalo: 0778602953
                         </div>
                     </div>
                 </div>
-            </div>
 
-            {/* Step 2: Upload Data */}
-            <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                <hr className="border-gray-100" />
+
+                {/* Step 2 */}
                 <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center shrink-0">
-                        <span className="text-2xl font-bold text-purple-600">2</span>
+                    <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center shrink-0">
+                        <span className="text-sm font-bold text-blue-600">2</span>
                     </div>
-                    <div className="space-y-2">
-                        <h3 className="text-lg font-semibold text-gray-900">Upload dữ liệu từ PMS</h3>
-                        <p className="text-gray-600">
+                    <div>
+                        <h3 className="text-base font-semibold text-gray-900">Upload dữ liệu từ PMS</h3>
+                        <p className="text-sm text-gray-600 mt-1">
                             Vào menu <strong>Upload</strong> → Kéo thả file XML hoặc CSV từ phần mềm quản lý
                             (Opera, RoomRaccoon, Cloudbeds...).
                         </p>
                         <div className="grid grid-cols-2 gap-3 mt-3">
                             <div className="bg-gray-50 rounded-lg p-3">
-                                <div className="font-medium text-gray-800 mb-1">📄 File Reservations</div>
+                                <div className="font-medium text-gray-800 text-sm">File Reservations</div>
                                 <p className="text-xs text-gray-500">Danh sách booking hiện tại</p>
                             </div>
                             <div className="bg-gray-50 rounded-lg p-3">
-                                <div className="font-medium text-gray-800 mb-1">❌ File Cancellations</div>
+                                <div className="font-medium text-gray-800 text-sm">File Cancellations</div>
                                 <p className="text-xs text-gray-500">Danh sách booking đã hủy</p>
                             </div>
                         </div>
-                        <div className="bg-amber-50 rounded-lg p-3 text-sm text-amber-700">
-                            ⚠️ Upload dữ liệu mỗi ngày (sáng) để có số liệu chính xác nhất
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-700 mt-2">
+                            <strong>Lưu ý:</strong> Upload dữ liệu mỗi ngày (sáng) để có số liệu chính xác nhất.
                         </div>
                     </div>
                 </div>
-            </div>
 
-            {/* Step 3: Build Data */}
-            <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                <hr className="border-gray-100" />
+
+                {/* Step 3 */}
                 <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center shrink-0">
-                        <span className="text-2xl font-bold text-emerald-600">3</span>
+                    <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center shrink-0">
+                        <span className="text-sm font-bold text-blue-600">3</span>
                     </div>
-                    <div className="space-y-2">
-                        <h3 className="text-lg font-semibold text-gray-900">Build dữ liệu (tự động)</h3>
-                        <p className="text-gray-600">
+                    <div>
+                        <h3 className="text-base font-semibold text-gray-900">Build dữ liệu (tự động)</h3>
+                        <p className="text-sm text-gray-600 mt-1">
                             Vào menu <strong>Dữ liệu</strong> → Nhấn các nút theo thứ tự:
                         </p>
                         <div className="flex flex-wrap items-center gap-2 text-sm mt-2">
-                            <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-lg">📊 Build OTB</span>
+                            <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-lg">Build OTB</span>
                             <span className="text-gray-400">→</span>
-                            <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-lg">⚡ Build Features</span>
+                            <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-lg">Build Features</span>
                             <span className="text-gray-400">→</span>
-                            <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-lg">📈 Run Forecast</span>
+                            <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-lg">Run Forecast</span>
                         </div>
-                        <div className="bg-emerald-50 rounded-lg p-3 text-sm text-emerald-700">
-                            ✅ Sau bước này, Dashboard sẽ hiển thị đầy đủ dữ liệu
-                        </div>
+                        <p className="text-sm text-gray-500 mt-2">Sau bước này, Dashboard sẽ hiển thị đầy đủ dữ liệu.</p>
                     </div>
                 </div>
-            </div>
 
-            {/* Step 4: View Dashboard */}
-            <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                <hr className="border-gray-100" />
+
+                {/* Step 4 */}
                 <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center shrink-0">
-                        <span className="text-2xl font-bold text-orange-600">4</span>
+                    <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center shrink-0">
+                        <span className="text-sm font-bold text-blue-600">4</span>
                     </div>
-                    <div className="space-y-2">
-                        <h3 className="text-lg font-semibold text-gray-900">Xem Dashboard</h3>
-                        <p className="text-gray-600">
+                    <div>
+                        <h3 className="text-base font-semibold text-gray-900">Xem Dashboard</h3>
+                        <p className="text-sm text-gray-600 mt-1">
                             Menu <strong>Dashboard</strong> hiển thị:
                         </p>
-                        <ul className="space-y-2 mt-2 text-gray-600 text-sm">
-                            <li className="flex items-center gap-2">
-                                <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-xs">📊</span>
-                                <span><strong>KPI Cards:</strong> Rooms OTB, Remaining Supply, Pickup</span>
-                            </li>
-                            <li className="flex items-center gap-2">
-                                <span className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center text-xs">📈</span>
-                                <span><strong>Charts:</strong> Biểu đồ OTB theo ngày, so sánh năm trước</span>
-                            </li>
-                            <li className="flex items-center gap-2">
-                                <span className="w-6 h-6 bg-emerald-100 rounded-full flex items-center justify-center text-xs">💰</span>
-                                <span><strong>Price Table:</strong> Giá khuyến nghị cho từng ngày</span>
-                            </li>
+                        <ul className="space-y-1 mt-2 text-gray-600 text-sm list-disc list-inside ml-2">
+                            <li><strong>KPI Cards:</strong> Rooms OTB, Remaining Supply, Pickup</li>
+                            <li><strong>Charts:</strong> Biểu đồ OTB theo ngày, so sánh năm trước</li>
+                            <li><strong>Price Table:</strong> Giá khuyến nghị cho từng ngày</li>
                         </ul>
                     </div>
                 </div>
-            </div>
 
-            {/* Step 5: Price Action */}
-            <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                <hr className="border-gray-100" />
+
+                {/* Step 5 */}
                 <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-rose-100 rounded-xl flex items-center justify-center shrink-0">
-                        <span className="text-2xl font-bold text-rose-600">5</span>
+                    <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center shrink-0">
+                        <span className="text-sm font-bold text-blue-600">5</span>
                     </div>
-                    <div className="space-y-2">
-                        <h3 className="text-lg font-semibold text-gray-900">Ra Quyết định Giá</h3>
-                        <p className="text-gray-600">
+                    <div>
+                        <h3 className="text-base font-semibold text-gray-900">Ra Quyết định Giá</h3>
+                        <p className="text-sm text-gray-600 mt-1">
                             Với mỗi ngày, hệ thống đề xuất giá. Bạn có thể:
                         </p>
                         <div className="grid grid-cols-2 gap-3 mt-3">
-                            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-center">
-                                <div className="text-2xl mb-1">✅</div>
-                                <div className="font-medium text-emerald-700">Chấp nhận</div>
+                            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-center">
+                                <div className="font-medium text-gray-800">Chấp nhận</div>
                                 <p className="text-xs text-gray-500 mt-1">Đồng ý với giá hệ thống đề xuất</p>
                             </div>
-                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
-                                <div className="text-2xl mb-1">✏️</div>
-                                <div className="font-medium text-blue-700">Override</div>
+                            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-center">
+                                <div className="font-medium text-gray-800">Override</div>
                                 <p className="text-xs text-gray-500 mt-1">Nhập giá theo ý mình</p>
                             </div>
                         </div>
@@ -270,108 +263,98 @@ function QuickStartGuide() {
             </div>
 
             {/* Daily Workflow */}
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
-                <h3 className="text-lg font-semibold text-blue-800 mb-3">📅 Quy trình hàng ngày</h3>
-                <ol className="space-y-2 text-blue-700">
-                    <li className="flex items-center gap-2">
-                        <span className="w-6 h-6 bg-blue-200 rounded-full flex items-center justify-center text-xs font-bold">1</span>
+            <section className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2 mb-4">
+                    <CalendarDays className="w-5 h-5 text-blue-600" />
+                    Quy trình hàng ngày
+                </h3>
+                <ol className="space-y-2 text-gray-700 text-sm">
+                    <li className="flex items-start gap-3">
+                        <span className="w-6 h-6 bg-blue-50 rounded-full flex items-center justify-center text-xs font-bold text-blue-600 shrink-0 mt-0.5">1</span>
                         <span>Sáng: Export báo cáo từ PMS → Upload vào hệ thống</span>
                     </li>
-                    <li className="flex items-center gap-2">
-                        <span className="w-6 h-6 bg-blue-200 rounded-full flex items-center justify-center text-xs font-bold">2</span>
+                    <li className="flex items-start gap-3">
+                        <span className="w-6 h-6 bg-blue-50 rounded-full flex items-center justify-center text-xs font-bold text-blue-600 shrink-0 mt-0.5">2</span>
                         <span>Vào Dashboard xem tình hình booking hôm nay</span>
                     </li>
-                    <li className="flex items-center gap-2">
-                        <span className="w-6 h-6 bg-blue-200 rounded-full flex items-center justify-center text-xs font-bold">3</span>
+                    <li className="flex items-start gap-3">
+                        <span className="w-6 h-6 bg-blue-50 rounded-full flex items-center justify-center text-xs font-bold text-blue-600 shrink-0 mt-0.5">3</span>
                         <span>Review giá khuyến nghị, Accept hoặc Override</span>
                     </li>
-                    <li className="flex items-center gap-2">
-                        <span className="w-6 h-6 bg-blue-200 rounded-full flex items-center justify-center text-xs font-bold">4</span>
+                    <li className="flex items-start gap-3">
+                        <span className="w-6 h-6 bg-blue-50 rounded-full flex items-center justify-center text-xs font-bold text-blue-600 shrink-0 mt-0.5">4</span>
                         <span>Cập nhật giá lên Channel Manager / OTA</span>
                     </li>
                 </ol>
-            </div>
+            </section>
 
-            {/* FAQ: Câu hỏi thường gặp */}
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-6">
-                <h3 className="text-lg font-semibold text-amber-800 mb-4 flex items-center gap-2">
-                    <HelpCircle className="w-5 h-5" />
+            {/* FAQ */}
+            <section className="bg-white border border-gray-200 rounded-xl p-6 space-y-4 shadow-sm">
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                    <HelpCircle className="w-5 h-5 text-blue-600" />
                     Câu hỏi thường gặp
                 </h3>
-                <div className="space-y-4">
-                    {/* FAQ 1: Data Quality warnings */}
-                    <div className="bg-white border border-amber-100 rounded-lg p-4">
-                        <h4 className="font-semibold text-gray-900 mb-2">
-                            ⚠️ &quot;Data Quality: {warningCount > 0 ? `${warningCount.toLocaleString()} cảnh báo` : 'Không có cảnh báo'}&quot;
-                        </h4>
-                        <p className="text-gray-600 text-sm mb-2">
-                            <strong>{warningCount > 0 ? 'Không sao cả!' : 'Dữ liệu sạch!'}</strong>{' '}
-                            {warningCount > 0 ? (
-                                <>Phần lớn cảnh báo là <code className="bg-gray-100 px-1 rounded">PAST_STAY_DATE</code> — hệ thống thông báo rằng dữ liệu có các ngày lưu trú <strong>đã qua</strong>.{' '}
-                                    Đây là bình thường khi bạn upload dữ liệu lịch sử.</>
-                            ) : (
-                                'Tất cả dữ liệu đều hợp lệ và sẵn sàng sử dụng.'
-                            )}
-                        </p>
-                        {totalRows > 0 && (
-                            <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-600">
-                                <p className="mb-1">📊 <strong>Khách sạn của bạn:</strong> {totalRows.toLocaleString()} dòng OTB
-                                    {pastCount > 0 && <>, trong đó {pastCount.toLocaleString()} dòng có ngày lưu trú đã qua = <strong>{pastPct}% là dữ liệu lịch sử</strong></>}
-                                    . Độ hoàn thiện: <strong>{completeness}%</strong>.</p>
-                                <p>✅ Dữ liệu lịch sử vẫn hữu ích cho phân tích xu hướng và so sánh cùng kỳ năm trước (STLY).</p>
-                            </div>
-                        )}
-                    </div>
 
-                    {/* FAQ 2: Pickup N/A */}
-                    <div className="bg-white border border-amber-100 rounded-lg p-4">
-                        <h4 className="font-semibold text-gray-900 mb-2">
-                            📊 &quot;Pickup TB: N/A&quot; — Tại sao không hiện số?
-                        </h4>
-                        <p className="text-gray-600 text-sm mb-2">
-                            <strong>Pickup</strong> = So sánh số phòng đặt <strong>hôm nay</strong> với <strong>7 ngày trước</strong>.
-                            Vì vậy cần ít nhất 2 lần upload cách nhau <strong>≥ 7 ngày</strong> để hệ thống tính được.
-                        </p>
-                        <div className="bg-gray-50 rounded-lg p-3 text-sm">
-                            <p className="text-gray-600 mb-2">📅 <strong>Ví dụ timeline:</strong></p>
-                            <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                                <div className="bg-blue-100 text-blue-700 rounded p-2">
-                                    <div className="font-bold">Upload #1</div>
-                                    <div>01/02</div>
-                                </div>
-                                <div className="bg-gray-200 text-gray-500 rounded p-2">
-                                    <div>⏳ Chờ 7 ngày...</div>
-                                </div>
-                                <div className="bg-emerald-100 text-emerald-700 rounded p-2">
-                                    <div className="font-bold">Upload #2</div>
-                                    <div>08/02 → Pickup ✅</div>
-                                </div>
+                {/* FAQ 1 */}
+                <div className="border-t border-gray-100 pt-4">
+                    <h4 className="font-medium text-gray-900 mb-2">
+                        Data Quality: {warningCount > 0 ? `${warningCount.toLocaleString()} cảnh báo` : 'Không có cảnh báo'}
+                    </h4>
+                    <p className="text-gray-600 text-sm">
+                        {warningCount > 0 ? (
+                            <>Phần lớn cảnh báo là <code className="bg-gray-100 px-1 rounded text-xs">PAST_STAY_DATE</code> — dữ liệu có các ngày lưu trú đã qua. Đây là bình thường khi upload dữ liệu lịch sử.</>
+                        ) : 'Tất cả dữ liệu đều hợp lệ và sẵn sàng sử dụng.'}
+                    </p>
+                    {totalRows > 0 && (
+                        <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-600 mt-2">
+                            <p><strong>Khách sạn của bạn:</strong> {totalRows.toLocaleString()} dòng OTB
+                                {pastCount > 0 && <>, trong đó {pastCount.toLocaleString()} dòng đã qua ({pastPct}%)</>}
+                                . Hoàn thiện: <strong>{completeness}%</strong>.</p>
+                        </div>
+                    )}
+                </div>
+
+                {/* FAQ 2 */}
+                <div className="border-t border-gray-100 pt-4">
+                    <h4 className="font-medium text-gray-900 mb-2">
+                        &quot;Pickup TB: N/A&quot; — Tại sao không hiện số?
+                    </h4>
+                    <p className="text-gray-600 text-sm">
+                        <strong>Pickup</strong> = So sánh số phòng đặt hôm nay với 7 ngày trước.
+                        Cần ít nhất <strong>2 lần upload cách nhau ≥ 7 ngày</strong> để hệ thống tính được.
+                    </p>
+                    <div className="bg-gray-50 rounded-lg p-3 text-sm mt-2">
+                        <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                            <div className="bg-white border border-gray-200 rounded p-2">
+                                <div className="font-bold text-gray-700">Upload #1</div>
+                                <div className="text-gray-500">01/02</div>
+                            </div>
+                            <div className="bg-white border border-gray-200 rounded p-2">
+                                <div className="text-gray-500">Chờ 7 ngày...</div>
+                            </div>
+                            <div className="bg-white border border-gray-200 rounded p-2">
+                                <div className="font-bold text-gray-700">Upload #2</div>
+                                <div className="text-gray-500">08/02 → Pickup ✓</div>
                             </div>
                         </div>
-                        <p className="text-gray-500 text-xs mt-2 italic">
-                            💡 Mẹo: Upload dữ liệu đều đặn mỗi ngày để có pickup chính xác nhất.
-                        </p>
-                    </div>
-
-                    {/* FAQ 3: Dự báo Ước lượng */}
-                    <div className="bg-white border border-amber-100 rounded-lg p-4">
-                        <h4 className="font-semibold text-gray-900 mb-2">
-                            ⚠️ Dự báo nhu cầu hiện &quot;Ước lượng&quot; — Có chính xác không?
-                        </h4>
-                        <p className="text-gray-600 text-sm mb-2">
-                            Khi chưa có đủ dữ liệu pickup, hệ thống sử dụng <strong>ước lượng sơ bộ</strong> (dựa trên tỷ lệ phòng còn trống).
-                            Con số này chỉ mang tính tham khảo.
-                        </p>
-                        <p className="text-gray-600 text-sm">
-                            Sau khi có <strong>≥ 2 lần upload cách nhau ≥ 7 ngày</strong>, hệ thống sẽ tự động chuyển sang dự báo dựa trên pickup thực tế — chính xác hơn nhiều.
-                        </p>
                     </div>
                 </div>
-            </div>
 
+                {/* FAQ 3 */}
+                <div className="border-t border-gray-100 pt-4">
+                    <h4 className="font-medium text-gray-900 mb-2">
+                        Dự báo hiện &quot;Ước lượng&quot; — Có chính xác không?
+                    </h4>
+                    <p className="text-gray-600 text-sm">
+                        Khi chưa có đủ dữ liệu pickup, hệ thống dùng ước lượng sơ bộ (tham khảo).
+                        Sau <strong>≥ 2 lần upload cách nhau ≥ 7 ngày</strong>, dự báo sẽ dựa trên pickup thực tế.
+                    </p>
+                </div>
+            </section>
 
-            <div className="bg-white border border-gray-200 rounded-xl p-6 text-center">
-                <p className="text-gray-600 mb-4">Đã sẵn sàng? Bắt đầu ngay!</p>
+            {/* CTA */}
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 text-center">
+                <p className="text-blue-700 mb-3">Đã sẵn sàng? Bắt đầu ngay!</p>
                 <div className="flex flex-wrap justify-center gap-3">
                     <Link
                         href="/upload"

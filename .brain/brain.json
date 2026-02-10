@@ -431,7 +431,14 @@
     "Performance: CancellationSection Promise.all + hotel_id filter (was 3 sequential queries)",
     "Performance: Dashboard batch merge 3→2 (cancellation query moved to batch 2)",
     "UX: Loading skeletons for Dashboard, Data, Pace & Pickup, So sánh giá pages",
-    "Fix: Timezone bug in BuildFeatures - ISO string instead of Date object to prevent UTC+7 shift"
+    "Fix: Timezone bug in BuildFeatures - ISO string instead of Date object to prevent UTC+7 shift",
+    "V01.5: OTA Growth Playbook - Premium-only checklist + Scorecard + ROI Engine for Booking.com & Agoda ranking optimization",
+    "V01.5: Booking.com ranking pillars = CTR → Gross Bookings → Net Bookings (confirmed from 'How we work' page)",
+    "V01.5: Agoda Content Score weights from Partner Hub (45% Property Photos, 25% Room Photos)",
+    "V01.5: Review Score Calculator 2 modes: Official (weighted, no published %) + Estimator (user input % with disclaimer)",
+    "V01.5: OTA Health Scorecard with separate Booking/Agoda weights (manual monthly input)",
+    "V01.5: ROI Engine with slider/input for program costs (no hard-coded rates)",
+    "V01.5: Phase B (Booking APIs) conditional on Connectivity Partner access (currently paused)"
   ],
   "cancellation_bridge_v011": {
     "status": "Implemented",
