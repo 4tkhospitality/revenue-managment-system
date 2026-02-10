@@ -30,7 +30,7 @@ export async function POST() {
             where: { hotel_id: result.hotelId },
             create: {
                 hotel_id: result.hotelId,
-                plan: 'GROWTH',
+                plan: 'DELUXE',
                 status: 'ACTIVE',
                 max_users: 999,
                 max_properties: 1,

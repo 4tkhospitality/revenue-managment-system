@@ -38,14 +38,14 @@ export interface TierInfo {
  */
 export function useTier(hotelId: string | null): TierInfo {
     const [tierInfo, setTierInfo] = useState<TierInfo>({
-        plan: 'FREE',
-        config: TIER_CONFIGS.FREE,
-        features: TIER_CONFIGS.FREE.features,
+        plan: 'STANDARD',
+        config: TIER_CONFIGS.STANDARD,
+        features: TIER_CONFIGS.STANDARD.features,
         limits: {
-            maxUsers: TIER_CONFIGS.FREE.maxUsers,
-            maxImportsMonth: TIER_CONFIGS.FREE.maxImportsMonth,
-            maxExportsDay: TIER_CONFIGS.FREE.maxExportsDay,
-            maxExportRows: TIER_CONFIGS.FREE.maxExportRows,
+            maxUsers: TIER_CONFIGS.STANDARD.maxUsers,
+            maxImportsMonth: TIER_CONFIGS.STANDARD.maxImportsMonth,
+            maxExportsDay: TIER_CONFIGS.STANDARD.maxExportsDay,
+            maxExportRows: TIER_CONFIGS.STANDARD.maxExportRows,
         },
         usage: {
             importsThisMonth: 0,
@@ -65,7 +65,7 @@ export function useTier(hotelId: string | null): TierInfo {
                 const res = await fetch(`/api/subscription?hotelId=${hotelId}`);
                 if (res.ok) {
                     const data = await res.json();
-                    const config = TIER_CONFIGS[data.plan as PlanTier] || TIER_CONFIGS.FREE;
+                    const config = TIER_CONFIGS[data.plan as PlanTier] || TIER_CONFIGS.STANDARD;
                     setTierInfo({
                         plan: data.plan,
                         config,

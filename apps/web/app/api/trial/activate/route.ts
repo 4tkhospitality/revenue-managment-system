@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
         if (existingSubscription) {
             // If already in trial or paid, don't change
             if (existingSubscription.status === 'TRIAL' || existingSubscription.status === 'ACTIVE') {
-                if (existingSubscription.plan !== 'FREE') {
+                if (existingSubscription.plan !== 'STANDARD') {
                     return NextResponse.json({
                         message: 'Trial already active or upgraded',
                         status: existingSubscription.status,
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
             await prisma.subscription.update({
                 where: { hotel_id: hotelId },
                 data: {
-                    plan: 'STARTER',
+                    plan: 'SUPERIOR',
                     status: 'TRIAL',
                     current_period_start: new Date(),
                     current_period_end: trialEnd,

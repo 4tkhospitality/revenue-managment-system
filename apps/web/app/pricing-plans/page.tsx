@@ -29,7 +29,7 @@ const ROOM_BANDS = [
 
 // Base Monthly Prices (VND)
 const PRICING_MATRIX: Record<string, Record<RoomBand, number>> = {
-    FREE: { small: 0, medium: 0, large: 0, xlarge: 0 },
+    STANDARD: { small: 0, medium: 0, large: 0, xlarge: 0 },
     SUPERIOR: { small: 990000, medium: 1490000, large: 1990000, xlarge: 2490000 },
     DELUXE: { small: 1990000, medium: 2990000, large: 3990000, xlarge: 4990000 },
     SUITE: { small: 3490000, medium: 4990000, large: 6990000, xlarge: 8990000 },
@@ -37,7 +37,7 @@ const PRICING_MATRIX: Record<string, Record<RoomBand, number>> = {
 
 const TIERS = [
     {
-        id: 'FREE',
+        id: 'STANDARD',
         name: 'Tiêu chuẩn',
         description: 'Tính giá OTA nhanh chóng',
         features: [
@@ -121,8 +121,8 @@ export default function PricingPlansPage() {
         if (status === 'authenticated') {
             fetch('/api/subscription')
                 .then((res) => res.json())
-                .then((data) => setCurrentTier(data.plan || 'FREE'))
-                .catch(() => setCurrentTier('FREE'));
+                .then((data) => setCurrentTier(data.plan || 'STANDARD'))
+                .catch(() => setCurrentTier('STANDARD'));
         }
     }, [status]);
 
@@ -249,7 +249,7 @@ export default function PricingPlansPage() {
 
                             {/* Price */}
                             <div className="mb-6">
-                                {tier.id === 'FREE' ? (
+                                {tier.id === 'STANDARD' ? (
                                     <div className="text-4xl font-bold text-gray-900">0₫</div>
                                 ) : (
                                     <>

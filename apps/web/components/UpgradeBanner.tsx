@@ -30,7 +30,7 @@ const FEATURE_DESCRIPTIONS: Record<FeatureKey, string> = {
     rate_shopper_addon: 'Theo dõi giá đối thủ',
 };
 
-export function UpgradeBanner({ feature, currentTier = 'FREE', className = '' }: UpgradeBannerProps) {
+export function UpgradeBanner({ feature, currentTier = 'STANDARD', className = '' }: UpgradeBannerProps) {
     const requiredTier = getUpgradeTierName(feature);
     const featureDesc = FEATURE_DESCRIPTIONS[feature] || feature;
 

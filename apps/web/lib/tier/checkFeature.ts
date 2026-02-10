@@ -56,18 +56,18 @@ export async function getHotelSubscription(hotelId: string): Promise<Subscriptio
     });
 
     if (!subscription) {
-        // Return FREE tier defaults
-        const freeConfig = TIER_CONFIGS.FREE;
+        // Return STANDARD tier defaults
+        const standardConfig = TIER_CONFIGS.STANDARD;
         return {
-            plan: 'FREE',
+            plan: 'STANDARD',
             status: 'ACTIVE',
-            maxUsers: freeConfig.maxUsers,
-            maxProperties: freeConfig.maxProperties,
-            maxImportsMonth: freeConfig.maxImportsMonth,
-            maxExportsDay: freeConfig.maxExportsDay,
-            maxExportRows: freeConfig.maxExportRows,
-            includedRateShopsMonth: freeConfig.includedRateShopsMonth,
-            dataRetentionMonths: freeConfig.dataRetentionMonths,
+            maxUsers: standardConfig.maxUsers,
+            maxProperties: standardConfig.maxProperties,
+            maxImportsMonth: standardConfig.maxImportsMonth,
+            maxExportsDay: standardConfig.maxExportsDay,
+            maxExportRows: standardConfig.maxExportRows,
+            includedRateShopsMonth: standardConfig.includedRateShopsMonth,
+            dataRetentionMonths: standardConfig.dataRetentionMonths,
         };
     }
 

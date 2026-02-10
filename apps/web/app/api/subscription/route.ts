@@ -87,7 +87,7 @@ export async function POST(request: Request) {
             where: { hotel_id: hotelId },
             create: {
                 hotel_id: hotelId,
-                plan: plan || 'FREE',
+                plan: plan || 'STANDARD',
                 max_users: maxUsers ?? 1,
                 max_imports_month: maxImportsMonth ?? 3,
                 max_exports_day: maxExportsDay ?? 1,

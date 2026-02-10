@@ -45,8 +45,8 @@ export interface TierConfig {
 }
 
 export const TIER_CONFIGS: Record<PlanTier, TierConfig> = {
-    FREE: {
-        name: 'FREE',
+    STANDARD: {
+        name: 'STANDARD',
         displayName: 'Calculator',
         description: 'Tính giá NET → BAR + promo stacking',
         maxUsers: 1,
@@ -58,8 +58,8 @@ export const TIER_CONFIGS: Record<PlanTier, TierConfig> = {
         includedRateShopsMonth: 0,
         features: ['pricing_calc', 'promo_stacking'],
     },
-    STARTER: {
-        name: 'STARTER',
+    SUPERIOR: {
+        name: 'SUPERIOR',
         displayName: 'Assistant',
         description: 'Daily Action + Export cho khách sạn 10-30 phòng',
         maxUsers: 2,
@@ -77,8 +77,8 @@ export const TIER_CONFIGS: Record<PlanTier, TierConfig> = {
             'export_excel',
         ],
     },
-    GROWTH: {
-        name: 'GROWTH',
+    DELUXE: {
+        name: 'DELUXE',
         displayName: 'RMS Lite',
         description: 'Guardrails + Analytics cho khách sạn 31-60 phòng',
         maxUsers: 5,
@@ -100,9 +100,9 @@ export const TIER_CONFIGS: Record<PlanTier, TierConfig> = {
             'basic_analytics',
         ],
     },
-    PRO: {
-        name: 'PRO',
-        displayName: 'Professional',
+    SUITE: {
+        name: 'SUITE',
+        displayName: 'Strategist',
         description: 'Multi-property + Advanced Analytics',
         maxUsers: 10,
         maxProperties: 5,
@@ -151,7 +151,7 @@ export function tierHasFeature(plan: PlanTier, feature: FeatureKey): boolean {
  * Get the minimum tier required for a feature
  */
 export function getMinimumTierForFeature(feature: FeatureKey): PlanTier | null {
-    const tiers: PlanTier[] = ['FREE', 'STARTER', 'GROWTH', 'PRO'];
+    const tiers: PlanTier[] = ['STANDARD', 'SUPERIOR', 'DELUXE', 'SUITE'];
     for (const tier of tiers) {
         if (TIER_CONFIGS[tier].features.includes(feature)) {
             return tier;

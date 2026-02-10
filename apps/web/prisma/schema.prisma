@@ -497,10 +497,10 @@ model RateLimitHit {
 // ════════════════════════════════════════════════════════════════════
 
 enum PlanTier {
-  FREE
-  STARTER
-  GROWTH
-  PRO
+  STANDARD
+  SUPERIOR
+  DELUXE
+  SUITE
 }
 
 enum SubscriptionStatus {
@@ -513,7 +513,7 @@ enum SubscriptionStatus {
 model Subscription {
   id                        String             @id @default(uuid()) @db.Uuid
   hotel_id                  String             @unique @db.Uuid
-  plan                      PlanTier           @default(FREE)
+  plan                      PlanTier           @default(STANDARD)
   status                    SubscriptionStatus @default(ACTIVE)
 
   // External payment (Sepay/Stripe) - optional for now

@@ -51,7 +51,7 @@ export async function createPersonalDemoHotel(userId: string): Promise<{
         await tx.subscription.create({
             data: {
                 hotel_id: hotel.hotel_id,
-                plan: 'FREE',
+                plan: 'STANDARD',
                 status: 'ACTIVE',
                 max_users: 1,
                 max_properties: 1,

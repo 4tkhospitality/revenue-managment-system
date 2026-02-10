@@ -5,21 +5,21 @@
 import prisma from '@/lib/prisma'
 
 const TIER_LIMITS = {
-    FREE: {
+    STANDARD: {
         exportsPerWeek: 3,
         teamSeats: 1,
     },
-    STARTER: {
+    SUPERIOR: {
         exportsPerWeek: 20,
         teamSeats: 3,
     },
-    PRO: {
+    DELUXE: {
+        exportsPerWeek: 50,
+        teamSeats: 5,
+    },
+    SUITE: {
         exportsPerWeek: -1, // Unlimited
         teamSeats: 10,
-    },
-    ENTERPRISE: {
-        exportsPerWeek: -1,
-        teamSeats: -1, // Unlimited
     },
 }
 
@@ -42,8 +42,8 @@ export async function checkExportQuota(userId: string, hotelId: string): Promise
         select: { plan: true },
     })
 
-    const tier = (subscription?.plan || 'FREE') as keyof typeof TIER_LIMITS
-    const limits = TIER_LIMITS[tier] || TIER_LIMITS.FREE
+    const tier = (subscription?.plan || 'STANDARD') as keyof typeof TIER_LIMITS
+    const limits = TIER_LIMITS[tier] || TIER_LIMITS.STANDARD
 
     // Unlimited exports for paid tiers
     if (limits.exportsPerWeek === -1) {
@@ -84,8 +84,8 @@ export async function checkTeamSeatQuota(hotelId: string): Promise<QuotaStatus> 
         select: { plan: true },
     })
 
-    const tier = (subscription?.plan || 'FREE') as keyof typeof TIER_LIMITS
-    const limits = TIER_LIMITS[tier] || TIER_LIMITS.FREE
+    const tier = (subscription?.plan || 'STANDARD') as keyof typeof TIER_LIMITS
+    const limits = TIER_LIMITS[tier] || TIER_LIMITS.STANDARD
 
     // Unlimited seats for enterprise
     if (limits.teamSeats === -1) {
@@ -143,8 +143,8 @@ export async function getUsageSummary(hotelId: string): Promise<{
         select: { plan: true },
     })
 
-    const tier = (subscription?.plan || 'FREE') as keyof typeof TIER_LIMITS
-    const limits = TIER_LIMITS[tier] || TIER_LIMITS.FREE
+    const tier = (subscription?.plan || 'STANDARD') as keyof typeof TIER_LIMITS
+    const limits = TIER_LIMITS[tier] || TIER_LIMITS.STANDARD
 
     // Count exports in last 7 days
     const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
