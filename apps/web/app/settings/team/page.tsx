@@ -94,57 +94,63 @@ export default function TeamSettingsPage() {
 
     const getRoleBadge = (role: string, isPrimary: boolean) => {
         if (isPrimary) {
-            return <span className="px-2 py-1 text-xs rounded-full bg-amber-500/20 text-amber-400">Owner</span>
+            return <span className="px-2 py-1 text-xs rounded-full bg-amber-100 text-amber-700">Owner</span>
         }
         const badges: Record<string, { bg: string; text: string }> = {
-            hotel_admin: { bg: 'bg-purple-500/20', text: 'text-purple-400' },
-            manager: { bg: 'bg-blue-500/20', text: 'text-blue-400' },
-            viewer: { bg: 'bg-slate-500/20', text: 'text-slate-400' },
+            hotel_admin: { bg: 'bg-purple-100', text: 'text-purple-700' },
+            manager: { bg: 'bg-blue-100', text: 'text-blue-700' },
+            viewer: { bg: 'bg-gray-100', text: 'text-gray-600' },
         }
         const badge = badges[role] || badges.viewer
         return <span className={`px-2 py-1 text-xs rounded-full ${badge.bg} ${badge.text}`}>{role}</span>
     }
 
     return (
-        <div className="p-6 max-w-4xl mx-auto">
-            <h1 className="text-2xl font-bold text-white mb-2">Quản lý Team</h1>
-            <p className="text-white/60 mb-8">Mời thành viên và quản lý quyền truy cập</p>
+        <div className="mx-auto max-w-[1400px] px-4 sm:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
+            {/* Header - consistent with other pages */}
+            <header
+                className="rounded-2xl px-4 sm:px-6 py-4 text-white shadow-sm"
+                style={{ background: 'linear-gradient(to right, #1E3A8A, #102A4C)' }}
+            >
+                <h1 className="text-lg font-semibold">👥 Quản lý Team</h1>
+                <p className="text-white/70 text-sm mt-1">Mời thành viên và quản lý quyền truy cập</p>
+            </header>
 
             {error && (
-                <div className="mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-xl text-red-200">
+                <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
                     {error}
                 </div>
             )}
 
             {/* Invite Section */}
             {isAdmin && (
-                <div className="mb-8 p-6 bg-white/5 border border-white/10 rounded-2xl">
-                    <h2 className="font-semibold text-white mb-4">🎟️ Mời thành viên</h2>
+                <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6">
+                    <h2 className="font-semibold text-gray-900 mb-4">🎟️ Mời thành viên</h2>
 
                     {invite ? (
                         <div className="space-y-4">
-                            <div className="p-4 bg-white/5 rounded-xl">
-                                <p className="text-sm text-white/60 mb-2">Mã mời:</p>
-                                <p className="text-2xl font-mono font-bold text-white tracking-wider">{invite.shortCode}</p>
+                            <div className="p-4 bg-gray-50 rounded-xl">
+                                <p className="text-sm text-gray-500 mb-2">Mã mời:</p>
+                                <p className="text-2xl font-mono font-bold text-gray-900 tracking-wider">{invite.shortCode}</p>
                             </div>
-                            <div className="p-4 bg-white/5 rounded-xl">
-                                <p className="text-sm text-white/60 mb-2">Hoặc gửi link:</p>
+                            <div className="p-4 bg-gray-50 rounded-xl">
+                                <p className="text-sm text-gray-500 mb-2">Hoặc gửi link:</p>
                                 <div className="flex gap-2">
                                     <input
                                         type="text"
                                         value={invite.inviteUrl}
                                         readOnly
-                                        className="flex-1 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white/80 font-mono"
+                                        className="flex-1 min-w-0 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 font-mono truncate"
                                     />
                                     <button
                                         onClick={copyInvite}
-                                        className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600"
+                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 shrink-0"
                                     >
                                         {copied ? '✓ Đã copy' : 'Copy'}
                                     </button>
                                 </div>
                             </div>
-                            <p className="text-xs text-white/40">
+                            <p className="text-xs text-gray-400">
                                 Hết hạn: {new Date(invite.expiresAt).toLocaleDateString('vi-VN')}
                             </p>
                         </div>
@@ -152,7 +158,7 @@ export default function TeamSettingsPage() {
                         <button
                             onClick={createInvite}
                             disabled={inviteLoading}
-                            className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white font-semibold rounded-xl disabled:opacity-50"
+                            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl disabled:opacity-50 transition-colors"
                         >
                             {inviteLoading ? 'Đang tạo...' : '+ Tạo mã mời mới'}
                         </button>
@@ -161,26 +167,26 @@ export default function TeamSettingsPage() {
             )}
 
             {/* Members List */}
-            <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
-                <div className="p-4 border-b border-white/10">
-                    <h2 className="font-semibold text-white">👥 Thành viên ({members.length})</h2>
+            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                <div className="p-4 border-b border-gray-100">
+                    <h2 className="font-semibold text-gray-900">👥 Thành viên ({members.length})</h2>
                 </div>
 
                 {loading ? (
-                    <div className="p-8 text-center text-white/40">Đang tải...</div>
+                    <div className="p-8 text-center text-gray-400">Đang tải...</div>
                 ) : members.length === 0 ? (
-                    <div className="p-8 text-center text-white/40">Chưa có thành viên nào</div>
+                    <div className="p-8 text-center text-gray-400">Chưa có thành viên nào</div>
                 ) : (
-                    <div className="divide-y divide-white/5">
+                    <div className="divide-y divide-gray-100">
                         {members.map((member) => (
                             <div key={member.id} className="p-4 flex items-center justify-between">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white font-semibold">
+                                <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold shrink-0">
                                         {member.user.name?.[0] || member.user.email[0].toUpperCase()}
                                     </div>
-                                    <div>
-                                        <p className="text-white font-medium">{member.user.name || 'Unnamed'}</p>
-                                        <p className="text-sm text-white/50">{member.user.email}</p>
+                                    <div className="min-w-0">
+                                        <p className="text-gray-900 font-medium truncate">{member.user.name || 'Unnamed'}</p>
+                                        <p className="text-sm text-gray-500 truncate">{member.user.email}</p>
                                     </div>
                                 </div>
                                 {getRoleBadge(member.role, member.is_primary)}

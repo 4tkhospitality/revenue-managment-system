@@ -132,48 +132,123 @@ export default function AdminUsersPage() {
     }
 
     return (
-        <div className="mx-auto max-w-[1400px] px-4 sm:px-8 py-4 sm:py-6 space-y-6">
-            {/* Header - consistent with other pages */}
+        <div className="mx-auto max-w-[1400px] px-4 sm:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
+            {/* Header - responsive */}
             <header
-                className="rounded-2xl px-6 py-4 text-white flex items-center justify-between shadow-sm"
+                className="rounded-2xl px-4 sm:px-6 py-4 text-white shadow-sm"
                 style={{ background: 'linear-gradient(to right, #1E3A8A, #102A4C)' }}
             >
-                <div>
-                    <h1 className="text-lg font-semibold">👥 Quản lý người dùng</h1>
-                    <p className="text-white/70 text-sm mt-1">
-                        Quản lý tài khoản và phân quyền
-                    </p>
-                </div>
-                <div className="flex items-center gap-3">
-                    <Link
-                        href="/admin/hotels"
-                        className="px-4 py-2 bg-white/15 text-white rounded-lg hover:bg-white/25 transition-colors backdrop-blur-sm text-sm"
-                    >
-                        🏨 Quản lý Hotels
-                    </Link>
-                    <button
-                        onClick={() => setShowCreateModal(true)}
-                        className="px-4 py-2 bg-white text-blue-900 font-medium rounded-lg hover:bg-blue-50 transition-colors text-sm"
-                    >
-                        + Thêm người dùng
-                    </button>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div>
+                        <h1 className="text-lg font-semibold">👥 Quản lý người dùng</h1>
+                        <p className="text-white/70 text-sm mt-1">
+                            Quản lý tài khoản và phân quyền
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-2 sm:gap-3">
+                        <Link
+                            href="/admin/hotels"
+                            className="px-3 sm:px-4 py-2 bg-white/15 text-white rounded-lg hover:bg-white/25 transition-colors backdrop-blur-sm text-xs sm:text-sm"
+                        >
+                            🏨 Hotels
+                        </Link>
+                        <button
+                            onClick={() => setShowCreateModal(true)}
+                            className="px-3 sm:px-4 py-2 bg-white text-blue-900 font-medium rounded-lg hover:bg-blue-50 transition-colors text-xs sm:text-sm"
+                        >
+                            + Thêm
+                        </button>
+                    </div>
                 </div>
             </header>
 
             {/* Search */}
-            <div className="mb-4">
+            <div>
                 <input
                     type="text"
                     placeholder="Tìm theo email hoặc tên..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && fetchUsers()}
-                    className="w-full max-w-md px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full sm:max-w-md px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
             </div>
 
-            {/* Users Table */}
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            {/* Users - Card layout on mobile, Table on desktop */}
+            {/* Mobile: Card layout */}
+            <div className="block sm:hidden space-y-3">
+                {loading ? (
+                    <div className="text-center py-8 text-gray-400">Đang tải...</div>
+                ) : users.length === 0 ? (
+                    <div className="text-center py-8 text-gray-400">Không tìm thấy người dùng</div>
+                ) : (
+                    users.map((user) => (
+                        <div key={user.id} className={`bg-white rounded-xl border border-gray-200 p-4 ${!user.isActive ? 'opacity-50' : ''}`}>
+                            <div className="flex items-center gap-3 mb-3">
+                                {user.image ? (
+                                    <img src={user.image} alt="" className="w-10 h-10 rounded-full" />
+                                ) : (
+                                    <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 font-medium">
+                                        {user.email[0].toUpperCase()}
+                                    </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                    <div className="font-medium text-gray-900 truncate">{user.name || 'Chưa đặt tên'}</div>
+                                    <div className="text-sm text-gray-500 truncate">{user.email}</div>
+                                </div>
+                                <span className={`px-2 py-0.5 rounded text-xs shrink-0 ${user.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                    {user.isActive ? 'Hoạt động' : 'Đã khóa'}
+                                </span>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2 mb-3 text-xs">
+                                {user.hotels.length > 0 ? (
+                                    <>
+                                        {user.hotels.slice(0, 1).map((h, i) => (
+                                            <span key={i}>{getRoleBadge(h.role)}</span>
+                                        ))}
+                                        {user.hotels.map((h, i) => (
+                                            <span key={`hotel-${i}`} className="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded">
+                                                {h.hotelName}{h.isPrimary && ' ★'}
+                                            </span>
+                                        ))}
+                                    </>
+                                ) : (
+                                    <span className="text-gray-400">Chưa gán hotel</span>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-3 pt-2 border-t border-gray-100">
+                                <button
+                                    onClick={() => { setSelectedUser(user); setShowEditModal(true); }}
+                                    className="text-emerald-600 hover:text-emerald-800 text-sm"
+                                >
+                                    Sửa
+                                </button>
+                                <button
+                                    onClick={() => { setSelectedUser(user); setShowAssignModal(true); }}
+                                    className="text-blue-600 hover:text-blue-800 text-sm"
+                                >
+                                    Gán hotel
+                                </button>
+                                <button
+                                    onClick={() => toggleUserActive(user)}
+                                    className={`text-sm ${user.isActive ? 'text-orange-600' : 'text-green-600'}`}
+                                >
+                                    {user.isActive ? 'Khóa' : 'Mở khóa'}
+                                </button>
+                                <button
+                                    onClick={() => deleteUser(user)}
+                                    className="text-red-600 hover:text-red-800 text-sm ml-auto"
+                                >
+                                    Xóa
+                                </button>
+                            </div>
+                        </div>
+                    ))
+                )}
+            </div>
+
+            {/* Desktop: Table layout */}
+            <div className="hidden sm:block bg-white rounded-xl border border-gray-200 overflow-hidden">
                 <table className="w-full">
                     <thead className="bg-gray-50 border-b border-gray-200">
                         <tr>
