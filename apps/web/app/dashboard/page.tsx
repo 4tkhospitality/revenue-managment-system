@@ -360,8 +360,11 @@ export default async function DashboardPage({
                 />
             </Suspense>
 
+            {/* Divider — separates controls from report */}
+            <div className="border-t border-gray-200" />
+
             {/* Main Content - wrapped for PDF export */}
-            <DashboardPdfWrapper hotelName={hotelName} asOfDate={dataAsOf || undefined}>
+            <DashboardPdfWrapper>
                 {/* Empty State */}
                 {otbData.length === 0 && (
                     <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
