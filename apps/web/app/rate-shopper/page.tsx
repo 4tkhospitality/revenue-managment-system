@@ -112,8 +112,15 @@ export default function RateShopperPage() {
     useEffect(() => {
         async function checkAccess() {
             try {
-                // Check subscription tier
-                const subRes = await fetch('/api/subscription');
+                const [subRes, demoRes] = await Promise.all([
+                    fetch('/api/subscription'),
+                    fetch('/api/is-demo-hotel').then(r => r.json()).catch(() => ({ isDemo: false, role: undefined })),
+                ]);
+                // Super admin → always allowed
+                if (demoRes.role === 'super_admin') {
+                    setTierStatus('allowed');
+                    return;
+                }
                 if (!subRes.ok) { setTierStatus('blocked'); return; }
                 const subData = await subRes.json();
                 const plan = subData.plan || 'STANDARD';

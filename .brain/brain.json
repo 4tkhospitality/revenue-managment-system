@@ -1,15 +1,30 @@
 {
   "meta": {
-    "schema_version": "1.4.0",
+    "schema_version": "1.5.0",
     "awf_version": "4.1.2",
-    "last_updated": "2026-02-10T22:54:00+07:00"
+    "last_updated": "2026-02-11T02:40:00+07:00"
   },
   "project": {
     "name": "revenue-management-system",
     "type": "SaaS Web App",
     "status": "Production - Deployed to Vercel (icn1 region)",
     "description": "RMS Version 01.5 - Revenue Management System with OTB Time-Travel + OTA Pricing + OTA Growth Playbook + User Management + Performance Optimized. Full-stack TypeScript.",
-    "github": "https://github.com/4tkhospitality/revenue-managment-system"
+    "github": "https://github.com/4tkhospitality/revenue-managment-system",
+    "landing_page": {
+      "path": "apps/landing",
+      "framework": "Next.js 16.1.6 (App Router)",
+      "domain": "pakhos.com / www.pakhos.com",
+      "status": "V3 - Professional Visual Overhaul pushed to GitHub, pending Vercel deployment",
+      "design": {
+        "palette": "Navy #204184 (from logo) + Emerald #10b981 + Gold #d4a24e",
+        "typography": "Inter (Google Fonts)",
+        "icons": "Inline SVG line-art (no emoji)",
+        "logo": "Inline SVG (white circle + 4TK text) — not PNG"
+      },
+      "i18n": "Vietnamese (vi.ts) + English (en.ts) with toggle",
+      "sections": "Hero, How It Works, Revenue Share Model, Comparison Table, Technology, Results, Case Studies, Clients, Team, FAQ, Lead Form, Footer",
+      "api": "/api/lead (POST — validates fields, logs lead, placeholder for Resend email)"
+    }
   },
   "tech_stack": {
     "frontend": {
@@ -358,6 +373,11 @@
       "path": "POST /api/otb/snapshots/backfill",
       "explained": "V01.4: Batch backfill snapshots with generate_series, chunking (limit=3), missing_only.",
       "v014_new": true
+    },
+    {
+      "path": "POST /api/lead (landing)",
+      "explained": "Landing page lead form submission. Validates required fields (name/email/phone/hotel/rooms), logs lead summary, placeholder for Resend email.",
+      "v02_new": true
     }
   ],
   "features": [
@@ -442,7 +462,16 @@
     "V01.5: WhenToBoost (251 lines) - 5 scenarios + Decision Log with localStorage",
     "V01.5: OTAGrowthPaywall - Premium gating for demo/non-paying users",
     "V01.5: Phase B (Booking APIs) conditional on Connectivity Partner access (currently paused)",
-    "V01.5: Pricing page has 5 tabs: Hạng phòng, Kênh OTA, Khuyến mãi, Bảng giá, Tối ưu OTA"
+    "V01.5: Pricing page has 5 tabs: Hạng phòng, Kênh OTA, Khuyến mãi, Bảng giá, Tối ưu OTA",
+    "Landing V2: Revenue-share messaging - 'No fixed salary, we earn % of revenue' as core message",
+    "Landing V2: How It Works funnel (RMS → Pilot 30d → Done-for-you)",
+    "Landing V2: Revenue Share Model - 4 pillars + transparency + media cost clarification",
+    "Landing V2: Comparison Table - In-house vs 4TK (cost, risk, speed, tools, KPI)",
+    "Landing V2: FAQ Accordion - 7 sensitive questions (%, revenue base, ads, contracts)",
+    "Landing V2: Lead Form with qualifying fields (rooms, OCC/ADR, channels, PMS, needs)",
+    "Landing V3: Professional visual overhaul - remove all emoji, SVG line-art icons",
+    "Landing V3: Brand colors from logo (#204184 navy), Emerald accent, Gold secondary",
+    "Landing V3: Inline SVG logo (white circle + 4TK) instead of dark PNG"
   ],
   "cancellation_bridge_v011": {
     "status": "Implemented",
@@ -596,7 +625,12 @@
       "OTB date used today's date as fallback when no data → misleading. Changed to null + 'Chưa có dữ liệu'",
       "HotelSwitcher white dropdown clashes with dark sidebar → redesigned with dark theme (bg-[#0f1d36])",
       "setHours(0,0,0,0) on Date object in client timezone (UTC+7) shifts date back 1 day when sent to server as UTC → use ISO string instead",
-      "Next.js loading.tsx convention auto-shows skeleton during server data fetch → prevents user clicking repeatedly"
+      "Next.js loading.tsx convention auto-shows skeleton during server data fetch → prevents user clicking repeatedly",
+      "NEXTAUTH_URL on Vercel MUST be custom domain (rms.pakhos.com), NOT *.vercel.app — OAuth callback 404 DEPLOYMENT_NOT_FOUND",
+      "Google OAuth redirect URI must match NEXTAUTH_URL — add https://rms.pakhos.com/api/auth/callback/google in Google Cloud Console",
+      "Logo.png with transparent bg + dark content is invisible on dark navbar → use inline SVG instead",
+      "Emoji icons (💹🏨) on hospitality landing page look unprofessional → use SVG line-art icons",
+      "PowerShell does not support && operator — use semicolons (;) to chain commands"
     ],
     "formulas": {
       "rooms_otb": "SUM(num_rooms) from reservations for that stay_date",

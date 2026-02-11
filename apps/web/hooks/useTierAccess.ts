@@ -14,7 +14,7 @@ interface TierAccessResult {
     currentPlan: string;
     /** Whether the hotel is a demo hotel */
     isDemo: boolean;
-    /** Whether the user meets the required tier (or is demo) */
+    /** Whether the user meets the required tier (or is super_admin) */
     hasAccess: boolean;
     /** Still loading */
     loading: boolean;
@@ -22,12 +22,13 @@ interface TierAccessResult {
 
 /**
  * Hook to check if the user has access to a feature based on their tier.
- * Demo hotel users always have access (for showcase).
- * Super admin always has access.
+ * Super admin always has access (bypasses paywall).
+ * Demo hotel users see paywalls like regular users.
  */
 export function useTierAccess(requiredTier: string): TierAccessResult {
     const [currentPlan, setCurrentPlan] = useState('STANDARD');
     const [isDemo, setIsDemo] = useState(false);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -38,15 +39,19 @@ export function useTierAccess(requiredTier: string): TierAccessResult {
         ]).then(([demoData, subData]) => {
             if (cancelled) return;
             setIsDemo(demoData.isDemo || false);
+            setIsSuperAdmin(demoData.role === 'super_admin');
             setCurrentPlan(subData.plan || 'STANDARD');
             setLoading(false);
         });
         return () => { cancelled = true; };
     }, []);
 
-    const userLevel = TIER_LEVELS[currentPlan] ?? 0;
+    // Demo hotel viewers see STANDARD tier (paywall shows).
+    // The demo hotel's DB subscription (DELUXE) is for super_admin showcase only.
+    const effectivePlan = (isDemo && !isSuperAdmin) ? 'STANDARD' : currentPlan;
+    const userLevel = TIER_LEVELS[effectivePlan] ?? 0;
     const requiredLevel = TIER_LEVELS[requiredTier] ?? 0;
-    const hasAccess = userLevel >= requiredLevel;
+    const hasAccess = isSuperAdmin || userLevel >= requiredLevel;
 
     return { currentPlan, isDemo, hasAccess, loading };
 }

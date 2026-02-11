@@ -242,7 +242,9 @@ export function Sidebar() {
                                     const Icon = item.icon;
                                     const canAccess = hasPermission(item.minRole);
                                     const needsTier = 'requiredTier' in item && item.requiredTier;
-                                    const hasTier = !needsTier || (TIER_LEVELS[currentPlan] ?? 0) >= (TIER_LEVELS[needsTier as string] ?? 0);
+                                    // Demo hotel viewers see STANDARD tier (show lock icons)
+                                    const effectivePlan = (isDemo && !isAdmin) ? 'STANDARD' : currentPlan;
+                                    const hasTier = !needsTier || isAdmin || (TIER_LEVELS[effectivePlan] ?? 0) >= (TIER_LEVELS[needsTier as string] ?? 0);
 
                                     if (canAccess) {
                                         // Normal clickable item (still links to page; page handles paywall)
@@ -260,10 +262,7 @@ export function Sidebar() {
                                                 <Icon className="w-5 h-5" />
                                                 <span className="flex-1">{item.label}</span>
                                                 {needsTier && !hasTier && (
-                                                    <span className="flex items-center gap-1 text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded-full font-semibold">
-                                                        <Lock className="w-2.5 h-2.5" />
-                                                        {TIER_DISPLAY[needsTier as string] || needsTier}
-                                                    </span>
+                                                    <Lock className="w-3.5 h-3.5 text-amber-400/70" />
                                                 )}
                                             </Link>
                                         );

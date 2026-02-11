@@ -1,8 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
-import { Lock, TrendingUp, BarChart3, Star, Zap, Calculator } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import { RoomTypesTab, OTAConfigTab, PromotionsTab, OverviewTab } from '@/components/pricing';
 import { OTAPlaybookGuide } from '@/components/guide/OTAPlaybookGuide';
 import { PageHeader } from '@/components/shared/PageHeader';
@@ -61,58 +60,10 @@ export default function PricingPage() {
                     {activeTab === 'promotions' && <PromotionsTab />}
                     {activeTab === 'overview' && <OverviewTab />}
                     {activeTab === 'ota-growth' && (
-                        (!tierLoading && !hasOtaAccess) ? (
-                            <OTAGrowthPaywall />
-                        ) : (
-                            <OTAPlaybookGuide />
-                        )
+                        <OTAPlaybookGuide hasAccess={tierLoading || hasOtaAccess} />
                     )}
                 </div>
             </div>
-        </div>
-    );
-}
-
-function OTAGrowthPaywall() {
-    const features = [
-        { icon: <BarChart3 className="w-4 h-4" />, label: 'Kiểm tra chỉ số OTA — Tình trạng thứ hạng tốt/xấu trên kênh OTA' },
-        { icon: <Calculator className="w-4 h-4" />, label: 'Hiệu quả chương trình — Lời hay lỗ khi tham gia chương trình khuyến mãi OTA' },
-        { icon: <Star className="w-4 h-4" />, label: 'Điểm Review — Cách tính điểm đánh giá & mục tiêu cải thiện' },
-        { icon: <Zap className="w-4 h-4" />, label: 'Cách tăng Ranking — Hướng dẫn khi nào nên đẩy ranking trên OTA' },
-        { icon: <TrendingUp className="w-4 h-4" />, label: 'Checklist Booking.com & Agoda — Tối ưu hóa chi tiết' },
-    ];
-
-    return (
-        <div className="flex flex-col items-center justify-center py-16 px-6">
-            <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-6">
-                <Lock className="w-8 h-8 text-blue-600" />
-            </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Tối ưu OTA</h3>
-            <p className="text-gray-500 text-center max-w-md mb-8">
-                Bộ công cụ tối ưu hóa ranking & conversion trên OTA dành cho khách hàng trả phí.
-            </p>
-
-            <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 w-full max-w-md mb-8">
-                <p className="text-sm font-medium text-gray-700 mb-4">Bao gồm:</p>
-                <div className="space-y-3">
-                    {features.map((f, i) => (
-                        <div key={i} className="flex items-center gap-3 text-sm text-gray-600">
-                            <span className="text-blue-600">{f.icon}</span>
-                            <span>{f.label}</span>
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            <Link
-                href="/pricing-plans"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
-            >
-                Xem gói nâng cấp →
-            </Link>
-            <p className="text-xs text-gray-400 mt-3">
-                Liên hệ Zalo 0778602953 để được tư vấn
-            </p>
         </div>
     );
 }

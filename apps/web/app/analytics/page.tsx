@@ -69,24 +69,6 @@ export default function AnalyticsPage() {
     const [selectedAsOf, setSelectedAsOf] = useState<string>('');
     const [viewMode, setViewMode] = useState<'rooms' | 'revenue'>('rooms');
 
-    // Tier gate: show paywall for non-SUPERIOR users
-    if (!tierLoading && !hasAccess) {
-        return (
-            <TierPaywall
-                title="Pace & Pickup Analytics"
-                subtitle="Phân tích STLY, Booking Pace, Remaining Supply"
-                tierDisplayName="Superior"
-                colorScheme="blue"
-                features={[
-                    { icon: <TrendingUp className="w-4 h-4" />, label: 'So sánh cùng kỳ năm trước (STLY)' },
-                    { icon: <BarChart3 className="w-4 h-4" />, label: 'Booking Pace — theo dõi tốc độ đặt phòng' },
-                    { icon: <CalendarDays className="w-4 h-4" />, label: 'Pickup T-3/T-7/T-15/T-30 chi tiết' },
-                    { icon: <DbIcon className="w-4 h-4" />, label: 'Remaining Supply — phòng còn trống' },
-                ]}
-            />
-        );
-    }
-
     const fetchData = useCallback(async (asOf?: string) => {
         setLoading(true);
         setError(null);
@@ -108,7 +90,29 @@ export default function AnalyticsPage() {
         }
     }, []);
 
-    useEffect(() => { fetchData(); }, [fetchData]);
+    useEffect(() => {
+        if (!hasAccess || tierLoading) return; // Don't fetch if no access
+        fetchData();
+    }, [fetchData, hasAccess, tierLoading]);
+
+    // Tier gate: show paywall for non-SUPERIOR users
+    // MUST be after all hooks to avoid React hooks order violation
+    if (!tierLoading && !hasAccess) {
+        return (
+            <TierPaywall
+                title="Pace & Pickup Analytics"
+                subtitle="Phân tích STLY, Booking Pace, Remaining Supply"
+                tierDisplayName="Superior"
+                colorScheme="blue"
+                features={[
+                    { icon: <TrendingUp className="w-4 h-4" />, label: 'So sánh cùng kỳ năm trước (STLY)' },
+                    { icon: <BarChart3 className="w-4 h-4" />, label: 'Booking Pace — theo dõi tốc độ đặt phòng' },
+                    { icon: <CalendarDays className="w-4 h-4" />, label: 'Pickup T-3/T-7/T-15/T-30 chi tiết' },
+                    { icon: <DbIcon className="w-4 h-4" />, label: 'Remaining Supply — phòng còn trống' },
+                ]}
+            />
+        );
+    }
 
     const handleAsOfChange = (asOf: string) => {
         setSelectedAsOf(asOf);

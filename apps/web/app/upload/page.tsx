@@ -32,26 +32,9 @@ export default function UploadPage() {
     const [isAdmin, setIsAdmin] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
 
-    // Tier gate: show paywall for non-SUPERIOR users
-    if (!tierLoading && !hasAccess) {
-        return (
-            <TierPaywall
-                title="Tải lên Reservations"
-                subtitle="Import báo cáo đặt phòng từ PMS"
-                tierDisplayName="Superior"
-                colorScheme="blue"
-                features={[
-                    { icon: <Upload className="w-4 h-4" />, label: 'Upload nhiều file CSV/XML cùng lúc' },
-                    { icon: <FileSpreadsheet className="w-4 h-4" />, label: 'Import báo cáo đặt phòng & huỷ phòng' },
-                    { icon: <FileCode className="w-4 h-4" />, label: 'Hỗ trợ Crystal Reports XML' },
-                    { icon: <CheckCircle className="w-4 h-4" />, label: 'Tự động xử lý & validate dữ liệu' },
-                ]}
-            />
-        );
-    }
-
     // Fetch active hotel and check if Demo Hotel
     useEffect(() => {
+        if (!hasAccess || tierLoading) return; // Don't fetch if no access
         const fetchActiveHotel = async () => {
             try {
                 const res = await fetch('/api/user/switch-hotel');
@@ -76,7 +59,26 @@ export default function UploadPage() {
             }
         };
         fetchActiveHotel();
-    }, [session]);
+    }, [session, hasAccess, tierLoading]);
+
+    // Tier gate: show paywall for non-SUPERIOR users
+    // MUST be after all hooks to avoid React hooks order violation
+    if (!tierLoading && !hasAccess) {
+        return (
+            <TierPaywall
+                title="Tải lên Reservations"
+                subtitle="Import báo cáo đặt phòng từ PMS"
+                tierDisplayName="Superior"
+                colorScheme="blue"
+                features={[
+                    { icon: <Upload className="w-4 h-4" />, label: 'Upload nhiều file CSV/XML cùng lúc' },
+                    { icon: <FileSpreadsheet className="w-4 h-4" />, label: 'Import báo cáo đặt phòng & huỷ phòng' },
+                    { icon: <FileCode className="w-4 h-4" />, label: 'Hỗ trợ Crystal Reports XML' },
+                    { icon: <CheckCircle className="w-4 h-4" />, label: 'Tự động xử lý & validate dữ liệu' },
+                ]}
+            />
+        );
+    }
 
     const detectFileType = (file: File): FileType => {
         if (file.name.endsWith('.xml')) return 'xml';

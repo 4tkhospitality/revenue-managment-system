@@ -54,25 +54,8 @@ export default function DailyPage() {
     const [upgradeRequired, setUpgradeRequired] = useState(false);
     const [acceptedDates, setAcceptedDates] = useState<Set<string>>(new Set());
 
-    // Tier gate: show paywall for non-SUPERIOR users
-    if (!tierLoading && !hasAccess) {
-        return (
-            <TierPaywall
-                title="Daily Actions"
-                subtitle="Gợi ý giá hàng ngày • 5 phút/ngày để ra quyết định"
-                tierDisplayName="Superior"
-                colorScheme="blue"
-                features={[
-                    { icon: <CalendarCheck className="w-4 h-4" />, label: 'Gợi ý tăng/giữ/giảm giá cho 30 ngày tới' },
-                    { icon: <TrendingUp className="w-4 h-4" />, label: 'Phân tích OCC, Pickup, Supply tự động' },
-                    { icon: <DollarSign className="w-4 h-4" />, label: 'Mức giá đề xuất dựa trên thuật toán AI' },
-                    { icon: <BarChart3 className="w-4 h-4" />, label: 'Accept/Override — ra quyết định nhanh' },
-                ]}
-            />
-        );
-    }
-
     useEffect(() => {
+        if (!hasAccess || tierLoading) return; // Don't fetch if no access
         const fetchData = async () => {
             setLoading(true);
             try {
@@ -94,7 +77,26 @@ export default function DailyPage() {
         };
 
         fetchData();
-    }, []);
+    }, [hasAccess, tierLoading]);
+
+    // Tier gate: show paywall for non-SUPERIOR users
+    // MUST be after all hooks to avoid React hooks order violation
+    if (!tierLoading && !hasAccess) {
+        return (
+            <TierPaywall
+                title="Daily Actions"
+                subtitle="Gợi ý giá hàng ngày • 5 phút/ngày để ra quyết định"
+                tierDisplayName="Superior"
+                colorScheme="blue"
+                features={[
+                    { icon: <CalendarCheck className="w-4 h-4" />, label: 'Gợi ý tăng/giữ/giảm giá cho 30 ngày tới' },
+                    { icon: <TrendingUp className="w-4 h-4" />, label: 'Phân tích OCC, Pickup, Supply tự động' },
+                    { icon: <DollarSign className="w-4 h-4" />, label: 'Mức giá đề xuất dựa trên thuật toán AI' },
+                    { icon: <BarChart3 className="w-4 h-4" />, label: 'Accept/Override — ra quyết định nhanh' },
+                ]}
+            />
+        );
+    }
 
     const handleAccept = (dateStr: string) => {
         setAcceptedDates((prev) => new Set([...prev, dateStr]));

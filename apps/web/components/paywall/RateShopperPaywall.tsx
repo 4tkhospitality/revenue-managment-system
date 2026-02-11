@@ -23,20 +23,20 @@ export function RateShopperPaywall() {
             <div className="mt-8 max-w-lg mx-auto">
                 <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
                     {/* Top accent */}
-                    <div className="h-1.5" style={{ background: 'linear-gradient(to right, #F59E0B, #EF4444, #8B5CF6)' }} />
+                    <div className="h-1.5" style={{ background: 'linear-gradient(to right, #3B82F6, #1D4ED8, #6366F1)' }} />
 
                     <div className="p-8 text-center">
                         {/* Lock icon */}
                         <div className="mx-auto w-16 h-16 rounded-2xl flex items-center justify-center mb-5"
-                            style={{ background: 'linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)' }}>
-                            <Lock className="w-8 h-8 text-amber-600" />
+                            style={{ background: 'linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%)' }}>
+                            <Lock className="w-8 h-8 text-blue-600" />
                         </div>
 
                         <h2 className="text-xl font-bold text-gray-900 mb-2">
                             Tính năng Rate Shopper
                         </h2>
                         <p className="text-sm text-gray-500 mb-6">
-                            Tính năng này chỉ dành cho gói <strong className="text-amber-600">Suite</strong>
+                            Tính năng này chỉ dành cho gói <strong className="text-blue-600">Suite</strong>
                         </p>
 
                         {/* Features preview */}
@@ -52,7 +52,7 @@ export function RateShopperPaywall() {
                                 'Multi-property management',
                             ].map((feature) => (
                                 <div key={feature} className="flex items-center gap-2.5">
-                                    <BarChart3 className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                                    <BarChart3 className="w-4 h-4 text-blue-500 flex-shrink-0" />
                                     <span className="text-sm text-gray-700">{feature}</span>
                                 </div>
                             ))}
@@ -62,7 +62,7 @@ export function RateShopperPaywall() {
                         <Link
                             href="/pricing-plans"
                             className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-200 shadow-md hover:shadow-lg"
-                            style={{ background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)', color: '#fff' }}
+                            style={{ background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)', color: '#fff' }}
                         >
                             <Crown className="w-4 h-4" />
                             Nâng cấp lên Suite

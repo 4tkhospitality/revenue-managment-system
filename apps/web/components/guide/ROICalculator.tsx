@@ -225,6 +225,21 @@ export function ROICalculator() {
 }
 
 function InputGroup({ label, value, onChange, unit, type = 'number', tooltip }: any) {
+    const isCurrency = type === 'currency';
+    const displayValue = isCurrency
+        ? new Intl.NumberFormat('vi-VN').format(value)
+        : value;
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (isCurrency) {
+            // Strip all non-digit characters, parse as number
+            const raw = e.target.value.replace(/\D/g, '');
+            onChange(parseInt(raw, 10) || 0);
+        } else {
+            onChange(parseFloat(e.target.value) || 0);
+        }
+    };
+
     return (
         <div className="space-y-1">
             <div className="flex items-center gap-1">
@@ -240,9 +255,10 @@ function InputGroup({ label, value, onChange, unit, type = 'number', tooltip }: 
             </div>
             <div className="relative">
                 <input
-                    type="number"
-                    value={value}
-                    onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+                    type={isCurrency ? 'text' : 'number'}
+                    inputMode={isCurrency ? 'numeric' : undefined}
+                    value={displayValue}
+                    onChange={handleChange}
                     className="w-full pl-3 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm font-medium"
                 />
                 {unit && <span className="absolute right-3 top-2 text-sm text-gray-400 font-medium select-none">{unit}</span>}
