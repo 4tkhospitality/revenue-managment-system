@@ -85,6 +85,39 @@ export function validatePromotions(
         );
     }
 
+    // ──────────── BOOKING.COM SPECIFIC RULES ────────────
+    if (vendor === 'booking') {
+        // Rule B1: Max 3 active promotions
+        if (active.length > 3) {
+            errors.push(`Booking.com chỉ cho phép tối đa 3 promotions cùng lúc (đang chọn ${active.length})`);
+        }
+
+        // Rule B2: TARGETED rates (Mobile ↔ Country) don't combine
+        const targetedRates = active.filter(d => d.subCategory === 'TARGETED_RATE');
+        if (targetedRates.length > 1) {
+            errors.push(
+                `Mobile Rate và Country Rate không thể kết hợp (targeted rates không combine với nhau)`
+            );
+        }
+
+        // Rule B3: TARGETED rates ❌ CAMPAIGN deals
+        const hasCampaign = active.some(d => d.group === 'CAMPAIGN');
+        const hasTargetedRate = targetedRates.length > 0;
+        if (hasTargetedRate && hasCampaign) {
+            const targetedNames = targetedRates.map(d => d.name).join(', ');
+            const campaignNames = active.filter(d => d.group === 'CAMPAIGN').map(d => d.name).join(', ');
+            errors.push(
+                `${targetedNames} không thể kết hợp với ${campaignNames} (Targeted Rates ❌ Campaign Deals)`
+            );
+        }
+
+        // Rule B4: Max 1 CAMPAIGN deal
+        const campaigns = active.filter(d => d.group === 'CAMPAIGN');
+        if (campaigns.length > 1) {
+            errors.push(`Chỉ được chọn 1 Campaign Deal (đang chọn ${campaigns.length}: ${campaigns.map(c => c.name).join(', ')})`);
+        }
+    }
+
     return {
         isValid: errors.length === 0,
         errors,

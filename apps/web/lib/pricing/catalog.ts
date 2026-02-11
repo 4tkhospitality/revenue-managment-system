@@ -241,10 +241,24 @@ export const AGODA_PROMOTIONS: PromotionCatalogItem[] = [
 // =============================================================================
 // BOOKING.COM PROMOTIONS
 // Stacking: Progressive (discount on discounted price)
-// Structure: GENIUS (Loyalty) + VISIBILITY (Mobile/Country) + TACTICAL (Timing)
+// Categories: PORTFOLIO + TARGETED_RATE + GENIUS + CAMPAIGN
+// Rules: Max 3 discounts, TARGETED ❌ TARGETED, TARGETED ❌ CAMPAIGN
 // =============================================================================
+
+// Booking.com commission booster (Preferred Partner)
+export const BOOKING_BOOSTERS: CommissionBooster[] = [
+    {
+        id: 'booking-preferred',
+        name: 'Preferred Partner',
+        program: 'PREFERRED',
+        boostPct: 0,
+        isVariable: true, // User nhập %
+        enabled: false,
+    },
+];
+
 export const BOOKING_COM_PROMOTIONS: PromotionCatalogItem[] = [
-    // A) GENIUS - Loyalty Program (max 1 level)
+    // ─── A) GENIUS — Loyalty Program (max 1 level) ────────────────────────
     {
         id: 'booking-genius-level1',
         vendor: 'booking',
@@ -279,81 +293,125 @@ export const BOOKING_COM_PROMOTIONS: PromotionCatalogItem[] = [
         maxOnePerSubcategory: true,
     },
 
-    // B) VISIBILITY - Platform & Geo targeting
+    // ─── B) TARGETED RATES — Mobile & Country (don't combine with each other) ──
     {
         id: 'booking-mobile-rate',
         vendor: 'booking',
         name: 'Mobile Rate',
         groupType: 'TARGETED',
-        subCategory: 'PLATFORM',
+        subCategory: 'TARGETED_RATE',
         defaultPct: 10,
         allowStack: true,
         maxOneInGroup: false,
-        maxOnePerSubcategory: true,
+        maxOnePerSubcategory: true, // Mobile OR Country, not both
     },
     {
         id: 'booking-country-rate',
         vendor: 'booking',
         name: 'Country Rate',
         groupType: 'TARGETED',
-        subCategory: 'GEOGRAPHY',
+        subCategory: 'TARGETED_RATE',
         defaultPct: 10,
         allowStack: true,
         maxOneInGroup: false,
-        maxOnePerSubcategory: true,
+        maxOnePerSubcategory: true, // Mobile OR Country, not both
     },
 
-    // C) TACTICAL - Time-based promotions
+    // ─── C) PORTFOLIO DEALS — reactive/flexible (all stack with Genius & Targeted) ──
     {
-        id: 'booking-early-booker',
+        id: 'booking-basic-deal',
         vendor: 'booking',
-        name: 'Early Booker Deal',
-        groupType: 'SEASONAL',
-        defaultPct: 15,
+        name: 'Basic Deal',
+        groupType: 'PORTFOLIO',
+        defaultPct: 10,
         allowStack: true,
-        maxOneInGroup: true, // Only 1 tactical timing promo
-        maxOnePerSubcategory: false,
-    },
-    {
-        id: 'booking-last-minute',
-        vendor: 'booking',
-        name: 'Last Minute Deal',
-        groupType: 'SEASONAL',
-        defaultPct: 15,
-        allowStack: true,
-        maxOneInGroup: true,
+        maxOneInGroup: false,
         maxOnePerSubcategory: false,
     },
     {
         id: 'booking-secret-deal',
         vendor: 'booking',
         name: 'Secret Deal',
-        groupType: 'ESSENTIAL',
+        groupType: 'PORTFOLIO',
         defaultPct: 10,
         allowStack: true,
         maxOneInGroup: false,
         maxOnePerSubcategory: false,
     },
     {
-        id: 'booking-basic-deal',
+        id: 'booking-early-booker',
         vendor: 'booking',
-        name: 'Basic Deal',
-        groupType: 'ESSENTIAL',
-        defaultPct: 10,
+        name: 'Early Booker Deal',
+        groupType: 'PORTFOLIO',
+        subCategory: 'TIMING',
+        defaultPct: 15,
         allowStack: true,
         maxOneInGroup: false,
-        maxOnePerSubcategory: false,
+        maxOnePerSubcategory: true, // Early Booker OR Last Minute
+    },
+    {
+        id: 'booking-last-minute',
+        vendor: 'booking',
+        name: 'Last Minute Deal',
+        groupType: 'PORTFOLIO',
+        subCategory: 'TIMING',
+        defaultPct: 15,
+        allowStack: true,
+        maxOneInGroup: false,
+        maxOnePerSubcategory: true, // Early Booker OR Last Minute
     },
     {
         id: 'booking-free-nights',
         vendor: 'booking',
         name: 'Free Nights Deal',
-        groupType: 'ESSENTIAL',
+        groupType: 'PORTFOLIO',
         subCategory: 'FREE_NIGHTS',
-        defaultPct: 25, // e.g., Stay 4 Pay 3 = 25%
+        defaultPct: 25, // Stay 4 Pay 3 = 1-(3/4) = 25%
         allowStack: true,
         maxOneInGroup: false,
         maxOnePerSubcategory: true,
+    },
+
+    // ─── D) CAMPAIGN / NAMED SEASONAL — don't stack with Targeted Rates ──
+    {
+        id: 'booking-getaway-deal',
+        vendor: 'booking',
+        name: 'Getaway Deal',
+        groupType: 'CAMPAIGN',
+        defaultPct: 15,
+        allowStack: true,
+        maxOneInGroup: true, // Max 1 Campaign
+        maxOnePerSubcategory: false,
+    },
+    {
+        id: 'booking-late-escape',
+        vendor: 'booking',
+        name: 'Late Escape Deal',
+        groupType: 'CAMPAIGN',
+        defaultPct: 15,
+        allowStack: true,
+        maxOneInGroup: true,
+        maxOnePerSubcategory: false,
+    },
+    {
+        id: 'booking-black-friday',
+        vendor: 'booking',
+        name: 'Black Friday Deal',
+        groupType: 'CAMPAIGN',
+        defaultPct: 20,
+        allowStack: true,
+        maxOneInGroup: true,
+        maxOnePerSubcategory: false,
+    },
+    {
+        id: 'booking-limited-time',
+        vendor: 'booking',
+        name: 'Limited-time Deal',
+        groupType: 'CAMPAIGN',
+        defaultPct: 15,
+        allowStack: true,
+        maxOneInGroup: true,
+        maxOnePerSubcategory: false,
     },
 ];
 
@@ -398,6 +456,8 @@ export const GROUP_COLORS: Record<PromotionGroup, { bg: string; text: string; la
     SEASONAL: { bg: 'bg-amber-100', text: 'text-amber-700', label: 'Seasonal' },
     ESSENTIAL: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Essential' },
     TARGETED: { bg: 'bg-purple-100', text: 'text-purple-700', label: 'Targeted' },
+    PORTFOLIO: { bg: 'bg-teal-100', text: 'text-teal-700', label: 'Portfolio' },
+    CAMPAIGN: { bg: 'bg-rose-100', text: 'text-rose-700', label: 'Campaign' },
 };
 
 // Vendor-specific group labels
@@ -406,11 +466,15 @@ export const VENDOR_GROUP_LABELS: Record<string, Record<PromotionGroup, string>>
         SEASONAL: 'Seasonal (Theo mùa)',
         ESSENTIAL: 'Essential (Cơ bản)',
         TARGETED: 'Targeted (Mục tiêu)',
+        PORTFOLIO: 'Portfolio',
+        CAMPAIGN: 'Campaign',
     },
     booking: {
         SEASONAL: 'Tactical (Thời điểm)',
         ESSENTIAL: 'Basic Deals',
         TARGETED: 'Genius & Visibility',
+        PORTFOLIO: 'Portfolio Deals',
+        CAMPAIGN: 'Campaign Deals',
     },
 };
 

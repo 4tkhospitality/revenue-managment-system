@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Plus, Trash2, Loader2, AlertTriangle, CheckCircle, ChevronDown, ChevronRight, Tag, X, Search, Calculator, DollarSign, TrendingUp } from 'lucide-react';
-import { AGODA_BOOSTERS } from '@/lib/pricing/catalog';
+import { AGODA_BOOSTERS, BOOKING_BOOSTERS } from '@/lib/pricing/catalog';
 import type { CommissionBooster } from '@/lib/pricing/types';
 
 // 4TK Brand-aligned color config
@@ -19,19 +19,27 @@ const GROUP_CONFIG = {
         dotColor: 'bg-emerald-500',
         label: 'Targeted (Mục tiêu)',
     },
+    PORTFOLIO: {
+        dotColor: 'bg-teal-500',
+        label: 'Portfolio Deals',
+    },
+    CAMPAIGN: {
+        dotColor: 'bg-rose-500',
+        label: 'Campaign Deals',
+    },
 } as const;
 
 // Vendor-specific group labels
-const VENDOR_GROUP_LABELS: Record<string, Record<keyof typeof GROUP_CONFIG, string>> = {
+const VENDOR_GROUP_LABELS: Record<string, Partial<Record<keyof typeof GROUP_CONFIG, string>>> = {
     agoda: {
         SEASONAL: 'Seasonal (Theo mùa)',
         ESSENTIAL: 'Essential (Cơ bản)',
         TARGETED: 'Targeted (Mục tiêu)',
     },
     booking: {
-        SEASONAL: 'Tactical (Thời điểm)',
-        ESSENTIAL: 'Basic Deals',
         TARGETED: 'Genius & Visibility',
+        PORTFOLIO: 'Portfolio Deals',
+        CAMPAIGN: 'Campaign Deals',
     },
 };
 
@@ -797,7 +805,7 @@ export default function PromotionsTab() {
     const [pickerInitialTab, setPickerInitialTab] = useState<GroupType>('SEASONAL');
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    // V01.4: Marketing program boosters (client-side state)
+    // V01.4: Marketing program boosters (dynamic per channel)
     const [boosters, setBoosters] = useState<CommissionBooster[]>(() =>
         AGODA_BOOSTERS.map(b => ({ ...b }))
     );
@@ -1126,6 +1134,18 @@ export default function PromotionsTab() {
     const seasonalCampaigns = campaigns.filter((c) => c.promo.group_type === 'SEASONAL');
     const essentialCampaigns = campaigns.filter((c) => c.promo.group_type === 'ESSENTIAL');
     const targetedCampaigns = campaigns.filter((c) => c.promo.group_type === 'TARGETED');
+    const portfolioCampaigns = campaigns.filter((c) => c.promo.group_type === 'PORTFOLIO');
+    const campaignCampaigns = campaigns.filter((c) => c.promo.group_type === 'CAMPAIGN');
+
+    // Dynamic boosters: switch between Agoda and Booking.com
+    const isBooking = selectedChannelData?.code === 'booking';
+    const isAgoda = selectedChannelData?.code === 'agoda';
+    const channelBoosters = isBooking ? BOOKING_BOOSTERS : AGODA_BOOSTERS;
+
+    // Reset boosters when channel changes
+    useEffect(() => {
+        setBoosters(channelBoosters.map(b => ({ ...b })));
+    }, [selectedChannel]);
 
     return (
         <div className="space-y-4">
@@ -1203,11 +1223,34 @@ export default function PromotionsTab() {
                                 onUpdateDiscount={handleUpdateDiscount}
                                 vendor={selectedChannelData?.code || 'agoda'}
                             />
+                            {/* Booking.com-specific groups */}
+                            {isBooking && (
+                                <>
+                                    <PromotionGroup
+                                        group="PORTFOLIO"
+                                        campaigns={portfolioCampaigns}
+                                        onToggle={handleToggle}
+                                        onDelete={handleDelete}
+                                        onAddClick={handleOpenPicker}
+                                        onUpdateDiscount={handleUpdateDiscount}
+                                        vendor="booking"
+                                    />
+                                    <PromotionGroup
+                                        group="CAMPAIGN"
+                                        campaigns={campaignCampaigns}
+                                        onToggle={handleToggle}
+                                        onDelete={handleDelete}
+                                        onAddClick={handleOpenPicker}
+                                        onUpdateDiscount={handleUpdateDiscount}
+                                        vendor="booking"
+                                    />
+                                </>
+                            )}
                         </div>
                     )}
 
-                    {/* Marketing Programs (Agoda only) */}
-                    {(selectedChannelData?.code === 'agoda') && (
+                    {/* Marketing Programs (Agoda + Booking.com) */}
+                    {(isAgoda || isBooking) && (
                         <MarketingPrograms
                             boosters={boosters}
                             onUpdate={setBoosters}
