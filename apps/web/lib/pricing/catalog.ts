@@ -258,6 +258,19 @@ export const BOOKING_BOOSTERS: CommissionBooster[] = [
 ];
 
 export const BOOKING_COM_PROMOTIONS: PromotionCatalogItem[] = [
+    // ─── A0) BUSINESS BOOKERS — Exclusive rate (❌ ALL) ─────────────────────
+    {
+        id: 'booking-business-bookers',
+        vendor: 'booking',
+        name: 'Business Bookers',
+        groupType: 'TARGETED',
+        subCategory: 'BUSINESS_BOOKERS',
+        defaultPct: 10,
+        allowStack: false, // Exclusive — blocks ALL other discounts
+        maxOneInGroup: false,
+        maxOnePerSubcategory: true,
+    },
+
     // ─── A) GENIUS — Loyalty Program (max 1 level) ────────────────────────
     {
         id: 'booking-genius-level1',
@@ -379,7 +392,7 @@ export const BOOKING_COM_PROMOTIONS: PromotionCatalogItem[] = [
         name: 'Getaway Deal',
         groupType: 'CAMPAIGN',
         defaultPct: 15,
-        allowStack: true,
+        allowStack: false, // Campaign = exclusive promo
         maxOneInGroup: true, // Max 1 Campaign
         maxOnePerSubcategory: false,
     },
@@ -389,7 +402,7 @@ export const BOOKING_COM_PROMOTIONS: PromotionCatalogItem[] = [
         name: 'Late Escape Deal',
         groupType: 'CAMPAIGN',
         defaultPct: 15,
-        allowStack: true,
+        allowStack: false, // Campaign = exclusive promo
         maxOneInGroup: true,
         maxOnePerSubcategory: false,
     },
@@ -399,7 +412,7 @@ export const BOOKING_COM_PROMOTIONS: PromotionCatalogItem[] = [
         name: 'Black Friday Deal',
         groupType: 'CAMPAIGN',
         defaultPct: 20,
-        allowStack: true,
+        allowStack: false, // Campaign = exclusive promo
         maxOneInGroup: true,
         maxOnePerSubcategory: false,
     },
@@ -409,7 +422,19 @@ export const BOOKING_COM_PROMOTIONS: PromotionCatalogItem[] = [
         name: 'Limited-time Deal',
         groupType: 'CAMPAIGN',
         defaultPct: 15,
-        allowStack: true,
+        allowStack: false, // Campaign = exclusive promo
+        maxOneInGroup: true,
+        maxOnePerSubcategory: false,
+    },
+
+    // ─── E) DEAL OF THE DAY — Exclusive promotion (❌ ALL) ──────────────────
+    {
+        id: 'booking-deal-of-day',
+        vendor: 'booking',
+        name: 'Deal of the Day',
+        groupType: 'CAMPAIGN', // Same exclusive behavior as Campaign
+        defaultPct: 25,
+        allowStack: false, // Exclusive — blocks ALL other discounts
         maxOneInGroup: true,
         maxOnePerSubcategory: false,
     },

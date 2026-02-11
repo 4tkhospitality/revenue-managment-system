@@ -79,42 +79,87 @@ export function validatePromotions(
     const hasEarlyBird = active.some(d => EARLY_BIRD_PATTERN.test(d.name));
     const hasLastMinute = active.some(d => LAST_MINUTE_PATTERN.test(d.name));
     if (hasEarlyBird && hasLastMinute) {
-        warnings.push(
-            'Early Bird + Last-Minute thường KHÔNG cộng dồn vì booking window khác nhau. ' +
-            'Hệ thống chỉ tính KM lớn hơn. Chỉ stack khi set ngày áp dụng chồng lên nhau.'
-        );
+        if (vendor === 'booking') {
+            // Booking.com: BLOCK (Early Booker ❌ Last Minute per matrix)
+            errors.push('Early Booker Deal ❌ Last Minute Deal — không thể kết hợp (booking window khác nhau)');
+        } else {
+            warnings.push(
+                'Early Bird + Last-Minute thường KHÔNG cộng dồn vì booking window khác nhau. ' +
+                'Hệ thống chỉ tính KM lớn hơn. Chỉ stack khi set ngày áp dụng chồng lên nhau.'
+            );
+        }
     }
 
-    // ──────────── BOOKING.COM SPECIFIC RULES ────────────
+    // ══════════════════════════════════════════════════════════════════════════
+    // BOOKING.COM — PDF STACKING MATRIX RULES
+    // Source: partner.booking.com "How discounts on rates and promotions stack"
+    // ══════════════════════════════════════════════════════════════════════════
     if (vendor === 'booking') {
-        // Rule B1: Max 3 active promotions
-        if (active.length > 3) {
-            errors.push(`Booking.com chỉ cho phép tối đa 3 promotions cùng lúc (đang chọn ${active.length})`);
-        }
-
-        // Rule B2: TARGETED rates (Mobile ↔ Country) don't combine
+        // Categorize active discounts per PDF matrix groups
+        const genius = active.filter(d => d.subCategory === 'GENIUS');
         const targetedRates = active.filter(d => d.subCategory === 'TARGETED_RATE');
+        const businessBookers = active.filter(d => d.subCategory === 'BUSINESS_BOOKERS');
+        const allTargeted = active.filter(d => d.group === 'TARGETED'); // Genius + Mobile/Country + BusinessBookers
+        const exclusivePromos = active.filter(d => d.group === 'CAMPAIGN'); // Campaign + Deal of the Day
+        const portfolioPromos = active.filter(d => d.group === 'PORTFOLIO'); // Early/Last/Basic/Secret/FreeNights
+
+        // ── B1: Max 3 active discounts ──
+        if (active.length > 3) {
+            errors.push(`Booking.com cho phép tối đa 3 discounts cùng lúc (đang chọn ${active.length})`);
+        }
+
+        // ── B2: Mobile Rate ❌ Country Rate (mutual exclusive) ──
         if (targetedRates.length > 1) {
+            errors.push('Mobile Rate ❌ Country Rate — không thể kết hợp');
+        }
+
+        // ── B3: Business Bookers ❌ ALL (exclusive rate) ──
+        if (businessBookers.length > 0 && active.length > businessBookers.length) {
+            const others = active.filter(d => d.subCategory !== 'BUSINESS_BOOKERS').map(d => d.name).join(', ');
             errors.push(
-                `Mobile Rate và Country Rate không thể kết hợp (targeted rates không combine với nhau)`
+                `Business Bookers là exclusive rate — không stack với: ${others}`
             );
         }
 
-        // Rule B3: TARGETED rates ❌ CAMPAIGN deals
-        const hasCampaign = active.some(d => d.group === 'CAMPAIGN');
-        const hasTargetedRate = targetedRates.length > 0;
-        if (hasTargetedRate && hasCampaign) {
-            const targetedNames = targetedRates.map(d => d.name).join(', ');
-            const campaignNames = active.filter(d => d.group === 'CAMPAIGN').map(d => d.name).join(', ');
-            errors.push(
-                `${targetedNames} không thể kết hợp với ${campaignNames} (Targeted Rates ❌ Campaign Deals)`
+        // ── B4: Campaign / Deal of the Day ❌ ALL (exclusive promo) ──
+        // Per PDF: Campaign and Deal of Day don't stack with ANY targeted rates OR any other promotions
+        if (exclusivePromos.length > 0) {
+            const exclusiveName = exclusivePromos[0].name;
+            // Check vs targeted rates (including Genius)
+            if (allTargeted.length > 0) {
+                const targetedNames = allTargeted.map(d => d.name).join(', ');
+                errors.push(
+                    `${exclusiveName} ❌ ${targetedNames} — Campaign/Deal of Day không stack với Targeted Rates`
+                );
+            }
+            // Check vs other promotions
+            if (portfolioPromos.length > 0) {
+                const promoNames = portfolioPromos.map(d => d.name).join(', ');
+                errors.push(
+                    `${exclusiveName} ❌ ${promoNames} — Campaign/Deal of Day không stack với promotions khác`
+                );
+            }
+            // Check vs other exclusive promos
+            if (exclusivePromos.length > 1) {
+                errors.push(
+                    `Chỉ được chọn 1 Campaign/Deal of Day (đang chọn: ${exclusivePromos.map(d => d.name).join(', ')})`
+                );
+            }
+        }
+
+        // ── B5: Multiple PORTFOLIO promotions — WARN (PDF matrix shows ✓ between them) ──
+        // User chose Option A: Allow (match PDF matrix). Warn so GM is aware.
+        if (portfolioPromos.length > 1) {
+            const names = portfolioPromos.map(d => `${d.name} (${d.percent}%)`).join(', ');
+            warnings.push(
+                `${portfolioPromos.length} promotions đang active: ${names}. ` +
+                `Khách đủ điều kiện sẽ nhận stacked discount (lũy tiến).`
             );
         }
 
-        // Rule B4: Max 1 CAMPAIGN deal
-        const campaigns = active.filter(d => d.group === 'CAMPAIGN');
-        if (campaigns.length > 1) {
-            errors.push(`Chỉ được chọn 1 Campaign Deal (đang chọn ${campaigns.length}: ${campaigns.map(c => c.name).join(', ')})`);
+        // ── B6: Max 1 Genius level ──
+        if (genius.length > 1) {
+            errors.push(`Chỉ được chọn 1 Genius level (đang chọn ${genius.length})`);
         }
     }
 
