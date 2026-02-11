@@ -1153,6 +1153,30 @@ export default function PromotionsTab() {
     // Channel-specific discount selection rules (ENGINE LAYER — source of truth)
     let appliedDiscounts = activeDiscounts;
 
+    // Helper: within a group sharing the same subcategory, keep only the highest discount
+    const dedupeBySubcategory = (deals: Campaign[]): Campaign[] => {
+        const subcatMap = new Map<string, Campaign>();
+        const noSubcat: Campaign[] = [];
+        for (const c of deals) {
+            const key = c.promo.sub_category || '';
+            if (!key) { noSubcat.push(c); continue; }
+            const existing = subcatMap.get(key);
+            if (!existing || c.discount_pct > existing.discount_pct) {
+                subcatMap.set(key, c);
+            }
+        }
+        return [...noSubcat, ...subcatMap.values()];
+    };
+
+    // Helper: pick only the highest Genius level (L1/L2/L3 — only 1 applies per booking)
+    const pickBestGenius = (deals: Campaign[]): Campaign[] => {
+        const genius = deals.filter(c => c.promo.group_type === 'GENIUS');
+        const nonGenius = deals.filter(c => c.promo.group_type !== 'GENIUS');
+        if (genius.length <= 1) return deals;
+        const best = genius.reduce((b, c) => c.discount_pct > b.discount_pct ? c : b);
+        return [...nonGenius, best];
+    };
+
     // Booking.com: 3-tier exclusion engine
     if (selectedChannelData?.code === 'booking' && activeDiscounts.length > 0) {
         // 1) Check for EXCLUSIVE deals (Campaign: Getaway, Black Friday, Deal of Day, etc.)
@@ -1160,12 +1184,12 @@ export default function PromotionsTab() {
             !c.promo.allow_stack && c.promo.group_type === 'CAMPAIGN'
         );
         if (exclusiveDeals.length > 0) {
-            // EXCLUSIVE deal blocks everything EXCEPT Genius
+            // EXCLUSIVE deal blocks everything EXCEPT Genius (highest level only)
             const geniusDeals = activeDiscounts.filter(c => c.promo.group_type === 'GENIUS');
             const bestExclusive = exclusiveDeals.reduce((best, c) =>
                 c.discount_pct > best.discount_pct ? c : best
             );
-            appliedDiscounts = [...geniusDeals, bestExclusive];
+            appliedDiscounts = pickBestGenius([...geniusDeals, bestExclusive]);
         } else {
             // 2) Check for Business Bookers (blocks ALL, no Genius)
             const businessBookers = activeDiscounts.filter(c =>
@@ -1174,15 +1198,30 @@ export default function PromotionsTab() {
             if (businessBookers.length > 0) {
                 appliedDiscounts = [businessBookers[0]]; // Only the exclusive rate
             } else {
-                // 3) Portfolio: highest-wins (pick best deal within Portfolio group)
+                // 3) Normal stacking: Portfolio highest-wins + Targeted subcategory highest-wins + Genius highest-only
                 const portfolioActive = activeDiscounts.filter(c => c.promo.group_type === 'PORTFOLIO');
-                const nonPortfolio = activeDiscounts.filter(c => c.promo.group_type !== 'PORTFOLIO');
-                if (portfolioActive.length > 1) {
-                    const bestPortfolio = portfolioActive.reduce((best, c) =>
-                        c.discount_pct > best.discount_pct ? c : best
-                    );
-                    appliedDiscounts = [...nonPortfolio, bestPortfolio];
-                }
+                const targetedActive = activeDiscounts.filter(c => c.promo.group_type === 'TARGETED');
+                const geniusActive = activeDiscounts.filter(c => c.promo.group_type === 'GENIUS');
+                const otherActive = activeDiscounts.filter(c =>
+                    c.promo.group_type !== 'PORTFOLIO' &&
+                    c.promo.group_type !== 'TARGETED' &&
+                    c.promo.group_type !== 'GENIUS'
+                );
+
+                // Portfolio: pick highest deal only
+                const bestPortfolio = portfolioActive.length > 0
+                    ? [portfolioActive.reduce((best, c) => c.discount_pct > best.discount_pct ? c : best)]
+                    : [];
+
+                // Targeted: same subcategory picks highest only (Mobile vs Country = same sub)
+                const bestTargeted = dedupeBySubcategory(targetedActive);
+
+                // Genius: pick highest level only (L1/L2/L3)
+                const bestGenius = geniusActive.length > 0
+                    ? [geniusActive.reduce((best, c) => c.discount_pct > best.discount_pct ? c : best)]
+                    : [];
+
+                appliedDiscounts = [...bestGenius, ...bestTargeted, ...bestPortfolio, ...otherActive];
             }
         }
     }
