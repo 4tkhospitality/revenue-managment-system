@@ -181,7 +181,7 @@ export default function AdminHotelsPage() {
                 style={{ background: 'linear-gradient(to right, #1E3A8A, #102A4C)' }}
             >
                 <div>
-                    <h1 className="text-lg font-semibold">🏨 Quản lý Tenants</h1>
+                    <h1 className="text-lg font-semibold">🏨 Danh sách các khách sạn</h1>
                     <p className="text-white/70 text-sm mt-1">
                         {hotels.length} khách sạn • {hotels.reduce((s, h) => s + h.userCount, 0)} users
                     </p>
@@ -227,8 +227,8 @@ export default function AdminHotelsPage() {
                             key={f.key}
                             onClick={() => { setStatusFilter(f.key); setSpecialFilter(null); }}
                             className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${statusFilter === f.key && !specialFilter
-                                    ? 'bg-blue-600 text-white'
-                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                 }`}
                         >
                             {f.label} {f.count > 0 && <span className="ml-1 opacity-70">({f.count})</span>}
@@ -256,8 +256,8 @@ export default function AdminHotelsPage() {
                         <button
                             onClick={() => { setSpecialFilter(specialFilter === 'OVER_LIMIT' ? null : 'OVER_LIMIT'); setStatusFilter('ALL'); }}
                             className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${specialFilter === 'OVER_LIMIT'
-                                    ? 'bg-red-600 text-white'
-                                    : 'bg-red-50 text-red-700 hover:bg-red-100'
+                                ? 'bg-red-600 text-white'
+                                : 'bg-red-50 text-red-700 hover:bg-red-100'
                                 }`}
                         >
                             ⚠️ Vượt limit ({stats.overLimit})
@@ -267,8 +267,8 @@ export default function AdminHotelsPage() {
                         <button
                             onClick={() => { setSpecialFilter(specialFilter === 'TRIAL_ENDING' ? null : 'TRIAL_ENDING'); setStatusFilter('ALL'); }}
                             className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${specialFilter === 'TRIAL_ENDING'
-                                    ? 'bg-amber-600 text-white'
-                                    : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
+                                ? 'bg-amber-600 text-white'
+                                : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
                                 }`}
                         >
                             ⏰ Trial sắp hết ({stats.trialEnding})
@@ -371,8 +371,8 @@ export default function AdminHotelsPage() {
                                             {maxUsers > 0 ? (
                                                 <div className="inline-flex flex-col items-center">
                                                     <span className={`px-2 py-1 rounded-lg text-sm font-medium ${over
-                                                            ? 'bg-red-50 text-red-700'
-                                                            : 'bg-emerald-50 text-emerald-700'
+                                                        ? 'bg-red-50 text-red-700'
+                                                        : 'bg-emerald-50 text-emerald-700'
                                                         }`}>
                                                         {currentSeats}/{maxUsers >= 999 ? '∞' : maxUsers}
                                                     </span>
@@ -412,8 +412,8 @@ export default function AdminHotelsPage() {
                                                 onClick={() => deleteHotel(hotel)}
                                                 disabled={!canDelete}
                                                 className={`text-sm ${canDelete
-                                                        ? 'text-red-600 hover:text-red-800'
-                                                        : 'text-gray-300 cursor-not-allowed'
+                                                    ? 'text-red-600 hover:text-red-800'
+                                                    : 'text-gray-300 cursor-not-allowed'
                                                     }`}
                                                 title={!canDelete ? 'Hủy gói trước khi xóa' : 'Xóa hotel'}
                                             >
@@ -484,6 +484,48 @@ function HotelModal({ hotel, onClose, onSaved }: {
     const [capacity, setCapacity] = useState(hotel?.capacity?.toString() || '100');
     const [currency, setCurrency] = useState(hotel?.currency || 'VND');
     const [saving, setSaving] = useState(false);
+    const [loadingDetails, setLoadingDetails] = useState(false);
+
+    // Subscription fields
+    const [subPlan, setSubPlan] = useState(hotel?.plan || '');
+    const [subStatus, setSubStatus] = useState(hotel?.subscriptionStatus || '');
+    const [periodStart, setPeriodStart] = useState('');
+    const [periodEnd, setPeriodEnd] = useState('');
+    const [maxUsers, setMaxUsers] = useState('1');
+
+    // Base rate
+    const [defaultBaseRate, setDefaultBaseRate] = useState('');
+
+    // Fetch full hotel details when editing
+    useEffect(() => {
+        if (!hotel) return;
+        setLoadingDetails(true);
+        fetch(`/api/admin/hotels/${hotel.id}`)
+            .then(res => res.json())
+            .then(data => {
+                const h = data.hotel;
+                if (h.defaultBaseRate) setDefaultBaseRate(String(Number(h.defaultBaseRate)));
+                if (h.subscription) {
+                    setSubPlan(h.subscription.plan || '');
+                    setSubStatus(h.subscription.status || '');
+                    setMaxUsers(String(h.subscription.maxUsers ?? 1));
+                    if (h.subscription.periodStart) {
+                        setPeriodStart(new Date(h.subscription.periodStart).toISOString().slice(0, 10));
+                    }
+                    if (h.subscription.periodEnd) {
+                        setPeriodEnd(new Date(h.subscription.periodEnd).toISOString().slice(0, 10));
+                    }
+                }
+            })
+            .catch(console.error)
+            .finally(() => setLoadingDetails(false));
+    }, [hotel]);
+
+    const formatBaseRate = (val: string) => {
+        const num = parseInt(val.replace(/\D/g, ''), 10);
+        if (isNaN(num)) return '';
+        return new Intl.NumberFormat('vi-VN').format(num);
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -493,15 +535,34 @@ function HotelModal({ hotel, onClose, onSaved }: {
             const url = hotel ? `/api/admin/hotels/${hotel.id}` : '/api/admin/hotels';
             const method = hotel ? 'PUT' : 'POST';
 
+            const payload: Record<string, unknown> = {
+                name,
+                timezone,
+                capacity: parseInt(capacity),
+                currency,
+            };
+
+            // Include base rate if provided
+            const rawRate = defaultBaseRate.replace(/\D/g, '');
+            if (rawRate) {
+                payload.defaultBaseRate = parseInt(rawRate, 10);
+            }
+
+            // Include subscription if editing and plan is selected
+            if (hotel && subPlan) {
+                payload.subscription = {
+                    plan: subPlan,
+                    status: subStatus || 'ACTIVE',
+                    periodStart: periodStart || null,
+                    periodEnd: periodEnd || null,
+                    maxUsers: parseInt(maxUsers) || 1,
+                };
+            }
+
             const res = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name,
-                    timezone,
-                    capacity: parseInt(capacity),
-                    currency,
-                })
+                body: JSON.stringify(payload)
             });
 
             if (res.ok) {
@@ -518,68 +579,144 @@ function HotelModal({ hotel, onClose, onSaved }: {
         }
     };
 
+    const inputClass = "w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm";
+    const labelClass = "block text-sm font-medium text-gray-700 mb-1";
+
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl p-6 w-full max-w-md">
-                <h2 className="text-xl font-bold mb-4">
-                    {hotel ? 'Chỉnh sửa Hotel' : 'Thêm Hotel mới'}
-                </h2>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Tên Hotel *</label>
-                        <input
-                            type="text"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            required
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Timezone</label>
-                        <select
-                            value={timezone}
-                            onChange={(e) => setTimezone(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                        >
-                            <option value="Asia/Ho_Chi_Minh">Asia/Ho_Chi_Minh (UTC+7)</option>
-                            <option value="Asia/Bangkok">Asia/Bangkok (UTC+7)</option>
-                            <option value="Asia/Singapore">Asia/Singapore (UTC+8)</option>
-                        </select>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Số phòng</label>
-                            <input
-                                type="number"
-                                value={capacity}
-                                onChange={(e) => setCapacity(e.target.value)}
-                                min="1"
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                            />
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+                <div className="sticky top-0 bg-white px-6 pt-6 pb-3 border-b border-gray-100 rounded-t-xl">
+                    <h2 className="text-xl font-bold">
+                        {hotel ? 'Chỉnh sửa Hotel' : 'Thêm Hotel mới'}
+                    </h2>
+                </div>
+
+                {loadingDetails ? (
+                    <div className="p-6 text-center text-gray-400">Đang tải thông tin...</div>
+                ) : (
+                    <form onSubmit={handleSubmit} className="p-6 space-y-5">
+                        {/* === Hotel Info === */}
+                        <div className="space-y-3">
+                            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Thông tin cơ bản</h3>
+                            <div>
+                                <label className={labelClass}>Tên Hotel *</label>
+                                <input type="text" value={name} onChange={(e) => setName(e.target.value)} required className={inputClass} />
+                            </div>
+                            <div>
+                                <label className={labelClass}>Timezone</label>
+                                <select value={timezone} onChange={(e) => setTimezone(e.target.value)} className={inputClass}>
+                                    <option value="Asia/Ho_Chi_Minh">Asia/Ho_Chi_Minh (UTC+7)</option>
+                                    <option value="Asia/Bangkok">Asia/Bangkok (UTC+7)</option>
+                                    <option value="Asia/Singapore">Asia/Singapore (UTC+8)</option>
+                                </select>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className={labelClass}>Số phòng</label>
+                                    <input type="number" value={capacity} onChange={(e) => setCapacity(e.target.value)} min="1" className={inputClass} />
+                                </div>
+                                <div>
+                                    <label className={labelClass}>Tiền tệ</label>
+                                    <select value={currency} onChange={(e) => setCurrency(e.target.value)} className={inputClass}>
+                                        <option value="VND">VND</option>
+                                        <option value="USD">USD</option>
+                                        <option value="THB">THB</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Tiền tệ</label>
-                            <select
-                                value={currency}
-                                onChange={(e) => setCurrency(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                            >
-                                <option value="VND">VND</option>
-                                <option value="USD">USD</option>
-                                <option value="THB">THB</option>
-                            </select>
+
+                        {/* === Base Rate === */}
+                        <div className="space-y-3 border-t border-gray-100 pt-4">
+                            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Giá cơ bản (Base Rate)</h3>
+                            <div>
+                                <label className={labelClass}>Giá cơ bản mặc định ({currency})</label>
+                                <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    value={formatBaseRate(defaultBaseRate)}
+                                    onChange={(e) => setDefaultBaseRate(e.target.value.replace(/\D/g, ''))}
+                                    placeholder="VD: 1.500.000"
+                                    className={inputClass}
+                                />
+                                <p className="text-xs text-gray-400 mt-1">Dùng trong Daily Actions để tính giá đề xuất</p>
+                            </div>
                         </div>
-                    </div>
-                    <div className="flex justify-end gap-3 pt-4">
-                        <button type="button" onClick={onClose} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">
-                            Hủy
-                        </button>
-                        <button type="submit" disabled={saving} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
-                            {saving ? 'Đang lưu...' : (hotel ? 'Lưu' : 'Tạo Hotel')}
-                        </button>
-                    </div>
-                </form>
+
+                        {/* === Subscription (only when editing) === */}
+                        {hotel && (
+                            <div className="space-y-3 border-t border-gray-100 pt-4">
+                                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Gói dịch vụ</h3>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className={labelClass}>Gói (Plan)</label>
+                                        <select value={subPlan} onChange={(e) => setSubPlan(e.target.value)} className={inputClass}>
+                                            <option value="">— Chưa có gói —</option>
+                                            <option value="STANDARD">STANDARD</option>
+                                            <option value="SUPERIOR">SUPERIOR</option>
+                                            <option value="DELUXE">DELUXE</option>
+                                            <option value="SUITE">SUITE</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className={labelClass}>Trạng thái</label>
+                                        <select value={subStatus} onChange={(e) => setSubStatus(e.target.value)} className={inputClass}>
+                                            <option value="ACTIVE">Active</option>
+                                            <option value="TRIAL">Trial</option>
+                                            <option value="PAST_DUE">Past Due</option>
+                                            <option value="CANCELLED">Đã hủy</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className={labelClass}>Bắt đầu (From)</label>
+                                        <input
+                                            type="date"
+                                            value={periodStart}
+                                            onChange={(e) => setPeriodStart(e.target.value)}
+                                            className={inputClass}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className={labelClass}>Hết hạn (To)</label>
+                                        <input
+                                            type="date"
+                                            value={periodEnd}
+                                            onChange={(e) => setPeriodEnd(e.target.value)}
+                                            className={inputClass}
+                                        />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className={labelClass}>Số users tối đa</label>
+                                    <input
+                                        type="number"
+                                        value={maxUsers}
+                                        onChange={(e) => setMaxUsers(e.target.value)}
+                                        min="1"
+                                        className={inputClass}
+                                    />
+                                </div>
+                                {!subPlan && (
+                                    <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded-lg">
+                                        ⚠️ Chọn gói để kích hoạt subscription cho hotel này
+                                    </p>
+                                )}
+                            </div>
+                        )}
+
+                        {/* === Actions === */}
+                        <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                            <button type="button" onClick={onClose} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">
+                                Hủy
+                            </button>
+                            <button type="submit" disabled={saving} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+                                {saving ? 'Đang lưu...' : (hotel ? 'Lưu' : 'Tạo Hotel')}
+                            </button>
+                        </div>
+                    </form>
+                )}
             </div>
         </div>
     );

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Upload, FileText, CheckCircle, XCircle, Loader2, FileSpreadsheet, FileCode, Lock, Files } from 'lucide-react';
+import { Upload, FileText, CheckCircle, XCircle, Loader2, FileSpreadsheet, FileCode, Lock, Files, Download } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { ingestCSV } from '../actions/ingestCSV';
 import { ingestXML } from '../actions/ingestXML';
@@ -10,7 +10,7 @@ import { TierPaywall } from '@/components/paywall/TierPaywall';
 import { useTierAccess } from '@/hooks/useTierAccess';
 
 type ReportType = 'booked' | 'cancelled';
-type FileType = 'csv' | 'xml';
+type FileType = 'csv' | 'xml' | 'xlsx';
 
 interface FileResult {
     fileName: string;
@@ -82,6 +82,7 @@ export default function UploadPage() {
 
     const detectFileType = (file: File): FileType => {
         if (file.name.endsWith('.xml')) return 'xml';
+        if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) return 'xlsx';
         return 'csv';
     };
 
@@ -89,8 +90,8 @@ export default function UploadPage() {
     const processOneFile = async (file: File, hotelId: string): Promise<{ success: boolean; message: string; count?: number }> => {
         const fileType = detectFileType(file);
 
-        if (fileType !== 'csv' && fileType !== 'xml') {
-            return { success: false, message: 'Chỉ hỗ trợ file CSV hoặc XML' };
+        if (fileType !== 'csv' && fileType !== 'xml' && fileType !== 'xlsx') {
+            return { success: false, message: 'Chỉ hỗ trợ file CSV, XML hoặc Excel (.xlsx)' };
         }
 
         try {
@@ -123,6 +124,7 @@ export default function UploadPage() {
             if (fileType === 'xml') {
                 result = await ingestXML(formData);
             } else {
+                // CSV and XLSX both go through ingestCSV (server detects format)
                 result = await ingestCSV(formData);
             }
 
@@ -335,7 +337,7 @@ export default function UploadPage() {
                     <input
                         ref={inputRef}
                         type="file"
-                        accept=".csv,.xml"
+                        accept=".csv,.xml,.xlsx,.xls"
                         multiple
                         onChange={handleChange}
                         className="hidden"
@@ -354,7 +356,7 @@ export default function UploadPage() {
                                 <Files className="w-10 h-10 text-blue-500" />
                             </div>
                             <p className="text-gray-700 text-lg mb-2">
-                                Kéo thả file CSV hoặc XML vào đây
+                                Kéo thả file CSV, XML hoặc Excel vào đây
                             </p>
                             <p className="text-gray-500 text-sm mb-4">
                                 Hỗ trợ chọn <strong>nhiều file</strong> cùng lúc (tối đa 31 file/lần)
@@ -368,6 +370,21 @@ export default function UploadPage() {
                             >
                                 Chọn file (có thể chọn nhiều)
                             </button>
+                            <div className="mt-4 pt-3 border-t border-gray-100">
+                                <a
+                                    href={activeTab === 'booked' ? '/template-booked.xlsx' : '/template-cancelled.xlsx'}
+                                    download
+                                    className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 transition-colors"
+                                >
+                                    <Download className="w-4 h-4" />
+                                    📥 Tải file mẫu Excel {activeTab === 'booked' ? '(Đặt phòng)' : '(Huỷ phòng)'}
+                                </a>
+                                <p className="text-xs text-gray-400 mt-1">
+                                    {activeTab === 'booked'
+                                        ? 'File mẫu có 7 cột: Mã, Ngày đặt, Check-in, Check-out, Phòng, Doanh thu, Trạng thái'
+                                        : 'File mẫu có 8 cột: bao gồm cột Ngày huỷ (bắt buộc)'}
+                                </p>
+                            </div>
                         </>
                     ) : null}
                 </div>

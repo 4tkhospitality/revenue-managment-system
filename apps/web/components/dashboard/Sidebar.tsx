@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { useState, useEffect } from 'react';
+import { SubscriptionBanner } from './SubscriptionBanner';
 import { LayoutDashboard, Upload, Database, Settings, BookOpen, Shield, Menu, X, LogOut, DollarSign, BarChart3, TrendingUp, CalendarCheck, Crown, Lock } from 'lucide-react';
 import { HotelSwitcher } from '@/components/HotelSwitcher';
 
@@ -315,6 +316,9 @@ export function Sidebar() {
                         </div>
                     )}
                 </nav>
+
+                {/* Subscription Expiry Banner */}
+                <SubscriptionBanner />
 
                 {/* User Info & Logout */}
                 <div className="p-4 border-t border-white/20">

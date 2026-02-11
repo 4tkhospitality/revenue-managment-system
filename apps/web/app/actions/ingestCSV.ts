@@ -4,6 +4,7 @@ import prisma from '../../lib/prisma';
 import { CSVUtils } from '../../lib/csv';
 import { DateUtils } from '../../lib/date';
 import { HashUtils } from '../../lib/hash';
+import { parseExcelToRows } from '../../lib/excel';
 import { Prisma } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { invalidateStatsCache } from '../../lib/cachedStats';
@@ -96,9 +97,16 @@ export async function ingestCSV(formData: FormData) {
     }
 
     try {
-        // 4. Parse CSV
-        const csvContent = buffer.toString('utf-8');
-        const rows = await CSVUtils.parseString(csvContent);
+        // 4. Parse CSV or Excel
+        const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+        let rows: Record<string, string>[];
+
+        if (isExcel) {
+            rows = parseExcelToRows(buffer) as unknown as Record<string, string>[];
+        } else {
+            const csvContent = buffer.toString('utf-8');
+            rows = await CSVUtils.parseString(csvContent);
+        }
         const validRows = [];
         const seenResIds = new Set<string>(); // Duplicate detection within file
 

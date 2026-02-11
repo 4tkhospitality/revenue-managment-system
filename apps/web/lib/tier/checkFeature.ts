@@ -16,6 +16,8 @@ import { auth } from '@/lib/auth';
 export interface SubscriptionInfo {
     plan: PlanTier;
     status: string;
+    periodEnd: Date | null;
+    isExpired: boolean;
     maxUsers: number;
     maxProperties: number;
     maxImportsMonth: number;
@@ -61,6 +63,8 @@ export async function getHotelSubscription(hotelId: string): Promise<Subscriptio
         return {
             plan: 'STANDARD',
             status: 'ACTIVE',
+            periodEnd: null,
+            isExpired: false,
             maxUsers: standardConfig.maxUsers,
             maxProperties: standardConfig.maxProperties,
             maxImportsMonth: standardConfig.maxImportsMonth,
@@ -71,17 +75,28 @@ export async function getHotelSubscription(hotelId: string): Promise<Subscriptio
         };
     }
 
+    // Check if subscription has expired
+    const now = new Date();
+    const periodEnd = subscription.current_period_end;
+    const isExpired = !!(periodEnd && periodEnd < now && ['ACTIVE', 'TRIAL'].includes(subscription.status));
+
+    // If expired, downgrade to STANDARD defaults
+    const effectivePlan = isExpired ? 'STANDARD' : subscription.plan;
+    const effectiveStatus = isExpired ? 'EXPIRED' : subscription.status;
+
     // Return subscription with possible admin overrides
     return {
-        plan: subscription.plan,
-        status: subscription.status,
+        plan: effectivePlan as PlanTier,
+        status: effectiveStatus,
+        periodEnd: periodEnd,
+        isExpired,
         maxUsers: subscription.max_users,
         maxProperties: subscription.max_properties,
-        maxImportsMonth: subscription.max_imports_month,
-        maxExportsDay: subscription.max_exports_day,
-        maxExportRows: subscription.max_export_rows,
-        includedRateShopsMonth: subscription.included_rate_shops_month,
-        dataRetentionMonths: subscription.data_retention_months,
+        maxImportsMonth: isExpired ? TIER_CONFIGS.STANDARD.maxImportsMonth : subscription.max_imports_month,
+        maxExportsDay: isExpired ? TIER_CONFIGS.STANDARD.maxExportsDay : subscription.max_exports_day,
+        maxExportRows: isExpired ? TIER_CONFIGS.STANDARD.maxExportRows : subscription.max_export_rows,
+        includedRateShopsMonth: isExpired ? TIER_CONFIGS.STANDARD.includedRateShopsMonth : subscription.included_rate_shops_month,
+        dataRetentionMonths: isExpired ? TIER_CONFIGS.STANDARD.dataRetentionMonths : subscription.data_retention_months,
     };
 }
 

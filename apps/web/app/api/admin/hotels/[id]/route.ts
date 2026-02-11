@@ -19,6 +19,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         const hotel = await prisma.hotel.findUnique({
             where: { hotel_id: id },
             include: {
+                subscription: true,
                 hotel_users: {
                     include: {
                         user: { select: { id: true, email: true, name: true, image: true } }
@@ -42,6 +43,18 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
                 minRate: hotel.min_rate,
                 maxRate: hotel.max_rate,
                 createdAt: hotel.created_at,
+                subscription: hotel.subscription ? {
+                    plan: hotel.subscription.plan,
+                    status: hotel.subscription.status,
+                    periodStart: hotel.subscription.current_period_start,
+                    periodEnd: hotel.subscription.current_period_end,
+                    maxUsers: hotel.subscription.max_users,
+                    maxImportsMonth: hotel.subscription.max_imports_month,
+                    maxExportsDay: hotel.subscription.max_exports_day,
+                    maxExportRows: hotel.subscription.max_export_rows,
+                    includedRateShopsMonth: hotel.subscription.included_rate_shops_month,
+                    dataRetentionMonths: hotel.subscription.data_retention_months,
+                } : null,
                 users: hotel.hotel_users.map(hu => ({
                     userId: hu.user_id,
                     email: hu.user.email,
@@ -82,6 +95,40 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
             where: { hotel_id: id },
             data: updateData
         })
+
+        // Subscription upsert (if subscription fields provided)
+        if (body.subscription) {
+            const sub = body.subscription
+            const subData: Record<string, unknown> = {}
+            if (sub.plan !== undefined) subData.plan = sub.plan
+            if (sub.status !== undefined) subData.status = sub.status
+            if (sub.periodStart !== undefined) subData.current_period_start = sub.periodStart ? new Date(sub.periodStart) : null
+            if (sub.periodEnd !== undefined) subData.current_period_end = sub.periodEnd ? new Date(sub.periodEnd) : null
+            if (sub.maxUsers !== undefined) subData.max_users = sub.maxUsers
+            if (sub.maxImportsMonth !== undefined) subData.max_imports_month = sub.maxImportsMonth
+            if (sub.maxExportsDay !== undefined) subData.max_exports_day = sub.maxExportsDay
+            if (sub.maxExportRows !== undefined) subData.max_export_rows = sub.maxExportRows
+            if (sub.includedRateShopsMonth !== undefined) subData.included_rate_shops_month = sub.includedRateShopsMonth
+            if (sub.dataRetentionMonths !== undefined) subData.data_retention_months = sub.dataRetentionMonths
+
+            await prisma.subscription.upsert({
+                where: { hotel_id: id },
+                create: {
+                    hotel_id: id,
+                    plan: sub.plan || 'STANDARD',
+                    status: sub.status || 'ACTIVE',
+                    current_period_start: sub.periodStart ? new Date(sub.periodStart) : new Date(),
+                    current_period_end: sub.periodEnd ? new Date(sub.periodEnd) : null,
+                    max_users: sub.maxUsers ?? 1,
+                    max_imports_month: sub.maxImportsMonth ?? 3,
+                    max_exports_day: sub.maxExportsDay ?? 1,
+                    max_export_rows: sub.maxExportRows ?? 30,
+                    included_rate_shops_month: sub.includedRateShopsMonth ?? 0,
+                    data_retention_months: sub.dataRetentionMonths ?? 6,
+                },
+                update: subData,
+            })
+        }
 
         return NextResponse.json({
             hotel: {
