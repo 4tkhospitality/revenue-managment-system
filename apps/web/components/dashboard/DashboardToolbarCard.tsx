@@ -32,7 +32,12 @@ const today = () => {
 
 function getVariant(dateStr: string | null): 'fresh' | 'stale' | 'missing' {
     if (!dateStr) return 'missing';
-    const d = new Date(dateStr);
+    // Parse dd/MM/yyyy format (used by DateUtils.format)
+    const parts = dateStr.split('/');
+    const d = parts.length === 3
+        ? new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]))
+        : new Date(dateStr);
+    if (isNaN(d.getTime())) return 'missing';
     const diff = Math.floor((today().getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
     if (diff <= 1) return 'fresh';
     if (diff <= 7) return 'stale';
