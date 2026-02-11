@@ -12,7 +12,8 @@ export function DeleteByMonthButton({ className }: DeleteByMonthButtonProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [month, setMonth] = useState('');
     const [dataType, setDataType] = useState<'reservations' | 'cancellations' | 'all'>('reservations');
-    const [preview, setPreview] = useState<{ reservationCount: number; cancellationCount: number } | null>(null);
+    const [includeOtb, setIncludeOtb] = useState(true);
+    const [preview, setPreview] = useState<{ reservationCount: number; cancellationCount: number; otbCount: number } | null>(null);
     const [loading, setLoading] = useState(false);
     const [confirmText, setConfirmText] = useState('');
     const [result, setResult] = useState<string | null>(null);
@@ -60,7 +61,7 @@ export function DeleteByMonthButton({ className }: DeleteByMonthButtonProps) {
         setError(null);
 
         try {
-            const res = await fetch(`/api/data/delete-by-month?month=${month}&type=${dataType}`, {
+            const res = await fetch(`/api/data/delete-by-month?month=${month}&type=${dataType}&includeOtb=${includeOtb}`, {
                 method: 'DELETE'
             });
             const data = await res.json();
@@ -87,6 +88,7 @@ export function DeleteByMonthButton({ className }: DeleteByMonthButtonProps) {
     const handleClose = () => {
         setIsOpen(false);
         setMonth('');
+        setIncludeOtb(true);
         setPreview(null);
         setConfirmText('');
         setResult(null);
@@ -196,7 +198,27 @@ export function DeleteByMonthButton({ className }: DeleteByMonthButtonProps) {
                                             <ul className="mt-2 space-y-1 text-sm text-amber-700">
                                                 <li>• Đặt phòng: <strong>{preview.reservationCount.toLocaleString()}</strong> bản ghi</li>
                                                 <li>• Hủy phòng: <strong>{preview.cancellationCount.toLocaleString()}</strong> bản ghi</li>
+                                                {preview.otbCount > 0 && (
+                                                    <li>• OTB snapshots: <strong>{preview.otbCount.toLocaleString()}</strong> bản ghi
+                                                        {!includeOtb && <span className="text-amber-500"> (sẽ KHÔNG xóa)</span>}
+                                                    </li>
+                                                )}
                                             </ul>
+
+                                            {/* OTB Checkbox */}
+                                            {preview.otbCount > 0 && (
+                                                <label className="flex items-center gap-2 mt-3 pt-3 border-t border-amber-200 cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={includeOtb}
+                                                        onChange={(e) => setIncludeOtb(e.target.checked)}
+                                                        className="w-4 h-4 rounded border-amber-400 text-red-600 focus:ring-red-500"
+                                                    />
+                                                    <span className="text-sm text-amber-800 font-medium">
+                                                        Xóa luôn OTB + Features ({preview.otbCount.toLocaleString()} bản ghi)
+                                                    </span>
+                                                </label>
+                                            )}
                                         </div>
                                     )}
 
