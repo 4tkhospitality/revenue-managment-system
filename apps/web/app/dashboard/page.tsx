@@ -22,7 +22,8 @@ async function fetchDashboardData(hotelId: string, today: Date) {
     const [
         hotel,
         latestReservation,
-        latestCancellation,
+        latestCancellationXml,
+        latestCancellationCsv,
         latestOtbDate,
         latestForecastDate
     ] = await Promise.all([
@@ -37,11 +38,17 @@ async function fetchDashboardData(hotelId: string, today: Date) {
             orderBy: { booking_date: 'desc' },
             select: { booking_date: true }
         }),
-        // Latest cancellation date
+        // Latest cancellation from XML imports (cancellationRaw table)
         prisma.cancellationRaw.findFirst({
             where: { hotel_id: hotelId },
             orderBy: { cancel_time: 'desc' },
             select: { cancel_time: true, as_of_date: true }
+        }),
+        // Latest cancellation from CSV/Excel uploads (reservationsRaw.cancel_time)
+        prisma.reservationsRaw.findFirst({
+            where: { hotel_id: hotelId, cancel_time: { not: null } },
+            orderBy: { cancel_time: 'desc' },
+            select: { cancel_time: true, booking_date: true }
         }),
         // Latest OTB date (query FIRST to use for subsequent queries)
         prisma.dailyOTB.findFirst({
@@ -56,6 +63,14 @@ async function fetchDashboardData(hotelId: string, today: Date) {
             select: { as_of_date: true }
         }),
     ]);
+
+    // Merge cancellation sources: use whichever has the latest date
+    const xmlCancelDate = latestCancellationXml?.as_of_date || latestCancellationXml?.cancel_time;
+    const csvCancelDate = latestCancellationCsv?.cancel_time;
+    const latestCancelDate = [xmlCancelDate, csvCancelDate]
+        .filter((d): d is Date => d != null)
+        .sort((a, b) => b.getTime() - a.getTime())[0] || null;
+    const latestCancellation = latestCancelDate ? { date: latestCancelDate } : null;
 
     console.log(`[Dashboard] Batch 1 queries: ${Date.now() - startTime}ms`);
 
@@ -350,7 +365,7 @@ export default async function DashboardPage({
                     }
                     latestCancellationDate={
                         latestCancellation
-                            ? DateUtils.format(latestCancellation.as_of_date, 'dd/MM/yyyy')
+                            ? DateUtils.format(latestCancellation.date, 'dd/MM/yyyy')
                             : null
                     }
                     otbAsOfDate={dataAsOf}
