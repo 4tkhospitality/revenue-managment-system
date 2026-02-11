@@ -426,12 +426,15 @@ enum ImportType {
 enum CalcType {
   PROGRESSIVE
   ADDITIVE
+  SINGLE_DISCOUNT
 }
 
 enum PromotionGroup {
   SEASONAL
   ESSENTIAL
   TARGETED
+  PORTFOLIO
+  CAMPAIGN
 }
 
 enum UserRole {

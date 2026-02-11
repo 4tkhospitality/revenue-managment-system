@@ -40,7 +40,7 @@ async function main() {
             { name: 'Agoda', code: 'agoda', commission: 20, calc_type: 'ADDITIVE' as const },
             { name: 'Booking.com', code: 'booking', commission: 18, calc_type: 'PROGRESSIVE' as const },
             { name: 'Traveloka', code: 'traveloka', commission: 17, calc_type: 'PROGRESSIVE' as const },
-            { name: 'Expedia', code: 'expedia', commission: 17, calc_type: 'PROGRESSIVE' as const },
+            { name: 'Expedia', code: 'expedia', commission: 17, calc_type: 'SINGLE_DISCOUNT' as const },
             { name: 'CTRIP', code: 'ctrip', commission: 18, calc_type: 'PROGRESSIVE' as const },
         ];
 

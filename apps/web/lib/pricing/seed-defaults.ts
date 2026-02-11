@@ -2,7 +2,7 @@
 import prisma from '@/lib/prisma';
 
 // CalcType as string literal (matches Prisma enum)
-type CalcTypeValue = 'PROGRESSIVE' | 'ADDITIVE';
+type CalcTypeValue = 'PROGRESSIVE' | 'ADDITIVE' | 'SINGLE_DISCOUNT';
 
 const DEFAULT_OTA_CHANNELS = [
     {
@@ -30,7 +30,7 @@ const DEFAULT_OTA_CHANNELS = [
         name: 'Expedia',
         code: 'expedia',
         commission: 17,
-        calc_type: 'PROGRESSIVE' as CalcTypeValue, // Lũy tiến
+        calc_type: 'SINGLE_DISCOUNT' as CalcTypeValue, // Mỗi deal riêng, chỉ 1 deal áp dụng
         is_active: true,
     },
     {

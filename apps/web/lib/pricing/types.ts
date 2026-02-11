@@ -1,11 +1,11 @@
 // V01.4: Pricing Types (Phase 02 Update — D25-D36)
 // Types for OTA Pricing calculation engine
 
-export type CalcType = 'PROGRESSIVE' | 'ADDITIVE';
+export type CalcType = 'PROGRESSIVE' | 'ADDITIVE' | 'SINGLE_DISCOUNT';
 export type PromotionGroup = 'SEASONAL' | 'ESSENTIAL' | 'TARGETED' | 'PORTFOLIO' | 'CAMPAIGN';
 
 // Marketing program types (commission boosters)
-export type BoosterProgram = 'AGP' | 'AGX' | 'SL' | 'PREFERRED';
+export type BoosterProgram = 'AGP' | 'AGX' | 'SL' | 'PREFERRED' | 'ACCELERATOR';
 
 // Input for calculation
 export interface PricingInput {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Plus, Trash2, Loader2, AlertTriangle, CheckCircle, ChevronDown, ChevronRight, Tag, X, Search, Calculator, DollarSign, TrendingUp } from 'lucide-react';
-import { AGODA_BOOSTERS, BOOKING_BOOSTERS } from '@/lib/pricing/catalog';
+import { AGODA_BOOSTERS, BOOKING_BOOSTERS, EXPEDIA_BOOSTERS } from '@/lib/pricing/catalog';
 import type { CommissionBooster } from '@/lib/pricing/types';
 
 // 4TK Brand-aligned color config
@@ -41,6 +41,17 @@ const VENDOR_GROUP_LABELS: Record<string, Partial<Record<keyof typeof GROUP_CONF
         PORTFOLIO: 'Portfolio Deals',
         CAMPAIGN: 'Campaign Deals',
     },
+    expedia: {
+        ESSENTIAL: 'Deals (Khuyến mãi)',
+        TARGETED: 'Audience Rates',
+    },
+};
+
+// Vendor-specific tab groups for PromotionPicker
+const VENDOR_PICKER_TABS: Record<string, GroupType[]> = {
+    agoda: ['SEASONAL', 'ESSENTIAL', 'TARGETED'],
+    booking: ['TARGETED', 'PORTFOLIO', 'CAMPAIGN'],
+    expedia: ['ESSENTIAL', 'TARGETED'],
 };
 
 // Get label by vendor
@@ -241,9 +252,9 @@ function PromotionPicker({
                     </button>
                 </div>
 
-                {/* Tabs */}
+                {/* Tabs — dynamic per vendor */}
                 <div className="flex border-b border-[#DBE1EB]">
-                    {(['SEASONAL', 'ESSENTIAL', 'TARGETED'] as GroupType[]).map((group) => {
+                    {(VENDOR_PICKER_TABS[vendor] || ['SEASONAL', 'ESSENTIAL', 'TARGETED']).map((group) => {
                         const isActive = activeTab === group;
                         return (
                             <button
@@ -318,7 +329,8 @@ function PromotionPicker({
     );
 }
 
-// Price Calculator Panel - Bidirectional (Net ↔ Display)
+// Price Calculator Panel - 3-Price Display (BUG-1 fix)
+// Shows: ① BAR (Channel Manager input) → ② Guest Display Price (after discounts) → ③ Net Revenue
 function PriceCalculator({
     roomTypes,
     selectedRoomId,
@@ -336,7 +348,7 @@ function PriceCalculator({
     discountMultiplier: number;
     commissionPct: number;
     channelName: string;
-    calcType: 'PROGRESSIVE' | 'ADDITIVE';
+    calcType: 'PROGRESSIVE' | 'ADDITIVE' | 'SINGLE_DISCOUNT';
 }) {
     const [calcMode, setCalcMode] = useState<'net_to_display' | 'display_to_net'>('net_to_display');
     const [customInput, setCustomInput] = useState<string>('');
@@ -355,27 +367,26 @@ function PriceCalculator({
         return parseFloat(s.replace(/\./g, '').replace(/,/g, '')) || 0;
     };
 
-    // Calculate based on mode
-    let netPrice: number;
-    let displayPrice: number;
-    let netAfterDiscount: number;
+    // Calculate 3 prices:
+    // barPrice = giá nhập Channel Manager (trước discount)
+    // guestPrice = giá khách thấy = BAR × discountMultiplier
+    // netRevenue = giá thu về = guestPrice × commissionMultiplier
+    let barPrice: number;
+    let guestPrice: number;
     let netRevenue: number;
 
     const inputValue = customInput ? parseNumber(customInput) : 0;
 
     if (calcMode === 'net_to_display') {
-        // Giá thu về → Giá hiển thị
-        netPrice = customInput ? inputValue : baseNetPrice;
-        // Display = Net / (1-discount) / (1-commission)
-        displayPrice = netPrice / discountMultiplier / commissionMultiplier;
-        netAfterDiscount = displayPrice * discountMultiplier;
-        netRevenue = netAfterDiscount * commissionMultiplier;
+        // Giá thu về → Tính ngược lên
+        netRevenue = customInput ? inputValue : baseNetPrice;
+        guestPrice = commissionMultiplier > 0 ? netRevenue / commissionMultiplier : netRevenue;
+        barPrice = discountMultiplier > 0 ? guestPrice / discountMultiplier : guestPrice;
     } else {
-        // Giá hiển thị → Giá thu về
-        displayPrice = customInput ? inputValue : baseNetPrice / discountMultiplier / commissionMultiplier;
-        netAfterDiscount = displayPrice * discountMultiplier;
-        netRevenue = netAfterDiscount * commissionMultiplier;
-        netPrice = netRevenue;
+        // Giá BAR (Channel Manager) → Tính xuống
+        barPrice = customInput ? inputValue : baseNetPrice / discountMultiplier / commissionMultiplier;
+        guestPrice = barPrice * discountMultiplier;
+        netRevenue = guestPrice * commissionMultiplier;
     }
 
     // Reset input when room changes
@@ -395,6 +406,8 @@ function PriceCalculator({
         );
     }
 
+    const calcLabel = calcType === 'PROGRESSIVE' ? 'lũy tiến' : calcType === 'SINGLE_DISCOUNT' ? 'deal cao nhất' : 'cộng dồn';
+
     return (
         <div className="bg-[#F2F4F8] border border-[#DBE1EB] rounded-xl p-4">
             <h3 className="text-sm font-semibold text-[#204183] mb-3 flex items-center gap-2">
@@ -411,7 +424,7 @@ function PriceCalculator({
                         : 'text-slate-600 hover:bg-slate-50'
                         }`}
                 >
-                    Thu về → Hiển thị
+                    Thu về → BAR
                 </button>
                 <button
                     onClick={() => { setCalcMode('display_to_net'); setCustomInput(''); }}
@@ -420,7 +433,7 @@ function PriceCalculator({
                         : 'text-slate-600 hover:bg-slate-50'
                         }`}
                 >
-                    Hiển thị → Thu về
+                    BAR → Thu về
                 </button>
             </div>
 
@@ -440,7 +453,7 @@ function PriceCalculator({
             {/* Input field */}
             <div className="mb-4">
                 <label className="block text-xs font-medium text-slate-600 mb-1">
-                    {calcMode === 'net_to_display' ? 'Nhập giá thu về mong muốn:' : 'Nhập giá hiển thị:'}
+                    {calcMode === 'net_to_display' ? 'Nhập giá thu về mong muốn:' : 'Nhập giá BAR (Channel Manager):'}
                 </label>
                 <div className="relative">
                     <input
@@ -457,105 +470,88 @@ function PriceCalculator({
                 </div>
             </div>
 
-            {/* Price breakdown */}
-            <div className="space-y-3 text-sm bg-white rounded-lg border border-[#DBE1EB] p-3">
-                {calcMode === 'net_to_display' ? (
-                    <>
-                        <div className="flex justify-between items-center">
-                            <span className="text-slate-600">Giá thu về mong muốn:</span>
-                            <span className="font-medium text-emerald-600">{formatNumber(netPrice)}đ</span>
-                        </div>
-                        <div className="border-t border-[#DBE1EB] pt-2">
-                            <div className="flex justify-between items-center">
-                                <span className="text-slate-600">+ Hoa hồng OTA ({commissionPct}%):</span>
-                                <span className="font-medium text-slate-800">+{formatNumber(netAfterDiscount - netRevenue)}đ</span>
-                            </div>
-                        </div>
-                        {totalDiscount > 0 && (
-                            <div className="flex justify-between items-center">
-                                <span className="text-slate-600">+ Khuyến mãi ({totalDiscount.toFixed(1)}%{calcType === 'PROGRESSIVE' ? ' lũy tiến' : ''}):</span>
-                                <span className="font-medium text-orange-600">+{formatNumber(displayPrice - netAfterDiscount)}đ</span>
-                            </div>
-                        )}
-                        <div className="border-t border-[#DBE1EB] pt-2">
-                            <div className="flex justify-between items-center text-[#204183]">
-                                <span className="font-semibold">→ Giá hiển thị:</span>
-                                <span className="font-bold text-lg">{formatNumber(displayPrice)}đ</span>
-                            </div>
-                        </div>
-                    </>
-                ) : (
-                    <>
-                        <div className="flex justify-between items-center">
-                            <span className="text-slate-600">Giá hiển thị trên OTA:</span>
-                            <span className="font-medium text-[#204183]">{formatNumber(displayPrice)}đ</span>
-                        </div>
-                        {totalDiscount > 0 && (
-                            <div className="border-t border-[#DBE1EB] pt-2">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-slate-600">- Khuyến mãi ({totalDiscount.toFixed(1)}%{calcType === 'PROGRESSIVE' ? ' lũy tiến' : ''}):</span>
-                                    <span className="font-medium text-orange-600">-{formatNumber(displayPrice - netAfterDiscount)}đ</span>
-                                </div>
-                            </div>
-                        )}
-                        <div className="flex justify-between items-center">
-                            <span className="text-slate-600">- Hoa hồng OTA ({commissionPct}%):</span>
-                            <span className="font-medium text-slate-800">-{formatNumber(netAfterDiscount - netRevenue)}đ</span>
-                        </div>
-                        <div className="border-t border-[#DBE1EB] pt-2">
-                            <div className="flex justify-between items-center text-emerald-600">
-                                <span className="font-semibold">→ Tiền thu về:</span>
-                                <span className="font-bold text-lg">{formatNumber(netRevenue)}đ</span>
-                            </div>
-                        </div>
-                    </>
+            {/* 3-Price breakdown: BAR → Guest Price → Net Revenue */}
+            <div className="space-y-2 text-sm">
+                {/* ① BAR — Channel Manager price */}
+                <div className="bg-white rounded-lg border border-[#DBE1EB] p-3">
+                    <div className="flex justify-between items-center">
+                        <span className="text-slate-500 text-xs">① Giá Channel Manager (BAR)</span>
+                        <span className="font-bold text-[#204183] text-lg">{formatNumber(barPrice)}đ</span>
+                    </div>
+                </div>
+
+                {/* Arrow + Discount info */}
+                {totalDiscount > 0 && (
+                    <div className="flex items-center gap-2 px-3 text-xs text-orange-600">
+                        <span>↓</span>
+                        <span>Khuyến mãi −{totalDiscount.toFixed(1)}% ({calcLabel})</span>
+                        <span className="ml-auto">−{formatNumber(barPrice - guestPrice)}đ</span>
+                    </div>
                 )}
+
+                {/* ② Guest Display Price */}
+                <div className="bg-white rounded-lg border border-orange-200 p-3">
+                    <div className="flex justify-between items-center">
+                        <span className="text-slate-500 text-xs">② Giá khách thấy trên OTA</span>
+                        <span className="font-bold text-orange-600 text-lg">{formatNumber(guestPrice)}đ</span>
+                    </div>
+                </div>
+
+                {/* Arrow + Commission info */}
+                <div className="flex items-center gap-2 px-3 text-xs text-slate-500">
+                    <span>↓</span>
+                    <span>Hoa hồng OTA −{commissionPct}%</span>
+                    <span className="ml-auto">−{formatNumber(guestPrice - netRevenue)}đ</span>
+                </div>
+
+                {/* ③ Net Revenue */}
+                <div className="bg-emerald-50 rounded-lg border border-emerald-200 p-3">
+                    <div className="flex justify-between items-center">
+                        <span className="text-emerald-700 text-xs font-medium">③ Tiền thu về (Net Revenue)</span>
+                        <span className="font-bold text-emerald-700 text-lg">{formatNumber(netRevenue)}đ</span>
+                    </div>
+                </div>
             </div>
         </div>
     );
 }
 
-// Marketing Programs Panel (AGP/AGX/SL)
+// Marketing Programs Panel — Vendor-aware (BUG-3 fix)
+// Agoda: AGP/AGX/SL | Booking: Preferred Partner | Expedia: Accelerator + B2B
 function MarketingPrograms({
     boosters,
     onUpdate,
     baseCommission,
+    vendor,
 }: {
     boosters: CommissionBooster[];
     onUpdate: (boosters: CommissionBooster[]) => void;
     baseCommission: number;
+    vendor: string;
 }) {
     const activeBoosters = boosters.filter(b => b.enabled);
     const totalBoost = activeBoosters.reduce((sum, b) => sum + b.boostPct, 0);
     const effectiveCommission = baseCommission + totalBoost;
 
-    // AGP: only one tier at a time
-    const agpBoosters = boosters.filter(b => b.program === 'AGP');
-    const activeAGP = agpBoosters.find(b => b.enabled);
-    const agx = boosters.find(b => b.program === 'AGX');
-    const sl = boosters.find(b => b.program === 'SL');
-
-    const handleAGPChange = (tierId: string) => {
+    const handleToggle = (id: string) => {
         onUpdate(boosters.map(b => {
-            if (b.program === 'AGP') {
-                return { ...b, enabled: b.id === tierId };
+            if (b.id === id) {
+                if (b.program === 'AGP') {
+                    return { ...b, enabled: false };
+                }
+                return { ...b, enabled: !b.enabled };
+            }
+            if (b.program === 'AGP' && boosters.find(x => x.id === id)?.program === 'AGP') {
+                return { ...b, enabled: false };
             }
             return b;
         }));
     };
 
-    const handleToggle = (id: string) => {
+    const handleAGPChange = (tierId: string) => {
         onUpdate(boosters.map(b => {
-            if (b.id === id) {
-                if (b.program === 'AGP') {
-                    // Toggling off AGP: disable all tiers
-                    return { ...b, enabled: false };
-                }
-                return { ...b, enabled: !b.enabled };
-            }
-            // If enabling an AGP tier, disable other AGP tiers
-            if (b.program === 'AGP' && boosters.find(x => x.id === id)?.program === 'AGP') {
-                return { ...b, enabled: false };
+            if (b.program === 'AGP') {
+                return { ...b, enabled: b.id === tierId };
             }
             return b;
         }));
@@ -567,12 +563,26 @@ function MarketingPrograms({
         ));
     };
 
+    // AGP tiers (Agoda only)
+    const agpBoosters = boosters.filter(b => b.program === 'AGP');
+    const activeAGP = agpBoosters.find(b => b.enabled);
+
+    // Generic variable-rate boosters (for AGX, SL, Preferred, Accelerator, B2B)
+    const genericBoosters = boosters.filter(b => b.program !== 'AGP');
+
+    // Vendor-specific title
+    const vendorTitles: Record<string, string> = {
+        agoda: 'Marketing Programs (Agoda)',
+        booking: 'Marketing Programs (Booking.com)',
+        expedia: 'Marketing Programs (Expedia)',
+    };
+
     return (
         <div className="bg-[#E9ECF3] border border-[#DBE1EB] rounded-xl overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3">
                 <div className="flex items-center gap-3">
                     <TrendingUp className="w-4 h-4 text-[#204183]" />
-                    <span className="font-medium text-slate-800">Marketing Programs</span>
+                    <span className="font-medium text-slate-800">{vendorTitles[vendor] || 'Marketing Programs'}</span>
                 </div>
                 {totalBoost > 0 && (
                     <span className="text-xs font-semibold text-orange-600 bg-orange-50 px-2 py-1 rounded-full">
@@ -582,104 +592,75 @@ function MarketingPrograms({
             </div>
 
             <div className="px-4 pb-4 space-y-3">
-                {/* AGP - Dropdown tier */}
-                <div className="bg-white border border-[#DBE1EB] rounded-lg p-3">
-                    <div className="flex items-center justify-between mb-2">
-                        <div>
-                            <span className="font-medium text-slate-800 text-sm">AGP</span>
-                            <span className="text-xs text-slate-500 ml-2">Agoda Growth Program</span>
-                        </div>
-                        <button
-                            onClick={() => activeAGP ? handleToggle(activeAGP.id) : handleAGPChange(agpBoosters[0]?.id)}
-                            className={`relative w-11 h-6 rounded-full transition-colors ${activeAGP ? 'bg-emerald-500' : 'bg-slate-300'}`}
-                        >
-                            <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${activeAGP ? 'left-6' : 'left-1'}`} />
-                        </button>
-                    </div>
-                    {activeAGP && (
-                        <div className="flex gap-2">
-                            {agpBoosters.map(tier => (
-                                <button
-                                    key={tier.id}
-                                    onClick={() => handleAGPChange(tier.id)}
-                                    className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${tier.enabled
-                                        ? 'bg-[#204183] text-white'
-                                        : 'bg-[#F2F4F8] text-slate-600 hover:bg-[#DBE1EB]'
-                                        }`}
-                                >
-                                    {tier.tier?.charAt(0).toUpperCase()}{tier.tier?.slice(1)} ({tier.boostPct}%)
-                                </button>
-                            ))}
-                        </div>
-                    )}
-                </div>
-
-                {/* AGX */}
-                {agx && (
+                {/* AGP tiers — Agoda only */}
+                {vendor === 'agoda' && agpBoosters.length > 0 && (
                     <div className="bg-white border border-[#DBE1EB] rounded-lg p-3">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between mb-2">
                             <div>
-                                <span className="font-medium text-slate-800 text-sm">AGX</span>
-                                <span className="text-xs text-slate-500 ml-2">Growth Express</span>
+                                <span className="font-medium text-slate-800 text-sm">AGP</span>
+                                <span className="text-xs text-slate-500 ml-2">Agoda Growth Program</span>
                             </div>
-                            <div className="flex items-center gap-3">
-                                <div className="flex items-center">
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        max="50"
-                                        value={agx.boostPct}
-                                        onChange={(e) => handlePctChange(agx.id, parseInt(e.target.value) || 0)}
-                                        disabled={!agx.enabled}
-                                        className="w-12 text-right text-sm font-semibold text-[#204183] bg-slate-50 border border-[#DBE1EB] rounded px-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-[#204183] disabled:opacity-40"
-                                    />
-                                    <span className="text-sm font-semibold text-[#204183] ml-0.5">%</span>
-                                </div>
-                                <button
-                                    onClick={() => handleToggle(agx.id)}
-                                    className={`relative w-11 h-6 rounded-full transition-colors ${agx.enabled ? 'bg-emerald-500' : 'bg-slate-300'}`}
-                                >
-                                    <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${agx.enabled ? 'left-6' : 'left-1'}`} />
-                                </button>
-                            </div>
+                            <button
+                                onClick={() => activeAGP ? handleToggle(activeAGP.id) : handleAGPChange(agpBoosters[0]?.id)}
+                                className={`relative w-11 h-6 rounded-full transition-colors ${activeAGP ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                            >
+                                <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${activeAGP ? 'left-6' : 'left-1'}`} />
+                            </button>
                         </div>
-                    </div>
-                )}
-
-                {/* SL */}
-                {sl && (
-                    <div className="bg-white border border-[#DBE1EB] rounded-lg p-3">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <span className="font-medium text-slate-800 text-sm">SL</span>
-                                <span className="text-xs text-slate-500 ml-2">Sponsored Listing</span>
+                        {activeAGP && (
+                            <div className="flex gap-2">
+                                {agpBoosters.map(tier => (
+                                    <button
+                                        key={tier.id}
+                                        onClick={() => handleAGPChange(tier.id)}
+                                        className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${tier.enabled
+                                            ? 'bg-[#204183] text-white'
+                                            : 'bg-[#F2F4F8] text-slate-600 hover:bg-[#DBE1EB]'
+                                            }`}
+                                    >
+                                        {tier.tier?.charAt(0).toUpperCase()}{tier.tier?.slice(1)} ({tier.boostPct}%)
+                                    </button>
+                                ))}
                             </div>
-                            <div className="flex items-center gap-3">
-                                <div className="flex items-center">
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        max="50"
-                                        value={sl.boostPct}
-                                        onChange={(e) => handlePctChange(sl.id, parseInt(e.target.value) || 0)}
-                                        disabled={!sl.enabled}
-                                        className="w-12 text-right text-sm font-semibold text-[#204183] bg-slate-50 border border-[#DBE1EB] rounded px-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-[#204183] disabled:opacity-40"
-                                    />
-                                    <span className="text-sm font-semibold text-[#204183] ml-0.5">%</span>
-                                </div>
-                                <button
-                                    onClick={() => handleToggle(sl.id)}
-                                    className={`relative w-11 h-6 rounded-full transition-colors ${sl.enabled ? 'bg-emerald-500' : 'bg-slate-300'}`}
-                                >
-                                    <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${sl.enabled ? 'left-6' : 'left-1'}`} />
-                                </button>
-                            </div>
-                        </div>
-                        {sl.enabled && (
-                            <p className="text-xs text-slate-400 mt-2">💡 Variable rate — nhập % theo YCS campaign setup</p>
                         )}
                     </div>
                 )}
+
+                {/* Generic boosters: AGX/SL (Agoda), Preferred (Booking), Accelerator/B2B (Expedia) */}
+                {genericBoosters.map(booster => (
+                    <div key={booster.id} className="bg-white border border-[#DBE1EB] rounded-lg p-3">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <span className="font-medium text-slate-800 text-sm">{booster.name}</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                {booster.isVariable && (
+                                    <div className="flex items-center">
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            max="50"
+                                            value={booster.boostPct}
+                                            onChange={(e) => handlePctChange(booster.id, parseInt(e.target.value) || 0)}
+                                            disabled={!booster.enabled}
+                                            className="w-12 text-right text-sm font-semibold text-[#204183] bg-slate-50 border border-[#DBE1EB] rounded px-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-[#204183] disabled:opacity-40"
+                                        />
+                                        <span className="text-sm font-semibold text-[#204183] ml-0.5">%</span>
+                                    </div>
+                                )}
+                                {!booster.isVariable && (
+                                    <span className="text-sm font-semibold text-[#204183]">{booster.boostPct}%</span>
+                                )}
+                                <button
+                                    onClick={() => handleToggle(booster.id)}
+                                    className={`relative w-11 h-6 rounded-full transition-colors ${booster.enabled ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                                >
+                                    <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${booster.enabled ? 'left-6' : 'left-1'}`} />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                ))}
 
                 {/* Commission breakdown */}
                 {totalBoost > 0 && (
@@ -713,7 +694,7 @@ function PricingExplanation({
     totalDiscount: number;
     commissionPct: number;
     validation: ValidationResult;
-    calcType: 'PROGRESSIVE' | 'ADDITIVE';
+    calcType: 'PROGRESSIVE' | 'ADDITIVE' | 'SINGLE_DISCOUNT';
 }) {
     const activeCampaigns = campaigns.filter((c) => c.is_active);
 
@@ -1106,18 +1087,18 @@ export default function PromotionsTab() {
     const selectedChannelData = channels.find((c) => c.id === selectedChannel);
     const commissionPct = selectedChannelData?.commission || 0; // Lấy từ tab Kênh OTA
 
-    // V01.4: Calculate totalDiscount based on calcType (additive vs progressive)
+    // V01.4: Calculate totalDiscount based on calcType
     const activeDiscounts = campaigns.filter((c) => c.is_active);
-    const calcType = (selectedChannelData?.calc_type as 'PROGRESSIVE' | 'ADDITIVE') || 'PROGRESSIVE';
+    const calcType = (selectedChannelData?.calc_type as 'PROGRESSIVE' | 'ADDITIVE' | 'SINGLE_DISCOUNT') || 'PROGRESSIVE';
 
-    // Booking.com: apply selection rules per PDF stacking matrix
-    // Portfolio promotions don't stack — pick only highest effective %
+    // Channel-specific discount selection rules
     let appliedDiscounts = activeDiscounts;
+
+    // Booking.com: portfolio promotions don't stack — pick only highest effective %
     if (selectedChannelData?.code === 'booking' && activeDiscounts.length > 0) {
         const portfolioActive = activeDiscounts.filter(c => c.promo.group_type === 'PORTFOLIO');
         const nonPortfolio = activeDiscounts.filter(c => c.promo.group_type !== 'PORTFOLIO');
         if (portfolioActive.length > 1) {
-            // Pick highest portfolio promotion only
             const bestPortfolio = portfolioActive.reduce((best, c) =>
                 c.discount_pct > best.discount_pct ? c : best
             );
@@ -1125,9 +1106,21 @@ export default function PromotionsTab() {
         }
     }
 
+    // Expedia: SINGLE_DISCOUNT — only highest deal applies
+    if (selectedChannelData?.code === 'expedia' && activeDiscounts.length > 1) {
+        const best = activeDiscounts.reduce((best, c) =>
+            c.discount_pct > best.discount_pct ? c : best
+        );
+        appliedDiscounts = [best];
+    }
+
     let totalDiscount: number;
     let discountMultiplier: number;
-    if (calcType === 'PROGRESSIVE' && appliedDiscounts.length > 0) {
+    if (calcType === 'SINGLE_DISCOUNT' && appliedDiscounts.length > 0) {
+        // Single discount: only highest deal
+        totalDiscount = appliedDiscounts[0].discount_pct;
+        discountMultiplier = 1 - totalDiscount / 100;
+    } else if (calcType === 'PROGRESSIVE' && appliedDiscounts.length > 0) {
         // Progressive: effective = 1 - Π(1 - dᵢ/100)
         discountMultiplier = appliedDiscounts.reduce((mult, c) => mult * (1 - c.discount_pct / 100), 1);
         totalDiscount = (1 - discountMultiplier) * 100;
@@ -1153,10 +1146,13 @@ export default function PromotionsTab() {
     const portfolioCampaigns = campaigns.filter((c) => c.promo.group_type === 'PORTFOLIO');
     const campaignCampaigns = campaigns.filter((c) => c.promo.group_type === 'CAMPAIGN');
 
-    // Dynamic boosters: switch between Agoda and Booking.com
+    // Dynamic boosters: switch per vendor (Agoda / Booking.com / Expedia)
     const isBooking = selectedChannelData?.code === 'booking';
     const isAgoda = selectedChannelData?.code === 'agoda';
-    const channelBoosters = isBooking ? BOOKING_BOOSTERS : AGODA_BOOSTERS;
+    const isExpedia = selectedChannelData?.code === 'expedia';
+    const channelBoosters = isBooking ? BOOKING_BOOSTERS
+        : isExpedia ? EXPEDIA_BOOSTERS
+            : AGODA_BOOSTERS;
 
     // Reset boosters when channel changes
     useEffect(() => {
@@ -1265,12 +1261,13 @@ export default function PromotionsTab() {
                         </div>
                     )}
 
-                    {/* Marketing Programs (Agoda + Booking.com) */}
-                    {(isAgoda || isBooking) && (
+                    {/* Marketing Programs (all vendors with boosters) */}
+                    {(isAgoda || isBooking || isExpedia) && (
                         <MarketingPrograms
                             boosters={boosters}
                             onUpdate={setBoosters}
                             baseCommission={commissionPct}
+                            vendor={selectedChannelData?.code || 'agoda'}
                         />
                     )}
 
@@ -1301,7 +1298,10 @@ export default function PromotionsTab() {
                         <div className="px-4 py-3 rounded-lg flex items-center gap-2 bg-[#F2F4F8] border border-[#DBE1EB]">
                             <CheckCircle className="w-5 h-5 text-emerald-600" />
                             <span className="text-sm font-medium text-slate-700">
-                                Tổng giảm giá: {totalDiscount.toFixed(1)}% {calcType === 'PROGRESSIVE' ? '(lũy tiến)' : '(cộng dồn)'}
+                                Tổng giảm giá: {totalDiscount.toFixed(1)}%
+                                {calcType === 'PROGRESSIVE' ? ' (lũy tiến)'
+                                    : calcType === 'SINGLE_DISCOUNT' ? ' (deal cao nhất)'
+                                        : ' (cộng dồn)'}
                             </span>
                         </div>
                     )}

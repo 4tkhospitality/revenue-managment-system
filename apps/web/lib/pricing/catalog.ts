@@ -257,6 +257,29 @@ export const BOOKING_BOOSTERS: CommissionBooster[] = [
     },
 ];
 
+// =============================================================================
+// EXPEDIA COMMISSION BOOSTERS (Marketing Programs)
+// Accelerator: extra commission → higher sort order (pay-per-stay)
+// B2B Uplift: +5% commission for EPS/TAAP channel bookings
+// =============================================================================
+export const EXPEDIA_BOOSTERS: CommissionBooster[] = [
+    {
+        id: 'expedia-accelerator',
+        name: 'Accelerator',
+        program: 'ACCELERATOR',
+        boostPct: 5,
+        isVariable: true, // Hotel chọn % boost
+        enabled: false,
+    },
+    {
+        id: 'expedia-b2b-uplift',
+        name: 'B2B EPS/TAAP Uplift',
+        program: 'ACCELERATOR',
+        boostPct: 5,
+        enabled: false,
+    },
+];
+
 export const BOOKING_COM_PROMOTIONS: PromotionCatalogItem[] = [
     // ─── A0) BUSINESS BOOKERS — Exclusive rate (❌ ALL) ─────────────────────
     {
@@ -441,13 +464,86 @@ export const BOOKING_COM_PROMOTIONS: PromotionCatalogItem[] = [
 ];
 
 // =============================================================================
+// EXPEDIA PROMOTIONS
+// Stacking: NONE — each deal creates a separate rate plan, only 1 applies per booking
+// Engine mode: SINGLE_DISCOUNT (pick highest eligible deal)
+// =============================================================================
+export const EXPEDIA_PROMOTIONS: PromotionCatalogItem[] = [
+    // ─── DEALS ─── Each is standalone, doesn't stack with others
+    {
+        id: 'expedia-same-day',
+        vendor: 'expedia',
+        name: 'Same Day Deal',
+        groupType: 'ESSENTIAL',
+        defaultPct: 20,
+        allowStack: false,
+        maxOneInGroup: false,
+        maxOnePerSubcategory: false,
+    },
+    {
+        id: 'expedia-early-booker',
+        vendor: 'expedia',
+        name: 'Early Booker Deal',
+        groupType: 'ESSENTIAL',
+        defaultPct: 15,
+        allowStack: false,
+        maxOneInGroup: false,
+        maxOnePerSubcategory: false,
+    },
+    {
+        id: 'expedia-multi-night',
+        vendor: 'expedia',
+        name: 'Multi-Night Deal',
+        groupType: 'ESSENTIAL',
+        defaultPct: 10,
+        allowStack: false,
+        maxOneInGroup: false,
+        maxOnePerSubcategory: false,
+    },
+    {
+        id: 'expedia-member-only',
+        vendor: 'expedia',
+        name: 'Member Only Deal',
+        groupType: 'TARGETED',
+        subCategory: 'MEMBER',
+        defaultPct: 10,
+        allowStack: false,
+        maxOneInGroup: false,
+        maxOnePerSubcategory: false,
+    },
+    {
+        id: 'expedia-mobile-rate',
+        vendor: 'expedia',
+        name: 'Mobile Rate',
+        groupType: 'TARGETED',
+        subCategory: 'MOBILE',
+        defaultPct: 10,
+        allowStack: false,
+        maxOneInGroup: false,
+        maxOnePerSubcategory: false,
+    },
+    {
+        id: 'expedia-package-rate',
+        vendor: 'expedia',
+        name: 'Package Rate',
+        groupType: 'TARGETED',
+        subCategory: 'PACKAGE',
+        defaultPct: 18,
+        allowStack: false,
+        maxOneInGroup: false,
+        maxOnePerSubcategory: false,
+    },
+];
+
+// =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
 
 // Get all promotions for a vendor
-export function getPromotionsByVendor(vendor: 'agoda' | 'booking'): PromotionCatalogItem[] {
+export function getPromotionsByVendor(vendor: 'agoda' | 'booking' | 'expedia'): PromotionCatalogItem[] {
     if (vendor === 'agoda') return AGODA_PROMOTIONS;
     if (vendor === 'booking') return BOOKING_COM_PROMOTIONS;
+    if (vendor === 'expedia') return EXPEDIA_PROMOTIONS;
     return [];
 }
 
@@ -457,7 +553,9 @@ export function getPromotionsByGroup(group: PromotionGroup, vendor?: string): Pr
         ? BOOKING_COM_PROMOTIONS
         : vendor === 'agoda'
             ? AGODA_PROMOTIONS
-            : [...AGODA_PROMOTIONS, ...BOOKING_COM_PROMOTIONS];
+            : vendor === 'expedia'
+                ? EXPEDIA_PROMOTIONS
+                : [...AGODA_PROMOTIONS, ...BOOKING_COM_PROMOTIONS, ...EXPEDIA_PROMOTIONS];
     return all.filter(p => p.groupType === group);
 }
 
@@ -467,7 +565,9 @@ export function getTargetedSubcategories(vendor?: string): string[] {
         ? BOOKING_COM_PROMOTIONS
         : vendor === 'agoda'
             ? AGODA_PROMOTIONS
-            : [...AGODA_PROMOTIONS, ...BOOKING_COM_PROMOTIONS];
+            : vendor === 'expedia'
+                ? EXPEDIA_PROMOTIONS
+                : [...AGODA_PROMOTIONS, ...BOOKING_COM_PROMOTIONS, ...EXPEDIA_PROMOTIONS];
 
     const subcats = new Set<string>();
     promos
@@ -500,6 +600,13 @@ export const VENDOR_GROUP_LABELS: Record<string, Record<PromotionGroup, string>>
         TARGETED: 'Genius & Visibility',
         PORTFOLIO: 'Portfolio Deals',
         CAMPAIGN: 'Campaign Deals',
+    },
+    expedia: {
+        SEASONAL: 'Seasonal',
+        ESSENTIAL: 'Deals (Khuyến mãi)',
+        TARGETED: 'Audience Rates',
+        PORTFOLIO: 'Portfolio',
+        CAMPAIGN: 'Campaign',
     },
 };
 
