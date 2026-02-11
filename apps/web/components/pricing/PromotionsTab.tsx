@@ -1109,15 +1109,31 @@ export default function PromotionsTab() {
     // V01.4: Calculate totalDiscount based on calcType (additive vs progressive)
     const activeDiscounts = campaigns.filter((c) => c.is_active);
     const calcType = (selectedChannelData?.calc_type as 'PROGRESSIVE' | 'ADDITIVE') || 'PROGRESSIVE';
+
+    // Booking.com: apply selection rules per PDF stacking matrix
+    // Portfolio promotions don't stack — pick only highest effective %
+    let appliedDiscounts = activeDiscounts;
+    if (selectedChannelData?.code === 'booking' && activeDiscounts.length > 0) {
+        const portfolioActive = activeDiscounts.filter(c => c.promo.group_type === 'PORTFOLIO');
+        const nonPortfolio = activeDiscounts.filter(c => c.promo.group_type !== 'PORTFOLIO');
+        if (portfolioActive.length > 1) {
+            // Pick highest portfolio promotion only
+            const bestPortfolio = portfolioActive.reduce((best, c) =>
+                c.discount_pct > best.discount_pct ? c : best
+            );
+            appliedDiscounts = [...nonPortfolio, bestPortfolio];
+        }
+    }
+
     let totalDiscount: number;
     let discountMultiplier: number;
-    if (calcType === 'PROGRESSIVE' && activeDiscounts.length > 0) {
+    if (calcType === 'PROGRESSIVE' && appliedDiscounts.length > 0) {
         // Progressive: effective = 1 - Π(1 - dᵢ/100)
-        discountMultiplier = activeDiscounts.reduce((mult, c) => mult * (1 - c.discount_pct / 100), 1);
+        discountMultiplier = appliedDiscounts.reduce((mult, c) => mult * (1 - c.discount_pct / 100), 1);
         totalDiscount = (1 - discountMultiplier) * 100;
     } else {
         // Additive: sum
-        totalDiscount = activeDiscounts.reduce((sum, c) => sum + c.discount_pct, 0);
+        totalDiscount = appliedDiscounts.reduce((sum, c) => sum + c.discount_pct, 0);
         discountMultiplier = totalDiscount > 0 ? (1 - totalDiscount / 100) : 1;
     }
 

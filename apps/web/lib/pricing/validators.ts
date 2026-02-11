@@ -103,9 +103,16 @@ export function validatePromotions(
         const exclusivePromos = active.filter(d => d.group === 'CAMPAIGN'); // Campaign + Deal of the Day
         const portfolioPromos = active.filter(d => d.group === 'PORTFOLIO'); // Early/Last/Basic/Secret/FreeNights
 
-        // ── B1: Max 3 active discounts ──
-        if (active.length > 3) {
-            errors.push(`Booking.com cho phép tối đa 3 discounts cùng lúc (đang chọn ${active.length})`);
+        // ── B1: Max 3 APPLIED discounts ──
+        // Applied = max 1 Genius + max 1 Targeted Rate + max 1 Promotion (highest wins)
+        // Config can have more enabled, but engine applies ≤3. Warn if enabled > 3.
+        const appliedCount =
+            Math.min(genius.length, 1) +
+            Math.min(targetedRates.length, 1) +
+            Math.min(portfolioPromos.length + exclusivePromos.length, 1);
+        if (appliedCount > 3) {
+            // Shouldn't happen given the category caps, but safety check
+            errors.push(`Tối đa 3 discounts được áp dụng (Genius + Targeted Rate + Promotion)`);
         }
 
         // ── B2: Mobile Rate ❌ Country Rate (mutual exclusive) ──
@@ -147,13 +154,16 @@ export function validatePromotions(
             }
         }
 
-        // ── B5: Multiple PORTFOLIO promotions — WARN (PDF matrix shows ✓ between them) ──
-        // User chose Option A: Allow (match PDF matrix). Warn so GM is aware.
+        // ── B5: Portfolio promotions DON'T stack (hatched in PDF) ──
+        // Config ALLOWS multiple enabled (GM runs many deals for different conditions).
+        // Engine picks only 1 — highest effective % wins.
         if (portfolioPromos.length > 1) {
+            const sorted = [...portfolioPromos].sort((a, b) => b.percent - a.percent);
+            const winner = sorted[0];
             const names = portfolioPromos.map(d => `${d.name} (${d.percent}%)`).join(', ');
             warnings.push(
-                `${portfolioPromos.length} promotions đang active: ${names}. ` +
-                `Khách đủ điều kiện sẽ nhận stacked discount (lũy tiến).`
+                `${portfolioPromos.length} promotions enabled: ${names}. ` +
+                `Promotions không stack — chỉ "${winner.name}" (${winner.percent}%) được áp dụng (highest wins).`
             );
         }
 
