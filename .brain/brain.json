@@ -678,7 +678,9 @@
       "OTB as_of_date = loaded_at (upload date), NOT booking_date → deleting by month of data doesn't delete OTB",
       "V01.6: PromotionGroup enum must be synced across 3 files: schema.prisma, types.ts, catalog.ts GROUP_COLORS/VENDOR_GROUP_LABELS",
       "V01.6: Free Nights X/Y inverse calc can produce rounding artifacts (e.g. Stay 7 / Pay 6 = 14.28% not 14%)",
-      "V01.6: Git push can hang if credential helper dialog is hidden behind other windows — terminate after 15s and retry"
+      "V01.6: Git push can hang if credential helper dialog is hidden behind other windows — terminate after 15s and retry",
+      "V01.6: catalog.ts constants are NOT used by /api/pricing/catalog — the API reads from DB (prisma.promotionCatalog). Must run seed-pricing.ts after updating catalog.ts",
+      "V01.6: seed-pricing.ts group_type values must match catalog.ts groupType values — mismatch causes picker to show 0 items in tabs"
     ],
     "formulas": {
       "rooms_otb": "SUM(num_rooms) from reservations for that stay_date",
