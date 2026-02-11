@@ -1,28 +1,91 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { BookOpen, BarChart3, TrendingUp, DollarSign, CalendarDays, Upload, Database, Settings, HelpCircle, XCircle, Calculator, Percent, Tag, ArrowRightLeft, Lock, AlertTriangle } from 'lucide-react';
+import {
+    BookOpen, BarChart3, TrendingUp, DollarSign, CalendarDays, Upload, Database,
+    HelpCircle, Calculator, Percent, Tag, ArrowRightLeft, Lock, ChevronRight,
+} from 'lucide-react';
 import { validateOTBData, type ValidationResult } from '../actions/validateOTBData';
 import Link from 'next/link';
 import { useTierAccess } from '@/hooks/useTierAccess';
 import { TierPaywall } from '@/components/paywall/TierPaywall';
 
+type SectionId = 'quickstart' | 'analytics' | 'pricing' | 'data';
 
-type TabId = 'quickstart' | 'revenue' | 'pricing';
+const SECTIONS: { id: SectionId; label: string; icon: React.ReactNode; sub?: { id: string; label: string }[] }[] = [
+    {
+        id: 'quickstart', label: 'Bắt đầu nhanh', icon: <HelpCircle className="w-4 h-4" />,
+        sub: [
+            { id: 'welcome', label: 'Giới thiệu' },
+            { id: 'steps', label: '5 bước bắt đầu' },
+            { id: 'daily', label: 'Quy trình hàng ngày' },
+            { id: 'faq', label: 'Câu hỏi thường gặp' },
+        ],
+    },
+    {
+        id: 'analytics', label: 'Tổng quan & Phân tích', icon: <BarChart3 className="w-4 h-4" />,
+        sub: [
+            { id: 'rm-intro', label: 'Revenue Management là gì?' },
+            { id: 'kpi', label: 'Các thẻ KPI' },
+            { id: 'charts', label: 'Biểu đồ OTB' },
+            { id: 'rec-table', label: 'Bảng khuyến nghị giá' },
+            { id: 'terms', label: 'Thuật ngữ chuyên ngành' },
+        ],
+    },
+    {
+        id: 'pricing', label: 'Định giá OTA', icon: <Calculator className="w-4 h-4" />,
+        sub: [
+            { id: 'pricing-intro', label: 'Tổng quan' },
+            { id: 'formula', label: 'Công thức tính giá' },
+            { id: 'room-types', label: 'Hạng phòng' },
+            { id: 'channels', label: 'Kênh OTA & Hoa hồng' },
+            { id: 'promos', label: 'Khuyến mãi & Stacking' },
+            { id: 'booking-engine', label: 'Booking.com chi tiết' },
+            { id: 'price-matrix', label: 'Bảng giá tổng hợp' },
+            { id: 'reverse', label: 'Tính ngược (BAR → NET)' },
+        ],
+    },
+    {
+        id: 'data', label: 'Quản lý dữ liệu', icon: <Database className="w-4 h-4" />,
+        sub: [
+            { id: 'upload', label: 'Import dữ liệu' },
+            { id: 'build-otb', label: 'Build OTB' },
+            { id: 'build-features', label: 'Build Features' },
+            { id: 'run-forecast', label: 'Run Forecast' },
+        ],
+    },
+];
 
 export default function GuidePage() {
-    const [activeTab, setActiveTab] = useState<TabId>('quickstart');
+    const [activeSection, setActiveSection] = useState<SectionId>('quickstart');
+    const [expandedSections, setExpandedSections] = useState<Set<SectionId>>(new Set(['quickstart']));
     const { hasAccess: hasRevenueAccess, loading: tierLoading } = useTierAccess('SUPERIOR');
 
-    // Default to revenue tab if user has access
     useEffect(() => {
         if (!tierLoading && hasRevenueAccess) {
-            setActiveTab('revenue');
+            setActiveSection('analytics');
+            setExpandedSections(new Set(['analytics']));
         }
     }, [tierLoading, hasRevenueAccess]);
 
+    const toggleExpand = (id: SectionId) => {
+        setExpandedSections(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id); else next.add(id);
+            return next;
+        });
+    };
+
+    const handleNav = (sectionId: SectionId, subId?: string) => {
+        setActiveSection(sectionId);
+        setExpandedSections(prev => new Set(prev).add(sectionId));
+        if (subId) {
+            setTimeout(() => document.getElementById(subId)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+        }
+    };
+
     return (
-        <div className="mx-auto max-w-[1400px] px-4 sm:px-8 py-4 sm:py-6 space-y-6">
+        <div className="mx-auto max-w-[1400px] px-4 sm:px-8 py-4 sm:py-6 space-y-4">
             {/* Header */}
             <header
                 className="rounded-2xl px-6 py-4 text-white shadow-sm"
@@ -37,79 +100,89 @@ export default function GuidePage() {
                 </p>
             </header>
 
-            {/* Tabs */}
-            <div className="bg-white border border-gray-200 rounded-xl p-1 flex gap-1">
-                <button
-                    onClick={() => setActiveTab('quickstart')}
-                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${activeTab === 'quickstart'
-                        ? 'bg-blue-600 text-white'
-                        : 'text-gray-600 hover:bg-gray-50'
-                        }`}
-                >
-                    <HelpCircle className="w-4 h-4" />
-                    Bắt đầu nhanh
-                </button>
-                <button
-                    onClick={() => setActiveTab('revenue')}
-                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${activeTab === 'revenue'
-                        ? 'bg-blue-600 text-white'
-                        : 'text-gray-600 hover:bg-gray-50'
-                        }`}
-                >
-                    <BarChart3 className="w-4 h-4" />
-                    Quản lý Doanh thu
-                    {!tierLoading && !hasRevenueAccess && <Lock className="w-3 h-3 text-amber-500" />}
-                </button>
-                <button
-                    onClick={() => setActiveTab('pricing')}
-                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${activeTab === 'pricing'
-                        ? 'bg-blue-600 text-white'
-                        : 'text-gray-600 hover:bg-gray-50'
-                        }`}
-                >
-                    <Calculator className="w-4 h-4" />
-                    Tính giá OTA
-                </button>
+            {/* Body: Sidebar + Content */}
+            <div className="flex gap-6">
+                {/* Left Sidebar Nav */}
+                <nav className="hidden lg:block w-64 shrink-0">
+                    <div className="sticky top-6 bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+                        {SECTIONS.map(sec => (
+                            <div key={sec.id}>
+                                <button
+                                    onClick={() => { handleNav(sec.id); toggleExpand(sec.id); }}
+                                    className={`w-full flex items-center gap-2.5 px-4 py-3 text-left text-sm font-medium transition-colors ${activeSection === sec.id
+                                        ? 'bg-blue-50 text-blue-700 border-l-[3px] border-blue-600'
+                                        : 'text-gray-700 hover:bg-gray-50 border-l-[3px] border-transparent'
+                                        }`}
+                                >
+                                    {sec.icon}
+                                    <span className="flex-1">{sec.label}</span>
+                                    {sec.id === 'analytics' && !tierLoading && !hasRevenueAccess && <Lock className="w-3 h-3 text-amber-500" />}
+                                    <ChevronRight className={`w-3.5 h-3.5 text-gray-400 transition-transform ${expandedSections.has(sec.id) ? 'rotate-90' : ''}`} />
+                                </button>
+                                {expandedSections.has(sec.id) && sec.sub && (
+                                    <div className="bg-gray-50 border-t border-gray-100">
+                                        {sec.sub.map(sub => (
+                                            <button
+                                                key={sub.id}
+                                                onClick={() => handleNav(sec.id, sub.id)}
+                                                className="w-full text-left pl-11 pr-4 py-2 text-xs text-gray-600 hover:text-blue-600 hover:bg-blue-50/50 transition-colors"
+                                            >
+                                                {sub.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </nav>
 
-            </div>
+                {/* Mobile Nav */}
+                <div className="lg:hidden w-full">
+                    <div className="bg-white border border-gray-200 rounded-xl p-1 flex gap-1 overflow-x-auto mb-4">
+                        {SECTIONS.map(sec => (
+                            <button
+                                key={sec.id}
+                                onClick={() => handleNav(sec.id)}
+                                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${activeSection === sec.id ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+                            >
+                                {sec.icon} {sec.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
 
-            {/* Tab Content */}
-            <div className="space-y-6">
-                {activeTab === 'quickstart' && <QuickStartGuide />}
-                {activeTab === 'revenue' && (
-                    (!tierLoading && !hasRevenueAccess) ? (
-                        <TierPaywall
-                            title="Quản lý Doanh thu"
-                            subtitle="Hướng dẫn phân tích OTB, Pickup, Forecast và Revenue Management"
-                            tierDisplayName="Superior"
-                            colorScheme="blue"
-                            features={[
-                                { icon: <BarChart3 className="w-4 h-4" />, label: 'Hiểu OTB (On The Books) và Pickup' },
-                                { icon: <TrendingUp className="w-4 h-4" />, label: 'Phân tích Booking Pace & Remaining Supply' },
-                                { icon: <DollarSign className="w-4 h-4" />, label: 'Chiến lược định giá theo demand' },
-                                { icon: <CalendarDays className="w-4 h-4" />, label: 'Daily Actions workflow hàng ngày' },
-                            ]}
-                        />
-                    ) : (
-                        <RevenueGuide />
-                    )
-                )}
-                {activeTab === 'pricing' && <PricingGuide />}
-
+                {/* Content */}
+                <div className="flex-1 min-w-0 space-y-6">
+                    {activeSection === 'quickstart' && <QuickStartSection />}
+                    {activeSection === 'analytics' && (
+                        !tierLoading && !hasRevenueAccess ? (
+                            <TierPaywall
+                                title="Tổng quan & Phân tích"
+                                subtitle="Hướng dẫn phân tích OTB, Pickup, Forecast và Revenue Management"
+                                tierDisplayName="Superior"
+                                colorScheme="blue"
+                                features={[
+                                    { icon: <BarChart3 className="w-4 h-4" />, label: 'Hiểu OTB (On The Books) và Pickup' },
+                                    { icon: <TrendingUp className="w-4 h-4" />, label: 'Phân tích Booking Pace & Remaining Supply' },
+                                    { icon: <DollarSign className="w-4 h-4" />, label: 'Chiến lược định giá theo demand' },
+                                    { icon: <CalendarDays className="w-4 h-4" />, label: 'Daily Actions workflow hàng ngày' },
+                                ]}
+                            />
+                        ) : <AnalyticsSection />
+                    )}
+                    {activeSection === 'pricing' && <PricingSection />}
+                    {activeSection === 'data' && <DataSection />}
+                </div>
             </div>
         </div>
     );
 }
 
-// ==================== QUICK START GUIDE ====================
-function QuickStartGuide() {
+/* ═══════════════════════ SECTION 1: BẮT ĐẦU NHANH ═══════════════════════ */
+function QuickStartSection() {
     const [dqStats, setDqStats] = useState<ValidationResult | null>(null);
-
-    useEffect(() => {
-        validateOTBData().then(setDqStats).catch(() => { });
-    }, []);
-
-    // Dynamic values from hotel data
+    useEffect(() => { validateOTBData().then(setDqStats).catch(() => { }); }, []);
     const warningCount = dqStats?.stats.warningCount ?? 0;
     const totalRows = dqStats?.stats.totalRows ?? 0;
     const completeness = dqStats?.stats.completeness ?? 0;
@@ -118,121 +191,40 @@ function QuickStartGuide() {
 
     return (
         <>
-            {/* Welcome */}
-            <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-                <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                    <HelpCircle className="w-5 h-5 text-blue-600" />
-                    Bắt đầu sử dụng RMS
-                </h2>
-                <p className="text-gray-700 mt-2">
+            <Card id="welcome" title="Bắt đầu sử dụng RMS" icon={<HelpCircle className="w-5 h-5 text-blue-600" />}>
+                <p className="text-gray-700">
                     Hệ thống Quản lý Doanh thu giúp bạn tối ưu hóa giá phòng và tăng doanh thu khách sạn.
                     Làm theo 5 bước dưới đây để bắt đầu.
                 </p>
-            </div>
+            </Card>
 
-            {/* Steps */}
-            <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-6 shadow-sm">
-                {/* Step 1 */}
-                <div className="flex items-start gap-4">
-                    <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center shrink-0">
-                        <span className="text-sm font-bold text-blue-600">1</span>
-                    </div>
-                    <div>
-                        <h3 className="text-base font-semibold text-gray-900">Đăng nhập</h3>
-                        <p className="text-sm text-gray-600 mt-1">
-                            Sử dụng tài khoản Google được admin cấp. Sau khi đăng nhập, bạn sẽ thấy khách sạn được gán trong sidebar.
-                        </p>
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700 mt-2">
-                            Nếu chưa có quyền truy cập, liên hệ admin qua Zalo: 0778602953
-                        </div>
-                    </div>
-                </div>
-
-                <hr className="border-gray-100" />
-
-                {/* Step 2 */}
-                <div className="flex items-start gap-4">
-                    <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center shrink-0">
-                        <span className="text-sm font-bold text-blue-600">2</span>
-                    </div>
-                    <div>
-                        <h3 className="text-base font-semibold text-gray-900">Upload dữ liệu từ PMS</h3>
-                        <p className="text-sm text-gray-600 mt-1">
-                            Vào menu <strong>Upload</strong> → Kéo thả file XML hoặc CSV từ phần mềm quản lý
-                            (Opera, RoomRaccoon, Cloudbeds...).
-                        </p>
-                        <div className="grid grid-cols-2 gap-3 mt-3">
-                            <div className="bg-gray-50 rounded-lg p-3">
-                                <div className="font-medium text-gray-800 text-sm">File Reservations</div>
-                                <p className="text-xs text-gray-500">Danh sách booking hiện tại</p>
-                            </div>
-                            <div className="bg-gray-50 rounded-lg p-3">
-                                <div className="font-medium text-gray-800 text-sm">File Cancellations</div>
-                                <p className="text-xs text-gray-500">Danh sách booking đã hủy</p>
-                            </div>
-                        </div>
-                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-700 mt-2">
-                            <strong>Lưu ý:</strong> Upload dữ liệu mỗi ngày (sáng) để có số liệu chính xác nhất.
-                        </div>
-                    </div>
-                </div>
-
-                <hr className="border-gray-100" />
-
-                {/* Step 3 */}
-                <div className="flex items-start gap-4">
-                    <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center shrink-0">
-                        <span className="text-sm font-bold text-blue-600">3</span>
-                    </div>
-                    <div>
-                        <h3 className="text-base font-semibold text-gray-900">Build dữ liệu (tự động)</h3>
-                        <p className="text-sm text-gray-600 mt-1">
-                            Vào menu <strong>Dữ liệu</strong> → Nhấn các nút theo thứ tự:
-                        </p>
-                        <div className="flex flex-wrap items-center gap-2 text-sm mt-2">
-                            <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-lg">Build OTB</span>
-                            <span className="text-gray-400">→</span>
-                            <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-lg">Build Features</span>
-                            <span className="text-gray-400">→</span>
-                            <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-lg">Run Forecast</span>
-                        </div>
-                        <p className="text-sm text-gray-500 mt-2">Sau bước này, Dashboard sẽ hiển thị đầy đủ dữ liệu.</p>
-                    </div>
-                </div>
-
-                <hr className="border-gray-100" />
-
-                {/* Step 4 */}
-                <div className="flex items-start gap-4">
-                    <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center shrink-0">
-                        <span className="text-sm font-bold text-blue-600">4</span>
-                    </div>
-                    <div>
-                        <h3 className="text-base font-semibold text-gray-900">Xem Dashboard</h3>
-                        <p className="text-sm text-gray-600 mt-1">
-                            Menu <strong>Dashboard</strong> hiển thị:
-                        </p>
-                        <ul className="space-y-1 mt-2 text-gray-600 text-sm list-disc list-inside ml-2">
+            <Card id="steps" title="5 bước bắt đầu">
+                <div className="space-y-5">
+                    <Step n={1} title="Đăng nhập">
+                        <p className="text-sm text-gray-600">Sử dụng tài khoản Google được admin cấp. Sau khi đăng nhập, bạn sẽ thấy khách sạn được gán trong sidebar.</p>
+                        <Tip>Nếu chưa có quyền truy cập, liên hệ admin qua Zalo: 0778602953</Tip>
+                    </Step>
+                    <hr className="border-gray-100" />
+                    <Step n={2} title="Upload dữ liệu từ PMS">
+                        <p className="text-sm text-gray-600">Vào menu <strong>Upload</strong> → Kéo thả file XML hoặc CSV từ PMS (Opera, RoomRaccoon, Cloudbeds...).</p>
+                        <Warn>Upload dữ liệu mỗi ngày (sáng) để có số liệu chính xác nhất.</Warn>
+                    </Step>
+                    <hr className="border-gray-100" />
+                    <Step n={3} title="Build dữ liệu (tự động)">
+                        <p className="text-sm text-gray-600">Vào menu <strong>Dữ liệu</strong> → Nhấn các nút theo thứ tự:</p>
+                        <Pipeline steps={['Build OTB', 'Build Features', 'Run Forecast']} />
+                    </Step>
+                    <hr className="border-gray-100" />
+                    <Step n={4} title="Xem Dashboard">
+                        <ul className="space-y-1 text-gray-600 text-sm list-disc list-inside ml-2">
                             <li><strong>KPI Cards:</strong> Rooms OTB, Remaining Supply, Pickup</li>
                             <li><strong>Charts:</strong> Biểu đồ OTB theo ngày, so sánh năm trước</li>
                             <li><strong>Price Table:</strong> Giá khuyến nghị cho từng ngày</li>
                         </ul>
-                    </div>
-                </div>
-
-                <hr className="border-gray-100" />
-
-                {/* Step 5 */}
-                <div className="flex items-start gap-4">
-                    <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center shrink-0">
-                        <span className="text-sm font-bold text-blue-600">5</span>
-                    </div>
-                    <div>
-                        <h3 className="text-base font-semibold text-gray-900">Ra Quyết định Giá</h3>
-                        <p className="text-sm text-gray-600 mt-1">
-                            Với mỗi ngày, hệ thống đề xuất giá. Bạn có thể:
-                        </p>
-                        <div className="grid grid-cols-2 gap-3 mt-3">
+                    </Step>
+                    <hr className="border-gray-100" />
+                    <Step n={5} title="Ra Quyết định Giá">
+                        <div className="grid grid-cols-2 gap-3 mt-2">
                             <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-center">
                                 <div className="font-medium text-gray-800">Chấp nhận</div>
                                 <p className="text-xs text-gray-500 mt-1">Đồng ý với giá hệ thống đề xuất</p>
@@ -242,759 +234,394 @@ function QuickStartGuide() {
                                 <p className="text-xs text-gray-500 mt-1">Nhập giá theo ý mình</p>
                             </div>
                         </div>
-                    </div>
+                    </Step>
                 </div>
-            </div>
+            </Card>
 
-            {/* Daily Workflow */}
-            <section className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2 mb-4">
-                    <CalendarDays className="w-5 h-5 text-blue-600" />
-                    Quy trình hàng ngày
-                </h3>
+            <Card id="daily" title="Quy trình hàng ngày" icon={<CalendarDays className="w-5 h-5 text-blue-600" />}>
                 <ol className="space-y-2 text-gray-700 text-sm">
-                    <li className="flex items-start gap-3">
-                        <span className="w-6 h-6 bg-blue-50 rounded-full flex items-center justify-center text-xs font-bold text-blue-600 shrink-0 mt-0.5">1</span>
-                        <span>Sáng: Export báo cáo từ PMS → Upload vào hệ thống</span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                        <span className="w-6 h-6 bg-blue-50 rounded-full flex items-center justify-center text-xs font-bold text-blue-600 shrink-0 mt-0.5">2</span>
-                        <span>Vào Dashboard xem tình hình booking hôm nay</span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                        <span className="w-6 h-6 bg-blue-50 rounded-full flex items-center justify-center text-xs font-bold text-blue-600 shrink-0 mt-0.5">3</span>
-                        <span>Review giá khuyến nghị, Accept hoặc Override</span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                        <span className="w-6 h-6 bg-blue-50 rounded-full flex items-center justify-center text-xs font-bold text-blue-600 shrink-0 mt-0.5">4</span>
-                        <span>Cập nhật giá lên Channel Manager / OTA</span>
-                    </li>
+                    {['Sáng: Export báo cáo từ PMS → Upload vào hệ thống', 'Vào Dashboard xem tình hình booking hôm nay', 'Review giá khuyến nghị, Accept hoặc Override', 'Cập nhật giá lên Channel Manager / OTA'].map((t, i) => (
+                        <li key={i} className="flex items-start gap-3">
+                            <span className="w-6 h-6 bg-blue-50 rounded-full flex items-center justify-center text-xs font-bold text-blue-600 shrink-0 mt-0.5">{i + 1}</span>
+                            <span>{t}</span>
+                        </li>
+                    ))}
                 </ol>
-            </section>
+            </Card>
 
-            {/* FAQ */}
-            <section className="bg-white border border-gray-200 rounded-xl p-6 space-y-4 shadow-sm">
-                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                    <HelpCircle className="w-5 h-5 text-blue-600" />
-                    Câu hỏi thường gặp
-                </h3>
-
-                {/* FAQ 1 */}
-                <div className="border-t border-gray-100 pt-4">
-                    <h4 className="font-medium text-gray-900 mb-2">
-                        Data Quality: {warningCount > 0 ? `${warningCount.toLocaleString()} cảnh báo` : 'Không có cảnh báo'}
-                    </h4>
-                    <p className="text-gray-600 text-sm">
-                        {warningCount > 0 ? (
-                            <>Phần lớn cảnh báo là <code className="bg-gray-100 px-1 rounded text-xs">PAST_STAY_DATE</code> — dữ liệu có các ngày lưu trú đã qua. Đây là bình thường khi upload dữ liệu lịch sử.</>
-                        ) : 'Tất cả dữ liệu đều hợp lệ và sẵn sàng sử dụng.'}
-                    </p>
-                    {totalRows > 0 && (
-                        <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-600 mt-2">
-                            <p><strong>Khách sạn của bạn:</strong> {totalRows.toLocaleString()} dòng OTB
-                                {pastCount > 0 && <>, trong đó {pastCount.toLocaleString()} dòng đã qua ({pastPct}%)</>}
-                                . Hoàn thiện: <strong>{completeness}%</strong>.</p>
-                        </div>
-                    )}
-                </div>
-
-                {/* FAQ 2 */}
-                <div className="border-t border-gray-100 pt-4">
-                    <h4 className="font-medium text-gray-900 mb-2">
-                        &quot;Pickup TB: N/A&quot; — Tại sao không hiện số?
-                    </h4>
-                    <p className="text-gray-600 text-sm">
-                        <strong>Pickup</strong> = So sánh số phòng đặt hôm nay với 7 ngày trước.
-                        Cần ít nhất <strong>2 lần upload cách nhau ≥ 7 ngày</strong> để hệ thống tính được.
-                    </p>
-                    <div className="bg-gray-50 rounded-lg p-3 text-sm mt-2">
-                        <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                            <div className="bg-white border border-gray-200 rounded p-2">
-                                <div className="font-bold text-gray-700">Upload #1</div>
-                                <div className="text-gray-500">01/02</div>
-                            </div>
-                            <div className="bg-white border border-gray-200 rounded p-2">
-                                <div className="text-gray-500">Chờ 7 ngày...</div>
-                            </div>
-                            <div className="bg-white border border-gray-200 rounded p-2">
-                                <div className="font-bold text-gray-700">Upload #2</div>
-                                <div className="text-gray-500">08/02 → Pickup ✓</div>
-                            </div>
-                        </div>
+            <Card id="faq" title="Câu hỏi thường gặp" icon={<HelpCircle className="w-5 h-5 text-blue-600" />}>
+                <div className="space-y-4">
+                    <div className="border-t border-gray-100 pt-4">
+                        <h4 className="font-medium text-gray-900 mb-2">Data Quality: {warningCount > 0 ? `${warningCount.toLocaleString()} cảnh báo` : 'Không có cảnh báo'}</h4>
+                        <p className="text-gray-600 text-sm">{warningCount > 0 ? <>Phần lớn cảnh báo là <code className="bg-gray-100 px-1 rounded text-xs">PAST_STAY_DATE</code> — dữ liệu có các ngày lưu trú đã qua.</> : 'Tất cả dữ liệu đều hợp lệ.'}</p>
+                        {totalRows > 0 && <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-600 mt-2"><strong>Khách sạn của bạn:</strong> {totalRows.toLocaleString()} dòng OTB{pastCount > 0 && <>, trong đó {pastCount.toLocaleString()} dòng đã qua ({pastPct}%)</>}. Hoàn thiện: <strong>{completeness}%</strong>.</div>}
+                    </div>
+                    <div className="border-t border-gray-100 pt-4">
+                        <h4 className="font-medium text-gray-900 mb-2">&quot;Pickup TB: N/A&quot; — Tại sao không hiện số?</h4>
+                        <p className="text-gray-600 text-sm"><strong>Pickup</strong> = So sánh số phòng đặt hôm nay với 7 ngày trước. Cần ít nhất <strong>2 lần upload cách nhau ≥ 7 ngày</strong>.</p>
+                    </div>
+                    <div className="border-t border-gray-100 pt-4">
+                        <h4 className="font-medium text-gray-900 mb-2">Dự báo hiện &quot;Ước lượng&quot; — Có chính xác không?</h4>
+                        <p className="text-gray-600 text-sm">Khi chưa có đủ dữ liệu pickup, hệ thống dùng ước lượng sơ bộ. Sau <strong>≥ 2 lần upload cách nhau ≥ 7 ngày</strong>, dự báo sẽ dựa trên pickup thực tế.</p>
                     </div>
                 </div>
+            </Card>
 
-                {/* FAQ 3 */}
-                <div className="border-t border-gray-100 pt-4">
-                    <h4 className="font-medium text-gray-900 mb-2">
-                        Dự báo hiện &quot;Ước lượng&quot; — Có chính xác không?
-                    </h4>
-                    <p className="text-gray-600 text-sm">
-                        Khi chưa có đủ dữ liệu pickup, hệ thống dùng ước lượng sơ bộ (tham khảo).
-                        Sau <strong>≥ 2 lần upload cách nhau ≥ 7 ngày</strong>, dự báo sẽ dựa trên pickup thực tế.
-                    </p>
-                </div>
-            </section>
-
-            {/* CTA */}
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 text-center">
                 <p className="text-blue-700 mb-3">Đã sẵn sàng? Bắt đầu ngay!</p>
                 <div className="flex flex-wrap justify-center gap-3">
-                    <Link
-                        href="/upload"
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-                    >
-                        <Upload className="w-4 h-4" />
-                        Upload dữ liệu
-                    </Link>
-                    <Link
-                        href="/dashboard"
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
-                    >
-                        <BarChart3 className="w-4 h-4" />
-                        Xem Dashboard
-                    </Link>
+                    <Link href="/upload" className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"><Upload className="w-4 h-4" /> Upload dữ liệu</Link>
+                    <Link href="/dashboard" className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"><BarChart3 className="w-4 h-4" /> Xem Dashboard</Link>
                 </div>
             </div>
         </>
     );
 }
 
-// ==================== REVENUE GUIDE ====================
-function RevenueGuide() {
+/* ═══════════════════════ SECTION 2: TỔNG QUAN & PHÂN TÍCH ═══════════════════════ */
+function AnalyticsSection() {
     return (
         <>
-            {/* Table of Contents */}
-            <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">📑 Mục lục</h2>
-                <nav className="space-y-2 text-sm">
-                    <a href="#gioi-thieu" className="block text-blue-600 hover:text-blue-700">1. Giới thiệu về Revenue Management</a>
-                    <a href="#dashboard" className="block text-blue-600 hover:text-blue-700">2. Dashboard - Bảng điều khiển chính</a>
-                    <a href="#kpi-cards" className="block text-blue-600 hover:text-blue-700 ml-4">2.1. Các thẻ KPI</a>
-                    <a href="#bieu-do" className="block text-blue-600 hover:text-blue-700 ml-4">2.2. Biểu đồ OTB</a>
-                    <a href="#bang-khuyen-nghi" className="block text-blue-600 hover:text-blue-700 ml-4">2.3. Bảng khuyến nghị giá</a>
-                    <a href="#upload" className="block text-blue-600 hover:text-blue-700">3. Import dữ liệu</a>
-                    <a href="#data-inspector" className="block text-blue-600 hover:text-blue-700">4. Data Inspector</a>
-                    <a href="#thuat-ngu" className="block text-blue-600 hover:text-blue-700">5. Thuật ngữ chuyên ngành</a>
-                </nav>
-            </div>
+            <Card id="rm-intro" title="Revenue Management là gì?" icon={<HelpCircle className="w-5 h-5 text-blue-600" />}>
+                <p className="text-gray-700"><strong>Revenue Management (RM)</strong> hay Quản lý Doanh thu là nghệ thuật bán đúng phòng, cho đúng khách, vào đúng thời điểm, với mức giá tối ưu.</p>
+                <ul className="list-disc list-inside space-y-1 ml-4 text-gray-700 mt-3">
+                    <li>Theo dõi lượng đặt phòng (OTB - On The Books)</li>
+                    <li>Theo dõi và xử lý các booking bị hủy</li>
+                    <li>Dự đoán nhu cầu tương lai</li>
+                    <li>Đề xuất mức giá tối ưu cho từng ngày</li>
+                </ul>
+            </Card>
 
-            {/* Section 1: Introduction */}
-            <section id="gioi-thieu" className="bg-white border border-gray-200 rounded-xl p-6 space-y-4 shadow-sm">
-                <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                    <HelpCircle className="w-5 h-5 text-blue-600" />
-                    1. Giới thiệu về Revenue Management
-                </h2>
-                <div className="text-gray-700 space-y-3">
-                    <p>
-                        <strong>Revenue Management (RM)</strong> hay Quản lý Doanh thu là nghệ thuật bán đúng phòng,
-                        cho đúng khách, vào đúng thời điểm, với mức giá tối ưu.
-                    </p>
-                    <p>Hệ thống RMS giúp bạn:</p>
-                    <ul className="list-disc list-inside space-y-1 ml-4">
-                        <li>Theo dõi lượng đặt phòng (OTB - On The Books)</li>
-                        <li>Theo dõi và xử lý các booking bị hủy</li>
-                        <li>Dự đoán nhu cầu tương lai</li>
-                        <li>Đề xuất mức giá tối ưu cho từng ngày</li>
-                        <li>Phân tích hiệu quả kinh doanh</li>
-                    </ul>
-                </div>
-            </section>
-
-            {/* Section 2: Dashboard */}
-            <section id="dashboard" className="bg-white border border-gray-200 rounded-xl p-6 space-y-6 shadow-sm">
-                <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                    <BarChart3 className="w-5 h-5 text-blue-600" />
-                    2. Dashboard - Bảng điều khiển chính
-                </h2>
-                <p className="text-gray-700">
-                    Dashboard là nơi bạn xem tổng quan về tình hình đặt phòng và nhận khuyến nghị giá.
-                </p>
-
-                {/* 2.1 KPI Cards */}
-                <div id="kpi-cards" className="border-t border-gray-200 pt-4">
-                    <h3 className="text-lg font-medium text-gray-900 mb-3">2.1. Các thẻ KPI (Chỉ số chính)</h3>
-                    <div className="space-y-4">
-                        <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                            <div className="text-blue-700 font-medium mb-2">📊 Rooms OTB</div>
-                            <p className="text-sm text-gray-700">
-                                <strong>Ý nghĩa:</strong> Tổng số phòng đã được đặt (On The Books) trong 30 ngày tới.
-                            </p>
-                        </div>
-
-                        <div className="bg-purple-50 p-4 rounded-xl border border-purple-100">
-                            <div className="text-purple-700 font-medium mb-2">🏨 Remaining Supply</div>
-                            <p className="text-sm text-gray-700">
-                                <strong>Ý nghĩa:</strong> Số phòng còn trống có thể bán trong 30 ngày tới.
-                            </p>
-                        </div>
-
-                        <div className="bg-emerald-50 p-4 rounded-xl border-l-4 border-emerald-500">
-                            <div className="text-emerald-700 font-medium mb-2">📈 Avg Pickup T7</div>
-                            <p className="text-sm text-gray-700">
-                                <strong>Ý nghĩa:</strong> Trung bình số phòng được đặt THÊM trong 7 ngày qua.
-                            </p>
-                            <p className="text-sm text-amber-600 mt-2">
-                                <strong>💡 Insight:</strong> Pickup cao = demand đang tăng → có thể tăng giá.
-                            </p>
-                        </div>
+            <Card id="kpi" title="Các thẻ KPI (Chỉ số chính)" icon={<BarChart3 className="w-5 h-5 text-blue-600" />}>
+                <div className="space-y-3">
+                    <KPIExplain color="blue" emoji="📊" name="Rooms OTB" desc="Tổng số phòng đã được đặt (On The Books) trong 30 ngày tới." />
+                    <KPIExplain color="purple" emoji="🏨" name="Remaining Supply" desc="Số phòng còn trống có thể bán trong 30 ngày tới." />
+                    <div className="bg-emerald-50 p-4 rounded-xl border-l-4 border-emerald-500">
+                        <div className="text-emerald-700 font-medium mb-2">📈 Avg Pickup T7</div>
+                        <p className="text-sm text-gray-700"><strong>Ý nghĩa:</strong> Trung bình số phòng được đặt THÊM trong 7 ngày qua.</p>
+                        <p className="text-sm text-amber-600 mt-2"><strong>💡 Insight:</strong> Pickup cao = demand đang tăng → có thể tăng giá.</p>
                     </div>
                 </div>
+            </Card>
 
-                {/* 2.2 Chart */}
-                <div id="bieu-do" className="border-t border-gray-200 pt-4">
-                    <h3 className="text-lg font-medium text-gray-900 mb-3">2.2. Biểu đồ OTB theo ngày</h3>
-                    <div className="text-sm text-gray-700 space-y-3">
-                        <ul className="list-disc list-inside space-y-2 ml-4">
-                            <li><strong>Trục ngang (X):</strong> Các ngày lưu trú</li>
-                            <li><strong>Trục dọc (Y):</strong> Số phòng đã được đặt</li>
-                            <li><strong>Cột cao (màu xanh):</strong> Ngày có nhiều booking → Demand cao</li>
-                            <li><strong>Cột thấp:</strong> Ngày ít booking → Cần promotion</li>
-                        </ul>
-                    </div>
-                </div>
+            <Card id="charts" title="Biểu đồ OTB theo ngày">
+                <ul className="list-disc list-inside space-y-2 ml-4 text-sm text-gray-700">
+                    <li><strong>Trục ngang (X):</strong> Các ngày lưu trú</li>
+                    <li><strong>Trục dọc (Y):</strong> Số phòng đã được đặt</li>
+                    <li><strong>Cột cao (màu xanh):</strong> Ngày có nhiều booking → Demand cao</li>
+                    <li><strong>Cột thấp:</strong> Ngày ít booking → Cần promotion</li>
+                </ul>
+            </Card>
 
-                {/* 2.3 Recommendations */}
-                <div id="bang-khuyen-nghi" className="border-t border-gray-200 pt-4">
-                    <h3 className="text-lg font-medium text-gray-900 mb-3">2.3. Bảng khuyến nghị giá</h3>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead className="bg-gray-100">
-                                <tr>
-                                    <th className="px-3 py-2 text-left text-gray-600">Cột</th>
-                                    <th className="px-3 py-2 text-left text-gray-600">Giải thích</th>
-                                </tr>
-                            </thead>
-                            <tbody className="text-gray-700">
-                                <tr className="border-t border-gray-100">
-                                    <td className="px-3 py-3 font-medium">Stay Date</td>
-                                    <td className="px-3 py-3">Ngày khách ở (check-in date).</td>
-                                </tr>
-                                <tr className="border-t border-gray-100">
-                                    <td className="px-3 py-3 font-medium">OTB</td>
-                                    <td className="px-3 py-3">Số phòng đã đặt cho ngày đó.</td>
-                                </tr>
-                                <tr className="border-t border-gray-100 bg-emerald-50">
-                                    <td className="px-3 py-3 font-medium text-emerald-700">Recommended</td>
-                                    <td className="px-3 py-3">Giá khuyến nghị do Pricing Engine tính.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
+            <Card id="rec-table" title="Bảng khuyến nghị giá">
+                <table className="w-full text-sm">
+                    <thead className="bg-gray-100"><tr><th className="px-3 py-2 text-left text-gray-600">Cột</th><th className="px-3 py-2 text-left text-gray-600">Giải thích</th></tr></thead>
+                    <tbody className="text-gray-700">
+                        <tr className="border-t border-gray-100"><td className="px-3 py-3 font-medium">Stay Date</td><td className="px-3 py-3">Ngày khách ở (check-in date).</td></tr>
+                        <tr className="border-t border-gray-100"><td className="px-3 py-3 font-medium">OTB</td><td className="px-3 py-3">Số phòng đã đặt cho ngày đó.</td></tr>
+                        <tr className="border-t border-gray-100 bg-emerald-50"><td className="px-3 py-3 font-medium text-emerald-700">Recommended</td><td className="px-3 py-3">Giá khuyến nghị do Pricing Engine tính.</td></tr>
+                    </tbody>
+                </table>
+            </Card>
 
-            {/* Section 3: Upload */}
-            <section id="upload" className="bg-white border border-gray-200 rounded-xl p-6 space-y-4 shadow-sm">
-                <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                    <Upload className="w-5 h-5 text-blue-600" />
-                    3. Import dữ liệu
-                </h2>
-                <p className="text-gray-700">
-                    Để hệ thống hoạt động chính xác, bạn cần import dữ liệu từ PMS:
-                </p>
-                <div className="space-y-2 ml-4">
-                    <ol className="list-decimal list-inside space-y-1 text-gray-600 text-sm">
-                        <li>Export báo cáo từ PMS (định dạng XML hoặc CSV)</li>
-                        <li>Vào menu <strong>Upload</strong></li>
-                        <li>Kéo thả file vào ô upload</li>
-                        <li>Chờ hệ thống xử lý (vài giây)</li>
-                    </ol>
-                </div>
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
-                    <p className="text-blue-700 text-sm">
-                        <strong>📌 Tần suất:</strong> Mỗi ngày 1 lần vào buổi sáng.
-                    </p>
-                </div>
-            </section>
-
-            {/* Section 4: Data Inspector */}
-            <section id="data-inspector" className="bg-white border border-gray-200 rounded-xl p-6 space-y-6 shadow-sm">
-                <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                    <Database className="w-5 h-5 text-blue-600" />
-                    4. Data Inspector - Trung tâm xử lý dữ liệu
-                </h2>
-                <p className="text-gray-700">
-                    Đây là nơi bạn kiểm tra dữ liệu đã nhập và chạy các bước xử lý để hệ thống có thể đưa ra khuyến nghị giá.
-                </p>
-
-                {/* Pipeline Overview */}
-                <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
-                    <p className="text-sm text-blue-700 font-medium mb-2">💡 Quy trình xử lý dữ liệu:</p>
-                    <div className="flex flex-wrap items-center gap-2 text-sm">
-                        <span className="bg-white px-3 py-1 rounded-lg border border-blue-200">📤 Upload</span>
-                        <span className="text-blue-400">→</span>
-                        <span className="bg-white px-3 py-1 rounded-lg border border-blue-200">📊 Build OTB</span>
-                        <span className="text-blue-400">→</span>
-                        <span className="bg-white px-3 py-1 rounded-lg border border-blue-200">⚡ Build Features</span>
-                        <span className="text-blue-400">→</span>
-                        <span className="bg-white px-3 py-1 rounded-lg border border-blue-200">📈 Run Forecast</span>
-                        <span className="text-blue-400">→</span>
-                        <span className="bg-white px-3 py-1 rounded-lg border border-blue-200">🎯 Dashboard</span>
-                    </div>
-                </div>
-
-                {/* Detailed Explanations */}
-                <div className="space-y-4">
-                    {/* Build OTB */}
-                    <div className="border border-gray-200 rounded-xl p-4 bg-gradient-to-r from-blue-50 to-white">
-                        <div className="flex items-start gap-3">
-                            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center shrink-0">
-                                <span className="text-xl">📊</span>
-                            </div>
-                            <div className="space-y-2">
-                                <h4 className="font-semibold text-gray-900">Build OTB (On The Books)</h4>
-                                <div className="text-sm text-gray-700 space-y-2">
-                                    <p>
-                                        <strong>OTB là gì?</strong> Là số phòng đã được khách đặt trước (đã "ghi sổ").
-                                        Giống như khi bạn xem sổ đặt phòng, đếm xem ngày mai có bao nhiêu phòng đã có khách book.
-                                    </p>
-                                    <p>
-                                        <strong>Dữ liệu nguồn:</strong> Hệ thống đọc file XML bạn upload từ phần mềm quản lý
-                                        (Opera, RoomRaccoon...) chứa danh sách các booking: ai đặt, đặt phòng nào,
-                                        từ ngày nào đến ngày nào.
-                                    </p>
-                                    <p>
-                                        <strong>Tại sao cần?</strong> Đây là bước đầu tiên - biết được "đã bán bao nhiêu"
-                                        thì mới tính được "còn lại bao nhiêu" và "nên bán với giá nào".
-                                    </p>
-                                </div>
-                                <div className="bg-blue-100 rounded-lg p-2 text-sm text-blue-700">
-                                    <strong>👉 Kết quả:</strong> Bảng thống kê số phòng đã đặt cho từng ngày trong tương lai.
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Build Features */}
-                    <div className="border border-gray-200 rounded-xl p-4 bg-gradient-to-r from-purple-50 to-white">
-                        <div className="flex items-start gap-3">
-                            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center shrink-0">
-                                <span className="text-xl">⚡</span>
-                            </div>
-                            <div className="space-y-2">
-                                <h4 className="font-semibold text-gray-900">Build Features (Xây dựng chỉ số)</h4>
-                                <div className="text-sm text-gray-700 space-y-2">
-                                    <p>
-                                        <strong>Features là gì?</strong> Là các "dấu hiệu" giúp thuật toán 4TK Hospitality phân tích tình hình booking đang tốt hay xấu.
-                                        Ví dụ: "7 ngày qua có thêm 10 booking mới" → demand đang cao.
-                                    </p>
-                                    <p>
-                                        <strong>Dữ liệu nguồn:</strong> Lấy từ bảng OTB vừa build, so sánh với:
-                                    </p>
-                                    <ul className="list-disc list-inside ml-4 space-y-1">
-                                        <li><strong>Pickup T-7/T-15/T-30:</strong> Số booking mới trong 7/15/30 ngày qua</li>
-                                        <li><strong>So với năm trước (STLY):</strong> Cùng kỳ năm ngoái có bao nhiêu booking?</li>
-                                        <li><strong>Remaining Supply:</strong> Còn bao nhiêu phòng trống có thể bán?</li>
-                                    </ul>
-                                    <p>
-                                        <strong>Tại sao cần?</strong> Thuật toán cần nhiều góc nhìn để đưa ra khuyến nghị chính xác.
-                                        Chỉ biết "đã bán 50 phòng" thì chưa đủ - phải biết "năm ngoái cùng ngày bán được 70"
-                                        thì mới biết năm nay đang chậm hơn → cần giảm giá.
-                                    </p>
-                                </div>
-                                <div className="bg-purple-100 rounded-lg p-2 text-sm text-purple-700">
-                                    <strong>👉 Kết quả:</strong> Bảng các chỉ số phân tích cho từng ngày (pace, pickup, remaining supply...).
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Run Forecast */}
-                    <div className="border border-gray-200 rounded-xl p-4 bg-gradient-to-r from-emerald-50 to-white">
-                        <div className="flex items-start gap-3">
-                            <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center shrink-0">
-                                <span className="text-xl">📈</span>
-                            </div>
-                            <div className="space-y-2">
-                                <h4 className="font-semibold text-gray-900">Run Forecast (Dự báo nhu cầu)</h4>
-                                <div className="text-sm text-gray-700 space-y-2">
-                                    <p>
-                                        <strong>Forecast là gì?</strong> Là dự đoán "còn bao nhiêu khách NỮA sẽ đặt phòng" từ hôm nay đến ngày đó.
-                                        Giống như dự báo thời tiết - không chính xác 100% nhưng đủ để ra quyết định.
-                                    </p>
-                                    <p>
-                                        <strong>Dữ liệu nguồn:</strong> Dựa vào các Features (chỉ số) vừa tính:
-                                    </p>
-                                    <ul className="list-disc list-inside ml-4 space-y-1">
-                                        <li>Nếu pickup 7 ngày qua cao → Demand còn nhiều → Có thể tăng giá</li>
-                                        <li>Nếu pace chậm hơn năm trước → Demand yếu → Cần khuyến mãi</li>
-                                    </ul>
-                                    <p>
-                                        <strong>Tại sao cần?</strong> Đây là bước cuối cùng để thuật toán 4TK Hospitality tính ra "còn lại bao nhiêu nhu cầu chưa được đáp ứng"
-                                        → Từ đó đưa ra khuyến nghị giá tối ưu doanh thu.
-                                    </p>
-                                </div>
-                                <div className="bg-emerald-100 rounded-lg p-2 text-sm text-emerald-700">
-                                    <strong>👉 Kết quả:</strong> Dự báo số phòng sẽ được đặt thêm + Giá khuyến nghị cho từng ngày.
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Important Notes */}
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                    <p className="font-medium text-amber-700 mb-2">⚠️ Lưu ý quan trọng:</p>
-                    <ul className="text-sm text-gray-700 space-y-1">
-                        <li>• <strong>Thứ tự bắt buộc:</strong> Phải chạy Build OTB trước → rồi Build Features → rồi Run Forecast</li>
-                        <li>• <strong>Dữ liệu quá khứ:</strong> Bạn có thể upload dữ liệu từ nhiều tháng/năm trước để so sánh STLY</li>
-                        <li>• <strong>Tự động:</strong> Sau khi upload file mới, các bước này sẽ tự động chạy (hoặc bạn bấm thủ công)</li>
-                    </ul>
-                </div>
-            </section>
-
-            {/* Section 5: Terminology */}
-            <section id="thuat-ngu" className="bg-white border border-gray-200 rounded-xl p-6 space-y-4 shadow-sm">
-                <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5 text-blue-600" />
-                    5. Thuật ngữ chuyên ngành
-                </h2>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                        <thead className="bg-gray-100">
-                            <tr>
-                                <th className="px-3 py-2 text-left text-gray-600">Thuật ngữ</th>
-                                <th className="px-3 py-2 text-left text-gray-600">Giải thích</th>
-                            </tr>
-                        </thead>
-                        <tbody className="text-gray-700">
-                            <tr className="border-t border-gray-100">
-                                <td className="px-3 py-3 font-mono text-blue-600">OTB</td>
-                                <td className="px-3 py-3">On The Books - Số phòng/doanh thu đã được đặt</td>
-                            </tr>
-                            <tr className="border-t border-gray-100">
-                                <td className="px-3 py-3 font-mono text-blue-600">ADR</td>
-                                <td className="px-3 py-3">Average Daily Rate - Giá phòng trung bình</td>
-                            </tr>
-                            <tr className="border-t border-gray-100">
-                                <td className="px-3 py-3 font-mono text-blue-600">RevPAR</td>
-                                <td className="px-3 py-3">Revenue Per Available Room - Doanh thu/phòng khả dụng</td>
-                            </tr>
-                            <tr className="border-t border-gray-100">
-                                <td className="px-3 py-3 font-mono text-blue-600">Occupancy</td>
-                                <td className="px-3 py-3">Tỷ lệ lấp đầy - % phòng được bán</td>
-                            </tr>
-                            <tr className="border-t border-gray-100">
-                                <td className="px-3 py-3 font-mono text-blue-600">Pickup</td>
-                                <td className="px-3 py-3">Lượng booking mới trong khoảng thời gian</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </section>
+            <Card id="terms" title="Thuật ngữ chuyên ngành" icon={<TrendingUp className="w-5 h-5 text-blue-600" />}>
+                <table className="w-full text-sm">
+                    <thead className="bg-gray-100"><tr><th className="px-3 py-2 text-left text-gray-600">Thuật ngữ</th><th className="px-3 py-2 text-left text-gray-600">Giải thích</th></tr></thead>
+                    <tbody className="text-gray-700">
+                        {[
+                            ['OTB', 'On The Books - Số phòng/doanh thu đã được đặt'],
+                            ['ADR', 'Average Daily Rate - Giá phòng trung bình'],
+                            ['RevPAR', 'Revenue Per Available Room - Doanh thu/phòng khả dụng'],
+                            ['Occupancy', 'Tỷ lệ lấp đầy - % phòng được bán'],
+                            ['Pickup', 'Lượng booking mới trong khoảng thời gian'],
+                        ].map(([term, desc]) => (
+                            <tr key={term} className="border-t border-gray-100"><td className="px-3 py-3 font-mono text-blue-600">{term}</td><td className="px-3 py-3">{desc}</td></tr>
+                        ))}
+                    </tbody>
+                </table>
+            </Card>
         </>
     );
 }
 
-// ==================== PRICING GUIDE ====================
-function PricingGuide() {
+/* ═══════════════════════ SECTION 3: ĐỊNH GIÁ OTA ═══════════════════════ */
+function PricingSection() {
     return (
         <>
-            {/* Table of Contents */}
-            <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">📑 Mục lục</h2>
-                <nav className="space-y-2 text-sm">
-                    <a href="#pricing-intro" className="block text-blue-600 hover:text-blue-700">1. Giới thiệu về Tính giá OTA</a>
-                    <a href="#cong-thuc" className="block text-blue-600 hover:text-blue-700">2. Công thức tính giá</a>
-                    <a href="#hang-phong" className="block text-blue-600 hover:text-blue-700">3. Quản lý Hạng phòng</a>
-                    <a href="#kenh-ota" className="block text-blue-600 hover:text-blue-700">4. Kênh OTA & Hoa hồng</a>
-                    <a href="#khuyen-mai" className="block text-blue-600 hover:text-blue-700">5. Chương trình khuyến mãi</a>
-                    <a href="#bang-gia" className="block text-blue-600 hover:text-blue-700">6. Bảng giá tổng hợp</a>
-                    <a href="#tinh-nguoc" className="block text-blue-600 hover:text-blue-700">7. Tính ngược (BAR → NET)</a>
-                </nav>
-            </div>
-
-            {/* Section 1: Introduction */}
-            <section id="pricing-intro" className="bg-white border border-gray-200 rounded-xl p-6 space-y-4 shadow-sm">
-                <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                    <Calculator className="w-5 h-5 text-blue-600" />
-                    1. Giới thiệu về Tính giá OTA
-                </h2>
-                <div className="text-gray-700 space-y-3">
-                    <p>
-                        Module <strong>Tính giá OTA</strong> giúp bạn tính toán giá hiển thị trên các kênh bán phòng
-                        (Agoda, Booking.com, Expedia...) sao cho đảm bảo thu về đúng số tiền mong muốn sau khi
-                        trừ hoa hồng và khuyến mãi.
-                    </p>
-                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                        <p className="text-blue-700">
-                            <strong>💡 Vấn đề:</strong> Nếu muốn thu về <strong>1.000.000đ</strong> nhưng OTA lấy 18% hoa hồng + 10% khuyến mãi,
-                            bạn phải đặt giá bao nhiêu?
-                        </p>
-                        <p className="text-blue-700 mt-2">
-                            <strong>→ Đáp án:</strong> Đặt giá <strong>1.389.000đ</strong> để sau khi trừ hết, về tay đúng 1 triệu!
-                        </p>
-                    </div>
+            <Card id="pricing-intro" title="Tổng quan về Tính giá OTA" icon={<Calculator className="w-5 h-5 text-blue-600" />}>
+                <p className="text-gray-700">Module <strong>Tính giá OTA</strong> giúp bạn tính toán giá hiển thị trên các kênh bán phòng (Agoda, Booking.com, Expedia...) sao cho đảm bảo thu về đúng số tiền mong muốn sau khi trừ hoa hồng và khuyến mãi.</p>
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mt-3">
+                    <p className="text-blue-700"><strong>💡 Vấn đề:</strong> Nếu muốn thu về <strong>1.000.000đ</strong> nhưng OTA lấy 18% hoa hồng + 10% khuyến mãi, bạn phải đặt giá bao nhiêu?</p>
+                    <p className="text-blue-700 mt-2"><strong>→ Đáp án:</strong> Đặt giá <strong>1.389.000đ</strong> để sau khi trừ hết, về tay đúng 1 triệu!</p>
                 </div>
-            </section>
+            </Card>
 
-            {/* Section 2: Formula */}
-            <section id="cong-thuc" className="bg-white border border-gray-200 rounded-xl p-6 space-y-4 shadow-sm">
-                <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5 text-blue-600" />
-                    2. Công thức tính giá
-                </h2>
-                <div className="text-gray-700 space-y-4">
-                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 font-mono text-center">
-                        <p className="text-lg">
-                            <strong>Giá hiển thị (BAR)</strong> = NET ÷ (1 - Hoa hồng) ÷ (1 - KM₁) ÷ (1 - KM₂) ...
-                        </p>
-                    </div>
-
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead className="bg-gray-100">
-                                <tr>
-                                    <th className="px-3 py-2 text-left text-gray-600">Thuật ngữ</th>
-                                    <th className="px-3 py-2 text-left text-gray-600">Giải thích</th>
-                                </tr>
-                            </thead>
-                            <tbody className="text-gray-700">
-                                <tr className="border-t border-gray-100">
-                                    <td className="px-3 py-3 font-medium text-emerald-600">NET</td>
-                                    <td className="px-3 py-3">Giá thu về mong muốn (tiền thực nhận)</td>
-                                </tr>
-                                <tr className="border-t border-gray-100">
-                                    <td className="px-3 py-3 font-medium text-blue-600">BAR</td>
-                                    <td className="px-3 py-3">Best Available Rate - Giá hiển thị trên OTA</td>
-                                </tr>
-                                <tr className="border-t border-gray-100">
-                                    <td className="px-3 py-3 font-medium text-orange-600">Hoa hồng</td>
-                                    <td className="px-3 py-3">% OTA thu (VD: Agoda 18%, Booking 15%)</td>
-                                </tr>
-                                <tr className="border-t border-gray-100">
-                                    <td className="px-3 py-3 font-medium text-purple-600">KM</td>
-                                    <td className="px-3 py-3">Khuyến mãi (Early Bird, Mobile Deal...)</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                        <p className="font-medium text-amber-700 mb-2">📝 Ví dụ cụ thể:</p>
-                        <ul className="text-sm text-gray-700 space-y-1">
-                            <li>• NET mong muốn: <strong>1.000.000đ</strong></li>
-                            <li>• Hoa hồng Agoda: <strong>18%</strong></li>
-                            <li>• Early Bird 10%, Mobile Deal 5%</li>
-                            <li>• BAR = 1.000.000 ÷ 0.82 ÷ 0.90 ÷ 0.95 = <strong>1.427.000đ</strong></li>
-                        </ul>
-                    </div>
+            <Card id="formula" title="Công thức tính giá" icon={<TrendingUp className="w-5 h-5 text-blue-600" />}>
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 font-mono text-center">
+                    <p className="text-lg"><strong>BAR</strong> = NET ÷ (1 - Hoa hồng) ÷ (1 - KM₁) ÷ (1 - KM₂) ...</p>
                 </div>
-            </section>
+                <table className="w-full text-sm mt-4">
+                    <thead className="bg-gray-100"><tr><th className="px-3 py-2 text-left text-gray-600">Thuật ngữ</th><th className="px-3 py-2 text-left text-gray-600">Giải thích</th></tr></thead>
+                    <tbody className="text-gray-700">
+                        <tr className="border-t"><td className="px-3 py-3 font-medium text-emerald-600">NET</td><td className="px-3 py-3">Giá thu về mong muốn (tiền thực nhận)</td></tr>
+                        <tr className="border-t"><td className="px-3 py-3 font-medium text-blue-600">BAR</td><td className="px-3 py-3">Best Available Rate - Giá hiển thị trên OTA</td></tr>
+                        <tr className="border-t"><td className="px-3 py-3 font-medium text-orange-600">Hoa hồng</td><td className="px-3 py-3">% OTA thu (VD: Agoda 18%, Booking 15%)</td></tr>
+                        <tr className="border-t"><td className="px-3 py-3 font-medium text-purple-600">KM</td><td className="px-3 py-3">Khuyến mãi (Early Bird, Mobile Deal...)</td></tr>
+                    </tbody>
+                </table>
+                <Warn>
+                    <strong>Ví dụ:</strong> NET = 1.000.000đ, Agoda 18%, Early Bird 10%, Mobile 5%<br />
+                    BAR = 1.000.000 ÷ 0.82 ÷ 0.90 ÷ 0.95 = <strong>1.427.000đ</strong>
+                </Warn>
+            </Card>
 
-            {/* Section 3: Room Types */}
-            <section id="hang-phong" className="bg-white border border-gray-200 rounded-xl p-6 space-y-4 shadow-sm">
-                <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                    🏨 3. Quản lý Hạng phòng
-                </h2>
-                <div className="text-gray-700 space-y-3">
-                    <p>Tạo các hạng phòng với giá NET mong muốn cho từng loại:</p>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead className="bg-gray-100">
-                                <tr>
-                                    <th className="px-3 py-2 text-left text-gray-600">Hạng phòng</th>
-                                    <th className="px-3 py-2 text-right text-gray-600">Giá NET</th>
-                                </tr>
-                            </thead>
-                            <tbody className="text-gray-700">
-                                <tr className="border-t border-gray-100">
-                                    <td className="px-3 py-3">Standard</td>
-                                    <td className="px-3 py-3 text-right font-mono">1.000.000đ</td>
-                                </tr>
-                                <tr className="border-t border-gray-100">
-                                    <td className="px-3 py-3">Deluxe</td>
-                                    <td className="px-3 py-3 text-right font-mono">1.500.000đ</td>
-                                </tr>
-                                <tr className="border-t border-gray-100">
-                                    <td className="px-3 py-3">Suite</td>
-                                    <td className="px-3 py-3 text-right font-mono">2.500.000đ</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3">
-                        <p className="text-emerald-700 text-sm">
-                            <strong>💡 Mẹo:</strong> Giá NET là số tiền bạn muốn THỰC NHẬN sau khi OTA trừ hết các khoản.
-                        </p>
-                    </div>
-                </div>
-            </section>
+            <Card id="room-types" title="Quản lý Hạng phòng">
+                <p className="text-gray-700">Tạo các hạng phòng với giá NET mong muốn cho từng loại:</p>
+                <table className="w-full text-sm mt-3">
+                    <thead className="bg-gray-100"><tr><th className="px-3 py-2 text-left text-gray-600">Hạng phòng</th><th className="px-3 py-2 text-right text-gray-600">Giá NET</th></tr></thead>
+                    <tbody className="text-gray-700">
+                        <tr className="border-t"><td className="px-3 py-3">Standard</td><td className="px-3 py-3 text-right font-mono">1.000.000đ</td></tr>
+                        <tr className="border-t"><td className="px-3 py-3">Deluxe</td><td className="px-3 py-3 text-right font-mono">1.500.000đ</td></tr>
+                        <tr className="border-t"><td className="px-3 py-3">Suite</td><td className="px-3 py-3 text-right font-mono">2.500.000đ</td></tr>
+                    </tbody>
+                </table>
+                <Tip>Giá NET là số tiền bạn muốn THỰC NHẬN sau khi OTA trừ hết các khoản.</Tip>
+            </Card>
 
-            {/* Section 4: OTA Channels */}
-            <section id="kenh-ota" className="bg-white border border-gray-200 rounded-xl p-6 space-y-4 shadow-sm">
-                <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                    <Percent className="w-5 h-5 text-blue-600" />
-                    4. Kênh OTA & Hoa hồng
-                </h2>
-                <div className="text-gray-700 space-y-3">
-                    <p>Cấu hình các kênh OTA với tỷ lệ hoa hồng tương ứng:</p>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead className="bg-gray-100">
-                                <tr>
-                                    <th className="px-3 py-2 text-left text-gray-600">Kênh</th>
-                                    <th className="px-3 py-2 text-center text-gray-600">Hoa hồng</th>
-                                    <th className="px-3 py-2 text-left text-gray-600">Ghi chú</th>
-                                </tr>
-                            </thead>
-                            <tbody className="text-gray-700">
-                                <tr className="border-t border-gray-100">
-                                    <td className="px-3 py-3 font-medium">Agoda</td>
-                                    <td className="px-3 py-3 text-center">18%</td>
-                                    <td className="px-3 py-3 text-gray-500">Phổ biến ở Châu Á</td>
-                                </tr>
-                                <tr className="border-t border-gray-100">
-                                    <td className="px-3 py-3 font-medium">Booking.com</td>
-                                    <td className="px-3 py-3 text-center">15%</td>
-                                    <td className="px-3 py-3 text-gray-500">Phổ biến toàn cầu</td>
-                                </tr>
-                                <tr className="border-t border-gray-100">
-                                    <td className="px-3 py-3 font-medium">Expedia</td>
-                                    <td className="px-3 py-3 text-center">17%</td>
-                                    <td className="px-3 py-3 text-gray-500">Thị trường Mỹ</td>
-                                </tr>
-                                <tr className="border-t border-gray-100">
-                                    <td className="px-3 py-3 font-medium">Traveloka</td>
-                                    <td className="px-3 py-3 text-center">17%</td>
-                                    <td className="px-3 py-3 text-gray-500">Đông Nam Á</td>
-                                </tr>
-                                <tr className="border-t border-gray-100">
-                                    <td className="px-3 py-3 font-medium">CTRIP</td>
-                                    <td className="px-3 py-3 text-center">18%</td>
-                                    <td className="px-3 py-3 text-gray-500">Khách Trung Quốc</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
+            <Card id="channels" title="Kênh OTA & Hoa hồng" icon={<Percent className="w-5 h-5 text-blue-600" />}>
+                <table className="w-full text-sm">
+                    <thead className="bg-gray-100"><tr><th className="px-3 py-2 text-left text-gray-600">Kênh</th><th className="px-3 py-2 text-center text-gray-600">Hoa hồng</th><th className="px-3 py-2 text-center text-gray-600">Kiểu tính</th><th className="px-3 py-2 text-left text-gray-600">Ghi chú</th></tr></thead>
+                    <tbody className="text-gray-700">
+                        {[
+                            ['Agoda', '18%', 'Progressive', 'Châu Á'],
+                            ['Booking.com', '18%', 'Progressive', 'Toàn cầu'],
+                            ['Expedia', '17%', 'Single (cao nhất)', 'Thị trường Mỹ'],
+                            ['Traveloka', '17%', 'Progressive', 'Đông Nam Á'],
+                            ['CTRIP', '18%', 'Progressive', 'Khách Trung Quốc'],
+                        ].map(([name, com, calc, note]) => (
+                            <tr key={name} className="border-t"><td className="px-3 py-3 font-medium">{name}</td><td className="px-3 py-3 text-center">{com}</td><td className="px-3 py-3 text-center text-xs">{calc}</td><td className="px-3 py-3 text-gray-500">{note}</td></tr>
+                        ))}
+                    </tbody>
+                </table>
+            </Card>
 
-            {/* Section 5: Promotions */}
-            <section id="khuyen-mai" className="bg-white border border-gray-200 rounded-xl p-6 space-y-4 shadow-sm">
-                <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                    <Tag className="w-5 h-5 text-blue-600" />
-                    5. Chương trình khuyến mãi
-                </h2>
-                <div className="text-gray-700 space-y-4">
-                    <p>Các loại khuyến mãi phổ biến trên OTA:</p>
-
-                    <div className="grid gap-3">
-                        <div className="bg-blue-50 p-3 rounded-xl border border-blue-100">
-                            <div className="font-medium text-blue-700">🌙 Early Bird</div>
-                            <p className="text-sm text-gray-600">Đặt sớm trước 7-30 ngày, giảm 10-20%</p>
+            <Card id="promos" title="Khuyến mãi & Quy tắc Stacking" icon={<Tag className="w-5 h-5 text-blue-600" />}>
+                <p className="text-gray-700 mb-3">Các loại khuyến mãi phổ biến và quy tắc kết hợp:</p>
+                <div className="grid gap-3">
+                    {[
+                        { emoji: '🌙', name: 'Early Bird', desc: 'Đặt sớm trước 7-30 ngày, giảm 10-20%', color: 'blue' },
+                        { emoji: '📱', name: 'Mobile Deal', desc: 'Đặt qua app, giảm 5-10%', color: 'purple' },
+                        { emoji: '⚡', name: 'Last Minute', desc: 'Đặt gấp trong 24h, giảm 15-25%', color: 'amber' },
+                        { emoji: '🔒', name: 'Member Deal', desc: 'Thành viên VIP (Genius, Agoda VIP), giảm 5-20%', color: 'emerald' },
+                    ].map(p => (
+                        <div key={p.name} className={`bg-${p.color}-50 p-3 rounded-xl border border-${p.color}-100`}>
+                            <div className={`font-medium text-${p.color}-700`}>{p.emoji} {p.name}</div>
+                            <p className="text-sm text-gray-600">{p.desc}</p>
                         </div>
-                        <div className="bg-purple-50 p-3 rounded-xl border border-purple-100">
-                            <div className="font-medium text-purple-700">📱 Mobile Deal</div>
-                            <p className="text-sm text-gray-600">Đặt qua app, giảm 5-10%</p>
-                        </div>
-                        <div className="bg-amber-50 p-3 rounded-xl border border-amber-100">
-                            <div className="font-medium text-amber-700">⚡ Last Minute</div>
-                            <p className="text-sm text-gray-600">Đặt gấp trong 24h, giảm 15-25%</p>
-                        </div>
-                        <div className="bg-emerald-50 p-3 rounded-xl border border-emerald-100">
-                            <div className="font-medium text-emerald-700">🔒 Member Deal</div>
-                            <p className="text-sm text-gray-600">Thành viên VIP, giảm 5-15%</p>
-                        </div>
-                    </div>
+                    ))}
+                </div>
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mt-4">
+                    <p className="font-medium text-blue-700 mb-2">📌 Kiểu tính Progressive (Lũy tiến):</p>
+                    <p className="text-sm text-gray-700">Mỗi KM nhân trên giá đã giảm trước đó. VD: Early Bird 10% + Mobile 5% → Effective = 1 - (0.90 × 0.95) = <strong>14.5%</strong> (không phải 15%).</p>
+                </div>
+            </Card>
 
-                    <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-                        <p className="text-red-700 text-sm">
-                            <strong>⚠️ Lưu ý quan trọng:</strong>
-                        </p>
-                        <ul className="text-sm text-red-700 mt-2 space-y-1">
-                            <li>• <strong>Early Bird + Last-Minute KHÔNG cộng dồn</strong> vì booking window khác nhau
-                                (đặt sớm vs đặt gấp). Hệ thống chỉ tính KM lớn hơn.</li>
-                            <li>• Các KM khác (Mobile Deal, Member Deal...) vẫn cộng dồn bình thường.
-                                VD: Early Bird 10% + Mobile 5% → Tổng giảm = 1 - (0.90 × 0.95) = <strong>14.5%</strong></li>
-                        </ul>
+            {/* Booking.com chi tiết */}
+            <Card id="booking-engine" title="🏨 Booking.com — Chi tiết cách tính">
+                <p className="text-gray-700 mb-4">Booking.com sử dụng kiểu tính <strong>Progressive (Lũy tiến)</strong> với hệ thống 4 nhóm khuyến mãi và 3 tầng ưu tiên.</p>
+
+                {/* 4 groups */}
+                <h4 className="font-semibold text-gray-800 mb-2">4 nhóm khuyến mãi:</h4>
+                <table className="w-full text-sm mb-4">
+                    <thead className="bg-gray-100"><tr><th className="px-3 py-2 text-left">Nhóm</th><th className="px-3 py-2 text-left">Promotions</th><th className="px-3 py-2 text-left">Quy tắc</th></tr></thead>
+                    <tbody className="text-gray-700 text-sm">
+                        <tr className="border-t"><td className="px-3 py-2 font-medium"><span className="w-2 h-2 rounded-full bg-amber-500 inline-block mr-1.5" />TARGETED</td><td className="px-3 py-2">Mobile Rate (10%), Country Rate (10%), Business Bookers (10%)</td><td className="px-3 py-2">Cùng subcategory → <strong>chỉ lấy cao nhất</strong>. Business Bookers = chặn tuyệt đối</td></tr>
+                        <tr className="border-t"><td className="px-3 py-2 font-medium"><span className="w-2 h-2 rounded-full bg-indigo-500 inline-block mr-1.5" />GENIUS</td><td className="px-3 py-2">L1 (10%), L2 (15%), L3 (20%)</td><td className="px-3 py-2"><strong>Chỉ lấy level cao nhất</strong>. Bật cả 3 → chỉ áp L3 = 20%</td></tr>
+                        <tr className="border-t"><td className="px-3 py-2 font-medium"><span className="w-2 h-2 rounded-full bg-blue-500 inline-block mr-1.5" />PORTFOLIO</td><td className="px-3 py-2">Basic Deal, Secret Deal, Early Booker, Last Minute, Free Nights</td><td className="px-3 py-2"><strong>Highest Wins</strong> — chỉ áp deal cao nhất trong nhóm</td></tr>
+                        <tr className="border-t"><td className="px-3 py-2 font-medium"><span className="w-2 h-2 rounded-full bg-rose-500 inline-block mr-1.5" />CAMPAIGN</td><td className="px-3 py-2">Getaway, Black Friday, Deal of Day, Early 2026</td><td className="px-3 py-2"><strong>EXCLUSIVE</strong> — chặn tất cả, <strong>chỉ stack với Genius</strong></td></tr>
+                    </tbody>
+                </table>
+
+                {/* 3-tier engine */}
+                <h4 className="font-semibold text-gray-800 mb-2">Engine 3 tầng (thứ tự ưu tiên):</h4>
+                <div className="bg-gray-50 rounded-xl p-4 space-y-3 text-sm">
+                    <div className="flex items-start gap-2">
+                        <span className="bg-rose-100 text-rose-700 text-xs font-bold px-2 py-0.5 rounded shrink-0">Tầng 1</span>
+                        <div><strong>Có Campaign Exclusive?</strong> → Giữ Campaign (cao nhất) + Genius (cao nhất) ONLY. Loại bỏ Mobile, Country, Portfolio.</div>
+                    </div>
+                    <div className="flex items-start gap-2">
+                        <span className="bg-amber-100 text-amber-700 text-xs font-bold px-2 py-0.5 rounded shrink-0">Tầng 2</span>
+                        <div><strong>Có Business Bookers?</strong> → Chỉ giữ Business Bookers ALONE (không stack Genius).</div>
+                    </div>
+                    <div className="flex items-start gap-2">
+                        <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-0.5 rounded shrink-0">Tầng 3</span>
+                        <div><strong>Stacking bình thường:</strong> Genius (cao nhất) + Targeted (cao nhất/sub) + Portfolio (cao nhất) → Lũy tiến tất cả.</div>
                     </div>
                 </div>
-            </section>
 
-            {/* Section 6: Price Matrix */}
-            <section id="bang-gia" className="bg-white border border-gray-200 rounded-xl p-6 space-y-4 shadow-sm">
-                <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                    📊 6. Bảng giá tổng hợp
-                </h2>
-                <div className="text-gray-700 space-y-3">
-                    <p>
-                        Tab <strong>"Bảng giá"</strong> hiển thị ma trận giá cho tất cả hạng phòng × kênh OTA:
-                    </p>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead className="bg-gray-100">
-                                <tr>
-                                    <th className="px-3 py-2 text-left text-gray-600">Hạng phòng</th>
-                                    <th className="px-3 py-2 text-right text-gray-600">NET</th>
-                                    <th className="px-3 py-2 text-right text-gray-600">Agoda</th>
-                                    <th className="px-3 py-2 text-right text-gray-600">Booking</th>
-                                </tr>
-                            </thead>
-                            <tbody className="text-gray-700">
-                                <tr className="border-t border-gray-100">
-                                    <td className="px-3 py-3">Standard</td>
-                                    <td className="px-3 py-3 text-right font-mono">1.000.000</td>
-                                    <td className="px-3 py-3 text-right font-mono text-blue-600">1.389.000</td>
-                                    <td className="px-3 py-3 text-right font-mono text-blue-600">1.333.000</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
-                        <p className="text-blue-700 text-sm">
-                            <strong>💡 Mẹo:</strong> Hover vào ô giá để xem chi tiết cách tính.
-                        </p>
+                {/* Example */}
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mt-4">
+                    <p className="font-medium text-amber-700 mb-2">📝 Ví dụ thực tế:</p>
+                    <div className="text-sm text-gray-700 space-y-1 font-mono">
+                        <p>NET = 1.000.000đ, Commission = 18%, Genius L3 = 20%, Early Booker = 15%</p>
+                        <p className="mt-2">Bước 1: Gross = 1.000.000 ÷ (1 - 18%) = 1.219.512đ</p>
+                        <p>Bước 2: BAR = 1.219.512 ÷ 0.80 ÷ 0.85 = <strong>1.793.400đ</strong></p>
+                        <p className="mt-2 text-emerald-700">Kiểm tra: 1.793.400 × 0.80 × 0.85 = 1.219.512 → trừ 18% = <strong>1.000.000đ ✅</strong></p>
                     </div>
                 </div>
-            </section>
 
-            {/* Section 7: Reverse Calculation */}
-            <section id="tinh-nguoc" className="bg-white border border-gray-200 rounded-xl p-6 space-y-4 shadow-sm">
-                <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                    <ArrowRightLeft className="w-5 h-5 text-blue-600" />
-                    7. Tính ngược (BAR → NET)
-                </h2>
-                <div className="text-gray-700 space-y-4">
-                    <p>
-                        Chế độ <strong>"Giá hiển thị → Thu về"</strong> giúp tính ngược: Nếu đặt giá đồng nhất trên tất cả OTA,
-                        khách sạn sẽ thu về bao nhiêu từ mỗi kênh?
-                    </p>
-
-                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                        <p className="font-medium text-amber-700 mb-2">📝 Ví dụ:</p>
-                        <p className="text-sm text-gray-700">
-                            Đặt giá đồng nhất <strong>1.500.000đ</strong> trên tất cả kênh:
-                        </p>
-                        <ul className="text-sm text-gray-700 mt-2 space-y-1">
-                            <li>• Agoda (18% + 10% KM): Thu về <strong>1.107.000đ</strong> (74%)</li>
-                            <li>• Booking (15% + 5% KM): Thu về <strong>1.211.000đ</strong> (81%)</li>
-                            <li>• Direct (0%): Thu về <strong>1.500.000đ</strong> (100%)</li>
-                        </ul>
-                    </div>
-
-                    <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
-                        <p className="text-emerald-700 text-sm">
-                            <strong>💡 Ứng dụng:</strong> So sánh hiệu quả giữa các kênh để quyết định
-                            nên ưu tiên kênh nào (kênh nào giữ lại được nhiều % nhất).
-                        </p>
-                    </div>
+                <div className="bg-red-50 border border-red-200 rounded-xl p-4 mt-4">
+                    <p className="text-red-700 text-sm"><strong>⚠️ Giới hạn:</strong></p>
+                    <ul className="text-sm text-red-700 mt-1 space-y-1">
+                        <li>• Tối đa <strong>3 promotions</strong> cùng lúc</li>
+                        <li>• Cùng nhóm/subcategory → chỉ áp deal cao nhất</li>
+                        <li>• Campaign Deal → chỉ lũy tiến với Genius, <strong>không</strong> với Mobile/Country/Portfolio</li>
+                    </ul>
                 </div>
-            </section>
+            </Card>
 
-            {/* Footer CTA */}
+            <Card id="price-matrix" title="Bảng giá tổng hợp">
+                <p className="text-gray-700">Tab <strong>&quot;Bảng giá&quot;</strong> hiển thị ma trận giá cho tất cả hạng phòng × kênh OTA:</p>
+                <table className="w-full text-sm mt-3">
+                    <thead className="bg-gray-100"><tr><th className="px-3 py-2 text-left">Hạng phòng</th><th className="px-3 py-2 text-right">NET</th><th className="px-3 py-2 text-right">Agoda</th><th className="px-3 py-2 text-right">Booking</th></tr></thead>
+                    <tbody><tr className="border-t text-gray-700"><td className="px-3 py-3">Standard</td><td className="px-3 py-3 text-right font-mono">1.000.000</td><td className="px-3 py-3 text-right font-mono text-blue-600">1.389.000</td><td className="px-3 py-3 text-right font-mono text-blue-600">1.333.000</td></tr></tbody>
+                </table>
+                <Tip>Hover vào ô giá để xem chi tiết cách tính.</Tip>
+            </Card>
+
+            <Card id="reverse" title="Tính ngược (BAR → NET)" icon={<ArrowRightLeft className="w-5 h-5 text-blue-600" />}>
+                <p className="text-gray-700">Chế độ <strong>&quot;Giá hiển thị → Thu về&quot;</strong> giúp tính ngược: Nếu đặt giá đồng nhất trên tất cả OTA, khách sạn sẽ thu về bao nhiêu từ mỗi kênh?</p>
+                <Warn>
+                    <strong>Ví dụ:</strong> Đặt giá đồng nhất <strong>1.500.000đ</strong>:<br />
+                    • Agoda (18% + 10% KM): Thu về <strong>1.107.000đ</strong> (74%)<br />
+                    • Booking (15% + 5% KM): Thu về <strong>1.211.000đ</strong> (81%)<br />
+                    • Direct (0%): Thu về <strong>1.500.000đ</strong> (100%)
+                </Warn>
+                <Tip>So sánh hiệu quả giữa các kênh để quyết định nên ưu tiên kênh nào.</Tip>
+            </Card>
+
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 text-center">
-                <p className="text-blue-700 mb-3">
-                    Sẵn sàng tính giá?
-                </p>
-                <Link
-                    href="/pricing"
-                    className="inline-block px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-                >
-                    Đi tới Tính giá OTA →
-                </Link>
+                <p className="text-blue-700 mb-3">Sẵn sàng tính giá?</p>
+                <Link href="/pricing" className="inline-block px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">Đi tới Tính giá OTA →</Link>
             </div>
         </>
+    );
+}
+
+/* ═══════════════════════ SECTION 4: QUẢN LÝ DỮ LIỆU ═══════════════════════ */
+function DataSection() {
+    return (
+        <>
+            <Card id="upload" title="Import dữ liệu" icon={<Upload className="w-5 h-5 text-blue-600" />}>
+                <p className="text-gray-700">Để hệ thống hoạt động chính xác, bạn cần import dữ liệu từ PMS:</p>
+                <ol className="list-decimal list-inside space-y-1 text-gray-600 text-sm ml-4 mt-2">
+                    <li>Export báo cáo từ PMS (định dạng XML hoặc CSV)</li>
+                    <li>Vào menu <strong>Upload</strong></li>
+                    <li>Kéo thả file vào ô upload</li>
+                    <li>Chờ hệ thống xử lý (vài giây)</li>
+                </ol>
+                <Tip><strong>Tần suất:</strong> Mỗi ngày 1 lần vào buổi sáng.</Tip>
+            </Card>
+
+            <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
+                <p className="text-sm text-blue-700 font-medium mb-2">💡 Quy trình xử lý dữ liệu:</p>
+                <Pipeline steps={['📤 Upload', '📊 Build OTB', '⚡ Build Features', '📈 Run Forecast', '🎯 Dashboard']} />
+            </div>
+
+            <Card id="build-otb" title="Build OTB (On The Books)" gradient="blue">
+                <p className="text-sm text-gray-700"><strong>OTB là gì?</strong> Là số phòng đã được khách đặt trước (&quot;ghi sổ&quot;). Giống như khi bạn xem sổ đặt phòng, đếm xem ngày mai có bao nhiêu phòng đã có khách book.</p>
+                <p className="text-sm text-gray-700 mt-2"><strong>Dữ liệu nguồn:</strong> Hệ thống đọc file XML bạn upload từ PMS (Opera, RoomRaccoon...) chứa danh sách booking.</p>
+                <p className="text-sm text-gray-700 mt-2"><strong>Tại sao cần?</strong> Đây là bước đầu tiên — biết được &quot;đã bán bao nhiêu&quot; thì mới tính được &quot;còn lại bao nhiêu&quot;.</p>
+                <div className="bg-blue-100 rounded-lg p-2 text-sm text-blue-700 mt-3"><strong>👉 Kết quả:</strong> Bảng thống kê số phòng đã đặt cho từng ngày trong tương lai.</div>
+            </Card>
+
+            <Card id="build-features" title="Build Features (Xây dựng chỉ số)" gradient="purple">
+                <p className="text-sm text-gray-700"><strong>Features là gì?</strong> Là các &quot;dấu hiệu&quot; giúp thuật toán phân tích tình hình booking đang tốt hay xấu.</p>
+                <ul className="list-disc list-inside ml-4 space-y-1 text-sm text-gray-700 mt-2">
+                    <li><strong>Pickup T-7/T-15/T-30:</strong> Số booking mới trong 7/15/30 ngày qua</li>
+                    <li><strong>So với năm trước (STLY):</strong> Cùng kỳ năm ngoái có bao nhiêu booking?</li>
+                    <li><strong>Remaining Supply:</strong> Còn bao nhiêu phòng trống có thể bán?</li>
+                </ul>
+                <div className="bg-purple-100 rounded-lg p-2 text-sm text-purple-700 mt-3"><strong>👉 Kết quả:</strong> Bảng các chỉ số phân tích cho từng ngày (pace, pickup, remaining supply...).</div>
+            </Card>
+
+            <Card id="run-forecast" title="Run Forecast (Dự báo nhu cầu)" gradient="emerald">
+                <p className="text-sm text-gray-700"><strong>Forecast là gì?</strong> Là dự đoán &quot;còn bao nhiêu khách NỮA sẽ đặt phòng&quot; từ hôm nay đến ngày đó.</p>
+                <ul className="list-disc list-inside ml-4 space-y-1 text-sm text-gray-700 mt-2">
+                    <li>Nếu pickup 7 ngày qua cao → Demand còn nhiều → Có thể tăng giá</li>
+                    <li>Nếu pace chậm hơn năm trước → Demand yếu → Cần khuyến mãi</li>
+                </ul>
+                <div className="bg-emerald-100 rounded-lg p-2 text-sm text-emerald-700 mt-3"><strong>👉 Kết quả:</strong> Dự báo số phòng sẽ được đặt thêm + Giá khuyến nghị cho từng ngày.</div>
+            </Card>
+
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                <p className="font-medium text-amber-700 mb-2">⚠️ Lưu ý quan trọng:</p>
+                <ul className="text-sm text-gray-700 space-y-1">
+                    <li>• <strong>Thứ tự bắt buộc:</strong> Build OTB → Build Features → Run Forecast</li>
+                    <li>• <strong>Dữ liệu quá khứ:</strong> Bạn có thể upload từ nhiều tháng/năm trước để so sánh STLY</li>
+                    <li>• <strong>Tự động:</strong> Sau khi upload file mới, các bước này sẽ tự động chạy</li>
+                </ul>
+            </div>
+        </>
+    );
+}
+
+/* ═══════════════════════ SHARED COMPONENTS ═══════════════════════ */
+
+function Card({ id, title, icon, children, gradient }: { id?: string; title: string; icon?: React.ReactNode; children: React.ReactNode; gradient?: string }) {
+    const gradientClass = gradient ? `bg-gradient-to-r from-${gradient}-50 to-white` : 'bg-white';
+    return (
+        <section id={id} className={`${gradientClass} border border-gray-200 rounded-xl p-6 space-y-3 shadow-sm scroll-mt-4`}>
+            {icon || title ? (
+                <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                    {icon} {title}
+                </h2>
+            ) : null}
+            {children}
+        </section>
+    );
+}
+
+function Step({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
+    return (
+        <div className="flex items-start gap-4">
+            <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center shrink-0">
+                <span className="text-sm font-bold text-blue-600">{n}</span>
+            </div>
+            <div className="space-y-2">
+                <h3 className="text-base font-semibold text-gray-900">{title}</h3>
+                {children}
+            </div>
+        </div>
+    );
+}
+
+function Pipeline({ steps }: { steps: string[] }) {
+    return (
+        <div className="flex flex-wrap items-center gap-2 text-sm mt-2">
+            {steps.map((s, i) => (
+                <span key={s}>
+                    <span className="bg-white px-3 py-1 rounded-lg border border-gray-200">{s}</span>
+                    {i < steps.length - 1 && <span className="text-gray-400 ml-2">→</span>}
+                </span>
+            ))}
+        </div>
+    );
+}
+
+function Tip({ children }: { children: React.ReactNode }) {
+    return <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-emerald-700 text-sm mt-2">💡 {children}</div>;
+}
+
+function Warn({ children }: { children: React.ReactNode }) {
+    return <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-gray-700 mt-2">{children}</div>;
+}
+
+function KPIExplain({ color, emoji, name, desc }: { color: string; emoji: string; name: string; desc: string }) {
+    return (
+        <div className={`bg-${color}-50 p-4 rounded-xl border border-${color}-100`}>
+            <div className={`text-${color}-700 font-medium mb-2`}>{emoji} {name}</div>
+            <p className="text-sm text-gray-700"><strong>Ý nghĩa:</strong> {desc}</p>
+        </div>
     );
 }
