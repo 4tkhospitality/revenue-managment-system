@@ -66,11 +66,24 @@ export async function GET(request: NextRequest) {
             select: { as_of_date: true },
         });
 
+        // Must include ALL fields the client expects (hotelName, capacity, asOfDates)
+        // otherwise data.asOfDates.map() crashes on undefined
+        const asOfDates = await prisma.dailyOTB.findMany({
+            where: { hotel_id: hotelId },
+            select: { as_of_date: true },
+            distinct: ['as_of_date'],
+            orderBy: { as_of_date: 'desc' },
+            take: 90,
+        });
+
         return NextResponse.json({
+            hotelName: hotel.name,
+            capacity: hotel.capacity,
+            asOfDate: asOfParam,
+            asOfDates: asOfDates.map(d => d.as_of_date.toISOString().split('T')[0]),
             rows: [],
             warning: 'NO_FEATURES_FOR_DATE',
             hint: `Chưa build features cho ngày ${asOfParam}. Vào /data → Build Features.`,
-            asOfDate: asOfParam,
             latestAvailable: latestFeat?.as_of_date?.toISOString().split('T')[0] || null,
             kpi: { occ7: 0, occ14: 0, occ30: 0, pace7: null, pace30: null, totalPickup7d: 0, totalPickup1d: 0 },
             quality: { totalRows: 0, withT7: 0, withSTLY: 0, approxSTLY: 0, completeness: 0, stlyCoverage: 0 },

@@ -183,7 +183,7 @@ export default function AnalyticsPage() {
                         onChange={(e) => handleAsOfChange(e.target.value)}
                         className="text-sm font-medium text-slate-800 bg-transparent border-none outline-none cursor-pointer"
                     >
-                        {data.asOfDates.map(d => (
+                        {(data.asOfDates || []).map(d => (
                             <option key={d} value={d}>{d}</option>
                         ))}
                     </select>
