@@ -374,7 +374,7 @@ function PricingSection() {
                     <tbody className="text-gray-700">
                         <tr className="border-t"><td className="px-3 py-3 font-medium text-emerald-600">NET</td><td className="px-3 py-3">Giá thu về mong muốn (tiền thực nhận)</td></tr>
                         <tr className="border-t"><td className="px-3 py-3 font-medium text-blue-600">BAR</td><td className="px-3 py-3">Best Available Rate - Giá hiển thị trên OTA</td></tr>
-                        <tr className="border-t"><td className="px-3 py-3 font-medium text-orange-600">Hoa hồng</td><td className="px-3 py-3">% OTA thu (VD: Agoda 18%, Booking 18%)</td></tr>
+                        <tr className="border-t"><td className="px-3 py-3 font-medium text-orange-600">Hoa hồng</td><td className="px-3 py-3">% OTA thu (VD: Agoda 20%, Booking 18%)</td></tr>
                         <tr className="border-t"><td className="px-3 py-3 font-medium text-purple-600">KM</td><td className="px-3 py-3">Khuyến mãi (Early Bird, Mobile Deal...)</td></tr>
                     </tbody>
                 </table>
@@ -386,8 +386,8 @@ function PricingSection() {
                         <p className="text-lg"><strong>BAR</strong> = NET ÷ (1 - Hoa hồng) ÷ (1 - KM₁) ÷ (1 - KM₂) ...</p>
                     </div>
                     <div className="text-sm text-gray-700 mt-3 font-mono">
-                        <p><strong>VD:</strong> NET = 1.000.000đ, Agoda 18%, Early Bird 10%, Mobile 5%</p>
-                        <p>BAR = 1.000.000 ÷ 0.82 ÷ 0.90 ÷ 0.95 = <strong>1.427.000đ</strong></p>
+                        <p><strong>VD:</strong> NET = 1.000.000đ, Booking 18%, Genius L3 20%, Early Booker 15%</p>
+                        <p>BAR = 1.000.000 ÷ 0.82 ÷ 0.80 ÷ 0.85 = <strong>1.793.000đ</strong></p>
                     </div>
                 </div>
 
@@ -424,11 +424,11 @@ function PricingSection() {
                     <thead className="bg-gray-100"><tr><th className="px-3 py-2 text-left text-gray-600">Kênh</th><th className="px-3 py-2 text-center text-gray-600">Hoa hồng</th><th className="px-3 py-2 text-center text-gray-600">Kiểu tính</th><th className="px-3 py-2 text-left text-gray-600">Ghi chú</th></tr></thead>
                     <tbody className="text-gray-700">
                         {[
-                            ['Agoda', '18%', 'Progressive', 'Châu Á'],
-                            ['Booking.com', '18%', 'Progressive', 'Toàn cầu'],
-                            ['Expedia', '17%', 'Single (cao nhất)', 'Thị trường Mỹ'],
-                            ['Traveloka', '17%', 'Progressive', 'Đông Nam Á'],
-                            ['CTRIP', '18%', 'Progressive', 'Khách Trung Quốc'],
+                            ['Agoda', '20%', 'Additive (cộng dồn)', 'Châu Á'],
+                            ['Booking.com', '18%', 'Progressive (lũy tiến)', 'Toàn cầu'],
+                            ['Expedia', '17%', 'Single (chọn 1 cao nhất)', 'Thị trường Mỹ'],
+                            ['Traveloka', '15%', 'Additive (cộng dồn)', 'Đông Nam Á'],
+                            ['CTRIP', '18%', 'Additive (cộng dồn)', 'Khách Trung Quốc'],
                         ].map(([name, com, calc, note]) => (
                             <tr key={name} className="border-t"><td className="px-3 py-3 font-medium">{name}</td><td className="px-3 py-3 text-center">{com}</td><td className="px-3 py-3 text-center text-xs">{calc}</td><td className="px-3 py-3 text-gray-500">{note}</td></tr>
                         ))}
@@ -452,8 +452,12 @@ function PricingSection() {
                     ))}
                 </div>
                 <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mt-4">
-                    <p className="font-medium text-blue-700 mb-2">📌 Kiểu tính Progressive (Lũy tiến):</p>
-                    <p className="text-sm text-gray-700">Mỗi KM nhân trên giá đã giảm trước đó. VD: Early Bird 10% + Mobile 5% → Effective = 1 - (0.90 × 0.95) = <strong>14.5%</strong> (không phải 15%).</p>
+                    <p className="font-medium text-blue-700 mb-2">📌 3 kiểu tính trong hệ thống:</p>
+                    <ul className="text-sm text-gray-700 space-y-1">
+                        <li><strong>Additive (Cộng dồn):</strong> Tổng KM = KM₁ + KM₂ + ... VD: 10% + 5% = <strong>15%</strong>. Dùng bởi: Agoda, Traveloka, CTRIP.</li>
+                        <li><strong>Progressive (Lũy tiến):</strong> Mỗi KM nhân trên giá đã giảm. VD: 10% + 5% → 1-(0.90×0.95) = <strong>14.5%</strong>. Dùng bởi: Booking.com.</li>
+                        <li><strong>Single Discount (Chọn 1):</strong> Chỉ áp deal cao nhất, không stack. Dùng bởi: Expedia.</li>
+                    </ul>
                 </div>
             </Card>
 
@@ -461,7 +465,7 @@ function PricingSection() {
 
             {/* Agoda */}
             <Card id="agoda-engine" title="🟡 Agoda — Chi tiết cách tính">
-                <p className="text-gray-700 mb-3">Agoda sử dụng <strong>Progressive (Lũy tiến)</strong> — mỗi KM nhân trên giá đã giảm trước đó.</p>
+                <p className="text-gray-700 mb-3">Agoda sử dụng <strong>ADDITIVE (Cộng dồn)</strong> — tất cả KM được <strong>cộng thẳng</strong> vào nhau. Commission mặc định <strong>20%</strong>.</p>
 
                 <h4 className="font-semibold text-gray-800 mb-2">3 nhóm khuyến mãi:</h4>
                 <table className="w-full text-sm mb-4">
@@ -474,8 +478,9 @@ function PricingSection() {
                 </table>
 
                 <div className="bg-gray-50 rounded-xl p-4 text-sm">
-                    <p className="font-medium text-gray-800 mb-1">Engine: Seasonal (1) + Essential (nhiều) + Targeted (1/sub) → Lũy tiến</p>
-                    <p className="text-gray-600">VD: Payday 12% + Early Bird 10% + VIP Gold 10% = 1 - (0.88 × 0.90 × 0.90) = <strong>28.7%</strong></p>
+                    <p className="font-medium text-gray-800 mb-1">Công thức: BAR = NET ÷ (1 - 20%) ÷ (1 - Tổng KM)</p>
+                    <p className="text-gray-600">VD: Payday 12% + Early Bird 10% + VIP Gold 10% → Tổng KM = <strong>32%</strong></p>
+                    <p className="text-gray-600">BAR = 1.000.000 ÷ 0.80 ÷ 0.68 = <strong>1.838.000đ</strong></p>
                 </div>
 
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mt-3">
@@ -555,13 +560,13 @@ function PricingSection() {
                 </div>
 
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mt-3">
-                    <p className="text-sm text-amber-700"><strong>📢 Commission Boosters:</strong> Accelerator (5%+), B2B EPS/TAAP Uplift (5%) — phí quảng cáo tr\u1ea3 thêm, <strong>không giảm giá cho khách</strong>.</p>
+                    <p className="text-sm text-amber-700"><strong>📢 Commission Boosters:</strong> Accelerator (5%+), B2B EPS/TAAP Uplift (5%) — phí quảng cáo trả thêm, <strong>không giảm giá cho khách</strong>.</p>
                 </div>
             </Card>
 
             {/* Traveloka */}
             <Card id="traveloka-engine" title="🟢 Traveloka — Chi tiết cách tính">
-                <p className="text-gray-700 mb-3">Traveloka sử dụng <strong>Progressive (Lũy tiến)</strong> — quy tắc tương tự Agoda.</p>
+                <p className="text-gray-700 mb-3">Traveloka sử dụng <strong>ADDITIVE (Cộng dồn)</strong> — quy tắc tương tự Agoda. Commission mặc định <strong>15%</strong>.</p>
 
                 <table className="w-full text-sm mb-4">
                     <thead className="bg-gray-100"><tr><th className="px-3 py-2 text-left">Nhóm</th><th className="px-3 py-2 text-left">Quy tắc</th></tr></thead>
@@ -573,8 +578,8 @@ function PricingSection() {
                 </table>
 
                 <div className="bg-emerald-50 rounded-xl p-4 text-sm">
-                    <p className="font-medium text-emerald-800 mb-1">Engine: Seasonal (1) + Essential (nhiều) + Targeted (1/sub) → Lũy tiến</p>
-                    <p className="text-gray-600">Giống Agoda nhưng commission mặc định 17%.</p>
+                    <p className="font-medium text-emerald-800 mb-1">Công thức: BAR = NET ÷ (1 - 15%) ÷ (1 - Tổng KM)</p>
+                    <p className="text-gray-600">Giống Agoda, cũng cộng dồn, nhưng commission thấp hơn (15% vs 20%).</p>
                 </div>
             </Card>
 
@@ -606,11 +611,11 @@ function PricingSection() {
                 <table className="w-full text-sm">
                     <thead className="bg-gray-100"><tr><th className="px-3 py-2 text-left">Kênh</th><th className="px-3 py-2 text-center">Kiểu tính</th><th className="px-3 py-2 text-center">Stack?</th><th className="px-3 py-2 text-left">Đặc điểm riêng</th></tr></thead>
                     <tbody className="text-gray-700 text-sm">
-                        <tr className="border-t bg-amber-50"><td className="px-3 py-2 font-medium">Agoda</td><td className="px-3 py-2 text-center">Progressive</td><td className="px-3 py-2 text-center text-emerald-600">✅ Có</td><td className="px-3 py-2">3 nhóm, Seasonal max 1, có Commission Boosters</td></tr>
-                        <tr className="border-t bg-blue-50"><td className="px-3 py-2 font-medium">Booking.com</td><td className="px-3 py-2 text-center">Progressive</td><td className="px-3 py-2 text-center text-emerald-600">✅ Có</td><td className="px-3 py-2">4 nhóm, 3 tầng engine, max 3 KM, Genius stack</td></tr>
-                        <tr className="border-t bg-purple-50"><td className="px-3 py-2 font-medium">Expedia</td><td className="px-3 py-2 text-center">Single</td><td className="px-3 py-2 text-center text-red-600">❌ Không</td><td className="px-3 py-2">Deal tạo rate plan riêng, khách chọn 1</td></tr>
-                        <tr className="border-t bg-emerald-50"><td className="px-3 py-2 font-medium">Traveloka</td><td className="px-3 py-2 text-center">Progressive</td><td className="px-3 py-2 text-center text-emerald-600">✅ Có</td><td className="px-3 py-2">Tương tự Agoda, commission 17%</td></tr>
-                        <tr className="border-t bg-red-50"><td className="px-3 py-2 font-medium">CTRIP/Trip.com</td><td className="px-3 py-2 text-center">Additive</td><td className="px-3 py-2 text-center text-emerald-600">✅ Có</td><td className="px-3 py-2">Cùng box chọn 1, khác box cộng dồn</td></tr>
+                        <tr className="border-t bg-amber-50"><td className="px-3 py-2 font-medium">Agoda</td><td className="px-3 py-2 text-center">Additive</td><td className="px-3 py-2 text-center text-emerald-600">✅ Có</td><td className="px-3 py-2">20% HH, 3 nhóm, Seasonal max 1, có Commission Boosters</td></tr>
+                        <tr className="border-t bg-blue-50"><td className="px-3 py-2 font-medium">Booking.com</td><td className="px-3 py-2 text-center">Progressive</td><td className="px-3 py-2 text-center text-emerald-600">✅ Có</td><td className="px-3 py-2">18% HH, 4 nhóm, 3 tầng engine, max 3 KM, Genius stack</td></tr>
+                        <tr className="border-t bg-purple-50"><td className="px-3 py-2 font-medium">Expedia</td><td className="px-3 py-2 text-center">Single</td><td className="px-3 py-2 text-center text-red-600">❌ Không</td><td className="px-3 py-2">17% HH, Deal tạo rate plan riêng, khách chọn 1</td></tr>
+                        <tr className="border-t bg-emerald-50"><td className="px-3 py-2 font-medium">Traveloka</td><td className="px-3 py-2 text-center">Additive</td><td className="px-3 py-2 text-center text-emerald-600">✅ Có</td><td className="px-3 py-2">15% HH, tương tự Agoda</td></tr>
+                        <tr className="border-t bg-red-50"><td className="px-3 py-2 font-medium">CTRIP/Trip.com</td><td className="px-3 py-2 text-center">Additive</td><td className="px-3 py-2 text-center text-emerald-600">✅ Có</td><td className="px-3 py-2">18% HH, cùng box chọn 1, khác box cộng dồn</td></tr>
                     </tbody>
                 </table>
             </Card>
