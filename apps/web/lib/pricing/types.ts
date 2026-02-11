@@ -2,7 +2,8 @@
 // Types for OTA Pricing calculation engine
 
 export type CalcType = 'PROGRESSIVE' | 'ADDITIVE' | 'SINGLE_DISCOUNT';
-export type PromotionGroup = 'SEASONAL' | 'ESSENTIAL' | 'TARGETED' | 'PORTFOLIO' | 'CAMPAIGN';
+export type PromotionGroup = 'SEASONAL' | 'ESSENTIAL' | 'TARGETED' | 'GENIUS' | 'PORTFOLIO' | 'CAMPAIGN';
+export type StackBehavior = 'STACKABLE' | 'HIGHEST_WINS' | 'EXCLUSIVE' | 'ONLY_WITH_GENIUS';
 
 // Marketing program types (commission boosters)
 export type BoosterProgram = 'AGP' | 'AGX' | 'SL' | 'PREFERRED' | 'ACCELERATOR';
@@ -73,6 +74,10 @@ export interface PromotionCatalogItem {
     allowStack: boolean;
     maxOneInGroup: boolean;
     maxOnePerSubcategory: boolean;
+    stackBehavior?: StackBehavior;      // Engine layer: stacking rule
+    isFreeNights?: boolean;             // True = render Stay X / Pay Y input
+    freeNightsStay?: number;            // Default Stay value (X)
+    freeNightsPay?: number;             // Default Pay value (Y)
 }
 
 // Campaign instance (applied promotion)
@@ -86,6 +91,9 @@ export interface CampaignInstanceData {
     isActive: boolean;
     group: PromotionGroup;
     subCategory?: string;
+    // Free Nights config (on promotion instance, not campaign)
+    freeNightsX?: number;               // Stay X nights
+    freeNightsY?: number;               // Pay Y nights
 }
 
 // OTA Channel config

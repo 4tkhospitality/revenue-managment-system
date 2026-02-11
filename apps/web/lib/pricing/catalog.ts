@@ -281,55 +281,7 @@ export const EXPEDIA_BOOSTERS: CommissionBooster[] = [
 ];
 
 export const BOOKING_COM_PROMOTIONS: PromotionCatalogItem[] = [
-    // ─── A0) BUSINESS BOOKERS — Exclusive rate (❌ ALL) ─────────────────────
-    {
-        id: 'booking-business-bookers',
-        vendor: 'booking',
-        name: 'Business Bookers',
-        groupType: 'TARGETED',
-        subCategory: 'BUSINESS_BOOKERS',
-        defaultPct: 10,
-        allowStack: false, // Exclusive — blocks ALL other discounts
-        maxOneInGroup: false,
-        maxOnePerSubcategory: true,
-    },
-
-    // ─── A) GENIUS — Loyalty Program (max 1 level) ────────────────────────
-    {
-        id: 'booking-genius-level1',
-        vendor: 'booking',
-        name: 'Genius Level 1',
-        groupType: 'TARGETED',
-        subCategory: 'GENIUS',
-        defaultPct: 10,
-        allowStack: true,
-        maxOneInGroup: false,
-        maxOnePerSubcategory: true, // Only 1 Genius level
-    },
-    {
-        id: 'booking-genius-level2',
-        vendor: 'booking',
-        name: 'Genius Level 2',
-        groupType: 'TARGETED',
-        subCategory: 'GENIUS',
-        defaultPct: 15,
-        allowStack: true,
-        maxOneInGroup: false,
-        maxOnePerSubcategory: true,
-    },
-    {
-        id: 'booking-genius-level3',
-        vendor: 'booking',
-        name: 'Genius Level 3',
-        groupType: 'TARGETED',
-        subCategory: 'GENIUS',
-        defaultPct: 20,
-        allowStack: true,
-        maxOneInGroup: false,
-        maxOnePerSubcategory: true,
-    },
-
-    // ─── B) TARGETED RATES — Mobile & Country (don't combine with each other) ──
+    // ─── A) TARGETED RATES — Mobile & Country (mutual exclusive within sub) ──
     {
         id: 'booking-mobile-rate',
         vendor: 'booking',
@@ -340,6 +292,7 @@ export const BOOKING_COM_PROMOTIONS: PromotionCatalogItem[] = [
         allowStack: true,
         maxOneInGroup: false,
         maxOnePerSubcategory: true, // Mobile OR Country, not both
+        stackBehavior: 'STACKABLE',
     },
     {
         id: 'booking-country-rate',
@@ -350,10 +303,61 @@ export const BOOKING_COM_PROMOTIONS: PromotionCatalogItem[] = [
         defaultPct: 10,
         allowStack: true,
         maxOneInGroup: false,
-        maxOnePerSubcategory: true, // Mobile OR Country, not both
+        maxOnePerSubcategory: true,
+        stackBehavior: 'STACKABLE',
+    },
+    {
+        id: 'booking-business-bookers',
+        vendor: 'booking',
+        name: 'Business Bookers',
+        groupType: 'TARGETED',
+        subCategory: 'BUSINESS_BOOKERS',
+        defaultPct: 10,
+        allowStack: false, // Exclusive — blocks ALL other discounts
+        maxOneInGroup: false,
+        maxOnePerSubcategory: true,
+        stackBehavior: 'EXCLUSIVE',
     },
 
-    // ─── C) PORTFOLIO DEALS — reactive/flexible (all stack with Genius & Targeted) ──
+    // ─── B) GENIUS — Loyalty Program (max 1 level, stacks with everything) ──
+    {
+        id: 'booking-genius-level1',
+        vendor: 'booking',
+        name: 'Genius Level 1',
+        groupType: 'GENIUS',
+        subCategory: 'GENIUS',
+        defaultPct: 10,
+        allowStack: true,
+        maxOneInGroup: false,
+        maxOnePerSubcategory: true, // Only 1 Genius level
+        stackBehavior: 'STACKABLE',
+    },
+    {
+        id: 'booking-genius-level2',
+        vendor: 'booking',
+        name: 'Genius Level 2',
+        groupType: 'GENIUS',
+        subCategory: 'GENIUS',
+        defaultPct: 15,
+        allowStack: true,
+        maxOneInGroup: false,
+        maxOnePerSubcategory: true,
+        stackBehavior: 'STACKABLE',
+    },
+    {
+        id: 'booking-genius-level3',
+        vendor: 'booking',
+        name: 'Genius Level 3',
+        groupType: 'GENIUS',
+        subCategory: 'GENIUS',
+        defaultPct: 20,
+        allowStack: true,
+        maxOneInGroup: false,
+        maxOnePerSubcategory: true,
+        stackBehavior: 'STACKABLE',
+    },
+
+    // ─── C) PORTFOLIO DEALS — Engine picks highest only (HIGHEST_WINS) ──
     {
         id: 'booking-basic-deal',
         vendor: 'booking',
@@ -363,6 +367,7 @@ export const BOOKING_COM_PROMOTIONS: PromotionCatalogItem[] = [
         allowStack: true,
         maxOneInGroup: false,
         maxOnePerSubcategory: false,
+        stackBehavior: 'HIGHEST_WINS',
     },
     {
         id: 'booking-secret-deal',
@@ -373,6 +378,7 @@ export const BOOKING_COM_PROMOTIONS: PromotionCatalogItem[] = [
         allowStack: true,
         maxOneInGroup: false,
         maxOnePerSubcategory: false,
+        stackBehavior: 'HIGHEST_WINS',
     },
     {
         id: 'booking-early-booker',
@@ -384,6 +390,7 @@ export const BOOKING_COM_PROMOTIONS: PromotionCatalogItem[] = [
         allowStack: true,
         maxOneInGroup: false,
         maxOnePerSubcategory: true, // Early Booker OR Last Minute
+        stackBehavior: 'HIGHEST_WINS',
     },
     {
         id: 'booking-last-minute',
@@ -394,7 +401,8 @@ export const BOOKING_COM_PROMOTIONS: PromotionCatalogItem[] = [
         defaultPct: 15,
         allowStack: true,
         maxOneInGroup: false,
-        maxOnePerSubcategory: true, // Early Booker OR Last Minute
+        maxOnePerSubcategory: true,
+        stackBehavior: 'HIGHEST_WINS',
     },
     {
         id: 'booking-free-nights',
@@ -406,18 +414,23 @@ export const BOOKING_COM_PROMOTIONS: PromotionCatalogItem[] = [
         allowStack: true,
         maxOneInGroup: false,
         maxOnePerSubcategory: true,
+        stackBehavior: 'HIGHEST_WINS',
+        isFreeNights: true,
+        freeNightsStay: 4,
+        freeNightsPay: 3,
     },
 
-    // ─── D) CAMPAIGN / NAMED SEASONAL — don't stack with Targeted Rates ──
+    // ─── D) CAMPAIGN / EXCLUSIVE DEALS ──
     {
         id: 'booking-getaway-deal',
         vendor: 'booking',
         name: 'Getaway Deal',
         groupType: 'CAMPAIGN',
         defaultPct: 15,
-        allowStack: false, // Campaign = exclusive promo
-        maxOneInGroup: true, // Max 1 Campaign
+        allowStack: false,
+        maxOneInGroup: true,
         maxOnePerSubcategory: false,
+        stackBehavior: 'EXCLUSIVE',
     },
     {
         id: 'booking-late-escape',
@@ -425,9 +438,10 @@ export const BOOKING_COM_PROMOTIONS: PromotionCatalogItem[] = [
         name: 'Late Escape Deal',
         groupType: 'CAMPAIGN',
         defaultPct: 15,
-        allowStack: false, // Campaign = exclusive promo
+        allowStack: false,
         maxOneInGroup: true,
         maxOnePerSubcategory: false,
+        stackBehavior: 'EXCLUSIVE',
     },
     {
         id: 'booking-black-friday',
@@ -435,31 +449,32 @@ export const BOOKING_COM_PROMOTIONS: PromotionCatalogItem[] = [
         name: 'Black Friday Deal',
         groupType: 'CAMPAIGN',
         defaultPct: 20,
-        allowStack: false, // Campaign = exclusive promo
+        allowStack: false,
         maxOneInGroup: true,
         maxOnePerSubcategory: false,
+        stackBehavior: 'EXCLUSIVE',
     },
     {
-        id: 'booking-limited-time',
+        id: 'booking-early-2026',
         vendor: 'booking',
-        name: 'Limited-time Deal',
+        name: 'Early 2026 Deal',
         groupType: 'CAMPAIGN',
         defaultPct: 15,
-        allowStack: false, // Campaign = exclusive promo
+        allowStack: false,
         maxOneInGroup: true,
         maxOnePerSubcategory: false,
+        stackBehavior: 'ONLY_WITH_GENIUS', // Stacks with Genius only
     },
-
-    // ─── E) DEAL OF THE DAY — Exclusive promotion (❌ ALL) ──────────────────
     {
         id: 'booking-deal-of-day',
         vendor: 'booking',
         name: 'Deal of the Day',
-        groupType: 'CAMPAIGN', // Same exclusive behavior as Campaign
+        groupType: 'CAMPAIGN',
         defaultPct: 25,
-        allowStack: false, // Exclusive — blocks ALL other discounts
+        allowStack: false,
         maxOneInGroup: true,
         maxOnePerSubcategory: false,
+        stackBehavior: 'EXCLUSIVE',
     },
 ];
 
@@ -581,30 +596,34 @@ export const GROUP_COLORS: Record<PromotionGroup, { bg: string; text: string; la
     SEASONAL: { bg: 'bg-amber-100', text: 'text-amber-700', label: 'Seasonal' },
     ESSENTIAL: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Essential' },
     TARGETED: { bg: 'bg-purple-100', text: 'text-purple-700', label: 'Targeted' },
+    GENIUS: { bg: 'bg-indigo-100', text: 'text-indigo-700', label: 'Genius' },
     PORTFOLIO: { bg: 'bg-teal-100', text: 'text-teal-700', label: 'Portfolio' },
     CAMPAIGN: { bg: 'bg-rose-100', text: 'text-rose-700', label: 'Campaign' },
 };
 
-// Vendor-specific group labels
+// Vendor-specific group labels (UI Layer — display only, not engine source-of-truth)
 export const VENDOR_GROUP_LABELS: Record<string, Record<PromotionGroup, string>> = {
     agoda: {
         SEASONAL: 'Seasonal (Theo mùa)',
         ESSENTIAL: 'Essential (Cơ bản)',
         TARGETED: 'Targeted (Mục tiêu)',
+        GENIUS: 'Genius',
         PORTFOLIO: 'Portfolio',
         CAMPAIGN: 'Campaign',
     },
     booking: {
-        SEASONAL: 'Tactical (Thời điểm)',
-        ESSENTIAL: 'Basic Deals',
-        TARGETED: 'Genius & Visibility',
-        PORTFOLIO: 'Portfolio Deals',
-        CAMPAIGN: 'Campaign Deals',
+        SEASONAL: 'Seasonal',
+        ESSENTIAL: 'Essential',
+        TARGETED: 'Targeted Rates (Nhắm theo thị trường)',
+        GENIUS: 'Genius (Loyalty)',
+        PORTFOLIO: 'Portfolio Deals (Cơ bản)',
+        CAMPAIGN: 'Campaign / Exclusive Deals',
     },
     expedia: {
         SEASONAL: 'Seasonal',
         ESSENTIAL: 'Deals (Khuyến mãi)',
         TARGETED: 'Audience Rates',
+        GENIUS: 'Genius',
         PORTFOLIO: 'Portfolio',
         CAMPAIGN: 'Campaign',
     },

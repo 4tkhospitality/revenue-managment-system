@@ -19,6 +19,10 @@ const GROUP_CONFIG = {
         dotColor: 'bg-emerald-500',
         label: 'Targeted (Mục tiêu)',
     },
+    GENIUS: {
+        dotColor: 'bg-indigo-500',
+        label: 'Genius (Loyalty)',
+    },
     PORTFOLIO: {
         dotColor: 'bg-teal-500',
         label: 'Portfolio Deals',
@@ -29,7 +33,7 @@ const GROUP_CONFIG = {
     },
 } as const;
 
-// Vendor-specific group labels
+// Vendor-specific group labels (UI Layer — display only)
 const VENDOR_GROUP_LABELS: Record<string, Partial<Record<keyof typeof GROUP_CONFIG, string>>> = {
     agoda: {
         SEASONAL: 'Seasonal (Theo mùa)',
@@ -37,9 +41,10 @@ const VENDOR_GROUP_LABELS: Record<string, Partial<Record<keyof typeof GROUP_CONF
         TARGETED: 'Targeted (Mục tiêu)',
     },
     booking: {
-        TARGETED: 'Genius & Visibility',
-        PORTFOLIO: 'Portfolio Deals',
-        CAMPAIGN: 'Campaign Deals',
+        TARGETED: 'Targeted Rates (Nhắm theo thị trường)',
+        GENIUS: 'Genius (Loyalty)',
+        PORTFOLIO: 'Portfolio Deals (Cơ bản)',
+        CAMPAIGN: 'Campaign / Exclusive Deals',
     },
     expedia: {
         ESSENTIAL: 'Deals (Khuyến mãi)',
@@ -50,7 +55,7 @@ const VENDOR_GROUP_LABELS: Record<string, Partial<Record<keyof typeof GROUP_CONF
 // Vendor-specific tab groups for PromotionPicker
 const VENDOR_PICKER_TABS: Record<string, GroupType[]> = {
     agoda: ['SEASONAL', 'ESSENTIAL', 'TARGETED'],
-    booking: ['TARGETED', 'PORTFOLIO', 'CAMPAIGN'],
+    booking: ['TARGETED', 'GENIUS', 'PORTFOLIO', 'CAMPAIGN'],
     expedia: ['ESSENTIAL', 'TARGETED'],
 };
 
@@ -155,54 +160,108 @@ function PromotionGroup({
                         </button>
                     ) : (
                         <div className="space-y-2">
-                            {campaigns.map((c) => (
-                                <div
-                                    key={c.id}
-                                    className="flex items-center justify-between px-4 py-3 bg-white border border-[#DBE1EB] rounded-lg"
-                                >
-                                    <div className="flex flex-col">
-                                        <span className="font-medium text-slate-800">{c.promo.name}</span>
-                                        {c.promo.sub_category && (
-                                            <span className="text-xs text-slate-500 uppercase tracking-wide mt-0.5">
-                                                {c.promo.sub_category}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <div className="flex items-center gap-4">
-                                        {/* Editable discount percentage */}
-                                        <div className="flex items-center">
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                max="100"
-                                                value={c.discount_pct}
-                                                onChange={(e) => {
-                                                    const val = Math.min(100, Math.max(0, parseInt(e.target.value) || 0));
-                                                    onUpdateDiscount(c.id, val);
-                                                }}
-                                                className="w-12 text-right text-sm font-semibold text-[#204183] bg-slate-50 border border-[#DBE1EB] rounded px-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-[#204183]"
-                                            />
-                                            <span className="text-sm font-semibold text-[#204183] ml-0.5">%</span>
+                            {campaigns.map((c) => {
+                                // Check if this is a Free Nights deal
+                                const isFreeNights = c.promo.name.toLowerCase().includes('free night');
+                                // Derive stackBehavior from promo properties
+                                const stackBehavior = !c.promo.allow_stack ? 'EXCLUSIVE' : (c.promo.group_type === 'PORTFOLIO' ? 'HIGHEST_WINS' : 'STACKABLE');
+                                const badgeConfig = {
+                                    STACKABLE: { bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'Stackable' },
+                                    HIGHEST_WINS: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Highest Wins' },
+                                    EXCLUSIVE: { bg: 'bg-red-100', text: 'text-red-700', label: 'Exclusive' },
+                                    ONLY_WITH_GENIUS: { bg: 'bg-purple-100', text: 'text-purple-700', label: 'Only w/ Genius' },
+                                }[stackBehavior];
+
+                                return (
+                                    <div
+                                        key={c.id}
+                                        className="flex items-center justify-between px-4 py-3 bg-white border border-[#DBE1EB] rounded-lg"
+                                    >
+                                        <div className="flex flex-col">
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-medium text-slate-800">{c.promo.name}</span>
+                                                {/* Stack behavior badge */}
+                                                <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${badgeConfig.bg} ${badgeConfig.text}`}>
+                                                    {badgeConfig.label}
+                                                </span>
+                                            </div>
+                                            {c.promo.sub_category && (
+                                                <span className="text-xs text-slate-500 uppercase tracking-wide mt-0.5">
+                                                    {c.promo.sub_category}
+                                                </span>
+                                            )}
                                         </div>
-                                        <button
-                                            onClick={() => onToggle(c)}
-                                            className={`relative w-11 h-6 rounded-full transition-colors ${c.is_active ? 'bg-emerald-500' : 'bg-slate-300'
-                                                }`}
-                                        >
-                                            <span
-                                                className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${c.is_active ? 'left-6' : 'left-1'
+                                        <div className="flex items-center gap-4">
+                                            {/* Free Nights: Stay X / Pay Y input */}
+                                            {isFreeNights ? (
+                                                <div className="flex items-center gap-1 text-sm">
+                                                    <span className="text-slate-500">Stay</span>
+                                                    <input
+                                                        type="number"
+                                                        min="2"
+                                                        max="14"
+                                                        value={Math.round(100 / (100 - c.discount_pct)) || 4}
+                                                        onChange={(e) => {
+                                                            const x = Math.max(2, parseInt(e.target.value) || 2);
+                                                            const y = x - 1; // Default: Pay (X-1)
+                                                            const pct = Math.round((1 - y / x) * 100);
+                                                            onUpdateDiscount(c.id, pct);
+                                                        }}
+                                                        className="w-10 text-center text-sm font-semibold text-[#204183] bg-slate-50 border border-[#DBE1EB] rounded px-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-[#204183]"
+                                                    />
+                                                    <span className="text-slate-500">Pay</span>
+                                                    <input
+                                                        type="number"
+                                                        min="1"
+                                                        max="13"
+                                                        value={Math.round(100 / (100 - c.discount_pct)) - 1 || 3}
+                                                        onChange={(e) => {
+                                                            const y = Math.max(1, parseInt(e.target.value) || 1);
+                                                            const x = y + 1; // Infer X from Y
+                                                            const pct = Math.round((1 - y / x) * 100);
+                                                            onUpdateDiscount(c.id, pct);
+                                                        }}
+                                                        className="w-10 text-center text-sm font-semibold text-[#204183] bg-slate-50 border border-[#DBE1EB] rounded px-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-[#204183]"
+                                                    />
+                                                    <span className="text-xs text-slate-400 ml-1">→ {c.discount_pct}%</span>
+                                                </div>
+                                            ) : (
+                                                /* Regular discount percentage input */
+                                                <div className="flex items-center">
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        max="100"
+                                                        value={c.discount_pct}
+                                                        onChange={(e) => {
+                                                            const val = Math.min(100, Math.max(0, parseInt(e.target.value) || 0));
+                                                            onUpdateDiscount(c.id, val);
+                                                        }}
+                                                        className="w-12 text-right text-sm font-semibold text-[#204183] bg-slate-50 border border-[#DBE1EB] rounded px-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-[#204183]"
+                                                    />
+                                                    <span className="text-sm font-semibold text-[#204183] ml-0.5">%</span>
+                                                </div>
+                                            )}
+                                            <button
+                                                onClick={() => onToggle(c)}
+                                                className={`relative w-11 h-6 rounded-full transition-colors ${c.is_active ? 'bg-emerald-500' : 'bg-slate-300'
                                                     }`}
-                                            />
-                                        </button>
-                                        <button
-                                            onClick={() => onDelete(c.id)}
-                                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
+                                            >
+                                                <span
+                                                    className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${c.is_active ? 'left-6' : 'left-1'
+                                                        }`}
+                                                />
+                                            </button>
+                                            <button
+                                                onClick={() => onDelete(c.id)}
+                                                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
                 </div>
@@ -1091,18 +1150,40 @@ export default function PromotionsTab() {
     const activeDiscounts = campaigns.filter((c) => c.is_active);
     const calcType = (selectedChannelData?.calc_type as 'PROGRESSIVE' | 'ADDITIVE' | 'SINGLE_DISCOUNT') || 'PROGRESSIVE';
 
-    // Channel-specific discount selection rules
+    // Channel-specific discount selection rules (ENGINE LAYER — source of truth)
     let appliedDiscounts = activeDiscounts;
 
-    // Booking.com: portfolio promotions don't stack — pick only highest effective %
+    // Booking.com: 3-tier exclusion engine
     if (selectedChannelData?.code === 'booking' && activeDiscounts.length > 0) {
-        const portfolioActive = activeDiscounts.filter(c => c.promo.group_type === 'PORTFOLIO');
-        const nonPortfolio = activeDiscounts.filter(c => c.promo.group_type !== 'PORTFOLIO');
-        if (portfolioActive.length > 1) {
-            const bestPortfolio = portfolioActive.reduce((best, c) =>
+        // 1) Check for EXCLUSIVE deals (Campaign: Getaway, Black Friday, Deal of Day, etc.)
+        const exclusiveDeals = activeDiscounts.filter(c =>
+            !c.promo.allow_stack && c.promo.group_type === 'CAMPAIGN'
+        );
+        if (exclusiveDeals.length > 0) {
+            // EXCLUSIVE deal blocks everything EXCEPT Genius
+            const geniusDeals = activeDiscounts.filter(c => c.promo.group_type === 'GENIUS');
+            const bestExclusive = exclusiveDeals.reduce((best, c) =>
                 c.discount_pct > best.discount_pct ? c : best
             );
-            appliedDiscounts = [...nonPortfolio, bestPortfolio];
+            appliedDiscounts = [...geniusDeals, bestExclusive];
+        } else {
+            // 2) Check for Business Bookers (blocks ALL, no Genius)
+            const businessBookers = activeDiscounts.filter(c =>
+                c.promo.sub_category === 'BUSINESS_BOOKERS'
+            );
+            if (businessBookers.length > 0) {
+                appliedDiscounts = [businessBookers[0]]; // Only the exclusive rate
+            } else {
+                // 3) Portfolio: highest-wins (pick best deal within Portfolio group)
+                const portfolioActive = activeDiscounts.filter(c => c.promo.group_type === 'PORTFOLIO');
+                const nonPortfolio = activeDiscounts.filter(c => c.promo.group_type !== 'PORTFOLIO');
+                if (portfolioActive.length > 1) {
+                    const bestPortfolio = portfolioActive.reduce((best, c) =>
+                        c.discount_pct > best.discount_pct ? c : best
+                    );
+                    appliedDiscounts = [...nonPortfolio, bestPortfolio];
+                }
+            }
         }
     }
 
@@ -1143,6 +1224,7 @@ export default function PromotionsTab() {
     const seasonalCampaigns = campaigns.filter((c) => c.promo.group_type === 'SEASONAL');
     const essentialCampaigns = campaigns.filter((c) => c.promo.group_type === 'ESSENTIAL');
     const targetedCampaigns = campaigns.filter((c) => c.promo.group_type === 'TARGETED');
+    const geniusCampaigns = campaigns.filter((c) => c.promo.group_type === 'GENIUS');
     const portfolioCampaigns = campaigns.filter((c) => c.promo.group_type === 'PORTFOLIO');
     const campaignCampaigns = campaigns.filter((c) => c.promo.group_type === 'CAMPAIGN');
 
@@ -1199,7 +1281,7 @@ export default function PromotionsTab() {
                     {/* Title */}
                     <div className="flex items-center gap-2 text-slate-700">
                         <CheckCircle className="w-5 h-5 text-[#204183]" />
-                        <h2 className="font-semibold">Cộng dồn khuyến mãi</h2>
+                        <h2 className="font-semibold">{isBooking ? 'Kết hợp giảm giá (lũy tiến theo Booking rules)' : 'Cộng dồn khuyến mãi'}</h2>
                     </div>
 
                     {loading ? (
@@ -1208,36 +1290,59 @@ export default function PromotionsTab() {
                         </div>
                     ) : (
                         <div className="space-y-3">
-                            <PromotionGroup
-                                group="SEASONAL"
-                                campaigns={seasonalCampaigns}
-                                onToggle={handleToggle}
-                                onDelete={handleDelete}
-                                onAddClick={handleOpenPicker}
-                                onUpdateDiscount={handleUpdateDiscount}
-                                vendor={selectedChannelData?.code || 'agoda'}
-                            />
-                            <PromotionGroup
-                                group="ESSENTIAL"
-                                campaigns={essentialCampaigns}
-                                onToggle={handleToggle}
-                                onDelete={handleDelete}
-                                onAddClick={handleOpenPicker}
-                                onUpdateDiscount={handleUpdateDiscount}
-                                vendor={selectedChannelData?.code || 'agoda'}
-                            />
-                            <PromotionGroup
-                                group="TARGETED"
-                                campaigns={targetedCampaigns}
-                                onToggle={handleToggle}
-                                onDelete={handleDelete}
-                                onAddClick={handleOpenPicker}
-                                onUpdateDiscount={handleUpdateDiscount}
-                                vendor={selectedChannelData?.code || 'agoda'}
-                            />
-                            {/* Booking.com-specific groups */}
+                            {/* Agoda: Seasonal + Essential + Targeted */}
+                            {!isBooking && (
+                                <>
+                                    <PromotionGroup
+                                        group="SEASONAL"
+                                        campaigns={seasonalCampaigns}
+                                        onToggle={handleToggle}
+                                        onDelete={handleDelete}
+                                        onAddClick={handleOpenPicker}
+                                        onUpdateDiscount={handleUpdateDiscount}
+                                        vendor={selectedChannelData?.code || 'agoda'}
+                                    />
+                                    <PromotionGroup
+                                        group="ESSENTIAL"
+                                        campaigns={essentialCampaigns}
+                                        onToggle={handleToggle}
+                                        onDelete={handleDelete}
+                                        onAddClick={handleOpenPicker}
+                                        onUpdateDiscount={handleUpdateDiscount}
+                                        vendor={selectedChannelData?.code || 'agoda'}
+                                    />
+                                    <PromotionGroup
+                                        group="TARGETED"
+                                        campaigns={targetedCampaigns}
+                                        onToggle={handleToggle}
+                                        onDelete={handleDelete}
+                                        onAddClick={handleOpenPicker}
+                                        onUpdateDiscount={handleUpdateDiscount}
+                                        vendor={selectedChannelData?.code || 'agoda'}
+                                    />
+                                </>
+                            )}
+                            {/* Booking.com: Targeted → Genius → Portfolio → Campaign */}
                             {isBooking && (
                                 <>
+                                    <PromotionGroup
+                                        group="TARGETED"
+                                        campaigns={targetedCampaigns}
+                                        onToggle={handleToggle}
+                                        onDelete={handleDelete}
+                                        onAddClick={handleOpenPicker}
+                                        onUpdateDiscount={handleUpdateDiscount}
+                                        vendor="booking"
+                                    />
+                                    <PromotionGroup
+                                        group="GENIUS"
+                                        campaigns={geniusCampaigns}
+                                        onToggle={handleToggle}
+                                        onDelete={handleDelete}
+                                        onAddClick={handleOpenPicker}
+                                        onUpdateDiscount={handleUpdateDiscount}
+                                        vendor="booking"
+                                    />
                                     <PromotionGroup
                                         group="PORTFOLIO"
                                         campaigns={portfolioCampaigns}
@@ -1247,6 +1352,11 @@ export default function PromotionsTab() {
                                         onUpdateDiscount={handleUpdateDiscount}
                                         vendor="booking"
                                     />
+                                    {/* Portfolio note */}
+                                    <div className="px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 text-xs flex items-center gap-2">
+                                        <span>📌</span>
+                                        <span>Trong nhóm Portfolio Deals, Booking chỉ áp dụng deal tốt nhất (highest wins).</span>
+                                    </div>
                                     <PromotionGroup
                                         group="CAMPAIGN"
                                         campaigns={campaignCampaigns}
