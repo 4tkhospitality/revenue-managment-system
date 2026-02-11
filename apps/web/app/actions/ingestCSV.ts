@@ -83,6 +83,20 @@ export async function ingestCSV(formData: FormData) {
         }
     }
 
+    // ═══ VALIDATE HOTEL EXISTS ═══
+    const hotelExists = await prisma.hotel.findUnique({
+        where: { hotel_id: hotelId },
+        select: { hotel_id: true },
+    });
+    if (!hotelExists) {
+        return {
+            success: false,
+            message: `Hotel không tồn tại (ID: ${hotelId.slice(0, 8)}...). Vui lòng tải lại trang và thử lại.`,
+            error: 'HOTEL_NOT_FOUND',
+        };
+    }
+    // ═══ END VALIDATE ═══
+
     // 3. Create Job (only if no existing job to reuse)
     if (!job) {
         job = await prisma.importJob.create({
@@ -201,15 +215,29 @@ export async function ingestCSV(formData: FormData) {
 
     } catch (err: any) {
         // 8. Fail Job
+        const errorMessage = err.message || "Unknown Error";
+
+        // Translate known errors to friendly messages
+        let friendlyMessage = errorMessage;
+        if (errorMessage.includes('Foreign key constraint failed')) {
+            friendlyMessage = 'Hotel không hợp lệ. Vui lòng tải lại trang và thử lại.';
+        } else if (errorMessage.includes('Unique constraint failed')) {
+            friendlyMessage = 'Dữ liệu bị trùng. Vui lòng kiểm tra file không chứa bản ghi đã import trước đó.';
+        } else if (errorMessage.includes('Connection')) {
+            friendlyMessage = 'Mất kết nối database. Vui lòng thử lại sau giây lát.';
+        }
+
+        console.error(`[UPLOAD CSV] ❌ FAILED: ${errorMessage}`);
+
         await prisma.importJob.update({
             where: { job_id: job.job_id },
             data: {
                 status: 'failed',
-                error_summary: err.message || "Unknown Error",
+                error_summary: friendlyMessage,
                 finished_at: new Date()
             }
         });
 
-        return { success: false, message: err.message };
+        return { success: false, message: friendlyMessage };
     }
 }
