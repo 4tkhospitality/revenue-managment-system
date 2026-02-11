@@ -14,13 +14,22 @@ export function RunForecastButton() {
         setIsRunning(true);
         setResult(null);
         try {
-            const { hotelId, latestBookingDate } = await getActiveHotelData();
-            if (!hotelId || !latestBookingDate) {
+            const { hotelId } = await getActiveHotelData();
+            if (!hotelId) {
                 setResult({ success: false, error: 'Chưa có dữ liệu reservation' });
                 return;
             }
 
-            const asOfDate = new Date(latestBookingDate);
+            // Get latest as_of_date from features_daily (must match Build Features)
+            const featuresRes = await fetch(`/api/features/latest-date?hotelId=${hotelId}`);
+            const featuresData = await featuresRes.json();
+
+            if (!featuresData.latestAsOfDate) {
+                setResult({ success: false, error: 'Chưa có Features. Hãy Build Features trước.' });
+                return;
+            }
+
+            const asOfDate = new Date(featuresData.latestAsOfDate);
             asOfDate.setHours(0, 0, 0, 0);
 
             const res = await runForecast(hotelId, asOfDate);
@@ -41,8 +50,8 @@ export function RunForecastButton() {
                 onClick={handleRunForecast}
                 disabled={isRunning}
                 className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all border ${isRunning
-                        ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
-                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400 shadow-sm'
+                    ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400 shadow-sm'
                     }`}
             >
                 {isRunning ? (
