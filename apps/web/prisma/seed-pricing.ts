@@ -201,120 +201,13 @@ const AGODA_PROMOTIONS = [
 ];
 
 // =============================================================================
-// BOOKING.COM PROMOTIONS (Complete Catalog matching Extranet UI)
-// Reference: https://admin.booking.com/hotel/hoteladmin/extranet_ng/manage/promo
+// BOOKING.COM PROMOTIONS (V01.6 - 2-Layer Architecture)
+// Engine groupType: TARGETED | GENIUS | PORTFOLIO | CAMPAIGN
+// Reference: Partner Hub stacking matrix + Extranet UI
 // =============================================================================
 const BOOKING_COM_PROMOTIONS = [
     // =========================================================================
-    // PORTFOLIO DEALS - Basic customizable deals (stackable, same category = pick 1)
-    // =========================================================================
-    {
-        id: 'booking-basic-deal',
-        vendor: 'booking',
-        name: 'Basic Deal',
-        description: 'Customize a deal to suit your needs',
-        group_type: 'ESSENTIAL' as const,
-        sub_category: 'PORTFOLIO',
-        default_pct: 10,
-        allow_stack: true,
-        max_one_in_group: false,
-        max_one_per_subcategory: true, // Only 1 Portfolio deal at a time
-    },
-    {
-        id: 'booking-last-minute',
-        vendor: 'booking',
-        name: 'Last-minute Deal',
-        description: 'Fill any empty rooms you have left',
-        group_type: 'ESSENTIAL' as const,
-        sub_category: 'PORTFOLIO',
-        default_pct: 10,
-        allow_stack: true,
-        max_one_in_group: false,
-        max_one_per_subcategory: true,
-    },
-    {
-        id: 'booking-early-booker',
-        vendor: 'booking',
-        name: 'Early Booker Deal',
-        description: 'Be better prepared with more of your bookings made earlier',
-        group_type: 'ESSENTIAL' as const,
-        sub_category: 'PORTFOLIO',
-        default_pct: 10,
-        allow_stack: true,
-        max_one_in_group: false,
-        max_one_per_subcategory: true,
-    },
-
-    // =========================================================================
-    // CAMPAIGN DEALS - Seasonal promotions (updated quarterly by Booking.com)
-    // =========================================================================
-    {
-        id: 'booking-campaign-early-2026',
-        vendor: 'booking',
-        name: 'Early 2026 Deal',
-        description: 'Secure advance bookings and get the new year off to a strong start',
-        group_type: 'SEASONAL' as const,
-        sub_category: 'CAMPAIGN',
-        default_pct: 20,
-        allow_stack: true,
-        max_one_in_group: false,
-        max_one_per_subcategory: true, // Only 1 campaign at a time
-    },
-    {
-        id: 'booking-campaign-getaway',
-        vendor: 'booking',
-        name: 'Getaway Deals',
-        description: 'Boost visibility during peak travel seasons',
-        group_type: 'SEASONAL' as const,
-        sub_category: 'CAMPAIGN',
-        default_pct: 15,
-        allow_stack: true,
-        max_one_in_group: false,
-        max_one_per_subcategory: true,
-    },
-    {
-        id: 'booking-campaign-late-escape',
-        vendor: 'booking',
-        name: 'Late Escape Deals',
-        description: 'End of season promotional campaign',
-        group_type: 'SEASONAL' as const,
-        sub_category: 'CAMPAIGN',
-        default_pct: 15,
-        allow_stack: true,
-        max_one_in_group: false,
-        max_one_per_subcategory: true,
-    },
-
-    // =========================================================================
-    // DEEP DEALS - Large discounts, NEVER STACK with other discounts
-    // =========================================================================
-    {
-        id: 'booking-deep-limited-time',
-        vendor: 'booking',
-        name: 'Limited-time Deal',
-        description: 'Boost your property in search results for 48 hours',
-        group_type: 'ESSENTIAL' as const,
-        sub_category: 'DEEP',
-        default_pct: 30,
-        allow_stack: false, // ⚠️ NEVER stacks
-        max_one_in_group: false,
-        max_one_per_subcategory: true,
-    },
-    {
-        id: 'booking-deep-deal-of-day',
-        vendor: 'booking',
-        name: 'Deal of the Day',
-        description: '24h flash sale with maximum visibility',
-        group_type: 'ESSENTIAL' as const,
-        sub_category: 'DEEP',
-        default_pct: 15,
-        allow_stack: false, // ⚠️ NEVER stacks
-        max_one_in_group: false,
-        max_one_per_subcategory: true,
-    },
-
-    // =========================================================================
-    // TARGETING - Specific audience segments (stackable across different segments)
+    // A) TARGETED RATES — Mobile, Country, Business Bookers
     // =========================================================================
     {
         id: 'booking-mobile-rate',
@@ -340,28 +233,41 @@ const BOOKING_COM_PROMOTIONS = [
         max_one_in_group: false,
         max_one_per_subcategory: true,
     },
+    {
+        id: 'booking-business-bookers',
+        vendor: 'booking',
+        name: 'Business Bookers',
+        description: 'Attract corporate travelers with exclusive rates',
+        group_type: 'TARGETED' as const,
+        sub_category: 'BUSINESS_BOOKERS',
+        default_pct: 10,
+        allow_stack: false, // ⚠️ EXCLUSIVE — blocks ALL other discounts
+        max_one_in_group: false,
+        max_one_per_subcategory: true,
+    },
 
     // =========================================================================
-    // GENIUS (LOYALTY) - Booking.com loyalty program tiers
+    // B) GENIUS (LOYALTY) — Booking.com loyalty program tiers
+    // Always stacks with everything (even EXCLUSIVE campaigns)
     // =========================================================================
     {
         id: 'booking-genius-level1',
         vendor: 'booking',
         name: 'Genius Level 1',
         description: 'Discount for frequent Booking.com travelers',
-        group_type: 'TARGETED' as const,
+        group_type: 'GENIUS' as const,
         sub_category: 'GENIUS',
         default_pct: 10,
         allow_stack: true,
         max_one_in_group: false,
-        max_one_per_subcategory: true, // Only 1 Genius level applies
+        max_one_per_subcategory: true,
     },
     {
         id: 'booking-genius-level2',
         vendor: 'booking',
         name: 'Genius Level 2',
         description: 'Premium discount for VIP travelers',
-        group_type: 'TARGETED' as const,
+        group_type: 'GENIUS' as const,
         sub_category: 'GENIUS',
         default_pct: 15,
         allow_stack: true,
@@ -373,7 +279,7 @@ const BOOKING_COM_PROMOTIONS = [
         vendor: 'booking',
         name: 'Genius Level 3',
         description: 'Maximum discount for super VIP travelers',
-        group_type: 'TARGETED' as const,
+        group_type: 'GENIUS' as const,
         sub_category: 'GENIUS',
         default_pct: 20,
         allow_stack: true,
@@ -382,16 +288,40 @@ const BOOKING_COM_PROMOTIONS = [
     },
 
     // =========================================================================
-    // EXTRAS - Special promotional types
+    // C) PORTFOLIO DEALS — Engine picks highest only (HIGHEST_WINS)
     // =========================================================================
     {
-        id: 'booking-free-nights',
+        id: 'booking-basic-deal',
         vendor: 'booking',
-        name: 'Free Nights Deal',
-        description: 'Book 3 nights, get 1 free (or similar)',
-        group_type: 'ESSENTIAL' as const,
-        sub_category: 'FREE_NIGHTS',
-        default_pct: 25, // Equivalent discount for 4th night free
+        name: 'Basic Deal',
+        description: 'Customize a deal to suit your needs',
+        group_type: 'PORTFOLIO' as const,
+        sub_category: 'PORTFOLIO',
+        default_pct: 10,
+        allow_stack: true,
+        max_one_in_group: false,
+        max_one_per_subcategory: false,
+    },
+    {
+        id: 'booking-last-minute',
+        vendor: 'booking',
+        name: 'Last-minute Deal',
+        description: 'Fill any empty rooms you have left',
+        group_type: 'PORTFOLIO' as const,
+        sub_category: 'TIMING',
+        default_pct: 10,
+        allow_stack: true,
+        max_one_in_group: false,
+        max_one_per_subcategory: true,
+    },
+    {
+        id: 'booking-early-booker',
+        vendor: 'booking',
+        name: 'Early Booker Deal',
+        description: 'Be better prepared with more of your bookings made earlier',
+        group_type: 'PORTFOLIO' as const,
+        sub_category: 'TIMING',
+        default_pct: 10,
         allow_stack: true,
         max_one_in_group: false,
         max_one_per_subcategory: true,
@@ -401,11 +331,87 @@ const BOOKING_COM_PROMOTIONS = [
         vendor: 'booking',
         name: 'Secret Deal',
         description: 'Closed user group discount',
-        group_type: 'ESSENTIAL' as const,
+        group_type: 'PORTFOLIO' as const,
         sub_category: 'SECRET',
         default_pct: 10,
         allow_stack: true,
         max_one_in_group: false,
+        max_one_per_subcategory: true,
+    },
+    {
+        id: 'booking-free-nights',
+        vendor: 'booking',
+        name: 'Free Nights Deal',
+        description: 'Stay X nights, Pay Y (e.g. Stay 4 Pay 3)',
+        group_type: 'PORTFOLIO' as const,
+        sub_category: 'FREE_NIGHTS',
+        default_pct: 25,
+        allow_stack: true,
+        max_one_in_group: false,
+        max_one_per_subcategory: true,
+    },
+
+    // =========================================================================
+    // D) CAMPAIGN / EXCLUSIVE DEALS — Seasonal + Deep Deals
+    // =========================================================================
+    {
+        id: 'booking-campaign-early-2026',
+        vendor: 'booking',
+        name: 'Early 2026 Deal',
+        description: 'Secure advance bookings and get the new year off to a strong start',
+        group_type: 'CAMPAIGN' as const,
+        sub_category: 'CAMPAIGN',
+        default_pct: 20,
+        allow_stack: false,
+        max_one_in_group: true,
+        max_one_per_subcategory: true,
+    },
+    {
+        id: 'booking-campaign-getaway',
+        vendor: 'booking',
+        name: 'Getaway Deals',
+        description: 'Boost visibility during peak travel seasons',
+        group_type: 'CAMPAIGN' as const,
+        sub_category: 'CAMPAIGN',
+        default_pct: 15,
+        allow_stack: false,
+        max_one_in_group: true,
+        max_one_per_subcategory: true,
+    },
+    {
+        id: 'booking-campaign-late-escape',
+        vendor: 'booking',
+        name: 'Late Escape Deals',
+        description: 'End of season promotional campaign',
+        group_type: 'CAMPAIGN' as const,
+        sub_category: 'CAMPAIGN',
+        default_pct: 15,
+        allow_stack: false,
+        max_one_in_group: true,
+        max_one_per_subcategory: true,
+    },
+    {
+        id: 'booking-deep-limited-time',
+        vendor: 'booking',
+        name: 'Limited-time Deal',
+        description: 'Boost your property in search results for 48 hours',
+        group_type: 'CAMPAIGN' as const,
+        sub_category: 'DEEP',
+        default_pct: 30,
+        allow_stack: false,
+        max_one_in_group: true,
+        max_one_per_subcategory: true,
+    },
+    {
+        id: 'booking-deep-deal-of-day',
+        vendor: 'booking',
+        name: 'Deal of the Day',
+        description: '24h flash sale with maximum visibility',
+        group_type: 'CAMPAIGN' as const,
+        sub_category: 'DEEP',
+        default_pct: 15,
+        allow_stack: false,
+        max_one_in_group: true,
         max_one_per_subcategory: true,
     },
 ];
