@@ -2,7 +2,7 @@
   "meta": {
     "schema_version": "1.5.0",
     "awf_version": "4.1.2",
-    "last_updated": "2026-02-11T12:21:00+07:00"
+    "last_updated": "2026-02-11T20:42:00+07:00"
   },
   "project": {
     "name": "revenue-management-system",
@@ -193,9 +193,22 @@
         "values": [
           "SEASONAL",
           "ESSENTIAL",
-          "TARGETED"
+          "TARGETED",
+          "GENIUS",
+          "PORTFOLIO",
+          "CAMPAIGN"
         ],
-        "description": "V01.2: Promotion stacking rules. SEASONAL=max 1, TARGETED=max 1 per subcategory"
+        "description": "V01.6: 2-layer architecture. Engine layer (source-of-truth for stacking): SEASONAL/ESSENTIAL/TARGETED/GENIUS/PORTFOLIO/CAMPAIGN. UI layer: vendor-specific display labels."
+      },
+      {
+        "name": "StackBehavior (TS type)",
+        "values": [
+          "STACKABLE",
+          "HIGHEST_WINS",
+          "EXCLUSIVE",
+          "ONLY_WITH_GENIUS"
+        ],
+        "description": "V01.6: Engine-layer stacking rule per promotion. STACKABLE=combines with others, HIGHEST_WINS=portfolio pick best, EXCLUSIVE=blocks all, ONLY_WITH_GENIUS=blocks all except Genius."
       },
       {
         "name": "CalcMode (conceptual)",
@@ -420,7 +433,7 @@
     "V01.2: OTA Channels Configuration (commission, calc mode)",
     "V01.2: Promotions Tab (campaign picker, validation panel)",
     "V01.2: Overview Tab (price matrix, heatmap, CSV export)",
-    "V01.2: Booking.com Promotions (Genius, Mobile, Deals) - 10 promotions",
+    "V01.2: Booking.com Promotions (Genius, Mobile, Deals) - 16 promotions with 2-layer architecture",
     "V01.2: Editable Discount Percentage - User can modify % per campaign",
     "V01.2: Demo Hotel - Default hotel for new users without assignment",
     "V01.2: User Phone Field - Contact number in user profile",
@@ -488,7 +501,13 @@
     "Hotel Validation Before Import - Validates hotel_id exists before creating importJob (prevents FK errors)",
     "Friendly Upload Error Messages - Translates FK/unique/connection errors to Vietnamese",
     "Forecast as_of_date Alignment - RunForecast uses max(as_of_date) from features_daily instead of max(booking_date) from reservationsRaw",
-    "Delete-by-month Hotel Filter - hotel_id in WHERE clause for both GET preview and DELETE operation"
+    "Delete-by-month Hotel Filter - hotel_id in WHERE clause for both GET preview and DELETE operation",
+    "V01.6: Booking.com 2-Layer Architecture - Engine groupType (GENIUS/TARGETED/PORTFOLIO/CAMPAIGN) separated from UI display labels",
+    "V01.6: Free Nights Deal - Stay X / Pay Y input with auto-calculated discount % instead of manual entry",
+    "V01.6: Stack Behavior Badges - Visual STACKABLE/EXCLUSIVE/HIGHEST_WINS indicators per promotion",
+    "V01.6: 3-Tier Exclusion Engine - Campaign EXCLUSIVE→Business Bookers→Portfolio HIGHEST_WINS validation pipeline",
+    "V01.6: Portfolio Highest-Wins Note - UI shows 'Booking chỉ áp dụng deal tốt nhất' below Portfolio group",
+    "V01.6: Booking Toggle Label - 'Kết hợp giảm giá (lũy tiến theo Booking rules)' for Booking.com channels"
   ],
   "cancellation_bridge_v011": {
     "status": "Implemented",
@@ -574,6 +593,11 @@
     "V01.2: Trip.com ADDITIVE mode - same box pick 1, different boxes stack additively (d₁+d₂+...)",
     "V01.2: Expedia ISOLATED mode - each promotion creates separate rate plan, no stacking",
     "V01.2: Booking.com Deep Deals (Limited-time, Deal of the Day) - allow_stack=false",
+    "V01.6: 2-layer architecture for promotions: Engine layer = groupType + stackBehavior (source-of-truth for rules), UI layer = display labels (for GM usability)",
+    "V01.6: GENIUS separated from TARGETED in PromotionGroup enum - Genius L1/L2/L3 are always stackable with everything",
+    "V01.6: Campaign EXCLUSIVE blocks everything except Genius deals (Genius always passes through)",
+    "V01.6: Business Bookers is EXCLUSIVE and blocks ALL including Genius (different from Campaign EXCLUSIVE)",
+    "V01.6: Free Nights uses inverse formula: Stay X / Pay Y → discount_pct = round((1 - Y/X) × 100)",
     "Auto-detect hotel_id from reservations_raw (groupBy most reservations) instead of env var DEFAULT_HOTEL_ID",
     "Super Admin bypasses Demo Hotel restrictions (Settings page, Guide page, OTA Growth tab)",
     "OTA Growth Playbook integrated into Pricing page (not Guide page) for logical grouping with OTA Pricing tabs",
@@ -651,7 +675,10 @@
       "ingestCSV was missing hotel validation → FK error on importJob.create if cookie has stale hotel_id",
       "RunForecast used max(booking_date) as as_of_date but features built with today's date → 0 results",
       "DeleteByMonth was not filtering by hotel_id → could delete data across all hotels",
-      "OTB as_of_date = loaded_at (upload date), NOT booking_date → deleting by month of data doesn't delete OTB"
+      "OTB as_of_date = loaded_at (upload date), NOT booking_date → deleting by month of data doesn't delete OTB",
+      "V01.6: PromotionGroup enum must be synced across 3 files: schema.prisma, types.ts, catalog.ts GROUP_COLORS/VENDOR_GROUP_LABELS",
+      "V01.6: Free Nights X/Y inverse calc can produce rounding artifacts (e.g. Stay 7 / Pay 6 = 14.28% not 14%)",
+      "V01.6: Git push can hang if credential helper dialog is hidden behind other windows — terminate after 15s and retry"
     ],
     "formulas": {
       "rooms_otb": "SUM(num_rooms) from reservations for that stay_date",
