@@ -47,6 +47,7 @@ interface OTAChannel {
     name: string;
     code: string;
     commission: number;  // % hoa hồng từ tab Kênh OTA
+    calc_type?: string;  // 'PROGRESSIVE' | 'ADDITIVE'
 }
 
 interface RoomType {
@@ -315,15 +316,19 @@ function PriceCalculator({
     selectedRoomId,
     onRoomSelect,
     totalDiscount,
+    discountMultiplier,
     commissionPct,
     channelName,
+    calcType,
 }: {
     roomTypes: RoomType[];
     selectedRoomId: string;
     onRoomSelect: (id: string) => void;
     totalDiscount: number;
+    discountMultiplier: number;
     commissionPct: number;
     channelName: string;
+    calcType: 'PROGRESSIVE' | 'ADDITIVE';
 }) {
     const [calcMode, setCalcMode] = useState<'net_to_display' | 'display_to_net'>('net_to_display');
     const [customInput, setCustomInput] = useState<string>('');
@@ -331,8 +336,7 @@ function PriceCalculator({
     const selectedRoom = roomTypes.find((r) => r.id === selectedRoomId);
     const baseNetPrice = selectedRoom?.net_price || 0;
 
-    // Multipliers
-    const discountMultiplier = totalDiscount > 0 ? (1 - totalDiscount / 100) : 1;
+    // Multipliers - discountMultiplier already calculated correctly by parent
     const commissionMultiplier = commissionPct > 0 ? (1 - commissionPct / 100) : 1;
 
     const formatNumber = (n: number) => {
@@ -461,7 +465,7 @@ function PriceCalculator({
                         </div>
                         {totalDiscount > 0 && (
                             <div className="flex justify-between items-center">
-                                <span className="text-slate-600">+ Khuyến mãi ({totalDiscount}%):</span>
+                                <span className="text-slate-600">+ Khuyến mãi ({totalDiscount.toFixed(1)}%{calcType === 'PROGRESSIVE' ? ' lũy tiến' : ''}):</span>
                                 <span className="font-medium text-orange-600">+{formatNumber(displayPrice - netAfterDiscount)}đ</span>
                             </div>
                         )}
@@ -481,7 +485,7 @@ function PriceCalculator({
                         {totalDiscount > 0 && (
                             <div className="border-t border-[#DBE1EB] pt-2">
                                 <div className="flex justify-between items-center">
-                                    <span className="text-slate-600">- Khuyến mãi ({totalDiscount}%):</span>
+                                    <span className="text-slate-600">- Khuyến mãi ({totalDiscount.toFixed(1)}%{calcType === 'PROGRESSIVE' ? ' lũy tiến' : ''}):</span>
                                     <span className="font-medium text-orange-600">-{formatNumber(displayPrice - netAfterDiscount)}đ</span>
                                 </div>
                             </div>
@@ -591,8 +595,8 @@ function MarketingPrograms({
                                     key={tier.id}
                                     onClick={() => handleAGPChange(tier.id)}
                                     className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${tier.enabled
-                                            ? 'bg-[#204183] text-white'
-                                            : 'bg-[#F2F4F8] text-slate-600 hover:bg-[#DBE1EB]'
+                                        ? 'bg-[#204183] text-white'
+                                        : 'bg-[#F2F4F8] text-slate-600 hover:bg-[#DBE1EB]'
                                         }`}
                                 >
                                     {tier.tier?.charAt(0).toUpperCase()}{tier.tier?.slice(1)} ({tier.boostPct}%)
@@ -695,11 +699,13 @@ function PricingExplanation({
     totalDiscount,
     commissionPct,
     validation,
+    calcType,
 }: {
     campaigns: Campaign[];
     totalDiscount: number;
     commissionPct: number;
     validation: ValidationResult;
+    calcType: 'PROGRESSIVE' | 'ADDITIVE';
 }) {
     const activeCampaigns = campaigns.filter((c) => c.is_active);
 
@@ -753,8 +759,11 @@ function PricingExplanation({
 
                     {totalDiscount > 0 && (
                         <div className="bg-white rounded-lg p-3 border border-[#DBE1EB]">
-                            <p className="font-medium text-slate-700 mb-1">📌 Bước 3: Cộng khuyến mãi ({totalDiscount}%)</p>
-                            <p className="text-slate-500">Giá trước KM ÷ (1 - {totalDiscount}%) = Giá hiển thị</p>
+                            <p className="font-medium text-slate-700 mb-1">📌 Bước 3: {calcType === 'PROGRESSIVE' ? 'Nhân lũy tiến' : 'Cộng dồn'} khuyến mãi ({totalDiscount.toFixed(1)}%)</p>
+                            <p className="text-slate-500">{calcType === 'PROGRESSIVE'
+                                ? 'Giá trước KM × Π(1 - dᵢ) = Giá hiển thị (mỗi KM nhân trên giá đã giảm)'
+                                : `Giá trước KM ÷ (1 - ${totalDiscount}%) = Giá hiển thị`
+                            }</p>
                             {activeCampaigns.length > 0 && (
                                 <div className="mt-2 text-xs text-slate-400">
                                     Gồm: {activeCampaigns.map((c) => `${c.promo.name} (${c.discount_pct}%)`).join(' + ')}
@@ -1086,9 +1095,24 @@ export default function PromotionsTab() {
     };
 
     const validation = validate();
-    const totalDiscount = campaigns.filter((c) => c.is_active).reduce((sum, c) => sum + c.discount_pct, 0);
     const selectedChannelData = channels.find((c) => c.id === selectedChannel);
     const commissionPct = selectedChannelData?.commission || 0; // Lấy từ tab Kênh OTA
+
+    // V01.4: Calculate totalDiscount based on calcType (additive vs progressive)
+    const activeDiscounts = campaigns.filter((c) => c.is_active);
+    const calcType = (selectedChannelData?.calc_type as 'PROGRESSIVE' | 'ADDITIVE') || 'PROGRESSIVE';
+    let totalDiscount: number;
+    let discountMultiplier: number;
+    if (calcType === 'PROGRESSIVE' && activeDiscounts.length > 0) {
+        // Progressive: effective = 1 - Π(1 - dᵢ/100)
+        discountMultiplier = activeDiscounts.reduce((mult, c) => mult * (1 - c.discount_pct / 100), 1);
+        totalDiscount = (1 - discountMultiplier) * 100;
+    } else {
+        // Additive: sum
+        totalDiscount = activeDiscounts.reduce((sum, c) => sum + c.discount_pct, 0);
+        discountMultiplier = totalDiscount > 0 ? (1 - totalDiscount / 100) : 1;
+    }
+
     // V01.4: Effective commission with marketing programs
     const activeBoosters = boosters.filter(b => b.enabled);
     const totalBoost = activeBoosters.reduce((sum, b) => sum + b.boostPct, 0);
@@ -1210,7 +1234,7 @@ export default function PromotionsTab() {
                                     }`}
                             />
                             <span className="text-sm font-medium text-slate-700">
-                                Tổng giảm giá: {totalDiscount}% (Agoda tối đa 80%)
+                                Tổng giảm giá: {totalDiscount.toFixed(1)}% (Agoda tối đa 80%)
                             </span>
                         </div>
                     )}
@@ -1218,7 +1242,7 @@ export default function PromotionsTab() {
                         <div className="px-4 py-3 rounded-lg flex items-center gap-2 bg-[#F2F4F8] border border-[#DBE1EB]">
                             <CheckCircle className="w-5 h-5 text-emerald-600" />
                             <span className="text-sm font-medium text-slate-700">
-                                Tổng giảm giá: {totalDiscount}%
+                                Tổng giảm giá: {totalDiscount.toFixed(1)}% {calcType === 'PROGRESSIVE' ? '(lũy tiến)' : '(cộng dồn)'}
                             </span>
                         </div>
                     )}
@@ -1232,8 +1256,10 @@ export default function PromotionsTab() {
                         selectedRoomId={selectedRoomId}
                         onRoomSelect={setSelectedRoomId}
                         totalDiscount={totalDiscount}
+                        discountMultiplier={discountMultiplier}
                         commissionPct={effectiveCommissionPct}
                         channelName={selectedChannelData?.name || 'OTA'}
+                        calcType={calcType}
                     />
 
                     {/* Pricing Explanation */}
@@ -1242,6 +1268,7 @@ export default function PromotionsTab() {
                         totalDiscount={totalDiscount}
                         commissionPct={effectiveCommissionPct}
                         validation={validation}
+                        calcType={calcType}
                     />
                 </div>
             </div>
