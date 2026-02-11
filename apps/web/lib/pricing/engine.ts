@@ -1,9 +1,29 @@
-// V01.3: Pricing Calculation Engine
+// V01.4: Pricing Calculation Engine
 // Calculate BAR from NET with commission and discounts
 // V01.3: Early Bird + Last-Minute are mutually exclusive (non-stacking)
+// V01.4: Commission Boosters (AGP/AGX/SL) support
 
-import type { CalcType, CalcResult, DiscountItem, TraceStep, ValidationResult } from './types';
+import type { CalcType, CalcResult, DiscountItem, CommissionBooster, TraceStep, ValidationResult } from './types';
 import { validatePromotions } from './validators';
+
+/**
+ * Calculate effective commission with boosters
+ * Total = Base + Σ(active booster %)
+ */
+function calcEffectiveCommission(
+    baseCommission: number,
+    boosters?: CommissionBooster[]
+): { effectiveCommission: number; activeBoosters: CommissionBooster[] } {
+    if (!boosters || boosters.length === 0) {
+        return { effectiveCommission: baseCommission, activeBoosters: [] };
+    }
+    const active = boosters.filter(b => b.enabled && b.boostPct > 0);
+    const totalBoost = active.reduce((sum, b) => sum + b.boostPct, 0);
+    return {
+        effectiveCommission: baseCommission + totalBoost,
+        activeBoosters: active,
+    };
+}
 
 // Patterns to detect timing-based promotions
 const EARLY_BIRD_PATTERN = /early.?bird|early.?booker/i;
@@ -43,11 +63,12 @@ export function resolveTimingConflicts(discounts: DiscountItem[]): {
  */
 export function calcBarFromNet(
     net: number,
-    commission: number,     // % (0-100)
+    commission: number,     // Base % (0-100)
     discounts: DiscountItem[],
     calcType: CalcType,
     roundingRule: 'CEIL_1000' | 'ROUND_100' | 'NONE' = 'CEIL_1000',
-    vendor: string = 'agoda'
+    vendor: string = 'agoda',
+    boosters?: CommissionBooster[]
 ): CalcResult {
     const trace: TraceStep[] = [];
 
@@ -94,13 +115,25 @@ export function calcBarFromNet(
         };
     }
 
+    // V01.4: Calculate effective commission with boosters
+    const { effectiveCommission, activeBoosters } = calcEffectiveCommission(commission, boosters);
+
     // Step 1: Calculate gross before discounts (use effectiveDiscounts from here on)
-    const commissionDecimal = commission / 100;
+    const commissionDecimal = effectiveCommission / 100;
     const gross = net / (1 - commissionDecimal);
+
+    if (activeBoosters.length > 0) {
+        const boosterBreakdown = activeBoosters.map(b => `${b.name} +${b.boostPct}%`).join(' + ');
+        trace.push({
+            step: '📊 Marketing Programs',
+            description: `Base ${commission}% + ${boosterBreakdown} = ${effectiveCommission}% total commission`,
+            priceAfter: net,
+        });
+    }
 
     trace.push({
         step: 'Commission',
-        description: `NET ${formatVND(net)} / (1 - ${commission}%) = ${formatVND(gross)}`,
+        description: `NET ${formatVND(net)} / (1 - ${effectiveCommission}%) = ${formatVND(gross)}`,
         priceAfter: gross,
     });
 
@@ -184,7 +217,9 @@ export function calcBarFromNet(
         barRaw,
         net,
         commission,
+        effectiveCommission: activeBoosters.length > 0 ? effectiveCommission : undefined,
         totalDiscount,
+        boosters: activeBoosters.length > 0 ? activeBoosters : undefined,
         validation,
         trace,
     };
@@ -197,10 +232,11 @@ export function calcBarFromNet(
  */
 export function calcNetFromBar(
     bar: number,
-    commission: number,     // % (0-100)
+    commission: number,     // Base % (0-100)
     discounts: DiscountItem[],
     calcType: CalcType,
-    vendor: string = 'agoda'
+    vendor: string = 'agoda',
+    boosters?: CommissionBooster[]
 ): CalcResult {
     const trace: TraceStep[] = [];
 
@@ -291,13 +327,25 @@ export function calcNetFromBar(
         });
     }
 
+    // V01.4: Calculate effective commission with boosters
+    const { effectiveCommission, activeBoosters } = calcEffectiveCommission(commission, boosters);
+
     // Step 2: Subtract commission
-    const commissionDecimal = commission / 100;
+    const commissionDecimal = effectiveCommission / 100;
     const net = afterDiscount * (1 - commissionDecimal);
+
+    if (activeBoosters.length > 0) {
+        const boosterBreakdown = activeBoosters.map(b => `${b.name} +${b.boostPct}%`).join(' + ');
+        trace.push({
+            step: '📊 Marketing Programs',
+            description: `Base ${commission}% + ${boosterBreakdown} = ${effectiveCommission}% total commission`,
+            priceAfter: afterDiscount,
+        });
+    }
 
     trace.push({
         step: 'Hoa hồng OTA',
-        description: `${formatVND(afterDiscount)} × (1 - ${commission}%) = ${formatVND(net)}`,
+        description: `${formatVND(afterDiscount)} × (1 - ${effectiveCommission}%) = ${formatVND(net)}`,
         priceAfter: net,
     });
 
@@ -314,7 +362,9 @@ export function calcNetFromBar(
         barRaw: bar,
         net: netRounded,
         commission,
+        effectiveCommission: activeBoosters.length > 0 ? effectiveCommission : undefined,
         totalDiscount,
+        boosters: activeBoosters.length > 0 ? activeBoosters : undefined,
         validation,
         trace,
     };

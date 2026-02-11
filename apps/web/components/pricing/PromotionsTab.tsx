@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, Loader2, AlertTriangle, CheckCircle, ChevronDown, ChevronRight, Tag, X, Search, Calculator, DollarSign } from 'lucide-react';
+import { Plus, Trash2, Loader2, AlertTriangle, CheckCircle, ChevronDown, ChevronRight, Tag, X, Search, Calculator, DollarSign, TrendingUp } from 'lucide-react';
+import { AGODA_BOOSTERS } from '@/lib/pricing/catalog';
+import type { CommissionBooster } from '@/lib/pricing/types';
 
 // 4TK Brand-aligned color config
 const GROUP_CONFIG = {
@@ -501,6 +503,192 @@ function PriceCalculator({
     );
 }
 
+// Marketing Programs Panel (AGP/AGX/SL)
+function MarketingPrograms({
+    boosters,
+    onUpdate,
+    baseCommission,
+}: {
+    boosters: CommissionBooster[];
+    onUpdate: (boosters: CommissionBooster[]) => void;
+    baseCommission: number;
+}) {
+    const activeBoosters = boosters.filter(b => b.enabled);
+    const totalBoost = activeBoosters.reduce((sum, b) => sum + b.boostPct, 0);
+    const effectiveCommission = baseCommission + totalBoost;
+
+    // AGP: only one tier at a time
+    const agpBoosters = boosters.filter(b => b.program === 'AGP');
+    const activeAGP = agpBoosters.find(b => b.enabled);
+    const agx = boosters.find(b => b.program === 'AGX');
+    const sl = boosters.find(b => b.program === 'SL');
+
+    const handleAGPChange = (tierId: string) => {
+        onUpdate(boosters.map(b => {
+            if (b.program === 'AGP') {
+                return { ...b, enabled: b.id === tierId };
+            }
+            return b;
+        }));
+    };
+
+    const handleToggle = (id: string) => {
+        onUpdate(boosters.map(b => {
+            if (b.id === id) {
+                if (b.program === 'AGP') {
+                    // Toggling off AGP: disable all tiers
+                    return { ...b, enabled: false };
+                }
+                return { ...b, enabled: !b.enabled };
+            }
+            // If enabling an AGP tier, disable other AGP tiers
+            if (b.program === 'AGP' && boosters.find(x => x.id === id)?.program === 'AGP') {
+                return { ...b, enabled: false };
+            }
+            return b;
+        }));
+    };
+
+    const handlePctChange = (id: string, pct: number) => {
+        onUpdate(boosters.map(b =>
+            b.id === id ? { ...b, boostPct: Math.min(50, Math.max(0, pct)) } : b
+        ));
+    };
+
+    return (
+        <div className="bg-[#E9ECF3] border border-[#DBE1EB] rounded-xl overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3">
+                <div className="flex items-center gap-3">
+                    <TrendingUp className="w-4 h-4 text-[#204183]" />
+                    <span className="font-medium text-slate-800">Marketing Programs</span>
+                </div>
+                {totalBoost > 0 && (
+                    <span className="text-xs font-semibold text-orange-600 bg-orange-50 px-2 py-1 rounded-full">
+                        +{totalBoost}% commission
+                    </span>
+                )}
+            </div>
+
+            <div className="px-4 pb-4 space-y-3">
+                {/* AGP - Dropdown tier */}
+                <div className="bg-white border border-[#DBE1EB] rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-2">
+                        <div>
+                            <span className="font-medium text-slate-800 text-sm">AGP</span>
+                            <span className="text-xs text-slate-500 ml-2">Agoda Growth Program</span>
+                        </div>
+                        <button
+                            onClick={() => activeAGP ? handleToggle(activeAGP.id) : handleAGPChange(agpBoosters[0]?.id)}
+                            className={`relative w-11 h-6 rounded-full transition-colors ${activeAGP ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                        >
+                            <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${activeAGP ? 'left-6' : 'left-1'}`} />
+                        </button>
+                    </div>
+                    {activeAGP && (
+                        <div className="flex gap-2">
+                            {agpBoosters.map(tier => (
+                                <button
+                                    key={tier.id}
+                                    onClick={() => handleAGPChange(tier.id)}
+                                    className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${tier.enabled
+                                            ? 'bg-[#204183] text-white'
+                                            : 'bg-[#F2F4F8] text-slate-600 hover:bg-[#DBE1EB]'
+                                        }`}
+                                >
+                                    {tier.tier?.charAt(0).toUpperCase()}{tier.tier?.slice(1)} ({tier.boostPct}%)
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* AGX */}
+                {agx && (
+                    <div className="bg-white border border-[#DBE1EB] rounded-lg p-3">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <span className="font-medium text-slate-800 text-sm">AGX</span>
+                                <span className="text-xs text-slate-500 ml-2">Growth Express</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <div className="flex items-center">
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max="50"
+                                        value={agx.boostPct}
+                                        onChange={(e) => handlePctChange(agx.id, parseInt(e.target.value) || 0)}
+                                        disabled={!agx.enabled}
+                                        className="w-12 text-right text-sm font-semibold text-[#204183] bg-slate-50 border border-[#DBE1EB] rounded px-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-[#204183] disabled:opacity-40"
+                                    />
+                                    <span className="text-sm font-semibold text-[#204183] ml-0.5">%</span>
+                                </div>
+                                <button
+                                    onClick={() => handleToggle(agx.id)}
+                                    className={`relative w-11 h-6 rounded-full transition-colors ${agx.enabled ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                                >
+                                    <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${agx.enabled ? 'left-6' : 'left-1'}`} />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* SL */}
+                {sl && (
+                    <div className="bg-white border border-[#DBE1EB] rounded-lg p-3">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <span className="font-medium text-slate-800 text-sm">SL</span>
+                                <span className="text-xs text-slate-500 ml-2">Sponsored Listing</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <div className="flex items-center">
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max="50"
+                                        value={sl.boostPct}
+                                        onChange={(e) => handlePctChange(sl.id, parseInt(e.target.value) || 0)}
+                                        disabled={!sl.enabled}
+                                        className="w-12 text-right text-sm font-semibold text-[#204183] bg-slate-50 border border-[#DBE1EB] rounded px-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-[#204183] disabled:opacity-40"
+                                    />
+                                    <span className="text-sm font-semibold text-[#204183] ml-0.5">%</span>
+                                </div>
+                                <button
+                                    onClick={() => handleToggle(sl.id)}
+                                    className={`relative w-11 h-6 rounded-full transition-colors ${sl.enabled ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                                >
+                                    <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${sl.enabled ? 'left-6' : 'left-1'}`} />
+                                </button>
+                            </div>
+                        </div>
+                        {sl.enabled && (
+                            <p className="text-xs text-slate-400 mt-2">💡 Variable rate — nhập % theo YCS campaign setup</p>
+                        )}
+                    </div>
+                )}
+
+                {/* Commission breakdown */}
+                {totalBoost > 0 && (
+                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                        <p className="text-xs font-medium text-orange-700">
+                            📊 Commission: Base {baseCommission}%
+                            {activeBoosters.map(b => ` + ${b.name} ${b.boostPct}%`).join('')}
+                            {' '}= <strong>{effectiveCommission}%</strong>
+                        </p>
+                        {effectiveCommission > 40 && (
+                            <p className="text-xs text-red-600 mt-1">
+                                ⚠️ Commission rất cao ({effectiveCommission}%) — kiểm tra lại
+                            </p>
+                        )}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
 // Step-by-step Explanation Panel
 function PricingExplanation({
     campaigns,
@@ -600,6 +788,10 @@ export default function PromotionsTab() {
     const [pickerInitialTab, setPickerInitialTab] = useState<GroupType>('SEASONAL');
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    // V01.4: Marketing program boosters (client-side state)
+    const [boosters, setBoosters] = useState<CommissionBooster[]>(() =>
+        AGODA_BOOSTERS.map(b => ({ ...b }))
+    );
 
     // Fetch channels
     useEffect(() => {
@@ -897,6 +1089,10 @@ export default function PromotionsTab() {
     const totalDiscount = campaigns.filter((c) => c.is_active).reduce((sum, c) => sum + c.discount_pct, 0);
     const selectedChannelData = channels.find((c) => c.id === selectedChannel);
     const commissionPct = selectedChannelData?.commission || 0; // Lấy từ tab Kênh OTA
+    // V01.4: Effective commission with marketing programs
+    const activeBoosters = boosters.filter(b => b.enabled);
+    const totalBoost = activeBoosters.reduce((sum, b) => sum + b.boostPct, 0);
+    const effectiveCommissionPct = commissionPct + totalBoost;
 
     // Get available promos (not already added)
     const usedPromoIds = new Set(campaigns.map((c) => c.promo.id));
@@ -986,6 +1182,15 @@ export default function PromotionsTab() {
                         </div>
                     )}
 
+                    {/* Marketing Programs (Agoda only) */}
+                    {(selectedChannelData?.code === 'agoda') && (
+                        <MarketingPrograms
+                            boosters={boosters}
+                            onUpdate={setBoosters}
+                            baseCommission={commissionPct}
+                        />
+                    )}
+
                     {/* Total Discount - Only show 80% limit for Agoda */}
                     {selectedChannelData?.code === 'agoda' && (
                         <div
@@ -1027,7 +1232,7 @@ export default function PromotionsTab() {
                         selectedRoomId={selectedRoomId}
                         onRoomSelect={setSelectedRoomId}
                         totalDiscount={totalDiscount}
-                        commissionPct={commissionPct}
+                        commissionPct={effectiveCommissionPct}
                         channelName={selectedChannelData?.name || 'OTA'}
                     />
 
@@ -1035,7 +1240,7 @@ export default function PromotionsTab() {
                     <PricingExplanation
                         campaigns={campaigns}
                         totalDiscount={totalDiscount}
-                        commissionPct={commissionPct}
+                        commissionPct={effectiveCommissionPct}
                         validation={validation}
                     />
                 </div>

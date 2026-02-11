@@ -1,8 +1,11 @@
-// V01.3: Pricing Types (Phase 02 Update — D25-D36)
+// V01.4: Pricing Types (Phase 02 Update — D25-D36)
 // Types for OTA Pricing calculation engine
 
 export type CalcType = 'PROGRESSIVE' | 'ADDITIVE';
 export type PromotionGroup = 'SEASONAL' | 'ESSENTIAL' | 'TARGETED';
+
+// Marketing program types (commission boosters)
+export type BoosterProgram = 'AGP' | 'AGX' | 'SL';
 
 // Input for calculation
 export interface PricingInput {
@@ -10,6 +13,7 @@ export interface PricingInput {
     commission: number;       // % (0-100)
     discounts: DiscountItem[];
     calcType: CalcType;
+    boosters?: CommissionBooster[];  // Marketing programs
 }
 
 export interface DiscountItem {
@@ -18,6 +22,17 @@ export interface DiscountItem {
     percent: number;          // % (0-100)
     group: PromotionGroup;
     subCategory?: string;     // For TARGETED
+}
+
+// Commission booster (marketing program that increases effective commission)
+export interface CommissionBooster {
+    id: string;
+    name: string;
+    program: BoosterProgram;
+    boostPct: number;         // Incremental % (0-100)
+    tier?: string;            // AGP: 'basic'|'standard'|'premium'
+    isVariable?: boolean;     // SL: true (user nhập %)
+    enabled: boolean;
 }
 
 // Validation result
@@ -39,8 +54,10 @@ export interface CalcResult {
     bar: number;              // BAR price (rounded)
     barRaw: number;           // BAR price (not rounded)
     net: number;              // Input NET
-    commission: number;       // Commission %
+    commission: number;       // Base commission %
+    effectiveCommission?: number; // Base + boosters %
     totalDiscount: number;    // Total discount %
+    boosters?: CommissionBooster[]; // Active boosters
     validation: ValidationResult;
     trace: TraceStep[];
 }

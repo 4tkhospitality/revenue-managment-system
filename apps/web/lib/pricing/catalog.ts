@@ -1,7 +1,54 @@
-// V01.2: OTA Promotion Catalogs (Static)
+// V01.4: OTA Promotion Catalogs (Static)
 // This is a reference for the UI - actual data comes from DB
 
-import type { PromotionCatalogItem, PromotionGroup } from './types';
+import type { PromotionCatalogItem, PromotionGroup, CommissionBooster } from './types';
+
+// =============================================================================
+// AGODA COMMISSION BOOSTERS (Marketing Programs)
+// These INCREASE effective commission (cost), not discounts
+// All 3 can stack (bundle) per Agoda Partner Hub
+// =============================================================================
+export const AGODA_BOOSTERS: CommissionBooster[] = [
+    {
+        id: 'agoda-agp-basic',
+        name: 'AGP Basic',
+        program: 'AGP',
+        boostPct: 10,
+        tier: 'basic',
+        enabled: false,
+    },
+    {
+        id: 'agoda-agp-standard',
+        name: 'AGP Standard',
+        program: 'AGP',
+        boostPct: 12,
+        tier: 'standard',
+        enabled: false,
+    },
+    {
+        id: 'agoda-agp-premium',
+        name: 'AGP Premium',
+        program: 'AGP',
+        boostPct: 15,
+        tier: 'premium',
+        enabled: false,
+    },
+    {
+        id: 'agoda-agx',
+        name: 'AGX (Growth Express)',
+        program: 'AGX',
+        boostPct: 5,
+        enabled: false,
+    },
+    {
+        id: 'agoda-sl',
+        name: 'Sponsored Listing',
+        program: 'SL',
+        boostPct: 5,
+        isVariable: true,
+        enabled: false,
+    },
+];
 
 // =============================================================================
 // AGODA PROMOTIONS
