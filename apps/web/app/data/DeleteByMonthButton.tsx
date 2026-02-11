@@ -223,7 +223,7 @@ export function DeleteByMonthButton({ className }: DeleteByMonthButtonProps) {
                                     )}
 
                                     {/* Confirmation Input */}
-                                    {preview && (preview.reservationCount > 0 || preview.cancellationCount > 0) && (
+                                    {preview && (preview.reservationCount > 0 || preview.cancellationCount > 0 || preview.otbCount > 0) && (
                                         <div>
                                             <label className="block text-sm font-medium text-red-700 mb-1">
                                                 Gõ <strong>&quot;XÓA DỮ LIỆU&quot;</strong> để xác nhận
@@ -257,7 +257,7 @@ export function DeleteByMonthButton({ className }: DeleteByMonthButtonProps) {
                                 {result ? 'Đóng' : 'Hủy'}
                             </button>
 
-                            {!result && preview && (preview.reservationCount > 0 || preview.cancellationCount > 0) && (
+                            {!result && preview && (preview.reservationCount > 0 || preview.cancellationCount > 0 || preview.otbCount > 0) && (
                                 <button
                                     onClick={handleDelete}
                                     disabled={confirmText !== 'XÓA DỮ LIỆU' || loading}
