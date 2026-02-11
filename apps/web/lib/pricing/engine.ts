@@ -1,8 +1,39 @@
-// V01.2: Pricing Calculation Engine
+// V01.3: Pricing Calculation Engine
 // Calculate BAR from NET with commission and discounts
+// V01.3: Early Bird + Last-Minute are mutually exclusive (non-stacking)
 
 import type { CalcType, CalcResult, DiscountItem, TraceStep, ValidationResult } from './types';
 import { validatePromotions } from './validators';
+
+// Patterns to detect timing-based promotions
+const EARLY_BIRD_PATTERN = /early.?bird|early.?booker/i;
+const LAST_MINUTE_PATTERN = /last.?minute/i;
+
+/**
+ * Resolve Early Bird + Last-Minute conflict.
+ * These promotions are mutually exclusive by booking window:
+ * - Early Bird: khách đặt sớm (14-30 ngày trước check-in)
+ * - Last-Minute: khách đặt gấp (1-7 ngày trước check-in)
+ * When both are active, only the LARGER discount is applied.
+ */
+export function resolveTimingConflicts(discounts: DiscountItem[]): {
+    resolved: DiscountItem[];
+    removed: DiscountItem | null;
+    hadConflict: boolean;
+} {
+    const earlyBird = discounts.find(d => EARLY_BIRD_PATTERN.test(d.name));
+    const lastMinute = discounts.find(d => LAST_MINUTE_PATTERN.test(d.name));
+
+    if (!earlyBird || !lastMinute) {
+        return { resolved: discounts, removed: null, hadConflict: false };
+    }
+
+    // Both exist → keep the larger discount, remove the smaller
+    const toRemove = earlyBird.percent >= lastMinute.percent ? lastMinute : earlyBird;
+    const resolved = discounts.filter(d => d.id !== toRemove.id);
+
+    return { resolved, removed: toRemove, hadConflict: true };
+}
 
 /**
  * Calculate BAR (Best Available Rate) from NET
@@ -20,8 +51,18 @@ export function calcBarFromNet(
 ): CalcResult {
     const trace: TraceStep[] = [];
 
+    // V01.3: Resolve Early Bird + Last-Minute mutual exclusivity
+    const { resolved: effectiveDiscounts, removed, hadConflict } = resolveTimingConflicts(discounts);
+    if (hadConflict && removed) {
+        trace.push({
+            step: '⚠️ Không cộng dồn',
+            description: `Early Bird + Last-Minute không stack → Bỏ "${removed.name}" (${removed.percent}%), giữ KM lớn hơn`,
+            priceAfter: net,
+        });
+    }
+
     // Validate inputs with vendor-specific rules
-    const validation = validatePromotions(discounts, commission, vendor);
+    const validation = validatePromotions(effectiveDiscounts, commission, vendor);
 
     // Enforce validation: reject if critical errors
     if (!validation.isValid && validation.errors.length > 0) {
@@ -53,7 +94,7 @@ export function calcBarFromNet(
         };
     }
 
-    // Step 1: Calculate gross before discounts
+    // Step 1: Calculate gross before discounts (use effectiveDiscounts from here on)
     const commissionDecimal = commission / 100;
     const gross = net / (1 - commissionDecimal);
 
@@ -70,7 +111,7 @@ export function calcBarFromNet(
     if (calcType === 'PROGRESSIVE') {
         // Progressive: BAR = gross / Π(1 - dᵢ)
         let multiplier = 1;
-        discounts.forEach((d) => {
+        effectiveDiscounts.forEach((d) => {
             multiplier *= (1 - d.percent / 100);
             totalDiscount = (1 - multiplier) * 100; // Running total
         });
@@ -78,7 +119,7 @@ export function calcBarFromNet(
 
         // Add trace for each discount
         let running = gross;
-        discounts.forEach((d) => {
+        effectiveDiscounts.forEach((d) => {
             running = running / (1 - d.percent / 100);
             trace.push({
                 step: d.name,
@@ -88,7 +129,7 @@ export function calcBarFromNet(
         });
     } else {
         // Additive: BAR = gross / (1 - Σdᵢ)
-        totalDiscount = discounts.reduce((sum, d) => sum + d.percent, 0);
+        totalDiscount = effectiveDiscounts.reduce((sum, d) => sum + d.percent, 0);
 
         if (totalDiscount >= 100) {
             return {
@@ -163,8 +204,18 @@ export function calcNetFromBar(
 ): CalcResult {
     const trace: TraceStep[] = [];
 
+    // V01.3: Resolve Early Bird + Last-Minute mutual exclusivity
+    const { resolved: effectiveDiscounts, removed, hadConflict } = resolveTimingConflicts(discounts);
+    if (hadConflict && removed) {
+        trace.push({
+            step: '⚠️ Không cộng dồn',
+            description: `Early Bird + Last-Minute không stack → Bỏ "${removed.name}" (${removed.percent}%), giữ KM lớn hơn`,
+            priceAfter: bar,
+        });
+    }
+
     // Validate inputs
-    const validation = validatePromotions(discounts, commission, vendor);
+    const validation = validatePromotions(effectiveDiscounts, commission, vendor);
 
     // If commission >= 100, return error
     if (commission >= 100) {
@@ -198,7 +249,7 @@ export function calcNetFromBar(
         let multiplier = 1;
         let running = bar;
 
-        discounts.forEach((d) => {
+        effectiveDiscounts.forEach((d) => {
             const before = running;
             running = running * (1 - d.percent / 100);
             multiplier *= (1 - d.percent / 100);
@@ -213,7 +264,7 @@ export function calcNetFromBar(
         afterDiscount = running;
     } else {
         // Additive: afterDiscount = BAR × (1 - Σdᵢ)
-        totalDiscount = discounts.reduce((sum, d) => sum + d.percent, 0);
+        totalDiscount = effectiveDiscounts.reduce((sum, d) => sum + d.percent, 0);
 
         if (totalDiscount >= 100) {
             return {

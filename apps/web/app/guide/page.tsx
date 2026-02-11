@@ -901,9 +901,14 @@ function PricingGuide() {
 
                     <div className="bg-red-50 border border-red-200 rounded-xl p-4">
                         <p className="text-red-700 text-sm">
-                            <strong>⚠️ Lưu ý:</strong> Các KM được tính lũy tiến (nhân dồn). VD: Early Bird 10% + Mobile 5%
-                            → Tổng giảm = 1 - (0.90 × 0.95) = <strong>14.5%</strong> (không phải 15%!)
+                            <strong>⚠️ Lưu ý quan trọng:</strong>
                         </p>
+                        <ul className="text-sm text-red-700 mt-2 space-y-1">
+                            <li>• <strong>Early Bird + Last-Minute KHÔNG cộng dồn</strong> vì booking window khác nhau
+                                (đặt sớm vs đặt gấp). Hệ thống chỉ tính KM lớn hơn.</li>
+                            <li>• Các KM khác (Mobile Deal, Member Deal...) vẫn cộng dồn bình thường.
+                                VD: Early Bird 10% + Mobile 5% → Tổng giảm = 1 - (0.90 × 0.95) = <strong>14.5%</strong></li>
+                        </ul>
                     </div>
                 </div>
             </section>

@@ -73,6 +73,18 @@ export function validatePromotions(
         warnings.push(`Tổng Commission + Discount = ${effectiveReduction}% (khuyến nghị < 90%)`);
     }
 
+    // Rule 6: Early Bird + Last-Minute non-stacking warning (V01.3)
+    const EARLY_BIRD_PATTERN = /early.?bird|early.?booker/i;
+    const LAST_MINUTE_PATTERN = /last.?minute/i;
+    const hasEarlyBird = active.some(d => EARLY_BIRD_PATTERN.test(d.name));
+    const hasLastMinute = active.some(d => LAST_MINUTE_PATTERN.test(d.name));
+    if (hasEarlyBird && hasLastMinute) {
+        warnings.push(
+            'Early Bird + Last-Minute thường KHÔNG cộng dồn vì booking window khác nhau. ' +
+            'Hệ thống chỉ tính KM lớn hơn. Chỉ stack khi set ngày áp dụng chồng lên nhau.'
+        );
+    }
+
     return {
         isValid: errors.length === 0,
         errors,
