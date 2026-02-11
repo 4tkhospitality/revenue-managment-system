@@ -1,157 +1,135 @@
 # 📋 Plan: Booking.com Promotion UI Restructuring + Free Nights X/Y
 
 **Created:** 2026-02-11
-**Updated:** 2026-02-11T20:05 (v2 — 2-layer architecture per BA feedback)
+**Updated:** 2026-02-11T20:10 (v3 — BA corrections applied)
 **Status:** 🟢 BA Approved → Ready for Dev
-**Priority:** High
-**Module:** OTA Pricing → catalog.ts, PromotionsTab.tsx, types.ts
+**Module:** OTA Pricing → catalog.ts, PromotionsTab.tsx, types.ts, schema.prisma
 
 ---
 
-## 🏗️ Kiến trúc 2 tầng (Core Concept)
-
-> **Nguyên tắc:** Engine và UI tách riêng, không trộn lẫn.
+## 🏗️ Kiến trúc 2 tầng (Core Architecture)
 
 ```
-┌──────────────────────────────────────────────────────┐
-│  TẦNG 2: UI LAYER (GM-friendly labels)               │
-│  ┌──────────┐ ┌──────┐ ┌──────────┐ ┌──────────┐    │
-│  │Targeted  │ │Genius│ │Portfolio │ │Campaign  │    │
-│  │Rates     │ │      │ │Deals     │ │/Exclusive│    │
-│  └────┬─────┘ └──┬───┘ └────┬─────┘ └────┬─────┘    │
-│       │           │          │             │          │
-├───────┼───────────┼──────────┼─────────────┼──────────┤
-│  TẦNG 1: ENGINE LAYER (stacking source-of-truth)     │
-│       │           │          │             │          │
-│       ▼           ▼          ▼             ▼          │
-│  groupType:   groupType:  groupType:   groupType:    │
-│  TARGETED     GENIUS      PORTFOLIO    CAMPAIGN      │
-│  ┌─────────┐  ┌────────┐  ┌─────────┐  ┌──────────┐ │
-│  │stack:   │  │stack:  │  │stack:   │  │stack:    │ │
-│  │YES w/   │  │YES w/  │  │highest  │  │EXCLUSIVE │ │
-│  │Genius+  │  │all     │  │wins     │  │blocks    │ │
-│  │Portfolio │  │(except │  │(no add) │  │others    │ │
-│  │         │  │Biz.Bk) │  │         │  │          │ │
-│  └─────────┘  └────────┘  └─────────┘  └──────────┘ │
-└──────────────────────────────────────────────────────┘
+TẦNG 2 (UI):     Targeted │ Genius │ Portfolio │ Campaign
+                     ↕          ↕         ↕          ↕         ← display labels
+TẦNG 1 (ENGINE):  TARGETED   GENIUS   PORTFOLIO   CAMPAIGN    ← groupType (source-of-truth)
+                  stack:✅   stack:✅  highest     exclusive
 ```
 
-**Tầng 1 (ENGINE):** `groupType` trong DB/catalog = source-of-truth. Validator/engine đọc field này để quyết stack/exclusion. **Không đổi tên theo marketing.**
-
-**Tầng 2 (UI):** `uiGroup` = label hiển thị cho GM. Có thể đổi tên thoải mái mà không ảnh hưởng engine logic.
+- `groupType` = engine source-of-truth → validator/engine đọc để quyết stack/exclusion
+- UI labels = thoải mái rename, không ảnh hưởng logic
 
 ---
 
-## 📊 Mapping Table: Engine ↔ UI
+## 📊 Mapping: Engine ↔ UI
 
-### Booking.com
+| Promotion | `groupType` | `stackBehavior` | UI Group |
+|-----------|-------------|-----------------|----------|
+| Mobile Rate | TARGETED | STACKABLE | Targeted Rates |
+| Country Rate | TARGETED | STACKABLE | Targeted Rates |
+| Business Bookers | TARGETED | EXCLUSIVE | Targeted Rates |
+| Genius L1/L2/L3 | **GENIUS** | STACKABLE | Genius (Loyalty) |
+| Basic Deal | PORTFOLIO | HIGHEST_WINS | Portfolio Deals |
+| Secret Deal | PORTFOLIO | HIGHEST_WINS | Portfolio Deals |
+| Early Booker | PORTFOLIO | HIGHEST_WINS | Portfolio Deals |
+| Last Minute | PORTFOLIO | HIGHEST_WINS | Portfolio Deals |
+| Free Nights | PORTFOLIO | HIGHEST_WINS | Portfolio Deals |
+| Getaway Deal | CAMPAIGN | EXCLUSIVE | Campaign / Exclusive |
+| Late Escape | CAMPAIGN | EXCLUSIVE | Campaign / Exclusive |
+| Black Friday | CAMPAIGN | EXCLUSIVE | Campaign / Exclusive |
+| Early 2026 | CAMPAIGN | **ONLY_WITH_GENIUS** | Campaign / Exclusive |
+| Deal of Day | CAMPAIGN | EXCLUSIVE | Campaign / Exclusive |
 
-| Promotion | Engine `groupType` | Engine `stackBehavior` | UI Group Label |
-|-----------|-------------------|----------------------|----------------|
-| Mobile Rate | `TARGETED` | STACKABLE | Targeted Rates |
-| Country Rate | `TARGETED` | STACKABLE | Targeted Rates |
-| Business Bookers | `TARGETED` | EXCLUSIVE | Targeted Rates |
-| Genius L1 | `GENIUS` | STACKABLE | Genius (Loyalty) |
-| Genius L2 | `GENIUS` | STACKABLE | Genius (Loyalty) |
-| Genius L3 | `GENIUS` | STACKABLE | Genius (Loyalty) |
-| Basic Deal | `PORTFOLIO` | HIGHEST_WINS | Portfolio Deals |
-| Secret Deal | `PORTFOLIO` | HIGHEST_WINS | Portfolio Deals |
-| Early Booker | `PORTFOLIO` | HIGHEST_WINS | Portfolio Deals |
-| Last Minute | `PORTFOLIO` | HIGHEST_WINS | Portfolio Deals |
-| Free Nights | `PORTFOLIO` | HIGHEST_WINS | Portfolio Deals |
-| Getaway Deal | `CAMPAIGN` | EXCLUSIVE | Campaign / Exclusive |
-| Late Escape | `CAMPAIGN` | EXCLUSIVE | Campaign / Exclusive |
-| Black Friday | `CAMPAIGN` | EXCLUSIVE | Campaign / Exclusive |
-| Deal of Day | `CAMPAIGN` | EXCLUSIVE | Campaign / Exclusive |
-
-### Stacking Matrix (Engine Rules)
+### Stacking Matrix (Engine)
 
 ```
-           Targeted  Genius  Portfolio  Campaign
-Targeted      —       ✅       ✅         ❌
-Genius        ✅       —       ✅         ❌*
-Portfolio     ✅      ✅     Highest      ❌
-Campaign      ❌      ❌*      ❌          —
-
-❌* = Some campaigns "only stack with Genius" (future exception)
+              Targeted  Genius  Portfolio  Campaign
+Targeted         —       ✅       ✅         ❌
+Genius           ✅       —       ✅       ✅(only_w_genius)
+Portfolio        ✅      ✅     Highest      ❌
+Campaign         ❌    ✅(owg)    ❌          —
 ```
 
 ---
 
-## 🔧 Implementation (5 Changes)
+## 🔧 Implementation Steps
 
-### 1. Schema: Add GENIUS enum
-```diff
- enum PromotionGroup {
-   SEASONAL     // Agoda only
-   ESSENTIAL    // Agoda only
-   TARGETED     // All vendors
-+  GENIUS       // Booking.com Genius loyalty program
-   PORTFOLIO    // Booking.com portfolio deals
-   CAMPAIGN     // Booking.com campaigns + Expedia
- }
-```
+### Step 1: Schema
+- Add `GENIUS` to `PromotionGroup` enum
+- `prisma db push`
 
-### 2. Types: Add `stackBehavior` + Free Nights fields
+### Step 2: Types
 ```typescript
-// catalog item
-stackBehavior: 'STACKABLE' | 'HIGHEST_WINS' | 'EXCLUSIVE';
+// PromotionCatalogItem — add:
+stackBehavior: 'STACKABLE' | 'HIGHEST_WINS' | 'EXCLUSIVE' | 'ONLY_WITH_GENIUS';
 isFreeNights?: boolean;
 
-// campaign instance
+// PromotionInstance / Campaign — Free Nights fields:
+// ⚠️ BA FIX A: freeNightsX/Y thuộc về promotion config, không phải "campaign"
 freeNightsX?: number;  // Stay X nights
 freeNightsY?: number;  // Pay Y nights
 ```
 
-### 3. Catalog: Re-map Genius promos + add stackBehavior
-- Change Genius L1/L2/L3 from `groupType: 'TARGETED'` → `'GENIUS'`
+### Step 3: Catalog
+- Genius L1/L2/L3: change `groupType: 'TARGETED'` → `'GENIUS'`
 - Add `stackBehavior` to every promo
 - Add `isFreeNights: true` to `booking-free-nights`
-- Update `VENDOR_GROUP_LABELS` (UI labels only)
+- Mark `booking-early-2026` (or similar) as `ONLY_WITH_GENIUS`
+- Update `VENDOR_GROUP_LABELS` (UI tầng 2 only)
 - Update `VENDOR_PICKER_TABS` → `['TARGETED', 'GENIUS', 'PORTFOLIO', 'CAMPAIGN']`
 
-### 4. PromotionsTab UI Changes
-- **Main groups for Booking:** TARGETED → GENIUS → PORTFOLIO → CAMPAIGN (remove SEASONAL, ESSENTIAL)
-- **Free Nights input:** Stay X / Pay Y with auto-calc % when `isFreeNights`
-- **Badges:** Show `STACKABLE` / `EXCLUSIVE` / `HIGHEST_WINS` per promo
-- **Toggle label:** "Cộng dồn khuyến mãi" → "Kết hợp giảm giá (lũy tiến theo Booking rules)"
-- **Portfolio note:** "Booking chỉ áp dụng deal tốt nhất trong nhóm"
+### Step 4: UI (PromotionsTab.tsx)
+- Main groups for Booking: TARGETED → GENIUS → PORTFOLIO → CAMPAIGN
+- Remove SEASONAL, ESSENTIAL for Booking
+- Free Nights: Stay X / Pay Y input + auto-calc `(1−Y/X)×100`
+- Badges: STACKABLE (green) / EXCLUSIVE (red) / HIGHEST_WINS (blue) / ONLY_WITH_GENIUS (purple)
+- Toggle label: "Kết hợp giảm giá (lũy tiến theo Booking rules)"
+- Portfolio note: "Booking chỉ áp dụng deal tốt nhất trong nhóm"
 
-### 5. Engine/Validator
-- **Portfolio logic:** Pick highest discount only (not additive)
-- **Campaign logic:** When active, block Targeted + Portfolio
-- **Genius logic:** Always stacks (except with Business Bookers exclusive)
-- **Free Nights calc:** `discount_pct = (1 - Y/X) * 100`
+### Step 5: Engine/Validator
+
+> ⚠️ **BA FIX C: Validation pipeline phải check trên *applied*, không phải *enabled*.**
+
+```
+Pipeline: enabled promos
+  → 1) Resolve conflicts (groupType + stackBehavior)
+  → 2) Select applied promos (Portfolio = highest wins, Campaign = exclusive, etc.)
+  → 3) Validate max_discounts trên applied.length (KHÔNG phải enabled.length)
+  → 4) Calculate totalDiscount
+```
+
+**Engine rules (đọc từ groupType + stackBehavior):**
+- `PORTFOLIO`: pick highest discount → 1 applied
+- `CAMPAIGN` + `EXCLUSIVE`: blocks Targeted + Portfolio
+- `CAMPAIGN` + `ONLY_WITH_GENIUS`: blocks Targeted + Portfolio, but allows Genius
+- `GENIUS`: always stacks (except with Business Bookers EXCLUSIVE)
+- `Free Nights`: `discount_pct = (1 - Y/X) * 100` (readonly)
 
 ---
 
-## 🛏️ Free Nights X/Y Spec
+## 🛏️ Free Nights X/Y
 
-**Input UI:**
 ```
-┌──────────────────────────────────────────────────────┐
-│ Free Nights Deal    Stay [4] Pay [3]  → 25.0%   [ON]│
-└──────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────┐
+│ Free Nights Deal    Stay [4] Pay [3]  → 25.0%    │
+└──────────────────────────────────────────────────┘
 ```
-
-**Validation:**
-- X ≥ 2
-- 1 ≤ Y < X
-- Soft warning if X > 14
-
-**Calc:** `(1 - Y/X) × 100`
+- X ≥ 2, 1 ≤ Y < X, soft warn if X > 14
+- `discount_pct = (1 - Y/X) × 100` (readonly)
 
 ---
 
 ## ✅ Acceptance Criteria
 
-- [ ] 2 layers clearly separated: engine groupType ≠ UI label
-- [ ] Booking.com shows 4 UI groups + Marketing
-- [ ] Popup picker has 4 tabs
-- [ ] Genius promos use `GENIUS` groupType (not TARGETED)
-- [ ] Free Nights: Stay X / Pay Y input
-- [ ] Badges: STACKABLE / EXCLUSIVE / HIGHEST_WINS
-- [ ] Portfolio engine: highest wins (not additive)
-- [ ] Campaign engine: exclusive (blocks others)
+- [ ] 2-layer: engine groupType ≠ UI label
+- [ ] GENIUS enum in schema
+- [ ] Booking.com: 4 groups + Marketing
+- [ ] Popup picker: 4 tabs
+- [ ] stackBehavior on every promo (STACKABLE / HIGHEST_WINS / EXCLUSIVE / ONLY_WITH_GENIUS)
+- [ ] Free Nights: Stay X / Pay Y + readonly %
+- [ ] freeNightsX/Y on promotion config (not campaign)
+- [ ] Engine: Portfolio = highest wins, Campaign = exclusive
+- [ ] Validator: check max_discounts on *applied*, not *enabled*
+- [ ] Badges per promo
 - [ ] Agoda + Expedia: no regression
 - [ ] TypeScript: 0 errors
