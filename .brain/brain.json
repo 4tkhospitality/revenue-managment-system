@@ -2,7 +2,7 @@
   "meta": {
     "schema_version": "1.5.0",
     "awf_version": "4.1.2",
-    "last_updated": "2026-02-11T02:40:00+07:00"
+    "last_updated": "2026-02-11T12:21:00+07:00"
   },
   "project": {
     "name": "revenue-management-system",
@@ -378,6 +378,16 @@
       "path": "POST /api/lead (landing)",
       "explained": "Landing page lead form submission. Validates required fields (name/email/phone/hotel/rooms), logs lead summary, placeholder for Resend email.",
       "v02_new": true
+    },
+    {
+      "path": "GET /api/features/latest-date",
+      "explained": "Returns max(as_of_date) from features_daily for a hotel. Used by RunForecast to align with Build Features.",
+      "v02_new": true
+    },
+    {
+      "path": "DELETE /api/data/delete-by-month?includeOtb=true",
+      "explained": "Deletes reservations, cancellations, and optionally OTB+FeaturesDaily by month. Hotel_id filtered.",
+      "v02_new": true
     }
   ],
   "features": [
@@ -471,7 +481,14 @@
     "Landing V2: Lead Form with qualifying fields (rooms, OCC/ADR, channels, PMS, needs)",
     "Landing V3: Professional visual overhaul - remove all emoji, SVG line-art icons",
     "Landing V3: Brand colors from logo (#204184 navy), Emerald accent, Gold secondary",
-    "Landing V3: Inline SVG logo (white circle + 4TK) instead of dark PNG"
+    "Landing V3: Inline SVG logo (white circle + 4TK) instead of dark PNG",
+    "Excel (.xlsx) Upload Support - ingestCSV auto-detects CSV vs Excel format",
+    "Split Excel Templates - Separate Booked and Cancelled templates with download links",
+    "OTB Reset on Data Delete - Checkbox to clear OTB snapshots + FeaturesDaily when deleting month data",
+    "Hotel Validation Before Import - Validates hotel_id exists before creating importJob (prevents FK errors)",
+    "Friendly Upload Error Messages - Translates FK/unique/connection errors to Vietnamese",
+    "Forecast as_of_date Alignment - RunForecast uses max(as_of_date) from features_daily instead of max(booking_date) from reservationsRaw",
+    "Delete-by-month Hotel Filter - hotel_id in WHERE clause for both GET preview and DELETE operation"
   ],
   "cancellation_bridge_v011": {
     "status": "Implemented",
@@ -630,7 +647,11 @@
       "Google OAuth redirect URI must match NEXTAUTH_URL — add https://rms.pakhos.com/api/auth/callback/google in Google Cloud Console",
       "Logo.png with transparent bg + dark content is invisible on dark navbar → use inline SVG instead",
       "Emoji icons (💹🏨) on hospitality landing page look unprofessional → use SVG line-art icons",
-      "PowerShell does not support && operator — use semicolons (;) to chain commands"
+      "PowerShell does not support && operator — use semicolons (;) to chain commands",
+      "ingestCSV was missing hotel validation → FK error on importJob.create if cookie has stale hotel_id",
+      "RunForecast used max(booking_date) as as_of_date but features built with today's date → 0 results",
+      "DeleteByMonth was not filtering by hotel_id → could delete data across all hotels",
+      "OTB as_of_date = loaded_at (upload date), NOT booking_date → deleting by month of data doesn't delete OTB"
     ],
     "formulas": {
       "rooms_otb": "SUM(num_rooms) from reservations for that stay_date",
@@ -640,11 +661,11 @@
       "time_travel_active": "book_time <= asOfTs AND (cancel_time IS NULL OR cancel_time > asOfTs)"
     },
     "data_pipeline": {
-      "step1": "Upload CSV/XML → reservations_raw",
+      "step1": "Upload CSV/Excel/XML → reservations_raw (auto-detect format)",
       "step1b": "Upload Cancellation XML → cancellations_raw → Bridge → reservations_raw",
-      "step2": "Build OTB (time-travel) → daily_otb",
-      "step3": "Build Features → features_daily",
-      "step4": "Run Forecast → demand_forecast",
+      "step2": "Build OTB (time-travel, as_of_date = loaded_at) → daily_otb",
+      "step3": "Build Features (as_of_date = today) → features_daily",
+      "step4": "Run Forecast (as_of_date = max from features_daily) → demand_forecast",
       "step5": "Pricing Engine → recommended_price (calculated on-the-fly)"
     }
   }
