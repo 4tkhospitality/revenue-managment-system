@@ -236,13 +236,15 @@ export async function buildDailyOTB(params?: BuildOTBParams): Promise<BuildOTBRe
 }
 
 /**
- * Quick action to rebuild all OTB data
+ * Quick action to rebuild all OTB data WITH historical backfill
  * Uses active hotel from cookie/session (no auto-detect)
  * 
- * V01.2.1: Auto-detect data range for historical imports
- * - Finds min(arrival_date) and max(departure_date) to set stay date range
- * - Uses max(booking_date) as snapshot timestamp
- * - This ensures hotels onboarding with historical data see results immediately
+ * V02: Auto-backfill monthly snapshots so STLY, pickup, and
+ * year-over-year comparisons work for bulk-uploaded data.
+ * 
+ * Creates end-of-month snapshots from min(booking_date) to max(booking_date),
+ * plus a "today" snapshot. This gives the system multiple as_of_dates
+ * for time-series features.
  */
 export async function rebuildAllOTB() {
     // Get active hotel from context (cookie → session → fallback)
@@ -259,46 +261,75 @@ export async function rebuildAllOTB() {
         _max: {
             booking_date: true,
             departure_date: true,
-            loaded_at: true,   // v2: actual upload timestamp
+            loaded_at: true,
         },
         _min: {
             arrival_date: true,
+            booking_date: true,
         },
     });
 
     const latestBookingDate = dataRange._max.booking_date;
-    const latestLoadedAt = dataRange._max.loaded_at;
+    const minBookingDate = dataRange._min.booking_date;
     const earliestArrival = dataRange._min.arrival_date;
     const latestDeparture = dataRange._max.departure_date;
 
-    if (!latestBookingDate) {
-        // Hotel exists but has no reservation data yet
+    if (!latestBookingDate || !minBookingDate) {
         return buildDailyOTB({ hotelId });
     }
 
-    // v2: Use loaded_at (upload date) as snapshot timestamp, NOT booking_date
-    // booking_date = when guest booked (could be days ago)
-    // loaded_at = when hotel uploaded data = true "as of" date
-    const snapshotDate = latestLoadedAt || latestBookingDate;
-    const asOfTs = new Date(snapshotDate);
-    asOfTs.setHours(23, 59, 59, 999);
+    // V02: Generate monthly end-of-month dates from first to last booking_date
+    const months = await prisma.$queryRaw<{ eom: Date }[]>`
+        SELECT (date_trunc('month', d) + interval '1 month' - interval '1 day')::date as eom
+        FROM generate_series(${minBookingDate}::date, ${latestBookingDate}::date, '1 month'::interval) d
+        ORDER BY d ASC
+    `;
 
-    // Use actual data range for stay dates (with some buffer)
-    // This ensures historical data imports work correctly
+    // Stay date range (with buffer)
     const stayDateFrom = earliestArrival
         ? new Date(new Date(earliestArrival).setDate(new Date(earliestArrival).getDate() - 7))
         : new Date('2020-01-01');
-
     const stayDateTo = latestDeparture
         ? new Date(new Date(latestDeparture).setDate(new Date(latestDeparture).getDate() + 7))
         : new Date('2030-12-31');
 
-    return buildDailyOTB({
+    let built = 0;
+    let skipped = 0;
+
+    // Build historical monthly snapshots
+    for (const { eom } of months) {
+        try {
+            const result = await buildDailyOTB({
+                hotelId,
+                asOfTs: eom,
+                stayDateFrom,
+                stayDateTo,
+            });
+            if (result.success) built++;
+            else skipped++;
+        } catch {
+            skipped++;
+        }
+    }
+
+    // Also build today's snapshot (current state)
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    const todayResult = await buildDailyOTB({
         hotelId,
-        asOfTs,
+        asOfTs: today,
         stayDateFrom,
         stayDateTo,
     });
+    if (todayResult.success) built++;
+
+    return {
+        success: built > 0,
+        daysBuilt: todayResult.daysBuilt,
+        totalRoomsOtb: todayResult.totalRoomsOtb,
+        message: `Built ${built} monthly snapshots (${skipped} skipped). Latest: ${todayResult.daysBuilt || 0} stay dates.`,
+        snapshotGeneratedAt: today,
+    };
 }
 
 /**
