@@ -2,14 +2,13 @@
 
 import { useState } from 'react';
 import { Lock } from 'lucide-react';
-import { RoomTypesTab, OTAConfigTab, PromotionsTab, OverviewTab, DynamicPricingTab } from '@/components/pricing';
+import { SetupTab, PromotionsTab, OverviewTab, DynamicPricingTab } from '@/components/pricing';
 import { OTAPlaybookGuide } from '@/components/guide/OTAPlaybookGuide';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { useTierAccess } from '@/hooks/useTierAccess';
 
 const TABS = [
-    { id: 'room-types', label: 'Hạng phòng' },
-    { id: 'ota-channels', label: 'Kênh OTA' },
+    { id: 'setup', label: 'Cấu hình' },
     { id: 'promotions', label: 'Khuyến mãi' },
     { id: 'overview', label: 'Bảng giá' },
     { id: 'dynamic-pricing', label: 'Giá Linh Hoạt' },
@@ -19,7 +18,7 @@ const TABS = [
 type TabId = typeof TABS[number]['id'];
 
 export default function PricingPage() {
-    const [activeTab, setActiveTab] = useState<TabId>('room-types');
+    const [activeTab, setActiveTab] = useState<TabId>('setup');
     const { hasAccess: hasOtaAccess, loading: tierLoading } = useTierAccess('SUPERIOR');
 
     return (
@@ -56,8 +55,7 @@ export default function PricingPage() {
 
                 {/* Tab Content */}
                 <div className="bg-white border border-slate-200 rounded-b-xl rounded-tr-xl shadow-sm p-4 sm:p-6">
-                    {activeTab === 'room-types' && <RoomTypesTab />}
-                    {activeTab === 'ota-channels' && <OTAConfigTab />}
+                    {activeTab === 'setup' && <SetupTab />}
                     {activeTab === 'promotions' && <PromotionsTab />}
                     {activeTab === 'overview' && <OverviewTab />}
                     {activeTab === 'dynamic-pricing' && <DynamicPricingTab />}
@@ -69,4 +67,3 @@ export default function PricingPage() {
         </div>
     );
 }
-

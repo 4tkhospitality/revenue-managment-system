@@ -674,94 +674,94 @@ function MarketingPrograms({
 
     return (
         <div className="bg-[#E9ECF3] border border-[#DBE1EB] rounded-xl overflow-hidden">
+            {/* Section header */}
             <div className="flex items-center justify-between px-4 py-3">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                     <TrendingUp className="w-4 h-4 text-[#204183]" />
-                    <span className="font-medium text-slate-800">{vendorTitles[vendor] || 'Marketing Programs'}</span>
+                    <span className="font-semibold text-sm text-slate-800">{vendorTitles[vendor] || 'Marketing Programs'}</span>
                 </div>
                 {totalBoost > 0 && (
-                    <span className="text-xs font-semibold text-orange-600 bg-orange-50 px-2 py-1 rounded-full">
+                    <span className="text-xs font-semibold text-orange-600 bg-orange-50 px-2.5 py-1 rounded-full">
                         +{totalBoost}% commission
                     </span>
                 )}
             </div>
 
             <div className="px-4 pb-4 space-y-3">
-                {/* AGP tiers — Agoda only */}
-                {vendor === 'agoda' && agpBoosters.length > 0 && (
-                    <div className="bg-white border border-[#DBE1EB] rounded-lg p-3">
-                        <div className="flex items-center justify-between mb-2">
-                            <div>
-                                <span className="font-medium text-slate-800 text-sm">AGP</span>
-                                <span className="text-xs text-slate-500 ml-2">Agoda Growth Program</span>
-                            </div>
-                            <button
-                                onClick={() => activeAGP ? handleToggle(activeAGP.id) : handleAGPChange(agpBoosters[0]?.id)}
-                                className={`relative w-11 h-6 rounded-full transition-colors ${activeAGP ? 'bg-emerald-500' : 'bg-slate-300'}`}
-                            >
-                                <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${activeAGP ? 'left-6' : 'left-1'}`} />
-                            </button>
-                        </div>
-                        {activeAGP && (
-                            <div className="flex gap-2">
-                                {agpBoosters.map(tier => (
-                                    <button
-                                        key={tier.id}
-                                        onClick={() => handleAGPChange(tier.id)}
-                                        className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${tier.enabled
-                                            ? 'bg-[#204183] text-white'
-                                            : 'bg-[#F2F4F8] text-slate-600 hover:bg-[#DBE1EB]'
-                                            }`}
-                                    >
-                                        {tier.tier?.charAt(0).toUpperCase()}{tier.tier?.slice(1)} ({tier.boostPct}%)
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                {/* Generic boosters: AGX/SL (Agoda), Preferred (Booking), Accelerator/B2B (Expedia) */}
-                {genericBoosters.map(booster => (
-                    <div key={booster.id} className="bg-white border border-[#DBE1EB] rounded-lg p-3">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <span className="font-medium text-slate-800 text-sm">{booster.name}</span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                {booster.isVariable && (
-                                    <div className="flex items-center">
-                                        <input
-                                            type="number"
-                                            min="1"
-                                            max="50"
-                                            value={booster.boostPct}
-                                            onChange={(e) => handlePctChange(booster.id, parseInt(e.target.value) || 0)}
-                                            disabled={!booster.enabled}
-                                            className="w-12 text-right text-sm font-semibold text-[#204183] bg-slate-50 border border-[#DBE1EB] rounded px-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-[#204183] disabled:opacity-40"
-                                        />
-                                        <span className="text-sm font-semibold text-[#204183] ml-0.5">%</span>
-                                    </div>
-                                )}
-                                {!booster.isVariable && (
-                                    <span className="text-sm font-semibold text-[#204183]">{booster.boostPct}%</span>
-                                )}
+                {/* Horizontal card grid — matching prototype B */}
+                <div className="flex gap-2.5">
+                    {/* AGP card — Agoda only */}
+                    {vendor === 'agoda' && agpBoosters.length > 0 && (
+                        <div className="flex-1 bg-white border border-[#DBE1EB] rounded-xl p-3">
+                            <div className="flex items-center justify-between mb-1">
+                                <span className="font-semibold text-sm text-slate-800">AGP</span>
                                 <button
-                                    onClick={() => handleToggle(booster.id)}
-                                    className={`relative w-11 h-6 rounded-full transition-colors ${booster.enabled ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                                    onClick={() => activeAGP ? handleToggle(activeAGP.id) : handleAGPChange(agpBoosters[0]?.id)}
+                                    className={`relative w-9 h-5 rounded-full transition-colors ${activeAGP ? 'bg-emerald-500' : 'bg-slate-300'}`}
                                 >
-                                    <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${booster.enabled ? 'left-6' : 'left-1'}`} />
+                                    <span className={`absolute top-[3px] w-3.5 h-3.5 bg-white rounded-full shadow transition-transform ${activeAGP ? 'left-[18px]' : 'left-[3px]'}`} />
                                 </button>
                             </div>
+                            <div className="text-[11px] text-slate-400 mb-2">Agoda Growth Program</div>
+                            {activeAGP && (
+                                <div className="flex gap-1">
+                                    {agpBoosters.map(tier => (
+                                        <button
+                                            key={tier.id}
+                                            onClick={() => handleAGPChange(tier.id)}
+                                            className={`flex-1 px-1 py-1.5 text-[10px] font-semibold rounded-md transition-colors ${tier.enabled
+                                                ? 'bg-[#204183] text-white border border-[#204183]'
+                                                : 'bg-[#F2F4F8] text-slate-500 border border-[#DBE1EB] hover:bg-[#E9ECF3]'
+                                                }`}
+                                        >
+                                            {tier.tier?.charAt(0).toUpperCase()}{tier.tier?.slice(1)} ({tier.boostPct}%)
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
-                    </div>
-                ))}
+                    )}
 
-                {/* Commission breakdown */}
+                    {/* Generic booster cards (AGX, Spotlight, Preferred, etc.) */}
+                    {genericBoosters.map(booster => (
+                        <div key={booster.id} className="flex-1 bg-white border border-[#DBE1EB] rounded-xl p-3">
+                            <div className="flex items-center justify-between mb-1">
+                                <span className="font-semibold text-sm text-slate-800">{booster.name.split(' ')[0]}</span>
+                                <button
+                                    onClick={() => handleToggle(booster.id)}
+                                    className={`relative w-9 h-5 rounded-full transition-colors ${booster.enabled ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                                >
+                                    <span className={`absolute top-[3px] w-3.5 h-3.5 bg-white rounded-full shadow transition-transform ${booster.enabled ? 'left-[18px]' : 'left-[3px]'}`} />
+                                </button>
+                            </div>
+                            <div className="text-[11px] text-slate-400 mb-2">{booster.name}</div>
+                            {booster.isVariable ? (
+                                <div className="flex items-center gap-0.5">
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max="50"
+                                        value={booster.boostPct}
+                                        onChange={(e) => handlePctChange(booster.id, parseInt(e.target.value) || 0)}
+                                        disabled={!booster.enabled}
+                                        className="w-11 text-right text-sm font-semibold text-[#204183] bg-[#F8FAFC] border border-[#DBE1EB] rounded-md px-1.5 py-1 focus:outline-none focus:ring-2 focus:ring-[#204183] disabled:opacity-40"
+                                    />
+                                    <span className={`text-sm font-semibold text-[#204183] ${!booster.enabled ? 'opacity-40' : ''}`}>%</span>
+                                </div>
+                            ) : (
+                                <div className={`text-sm font-semibold text-[#204183] ${!booster.enabled ? 'opacity-40' : ''}`}>
+                                    {booster.boostPct}%
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+
+                {/* Commission formula bar */}
                 {totalBoost > 0 && (
-                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                        <p className="text-xs font-medium text-orange-700">
-                            📊 Commission: Base {baseCommission}%
+                    <div className="bg-orange-50 border border-orange-200 rounded-lg px-3.5 py-2.5">
+                        <p className="text-xs font-medium text-orange-800">
+                            Commission: Base {baseCommission}%
                             {activeBoosters.map(b => ` + ${b.name} ${b.boostPct}%`).join('')}
                             {' '}= <strong>{effectiveCommission}%</strong>
                         </p>
@@ -775,6 +775,7 @@ function MarketingPrograms({
             </div>
         </div>
     );
+
 }
 
 // Step-by-step Explanation Panel
@@ -1335,30 +1336,55 @@ export default function PromotionsTab() {
         setBoosters(channelBoosters.map(b => ({ ...b })));
     }, [selectedChannel]);
 
+    // Channel dot colors for pill tabs
+    const channelDotColors: Record<string, string> = {
+        agoda: 'bg-orange-500',
+        booking: 'bg-[#003580]',
+        expedia: 'bg-yellow-400',
+        traveloka: 'bg-green-500',
+        ctrip: 'bg-red-500',
+    };
+
+    // Group pill config for table
+    const groupPillConfig: Record<string, { bg: string; text: string; dot: string; short: string }> = {
+        SEASONAL: { bg: 'bg-orange-50', text: 'text-orange-700', dot: 'bg-orange-500', short: 'Mùa' },
+        ESSENTIAL: { bg: 'bg-[#EFF1F8]', text: 'text-[#204183]', dot: 'bg-[#204183]', short: 'CB' },
+        TARGETED: { bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-500', short: 'MT' },
+        GENIUS: { bg: 'bg-indigo-50', text: 'text-indigo-700', dot: 'bg-indigo-500', short: 'Genius' },
+        PORTFOLIO: { bg: 'bg-teal-50', text: 'text-teal-700', dot: 'bg-teal-500', short: 'PF' },
+        CAMPAIGN: { bg: 'bg-rose-50', text: 'text-rose-700', dot: 'bg-rose-500', short: 'Camp' },
+    };
+
+    // Active campaign count for badge
+    const activeCampaignCount = campaigns.filter(c => c.is_active).length;
+
     return (
-        <div className="space-y-4">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <select
-                        value={selectedChannel}
-                        onChange={(e) => setSelectedChannel(e.target.value)}
-                        className="px-3 py-2 bg-[#204183] border border-[#204183] rounded-lg text-white focus:ring-2 focus:ring-[#204183] focus:outline-none"
-                    >
-                        {channels.map((ch) => (
-                            <option key={ch.id} value={ch.id}>
-                                {ch.name}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-                <button
-                    onClick={() => handleOpenPicker('SEASONAL')}
-                    className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-lg transition-colors"
-                >
-                    <Plus className="w-4 h-4" />
-                    Thêm Khuyến Mãi
-                </button>
+        <div className="space-y-5">
+            {/* ── Channel Pill Tabs ── */}
+            <div className="flex flex-wrap gap-1 bg-[#E9ECF3] rounded-xl p-1 w-fit">
+                {channels.map((ch) => {
+                    const isActive = ch.id === selectedChannel;
+                    const dotColor = channelDotColors[ch.code] || 'bg-slate-400';
+                    return (
+                        <button
+                            key={ch.id}
+                            onClick={() => setSelectedChannel(ch.id)}
+                            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all ${isActive
+                                ? 'bg-[#204183] text-white shadow-md'
+                                : 'text-slate-500 hover:text-[#204183] hover:bg-white/50'
+                                }`}
+                        >
+                            <span className={`w-2 h-2 rounded-full ${dotColor} ${isActive ? 'ring-2 ring-white/40' : ''}`} />
+                            {ch.name}
+                            <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-full ${isActive
+                                ? 'bg-white/20 text-white'
+                                : 'bg-[#DBE1EB] text-slate-500'
+                                }`}>
+                                {ch.id === selectedChannel ? activeCampaignCount : '–'}
+                            </span>
+                        </button>
+                    );
+                })}
             </div>
 
             {/* Error message */}
@@ -1368,104 +1394,182 @@ export default function PromotionsTab() {
                 </div>
             )}
 
-            {/* Content */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Promotion Groups */}
-                <div className="lg:col-span-2 space-y-4">
-                    {/* Title */}
-                    <div className="flex items-center gap-2 text-slate-700">
-                        <CheckCircle className="w-5 h-5 text-[#204183]" />
-                        <h2 className="font-semibold">{isBooking ? 'Kết hợp giảm giá (lũy tiến theo Booking rules)' : 'Cộng dồn khuyến mãi'}</h2>
+            {/* ── Two Panel Layout ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6 items-start">
+                {/* ── LEFT: Table + Marketing ── */}
+                <div className="space-y-4 min-w-0">
+                    {/* Panel Header */}
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-base font-bold text-slate-800">
+                            {selectedChannelData?.name || 'OTA'}
+                            <span className="text-sm font-normal text-slate-400 ml-2">
+                                · {campaigns.length} promotions · Hoa hồng {commissionPct}%
+                                {calcType === 'PROGRESSIVE' ? ' · lũy tiến'
+                                    : calcType === 'SINGLE_DISCOUNT' ? ' · deal cao nhất'
+                                        : ' · cộng dồn'}
+                            </span>
+                        </h2>
+                        <button
+                            onClick={() => handleOpenPicker(VENDOR_PICKER_TABS[selectedChannelData?.code || 'agoda']?.[0] || 'SEASONAL')}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#204183] hover:bg-[#1a3469] text-white text-sm font-semibold rounded-lg transition-colors"
+                        >
+                            <Plus className="w-4 h-4" />
+                            Thêm khuyến mãi
+                        </button>
                     </div>
 
+                    {/* ── Promotions Data Table ── */}
                     {loading ? (
                         <div className="flex items-center justify-center py-12">
                             <Loader2 className="w-6 h-6 animate-spin text-[#204183]" />
                         </div>
+                    ) : campaigns.length === 0 ? (
+                        <div className="bg-white border border-[#DBE1EB] rounded-xl">
+                            <button
+                                onClick={() => handleOpenPicker(VENDOR_PICKER_TABS[selectedChannelData?.code || 'agoda']?.[0] || 'SEASONAL')}
+                                className="w-full flex flex-col items-center justify-center py-16 text-slate-400 hover:text-[#204183] transition-colors cursor-pointer"
+                            >
+                                <Plus className="w-10 h-10 mb-3 opacity-40" />
+                                <span className="text-sm font-medium">Chưa có khuyến mãi nào — Nhấn để thêm</span>
+                            </button>
+                        </div>
                     ) : (
-                        <div className="space-y-3">
-                            {/* Agoda: Seasonal + Essential + Targeted */}
-                            {!isBooking && (
-                                <>
-                                    <PromotionGroup
-                                        group="SEASONAL"
-                                        campaigns={seasonalCampaigns}
-                                        onToggle={handleToggle}
-                                        onDelete={handleDelete}
-                                        onAddClick={handleOpenPicker}
-                                        onUpdateDiscount={handleUpdateDiscount}
-                                        vendor={selectedChannelData?.code || 'agoda'}
-                                    />
-                                    <PromotionGroup
-                                        group="ESSENTIAL"
-                                        campaigns={essentialCampaigns}
-                                        onToggle={handleToggle}
-                                        onDelete={handleDelete}
-                                        onAddClick={handleOpenPicker}
-                                        onUpdateDiscount={handleUpdateDiscount}
-                                        vendor={selectedChannelData?.code || 'agoda'}
-                                    />
-                                    <PromotionGroup
-                                        group="TARGETED"
-                                        campaigns={targetedCampaigns}
-                                        onToggle={handleToggle}
-                                        onDelete={handleDelete}
-                                        onAddClick={handleOpenPicker}
-                                        onUpdateDiscount={handleUpdateDiscount}
-                                        vendor={selectedChannelData?.code || 'agoda'}
-                                    />
-                                </>
-                            )}
-                            {/* Booking.com: Targeted → Genius → Portfolio → Campaign */}
-                            {isBooking && (
-                                <>
-                                    <PromotionGroup
-                                        group="TARGETED"
-                                        campaigns={targetedCampaigns}
-                                        onToggle={handleToggle}
-                                        onDelete={handleDelete}
-                                        onAddClick={handleOpenPicker}
-                                        onUpdateDiscount={handleUpdateDiscount}
-                                        vendor="booking"
-                                    />
-                                    <PromotionGroup
-                                        group="GENIUS"
-                                        campaigns={geniusCampaigns}
-                                        onToggle={handleToggle}
-                                        onDelete={handleDelete}
-                                        onAddClick={handleOpenPicker}
-                                        onUpdateDiscount={handleUpdateDiscount}
-                                        vendor="booking"
-                                    />
-                                    <PromotionGroup
-                                        group="PORTFOLIO"
-                                        campaigns={portfolioCampaigns}
-                                        onToggle={handleToggle}
-                                        onDelete={handleDelete}
-                                        onAddClick={handleOpenPicker}
-                                        onUpdateDiscount={handleUpdateDiscount}
-                                        vendor="booking"
-                                    />
-                                    {/* Portfolio note */}
-                                    <div className="px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 text-xs flex items-center gap-2">
-                                        <span>📌</span>
-                                        <span>Trong nhóm Portfolio Deals, Booking chỉ áp dụng deal tốt nhất (highest wins).</span>
-                                    </div>
-                                    <PromotionGroup
-                                        group="CAMPAIGN"
-                                        campaigns={campaignCampaigns}
-                                        onToggle={handleToggle}
-                                        onDelete={handleDelete}
-                                        onAddClick={handleOpenPicker}
-                                        onUpdateDiscount={handleUpdateDiscount}
-                                        vendor="booking"
-                                    />
-                                </>
-                            )}
+                        <div className="bg-white border border-[#DBE1EB] rounded-xl overflow-hidden">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="bg-[#F2F4F8]">
+                                        <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Tên khuyến mãi</th>
+                                        <th className="text-left px-3 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Nhóm</th>
+                                        <th className="text-right px-3 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Giảm</th>
+                                        <th className="text-center px-3 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Trạng thái</th>
+                                        <th className="text-center px-3 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {campaigns.map((c) => {
+                                        const isFreeNights = c.promo.name.toLowerCase().includes('free night');
+                                        const stackBehavior = !c.promo.allow_stack ? 'EXCLUSIVE' : (c.promo.group_type === 'PORTFOLIO' ? 'HIGHEST_WINS' : 'STACKABLE');
+                                        const badgeCfg = {
+                                            STACKABLE: { bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'Stackable' },
+                                            HIGHEST_WINS: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Highest Wins' },
+                                            EXCLUSIVE: { bg: 'bg-red-100', text: 'text-red-700', label: 'Exclusive' },
+                                        }[stackBehavior]!;
+                                        const pill = groupPillConfig[c.promo.group_type] || groupPillConfig.ESSENTIAL;
+                                        const vendorCode = selectedChannelData?.code || 'agoda';
+                                        const groupLabel = VENDOR_GROUP_LABELS[vendorCode]?.[c.promo.group_type as keyof typeof GROUP_CONFIG] || pill.short;
+
+                                        return (
+                                            <tr key={c.id} className="border-t border-[#F2F4F8] hover:bg-[#FAFBFD] transition-colors">
+                                                {/* Name + Badge */}
+                                                <td className="px-4 py-3">
+                                                    <div className="flex items-center gap-1.5 min-w-0">
+                                                        <span className="font-semibold text-slate-800 truncate">{c.promo.name}</span>
+                                                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap shrink-0 ${badgeCfg.bg} ${badgeCfg.text}`}>
+                                                            {badgeCfg.label}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                {/* Group pill */}
+                                                <td className="px-3 py-3">
+                                                    <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full ${pill.bg} ${pill.text}`}>
+                                                        <span className={`w-1.5 h-1.5 rounded-full ${pill.dot}`} />
+                                                        {groupLabel}
+                                                    </span>
+                                                </td>
+                                                {/* Discount */}
+                                                <td className="px-3 py-3">
+                                                    <div className="flex items-center justify-end">
+                                                        {isFreeNights ? (
+                                                            <div className="flex items-center gap-1 text-xs">
+                                                                <span className="text-slate-500">S</span>
+                                                                <input
+                                                                    type="number"
+                                                                    min="2"
+                                                                    max="14"
+                                                                    value={Math.round(100 / (100 - c.discount_pct)) || 4}
+                                                                    onChange={(e) => {
+                                                                        const x = Math.max(2, parseInt(e.target.value) || 2);
+                                                                        const y = x - 1;
+                                                                        const pct = Math.round((1 - y / x) * 100);
+                                                                        handleUpdateDiscount(c.id, pct);
+                                                                    }}
+                                                                    className="w-8 text-center text-xs font-semibold text-[#204183] bg-slate-50 border border-[#DBE1EB] rounded px-0.5 py-0.5 focus:outline-none focus:ring-2 focus:ring-[#204183]"
+                                                                />
+                                                                <span className="text-slate-500">P</span>
+                                                                <input
+                                                                    type="number"
+                                                                    min="1"
+                                                                    max="13"
+                                                                    value={Math.round(100 / (100 - c.discount_pct)) - 1 || 3}
+                                                                    onChange={(e) => {
+                                                                        const y = Math.max(1, parseInt(e.target.value) || 1);
+                                                                        const x = y + 1;
+                                                                        const pct = Math.round((1 - y / x) * 100);
+                                                                        handleUpdateDiscount(c.id, pct);
+                                                                    }}
+                                                                    className="w-8 text-center text-xs font-semibold text-[#204183] bg-slate-50 border border-[#DBE1EB] rounded px-0.5 py-0.5 focus:outline-none focus:ring-2 focus:ring-[#204183]"
+                                                                />
+                                                                <span className="text-[10px] text-slate-400">→{c.discount_pct}%</span>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex items-center">
+                                                                <input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    max="100"
+                                                                    value={c.discount_pct}
+                                                                    onChange={(e) => {
+                                                                        const val = Math.min(100, Math.max(0, parseInt(e.target.value) || 0));
+                                                                        handleUpdateDiscount(c.id, val);
+                                                                    }}
+                                                                    className="w-14 text-right text-sm font-bold text-[#204183] bg-slate-50 border border-[#DBE1EB] rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#204183]"
+                                                                />
+                                                                <span className="text-sm font-bold text-[#204183] ml-0.5">%</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                {/* Toggle */}
+                                                <td className="px-3 py-3">
+                                                    <button
+                                                        onClick={() => handleToggle(c)}
+                                                        className={`relative w-11 h-6 rounded-full transition-colors mx-auto block ${c.is_active ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                                                    >
+                                                        <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${c.is_active ? 'left-6' : 'left-1'}`} />
+                                                    </button>
+                                                </td>
+                                                {/* Actions */}
+                                                <td className="px-3 py-3">
+                                                    <div className="flex items-center justify-center gap-1">
+                                                        <button
+                                                            onClick={() => handleDelete(c.id)}
+                                                            className="p-1.5 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                    {/* Add row */}
+                                    <tr>
+                                        <td colSpan={5} className="p-0">
+                                            <button
+                                                onClick={() => handleOpenPicker(VENDOR_PICKER_TABS[selectedChannelData?.code || 'agoda']?.[0] || 'SEASONAL')}
+                                                className="w-full flex items-center justify-center gap-2 py-3 text-slate-400 hover:text-[#204183] hover:bg-[#F8FAFC] text-sm font-semibold border-t-2 border-dashed border-[#E9ECF3] hover:border-[#204183] transition-all"
+                                            >
+                                                <Plus className="w-4 h-4" />
+                                                Thêm khuyến mãi từ catalog
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     )}
 
-                    {/* Marketing Programs (all vendors with boosters) */}
+                    {/* ── Marketing Programs ── */}
                     {(isAgoda || isBooking || isExpedia) && (
                         <MarketingPrograms
                             boosters={boosters}
@@ -1483,8 +1587,8 @@ export default function PromotionsTab() {
                         </div>
                     )}
 
-                    {/* Total Discount - Only show 80% limit for Agoda */}
-                    {selectedChannelData?.code === 'agoda' && (
+                    {/* Total Discount Summary */}
+                    {selectedChannelData?.code === 'agoda' ? (
                         <div
                             className={`px-4 py-3 rounded-lg flex items-center gap-2 ${totalDiscount > 80
                                 ? 'bg-red-50 border border-red-200'
@@ -1505,8 +1609,7 @@ export default function PromotionsTab() {
                                 Tổng giảm giá: {totalDiscount.toFixed(1)}% (Agoda tối đa 80%)
                             </span>
                         </div>
-                    )}
-                    {selectedChannelData?.code !== 'agoda' && (
+                    ) : (
                         <div className="px-4 py-3 rounded-lg flex items-center gap-2 bg-[#F2F4F8] border border-[#DBE1EB]">
                             <CheckCircle className="w-5 h-5 text-emerald-600" />
                             <span className="text-sm font-medium text-slate-700">
@@ -1519,8 +1622,8 @@ export default function PromotionsTab() {
                     )}
                 </div>
 
-                {/* Right Panel */}
-                <div className="space-y-4">
+                {/* ── RIGHT: Sticky Price Calculator ── */}
+                <div className="space-y-4 lg:sticky lg:top-6">
                     {/* Price Calculator */}
                     <PriceCalculator
                         roomTypes={roomTypes}
