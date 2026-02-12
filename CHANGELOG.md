@@ -1,5 +1,30 @@
 # Changelog
 
+## [2026-02-13]
+### Added
+- Phase 03: Unified Pricing Logic — server as single source of truth.
+- `usePricingPreview` hook with AbortController, debounce 250ms, `isRefreshing` state.
+- `StackingResult` type in `engine.ts` with `ignored[]` human-readable reasons.
+- Enriched `PreviewResult` in `service.ts`: `breakdown[]`, `resolvedPromotions`, `calc_version`.
+- Loading/refreshing indicators (Loader2 spinner + opacity transitions) in `PromotionsTab.tsx`.
+- 3 new golden tests: Genius L1+L2 dedup, rounding tolerance, ignored[] verification (10 total).
+- `force-dynamic` export in `calc-preview/route.ts` to prevent caching.
+
+### Changed
+- `PromotionsTab.tsx`: Removed ~210 lines of duplicated client-side pricing logic.
+  Deleted: `validate()`, `dedupeBySubcategory()`, `pickBestGenius()`, vendor stacking blocks.
+  Now renders API response only via `usePricingPreview` hook.
+
+## [2026-02-12]
+### Added
+- Dynamic Pricing UI V2: context bar chips, cell drill-down panel, effective discount labels.
+- OCC dirty-state validation in `OccTierEditor.tsx`.
+- Enriched CSV export with 8-line metadata header.
+- Booking.com stacking logic fix (Targeted promos don't stack).
+- Promotions Tab UI redesign (Option B).
+- Pricing Overview Tab redesign.
+- Replace all emoji icons with Lucide icons and text labels (UUPM skill).
+
 ## [2026-02-11]
 ### Added
 - OTB Reset checkbox when deleting data by month (`DeleteByMonthButton.tsx`) — clears OTB snapshots + FeaturesDaily.
@@ -8,6 +33,11 @@
 - New API `GET /api/features/latest-date` — returns `max(as_of_date)` from `features_daily`.
 - Excel (.xlsx) upload support in `ingestCSV` — auto-detects format (CSV vs Excel).
 - Split Excel templates: separate Booked and Cancelled templates with download links.
+
+### Fixed
+- **Forecast 0 results bug**: `RunForecastButton` now uses `max(as_of_date)` from `features_daily` instead of `max(booking_date)` from `reservationsRaw`. This aligns forecast query with features built date.
+- **Delete-by-month hotel_id filter**: Added `hotel_id` to `WHERE` clause in both `GET` and `DELETE` operations (was deleting across all hotels).
+- **Delete button hidden**: Now shows delete button when only OTB data exists (no raw data).
 
 ### Fixed
 - **Forecast 0 results bug**: `RunForecastButton` now uses `max(as_of_date)` from `features_daily` instead of `max(booking_date)` from `reservationsRaw`. This aligns forecast query with features built date.

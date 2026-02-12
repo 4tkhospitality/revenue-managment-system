@@ -3,7 +3,7 @@
 > **This document is the canonical reference for all pricing calculation rules.**
 > Any change to pricing math MUST follow these constraints.
 
-## Architecture Rule (LOCKED — Rev.4, 2026-02-12)
+## Architecture Rule (LOCKED — Rev.5, 2026-02-13)
 
 ```
 All pricing math & promotion resolution must be executed server-side in:
@@ -36,9 +36,39 @@ Pure functions — receive inputs, return outputs. No database, no fetch, no sid
 | `calcBarFromNet(net, commission, discounts, calcType, ...)` | NET → BAR |
 | `calcNetFromBar(bar, commission, discounts, calcType, ...)` | BAR → NET |
 | `resolveTimingConflicts(discounts)` | Early Bird vs Last-Minute: keep larger |
-| `resolveVendorStacking(vendor, discounts)` | Booking exclusion, Expedia single, Trip.com box dedup |
+| `resolveVendorStacking(vendor, discounts)` | Booking exclusion, Expedia single, Trip.com box dedup → returns `StackingResult` |
+| `calcEffectiveDiscount(discounts, calcType)` | Effective % after calc_type resolution |
 | `computeDisplay(bar, totalDiscount)` | `Math.round(bar * (1 - totalDiscount / 100))` |
 | `applyOccMultiplier(netBase, multiplier)` | `Math.round(netBase * multiplier)` |
+
+### New Types (V01.9 / Phase 03)
+
+```typescript
+interface StackingResult {
+  resolved: DiscountItem[];   // Promos kept after stacking rules
+  ignored: StackingIgnored[]; // Promos dropped with human-readable reason
+  removedCount: number;
+  rule: string;               // e.g. 'booking: exclusive + genius'
+}
+
+interface StackingIgnored {
+  id: string;
+  name: string;
+  reason: string; // e.g. 'Country Rate bị bỏ vì Mobile Rate cao hơn (15% > 10%)'
+}
+```
+
+### Client Hook: `hooks/usePricingPreview.ts`
+
+```typescript
+// AbortController cancels stale requests, debounce 250ms
+const { result, isLoading, isRefreshing, error } = usePricingPreview({
+  channelId, roomTypeId, mode, value,
+  selectedCampaignInstanceIds, debounceMs: 250,
+});
+// result includes: net, bar, display, totalDiscountEffective,
+//   breakdown[], resolvedPromotions, calc_version, trace, validation
+```
 
 ### Critical: `totalDiscount` Definition
 
@@ -68,8 +98,8 @@ DB-aware orchestration. Starts with `import 'server-only'` to prevent client imp
 
 1. **Modify** `engine.ts` only (or `service.ts` if DB logic changes)
 2. **Update** golden test expected values in `tests/pricing-golden.test.ts`
-3. **Run** `vitest run tests/pricing-golden.test.ts` — all 6 cases must pass
-4. **Do NOT** touch OverviewTab, DynamicPricingTab, or PromotionsTab
+3. **Run** `npx tsx tests/pricing-golden.test.ts` — all 10 cases must pass
+4. **Do NOT** touch OverviewTab, DynamicPricingTab, or PromotionsTab (they are pure renderers)
 5. **PR reviewer** checks: no pricing math leaked to UI components
 
 ## Anti-Duplication CI Checks

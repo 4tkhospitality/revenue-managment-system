@@ -1,8 +1,8 @@
 # Database Schema (Prisma)
 
-**Version**: V01.7 (Current)
+**Version**: V01.9 (Current)
 **Type**: Multi-tenant SaaS (UUID-based)
-**Last Updated**: 2026-02-12
+**Last Updated**: 2026-02-13
 **DB**: PostgreSQL 16 (Supabase, region: ap-northeast-2)
 **ORM**: Prisma 5.10.2
 

@@ -32,6 +32,7 @@ RMS V01 is a **SaaS-ready Revenue Management System** designed for 14-day pilots
     *   Demand Forecast: Uses `max(as_of_date)` from `features_daily`.
     *   Pricing Engine: Rule-based Ladder Strategy.
     *   OTA Pricing: BAR→NET calculation with commission/promotions.
+    *   **Unified Pricing (V01.9)**: Server-only engine (`engine.ts` + `service.ts`), `usePricingPreview` hook with AbortController + debounce. Client renders API response only.
 
 4.  **Dashboard UI**:
     *   Visualizes OTB curves vs Last Year with date picker.

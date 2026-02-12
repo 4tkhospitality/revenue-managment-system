@@ -1,14 +1,14 @@
 {
   "meta": {
-    "schema_version": "1.6.0",
+    "schema_version": "1.7.0",
     "awf_version": "4.1.2",
-    "last_updated": "2026-02-12T17:30:00+07:00"
+    "last_updated": "2026-02-13T00:05:00+07:00"
   },
   "project": {
     "name": "revenue-management-system",
     "type": "SaaS Web App",
     "status": "Production - Deployed to Vercel (icn1 region)",
-    "description": "RMS Version 01.8 - Revenue Management System with OTB Time-Travel + OTA Pricing + Dynamic Pricing by OCC (occupancy-based tier pricing with seasons, guardrails, trace engine) + OTA Growth Playbook + User Management + Performance Optimized + Comprehensive Guide. Full-stack TypeScript.",
+    "description": "RMS Version 01.9 - Revenue Management System with OTB Time-Travel + OTA Pricing + Dynamic Pricing by OCC + Unified Pricing Logic (Phase 03: server-only engine, usePricingPreview hook) + OTA Growth Playbook + User Management + Performance Optimized + Comprehensive Guide. Full-stack TypeScript.",
     "github": "https://github.com/4tkhospitality/revenue-managment-system",
     "landing_page": {
       "path": "apps/landing",
@@ -566,7 +566,14 @@
     "V01.8: Pricing page 6 tabs: Hạng phòng, Kênh OTA, Khuyến mãi, Bảng giá, Giá Linh Hoạt, Tối ưu OTA",
     "V01.8: Architecture doc ARCHITECTURE_PRICING.md - Describes engine pipeline, trace format, guardrail system",
     "V01.8: Golden tests pricing-golden.test.ts - Snapshot tests for pricing engine correctness",
-    "V01.8: Lint script lint-pricing-architecture.ts - Validates no direct DB calls in engine, no client recompute"
+    "V01.8: Lint script lint-pricing-architecture.ts - Validates no direct DB calls in engine, no client recompute",
+    "V01.9: Phase 03 Unified Pricing — server-only engine as single source of truth, ~210 lines removed from PromotionsTab.tsx",
+    "V01.9: usePricingPreview hook — AbortController for stale request cancellation, debounce 250ms, isRefreshing state",
+    "V01.9: StackingResult type in engine.ts — ignored[] with human-readable reasons per dropped promo",
+    "V01.9: PreviewResult enriched in service.ts — breakdown[], resolvedPromotions, calc_version v3.0.0",
+    "V01.9: Promotions Tab loading states — Loader2 spinner replaces icons during refresh, opacity-60 transition",
+    "V01.9: Golden tests expanded to 10 cases — Genius L1+L2 dedup, rounding tolerance ±1000, ignored[] verification",
+    "V01.9: force-dynamic in calc-preview route.ts — prevents Next.js caching of pricing API responses"
   ],
   "cancellation_bridge_v011": {
     "status": "Implemented",
@@ -675,7 +682,11 @@
     "V01.8: CSV export includes metadata and respects current viewMode (BAR/Display/NET)",
     "V01.8: OCC tiers saved atomically via $transaction (delete all + create all)",
     "V01.8: Season date ranges validated server-side for no overlaps within same hotel",
-    "V01.8: Guardrails are advisory (red border + tooltip) not blocking — GM can still save"
+    "V01.8: Guardrails are advisory (red border + tooltip) not blocking — GM can still save",
+    "V01.9: Phase 03 — PromotionsTab.tsx must NOT contain any pricing math. Removed validate(), dedupeBySubcategory(), pickBestGenius(), all stacking logic",
+    "V01.9: resolveTimingConflicts() moved server-side only — client reads validation.warnings from API response",
+    "V01.9: usePricingPreview hook replaces all direct fetch() calls in PromotionsTab — single source of truth for preview data",
+    "V01.9: AbortController cancels in-flight requests when user toggles promo rapidly — prevents race condition stale data"
   ],
   "ui_design": {
     "theme": "SaaS Pro Light",
@@ -751,7 +762,10 @@
       "V01.7: React controlled input: value={input || fallback} prevents clearing. Use value={input} directly + initialize default via useEffect on mode/room change",
       "V01.8: Git commit can hang when GPG sign is configured but agent is hidden — use --no-gpg-sign flag or terminate after 30s",
       "V01.8: PowerShell && operator not supported in older versions — use semicolons (;) to chain commands",
-      "V01.8: UUPM skill installed to .agent/skills/ (project-level) not global — __pycache__ should be gitignored"
+      "V01.8: UUPM skill installed to .agent/skills/ (project-level) not global — __pycache__ should be gitignored",
+      "V01.9: PromotionsTab.tsx client-side pricing math causes drift from server engine — MUST use usePricingPreview hook instead",
+      "V01.9: AbortController abort() fires before new fetch starts — check signal.aborted in response handler to avoid stale state",
+      "V01.9: calc-preview route without force-dynamic gets cached by Next.js — add export const dynamic = 'force-dynamic'"
     ],
     "formulas": {
       "rooms_otb": "SUM(num_rooms) from reservations for that stay_date",

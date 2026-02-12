@@ -1,7 +1,7 @@
-# Design Specifications: OTA Pricing Module V01.7
+# Design Specifications: OTA Pricing Module V01.9
 
 **Created:** 2026-02-05
-**Last Updated:** 2026-02-12
+**Last Updated:** 2026-02-13
 **Module:** `/pricing`
 **Theme:** SaaS Pro Light (RMS)
 
@@ -158,12 +158,19 @@ net_to_bar:     BAR = NET / (1 - commission%)
                 Display = BAR × (1 - d)
 ```
 
-### Timing Conflict Resolution (V01.7)
+### Timing Conflict Resolution (V01.7 → V01.9)
 - **Rule**: Early Bird + Last-Minute are mutually exclusive
-- **Logic**: `resolveTimingConflicts()` applied in BOTH:
-  - `calc-matrix` API route
-  - `PromotionsTab` parent component (before totalDiscount computation)
+- **Logic**: `resolveTimingConflicts()` applied **server-side only** in:
+  - `engine.ts` (core resolution)
+  - `service.ts → calculatePreview()` (merged into `validation.warnings`)
+- Client (`PromotionsTab.tsx`) reads `validation.warnings` from API response
 - If both active, only the highest discount is applied
+
+### Unified Pricing Architecture (V01.9 / Phase 03)
+- **Single Source of Truth**: All pricing math in `engine.ts` + `service.ts`
+- **Client Hook**: `usePricingPreview` ({AbortController, debounce 250ms, isRefreshing})
+- **PromotionsTab.tsx**: Zero pricing math — only builds payload and renders API response
+- **Loading UI**: `Loader2` spinner + opacity transition during refresh
 
 ### Input UX (V01.7 Fix)
 - Controlled input pattern: `value={customInput}` (no fallback)
@@ -237,8 +244,9 @@ net_to_bar:     BAR = NET / (1 - commission%)
 ## ⚠️ Critical Gotchas
 
 1. **bar_to_net mode**: Do NOT use `calcNetFromBar()` — compute `NET = display × (1 - commission%)` directly
-2. **Timing conflicts**: `resolveTimingConflicts()` must be in BOTH `calc-matrix` API AND `PromotionsTab`
+2. **Timing conflicts**: `resolveTimingConflicts()` is server-side only (engine.ts). Client reads `validation.warnings`
 3. **PromotionGroup enum**: Must be synced across `schema.prisma`, `types.ts`, `catalog.ts`
 4. **Catalog vs DB**: `catalog.ts` constants are NOT used by API — API reads from DB. Must run `seed-pricing.ts` after updating
 5. **Free Nights rounding**: Stay 7 / Pay 6 = 14.28% → rounds to 14%
 6. **Controlled input**: `value={input || fallback}` prevents clearing — use `value={input}` directly
+7. **Client pricing math forbidden**: `PromotionsTab.tsx` must NOT compute `totalDiscount`, `discountMultiplier`, or call any engine functions. Use `usePricingPreview` hook only.

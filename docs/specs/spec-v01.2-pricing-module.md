@@ -1,9 +1,9 @@
 # Spec V01.2: OTA Pricing Module
 
 **Ngày tạo:** 2026-02-05  
-**Version:** V01.2 (Planned)  
+**Version:** V01.9 (Implemented)
 **Module URL:** `/pricing`  
-**Status:** Planning Complete
+**Status:** Implemented + Phase 03 Unified Pricing Complete
 
 ---
 
@@ -288,11 +288,26 @@ interface ValidationResult {
 interface CalcResult {
   bar: number
   net: number
+  display: number                  // V01.9: BAR × (1 - totalDiscount%)
   commission: number
   totalDiscount: number
+  totalDiscountEffective: number   // V01.9: Alias for API consumers
+  calc_version: string             // V01.9: 'v3.0.0'
+  breakdown: {                     // V01.9: Per-group detail
+    group: string
+    chosenPromotionId: string
+    chosenPercent: number
+    amountDelta: number
+    stackRule: string
+  }[]
+  resolvedPromotions: {            // V01.9: Applied vs ignored
+    applied: string[]
+    ignored: { id: string; name: string; reason: string }[]
+  }
   validation: ValidationResult
   trace: {
     step: string
+    description: string            // V01.9: Added
     priceAfter: number
   }[]
 }

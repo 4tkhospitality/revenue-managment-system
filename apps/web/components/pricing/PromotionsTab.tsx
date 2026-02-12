@@ -1391,6 +1391,21 @@ export default function PromotionsTab() {
                         </div>
                     )}
 
+                    {/* ── Agoda Stacking Warning ── */}
+                    {isAgoda && essentialCampaigns.filter(c => c.is_active).length > 0 && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex gap-3">
+                            <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                            <div className="text-sm text-amber-800 space-y-1">
+                                <p className="font-semibold">Agoda tự động bật cộng dồn cho khuyến mãi Cơ bản</p>
+                                <p className="text-xs text-amber-700 leading-relaxed">
+                                    Khi tạo khuyến mãi Cơ bản trên Agoda, nút &ldquo;Kết hợp với khuyến mãi khác&rdquo; mặc định <strong>BẬT</strong>.
+                                    Điều này khiến tất cả khuyến mãi Cơ bản <strong>cộng dồn giảm giá</strong> lên nhau.
+                                    Nếu không muốn, hãy tắt nút này trong trang quản lý Agoda cho từng khuyến mãi.
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
                     {/* ── Marketing Programs ── */}
                     {(isAgoda || isBooking || isExpedia) && (
                         <MarketingPrograms
