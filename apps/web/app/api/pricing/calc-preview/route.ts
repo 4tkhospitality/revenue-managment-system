@@ -1,8 +1,11 @@
-// Phase 00: Calc Preview API — thin wrapper over service.calculatePreview()
+// Phase 03: Calc Preview API — thin wrapper over service.calculatePreview()
 // ARCHITECTURE: no pricing math here, only parse + call service + return
 import { NextRequest, NextResponse } from 'next/server';
 import { getActiveHotelId } from '@/lib/pricing/get-hotel';
 import { calculatePreview } from '@/lib/pricing/service';
+
+// Force dynamic — this is a realtime preview endpoint, never cache
+export const dynamic = 'force-dynamic';
 
 interface CalcPreviewRequest {
     channelId: string;

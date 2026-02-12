@@ -657,61 +657,91 @@ function logDebug(msg: string) {
  * - agoda: Progressive + subcategory dedup
  * - (default): No vendor-specific filtering
  */
+export interface StackingIgnored {
+    id: string;
+    name: string;
+    reason: string;
+}
+
+export interface StackingResult {
+    resolved: DiscountItem[];
+    ignored: StackingIgnored[];
+    removedCount: number;
+    rule: string;
+}
+
 export function resolveVendorStacking(
     vendor: string,
     discounts: DiscountItem[]
-): {
-    resolved: DiscountItem[];
-    removedCount: number;
-    rule: string;
-} {
+): StackingResult {
     const active = discounts.filter(d => d.percent > 0);
     const vendorNorm = normalizeVendorCode(vendor);
 
+    // Helper: diff two arrays to find ignored items
+    const findIgnored = (all: DiscountItem[], kept: DiscountItem[], reason: string): StackingIgnored[] => {
+        const keptIds = new Set(kept.map(d => d.id));
+        return all.filter(d => !keptIds.has(d.id)).map(d => ({ id: d.id, name: d.name, reason }));
+    };
+
     // Helper: within a group sharing the same subcategory, keep only highest
-    const dedupeBySubcategory = (items: DiscountItem[]): DiscountItem[] => {
+    const dedupeBySubcategory = (items: DiscountItem[]): { kept: DiscountItem[]; dropped: StackingIgnored[] } => {
         const subcatMap = new Map<string, DiscountItem>();
         const noSubcat: DiscountItem[] = [];
+        const dropped: StackingIgnored[] = [];
         for (const d of items) {
             const key = d.subCategory || '';
             if (!key) { noSubcat.push(d); continue; }
             const existing = subcatMap.get(key);
             if (!existing || d.percent > existing.percent) {
+                if (existing) dropped.push({ id: existing.id, name: existing.name, reason: `Cùng nhóm "${key}" — "${d.name}" cao hơn (${d.percent}% > ${existing.percent}%)` });
                 subcatMap.set(key, d);
+            } else {
+                dropped.push({ id: d.id, name: d.name, reason: `Cùng nhóm "${key}" — "${existing.name}" cao hơn (${existing.percent}% > ${d.percent}%)` });
             }
         }
-        return [...noSubcat, ...subcatMap.values()];
+        return { kept: [...noSubcat, ...subcatMap.values()], dropped };
     };
 
-    // Helper: pick best Genius (only 1 level applies per booking)
-    const pickBestGenius = (items: DiscountItem[]): DiscountItem[] => {
-        const genius = items.filter(d => d.group === 'GENIUS');
-        const nonGenius = items.filter(d => d.group !== 'GENIUS');
-        if (genius.length <= 1) return items;
-        const best = genius.reduce((b, d) => d.percent > b.percent ? d : b);
-        return [...nonGenius, best];
+    // Helper: pick best from array, return best + ignored
+    const pickBest = (items: DiscountItem[], reason: string): { best: DiscountItem | null; ignored: StackingIgnored[] } => {
+        if (items.length === 0) return { best: null, ignored: [] };
+        const best = items.reduce((b, d) => d.percent > b.percent ? d : b);
+        const ignored = items.filter(d => d.id !== best.id).map(d => ({
+            id: d.id, name: d.name,
+            reason: `${reason} — "${best.name}" cao hơn (${best.percent}% > ${d.percent}%)`
+        }));
+        return { best, ignored };
     };
 
     // ── Booking.com: 3-tier exclusion engine ──
     if (vendorNorm === 'booking') {
-        // Tier 1: Exclusive deals (Campaign group, non-stackable) block everything except Genius
-        const exclusiveDeals = active.filter(d =>
-            d.group === 'CAMPAIGN' // Getaway, Black Friday, Deal of Day, etc.
-        );
+        // Tier 1: Exclusive deals (Campaign group) block everything except Genius
+        const exclusiveDeals = active.filter(d => d.group === 'CAMPAIGN');
         if (exclusiveDeals.length > 0) {
             const geniusDeals = active.filter(d => d.group === 'GENIUS');
-            const bestExclusive = exclusiveDeals.reduce((b, d) => d.percent > b.percent ? d : b);
-            const result = pickBestGenius([...geniusDeals, bestExclusive]);
-            return { resolved: result, removedCount: active.length - result.length, rule: 'booking: exclusive + genius' };
+            const { best: bestExclusive, ignored: exclIgnored } = pickBest(exclusiveDeals, 'Exclusive deal: chỉ giữ deal cao nhất');
+            const { best: bestGenius, ignored: geniusIgnored } = pickBest(geniusDeals, 'Genius: chỉ giữ level cao nhất');
+            const resolved = [bestGenius, bestExclusive].filter(Boolean) as DiscountItem[];
+            const blockedOthers = active.filter(d => d.group !== 'CAMPAIGN' && d.group !== 'GENIUS')
+                .map(d => ({ id: d.id, name: d.name, reason: `Bị chặn bởi Exclusive deal "${bestExclusive!.name}"` }));
+            return {
+                resolved,
+                ignored: [...exclIgnored, ...geniusIgnored, ...blockedOthers],
+                removedCount: active.length - resolved.length,
+                rule: 'booking: exclusive + genius'
+            };
         }
 
-        // Tier 2: Business Bookers blocks ALL, no Genius
+        // Tier 2: Business Bookers blocks ALL
         const businessBookers = active.filter(d => d.subCategory === 'BUSINESS_BOOKERS');
         if (businessBookers.length > 0) {
-            return { resolved: [businessBookers[0]], removedCount: active.length - 1, rule: 'booking: business_bookers exclusive' };
+            const kept = businessBookers[0];
+            const ignored = active.filter(d => d.id !== kept.id)
+                .map(d => ({ id: d.id, name: d.name, reason: `Bị chặn bởi Business Bookers "${kept.name}"` }));
+            return { resolved: [kept], ignored, removedCount: active.length - 1, rule: 'booking: business_bookers exclusive' };
         }
 
-        // Tier 3: Normal stacking — Portfolio highest + Targeted subcat highest + Genius best
+        // Tier 3: Normal stacking — Portfolio highest + Targeted highest + Genius best
         const portfolio = active.filter(d => d.group === 'PORTFOLIO');
         const targeted = active.filter(d => d.group === 'TARGETED');
         const genius = active.filter(d => d.group === 'GENIUS');
@@ -719,49 +749,40 @@ export function resolveVendorStacking(
             d.group !== 'PORTFOLIO' && d.group !== 'TARGETED' && d.group !== 'GENIUS'
         );
 
-        const bestPortfolio = portfolio.length > 0
-            ? [portfolio.reduce((b, d) => d.percent > b.percent ? d : b)]
-            : [];
+        const { best: bp, ignored: pi } = pickBest(portfolio, 'Portfolio: chỉ giữ cao nhất');
+        const { best: bt, ignored: ti } = pickBest(targeted, 'Targeted: chỉ giữ cao nhất (Mobile/Country không cộng dồn)');
+        const { best: bg, ignored: gi } = pickBest(genius, 'Genius: chỉ giữ level cao nhất');
 
-        // Fix: Targeting Promotions (Mobile, Country, etc.) do NOT stack.
-        // Choose only the highest %.
-        const bestTargeted = targeted.length > 0
-            ? [targeted.reduce((b, d) => d.percent > b.percent ? d : b)]
-            : [];
-
-        const bestGenius = genius.length > 0
-            ? [genius.reduce((b, d) => d.percent > b.percent ? d : b)]
-            : [];
-
-        const result = [...bestGenius, ...bestTargeted, ...bestPortfolio, ...other];
+        const resolved = [bg, bt, bp, ...other].filter(Boolean) as DiscountItem[];
         return {
-            resolved: result,
-            removedCount: active.length - result.length,
+            resolved,
+            ignored: [...pi, ...ti, ...gi],
+            removedCount: active.length - resolved.length,
             rule: 'booking: normal stacking'
         };
     }
 
     // ── Expedia: Only highest deal wins ──
     if (vendorNorm === 'expedia') {
-        const best = active.reduce((b, d) => d.percent > b.percent ? d : b);
-        return { resolved: [best], removedCount: active.length - 1, rule: 'expedia: single_discount (highest wins)' };
+        if (active.length === 0) return { resolved: [], ignored: [], removedCount: 0, rule: 'expedia: none' };
+        const { best, ignored } = pickBest(active, 'Expedia: chỉ cho phép 1 discount');
+        return { resolved: best ? [best] : [], ignored, removedCount: active.length - 1, rule: 'expedia: single_discount (highest wins)' };
     }
 
     // ── Trip.com: Additive + same-box dedup ──
-    // Lock #2: normalizeVendorCode already maps 'ctrip'/'trip.com' → 'trip'
     if (vendorNorm === 'trip') {
-        const result = dedupeBySubcategory(active);
-        return { resolved: result, removedCount: active.length - result.length, rule: 'trip.com: additive + box dedup' };
+        const { kept, dropped } = dedupeBySubcategory(active);
+        return { resolved: kept, ignored: dropped, removedCount: active.length - kept.length, rule: 'trip.com: additive + box dedup' };
     }
 
     // ── Agoda: Progressive + subcategory dedup ──
     if (vendorNorm === 'agoda') {
-        const result = dedupeBySubcategory(active);
-        return { resolved: result, removedCount: active.length - result.length, rule: 'agoda: progressive + subcat dedup' };
+        const { kept, dropped } = dedupeBySubcategory(active);
+        return { resolved: kept, ignored: dropped, removedCount: active.length - kept.length, rule: 'agoda: progressive + subcat dedup' };
     }
 
     // Default: no vendor-specific filtering
-    return { resolved: active, removedCount: 0, rule: 'default (no vendor rules)' };
+    return { resolved: active, ignored: [], removedCount: 0, rule: 'default (no vendor rules)' };
 }
 
 /**

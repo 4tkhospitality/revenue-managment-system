@@ -241,6 +241,89 @@ test('7. Vendor normalization: booking.com → booking, ctrip → trip', () => {
     assertEqual(normalizeVendorCode('unknown_ota'), 'unknown_ota', 'unknown passes through');
 });
 
+// ── Phase 03 Tests ──────────────────────────────────────────────
+
+// ── Test 8: Booking Genius L1 + L2 → only L2 ──────────────────
+
+test('8. Booking: Genius L1 + L2 → only L2 (no stacking within Genius)', () => {
+    const discounts: DiscountItem[] = [
+        { id: '1', name: 'Genius Level 1', percent: 10, group: 'GENIUS' },
+        { id: '2', name: 'Genius Level 2', percent: 15, group: 'GENIUS' },
+        { id: '3', name: 'Mobile Deal', percent: 12, group: 'TARGETED', subCategory: 'MOBILE' },
+    ];
+    const { resolved, ignored, rule } = resolveVendorStacking('booking', discounts);
+
+    // Genius: only L2 (highest) should survive
+    const genius = resolved.filter(d => d.group === 'GENIUS');
+    assertEqual(genius.length, 1, 'should keep only 1 Genius');
+    assertEqual(genius[0].percent, 15, 'should keep L2 (15%)');
+
+    // Mobile Deal should also survive (different group)
+    const targeted = resolved.filter(d => d.group === 'TARGETED');
+    assertEqual(targeted.length, 1, 'should keep Mobile Deal');
+
+    // Genius L1 should be in ignored list
+    const ignoredGenius = ignored.filter(i => i.id === '1');
+    assertEqual(ignoredGenius.length, 1, 'Genius L1 should be in ignored');
+    if (!ignoredGenius[0].reason.includes('cao hơn')) {
+        throw new Error(`Ignored reason should mention "cao hơn", got: ${ignoredGenius[0].reason}`);
+    }
+});
+
+// ── Test 9: Rounding tolerance (CEIL_1000 vs ROUND_100) ────────
+
+test('9. Rounding tolerance: CEIL_1000 result ≤ ROUND_100 + 1000', () => {
+    const net = 487_321; // Awkward number to test rounding
+    const commission = 17;
+    const discounts: DiscountItem[] = [
+        { id: '1', name: 'Promo X', percent: 12, group: 'SEASONAL' },
+        { id: '2', name: 'Promo Y', percent: 7, group: 'TARGETED' },
+    ];
+
+    const ceil1000 = calcBarFromNet(net, commission, discounts, 'PROGRESSIVE', 'CEIL_1000', 'agoda');
+    const round100 = calcBarFromNet(net, commission, discounts, 'PROGRESSIVE', 'ROUND_100', 'agoda');
+    const noRound = calcBarFromNet(net, commission, discounts, 'PROGRESSIVE', 'NONE', 'agoda');
+
+    // CEIL_1000 should be ≥ NONE (rounds up to nearest 1000)
+    if (ceil1000.bar < noRound.bar) {
+        throw new Error(`CEIL_1000 (${ceil1000.bar}) should be >= NONE (${noRound.bar})`);
+    }
+
+    // CEIL_1000 − noRound should be < 1000 (max rounding delta)
+    const delta = ceil1000.bar - noRound.bar;
+    if (delta >= 1000) {
+        throw new Error(`CEIL_1000 delta (${delta}) should be < 1000`);
+    }
+
+    // All 3 should have same totalDiscount (rounding doesn't affect discount%)
+    assertClose(ceil1000.totalDiscount, round100.totalDiscount, 0.01, 'totalDiscount should match across rounding modes');
+});
+
+// ── Test 10: Booking Mobile + Country → ignored[] has reason ────
+
+test('10. Booking: Mobile + Country → StackingResult.ignored[] has reason', () => {
+    const discounts: DiscountItem[] = [
+        { id: '1', name: 'Mobile Rate', percent: 15, group: 'TARGETED', subCategory: 'MOBILE' },
+        { id: '2', name: 'Country Rate', percent: 10, group: 'TARGETED', subCategory: 'COUNTRY' },
+    ];
+    const result = resolveVendorStacking('booking', discounts);
+
+    // Only highest Targeted should survive
+    assertEqual(result.resolved.length, 1, 'should keep only 1 Targeted');
+    assertEqual(result.resolved[0].name, 'Mobile Rate', 'should keep Mobile Rate (15%)');
+
+    // Country Rate should be in ignored with human-readable reason
+    assertEqual(result.ignored.length, 1, 'should have 1 ignored');
+    assertEqual(result.ignored[0].id, '2', 'ignored should be Country Rate');
+    if (!result.ignored[0].reason) {
+        throw new Error('Ignored item should have a reason string');
+    }
+    // Reason should mention the winner name
+    if (!result.ignored[0].reason.includes('Mobile Rate')) {
+        throw new Error(`Reason should mention "Mobile Rate", got: ${result.ignored[0].reason}`);
+    }
+});
+
 // ── Summary ─────────────────────────────────────────────────────
 
 console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');

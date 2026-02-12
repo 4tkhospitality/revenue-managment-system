@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { usePricingPreview } from '@/hooks/usePricingPreview';
 import { Plus, Trash2, Loader2, AlertTriangle, CheckCircle, ChevronDown, ChevronRight, Tag, X, Search, Calculator, DollarSign, TrendingUp } from 'lucide-react';
 import { AGODA_BOOSTERS, BOOKING_BOOSTERS, EXPEDIA_BOOSTERS } from '@/lib/pricing/catalog';
 import type { CommissionBooster } from '@/lib/pricing/types';
@@ -992,112 +993,8 @@ export default function PromotionsTab() {
         fetchCampaigns();
     }, [selectedChannel]);
 
-    // Validate current selection
-    const validate = (): ValidationResult => {
-        const errors: string[] = [];
-        const warnings: string[] = [];
-        const active = campaigns.filter((c) => c.is_active);
-        const vendorCode = channels.find((c) => c.id === selectedChannel)?.code || 'agoda';
-
-        // =========================================================================
-        // EXPEDIA: ISOLATED Mode - Each promotion is standalone, no real stacking
-        // =========================================================================
-        if (vendorCode === 'expedia') {
-            if (active.length > 1) {
-                warnings.push(`Expedia: Mỗi promotion tạo rate plan riêng, không cộng dồn. Khách chỉ nhận 1 discount.`);
-            }
-            return { isValid: errors.length === 0, errors, warnings };
-        }
-
-        // =========================================================================
-        // TRIP.COM/CTRIP: ADDITIVE Mode - Same "box" = pick 1, different boxes = additive stack
-        // =========================================================================
-        if (vendorCode === 'ctrip') {
-            // Check same-box conflicts (REGULAR, TARGETING, CAMPAIGN, PACKAGE)
-            const boxGroups: Record<string, Campaign[]> = {};
-            active.forEach((c) => {
-                const box = c.promo.sub_category || 'OTHER';
-                if (!boxGroups[box]) boxGroups[box] = [];
-                boxGroups[box].push(c);
-            });
-            Object.entries(boxGroups).forEach(([box, items]) => {
-                if (items.length > 1) {
-                    errors.push(`Trip.com: Cùng nhóm "${box}" chỉ chọn được 1 (đang chọn ${items.length})`);
-                }
-            });
-            // Trip.com uses ADDITIVE calculation
-            const totalAdditive = active.reduce((sum, c) => sum + c.discount_pct, 0);
-            if (totalAdditive > 50) {
-                warnings.push(`Trip.com: Tổng discount CỘNG DỒN ${totalAdditive}% - khá cao`);
-            }
-            return { isValid: errors.length === 0, errors, warnings };
-        }
-
-        // =========================================================================
-        // BOOKING.COM: Progressive + Max 3 + Deep Deals no-stack
-        // =========================================================================
-        if (vendorCode === 'booking') {
-            // Deep Deals cannot stack
-            const deepDeals = active.filter((c) => c.promo.allow_stack === false);
-            if (deepDeals.length > 0 && active.length > 1) {
-                errors.push(`Deep Deal "${deepDeals[0].promo.name}" không thể kết hợp với promotions khác`);
-            }
-            // Max 3 stacking
-            if (active.length > 3) {
-                errors.push(`Booking.com chỉ cho phép tối đa 3 promotions cùng lúc (đang chọn ${active.length})`);
-            }
-            // Same subcategory = pick highest only
-            const subcatGroups: Record<string, Campaign[]> = {};
-            active.forEach((c) => {
-                if (c.promo.sub_category) {
-                    const key = c.promo.sub_category;
-                    if (!subcatGroups[key]) subcatGroups[key] = [];
-                    subcatGroups[key].push(c);
-                }
-            });
-            Object.entries(subcatGroups).forEach(([subcat, items]) => {
-                if (items.length > 1) {
-                    warnings.push(`Booking.com: Cùng nhóm "${subcat}" sẽ chỉ áp dụng discount cao nhất`);
-                }
-            });
-            return { isValid: errors.length === 0, errors, warnings };
-        }
-
-        // =========================================================================
-        // AGODA & TRAVELOKA: Progressive stacking with category rules
-        // =========================================================================
-        // Max 1 SEASONAL
-        const seasonals = active.filter((c) => c.promo.group_type === 'SEASONAL');
-        if (seasonals.length > 1) {
-            errors.push(`Chỉ được chọn 1 Seasonal (đang chọn ${seasonals.length})`);
-        }
-
-        // Max 1 TARGETED per subcategory
-        const targeteds = active.filter((c) => c.promo.group_type === 'TARGETED');
-        const subcatGroups: Record<string, Campaign[]> = {};
-        targeteds.forEach((c) => {
-            const key = c.promo.sub_category || 'UNKNOWN';
-            if (!subcatGroups[key]) subcatGroups[key] = [];
-            subcatGroups[key].push(c);
-        });
-        Object.entries(subcatGroups).forEach(([subcat, items]) => {
-            if (items.length > 1) {
-                errors.push(`Chỉ được chọn 1 Targeted trong nhóm ${subcat} (đang chọn ${items.length})`);
-            }
-        });
-
-        // Total discount - only check for Agoda (80% max)
-        const total = active.reduce((sum, c) => sum + c.discount_pct, 0);
-        if (vendorCode === 'agoda') {
-            if (total > 80) {
-                errors.push(`Tổng giảm giá vượt quá 80% (hiện tại: ${total}%)`);
-            } else if (total > 70) {
-                warnings.push(`Tổng giảm giá gần đạt giới hạn (${total}% / 80%)`);
-            }
-        }
-
-        return { isValid: errors.length === 0, errors, warnings };
-    };
+    // Phase 03: Validation comes from server via usePricingPreview hook
+    // No client-side validate() — engine.ts is the single source of truth
 
     // Open picker for specific group
     const handleOpenPicker = (group: GroupType) => {
@@ -1205,135 +1102,31 @@ export default function PromotionsTab() {
         }
     };
 
-    const validation = validate();
     const selectedChannelData = channels.find((c) => c.id === selectedChannel);
-    const commissionPct = selectedChannelData?.commission || 0; // Lấy từ tab Kênh OTA
-
-    // V01.4: Calculate totalDiscount based on calcType
-    const activeDiscounts = campaigns.filter((c) => c.is_active);
+    const commissionPct = selectedChannelData?.commission || 0;
     const calcType = (selectedChannelData?.calc_type as 'PROGRESSIVE' | 'ADDITIVE' | 'SINGLE_DISCOUNT') || 'PROGRESSIVE';
 
-    // Channel-specific discount selection rules (ENGINE LAYER — source of truth)
-    let appliedDiscounts = activeDiscounts;
+    // Phase 03: usePricingPreview — single source of truth for pricing math
+    // Build payload: only active campaign instance IDs
+    const activeCampaignIds = campaigns.filter(c => c.is_active).map(c => c.id);
+    const selectedRoom = roomTypes.find(r => r.id === selectedRoomId);
 
-    // Helper: within a group sharing the same subcategory, keep only the highest discount
-    const dedupeBySubcategory = (deals: Campaign[]): Campaign[] => {
-        const subcatMap = new Map<string, Campaign>();
-        const noSubcat: Campaign[] = [];
-        for (const c of deals) {
-            const key = c.promo.sub_category || '';
-            if (!key) { noSubcat.push(c); continue; }
-            const existing = subcatMap.get(key);
-            if (!existing || c.discount_pct > existing.discount_pct) {
-                subcatMap.set(key, c);
-            }
-        }
-        return [...noSubcat, ...subcatMap.values()];
-    };
+    const { result: previewData, isLoading: previewLoading, isRefreshing: previewRefreshing } = usePricingPreview({
+        channelId: selectedChannel || undefined,
+        roomTypeId: selectedRoomId || undefined,
+        mode: 'NET',
+        value: selectedRoom?.net_price || 0,
+        selectedCampaignInstanceIds: activeCampaignIds,
+        debounceMs: 250,
+    });
 
-    // Helper: pick only the highest Genius level (L1/L2/L3 — only 1 applies per booking)
-    const pickBestGenius = (deals: Campaign[]): Campaign[] => {
-        const genius = deals.filter(c => c.promo.group_type === 'GENIUS');
-        const nonGenius = deals.filter(c => c.promo.group_type !== 'GENIUS');
-        if (genius.length <= 1) return deals;
-        const best = genius.reduce((b, c) => c.discount_pct > b.discount_pct ? c : b);
-        return [...nonGenius, best];
-    };
+    // Derive display values from API response (no client-side math)
+    const totalDiscount = previewData?.totalDiscountEffective ?? 0;
+    const discountMultiplier = totalDiscount > 0 ? (1 - totalDiscount / 100) : 1;
+    const validation: ValidationResult = previewData?.validation ?? { isValid: true, errors: [], warnings: [] };
 
-    // Booking.com: 3-tier exclusion engine
-    if (selectedChannelData?.code === 'booking' && activeDiscounts.length > 0) {
-        // 1) Check for EXCLUSIVE deals (Campaign: Getaway, Black Friday, Deal of Day, etc.)
-        const exclusiveDeals = activeDiscounts.filter(c =>
-            !c.promo.allow_stack && c.promo.group_type === 'CAMPAIGN'
-        );
-        if (exclusiveDeals.length > 0) {
-            // EXCLUSIVE deal blocks everything EXCEPT Genius (highest level only)
-            const geniusDeals = activeDiscounts.filter(c => c.promo.group_type === 'GENIUS');
-            const bestExclusive = exclusiveDeals.reduce((best, c) =>
-                c.discount_pct > best.discount_pct ? c : best
-            );
-            appliedDiscounts = pickBestGenius([...geniusDeals, bestExclusive]);
-        } else {
-            // 2) Check for Business Bookers (blocks ALL, no Genius)
-            const businessBookers = activeDiscounts.filter(c =>
-                c.promo.sub_category === 'BUSINESS_BOOKERS'
-            );
-            if (businessBookers.length > 0) {
-                appliedDiscounts = [businessBookers[0]]; // Only the exclusive rate
-            } else {
-                // 3) Normal stacking: Portfolio highest-wins + Targeted subcategory highest-wins + Genius highest-only
-                const portfolioActive = activeDiscounts.filter(c => c.promo.group_type === 'PORTFOLIO');
-                const targetedActive = activeDiscounts.filter(c => c.promo.group_type === 'TARGETED');
-                const geniusActive = activeDiscounts.filter(c => c.promo.group_type === 'GENIUS');
-                const otherActive = activeDiscounts.filter(c =>
-                    c.promo.group_type !== 'PORTFOLIO' &&
-                    c.promo.group_type !== 'TARGETED' &&
-                    c.promo.group_type !== 'GENIUS'
-                );
-
-                // Portfolio: pick highest deal only
-                const bestPortfolio = portfolioActive.length > 0
-                    ? [portfolioActive.reduce((best, c) => c.discount_pct > best.discount_pct ? c : best)]
-                    : [];
-
-                // Targeted: Booking.com allows only 1 targeted promotion (Mobile OR Country)
-                // Even though they might share subcategory, we enforce strict single-choice to prevent stacking
-                const bestTargeted = targetedActive.length > 0
-                    ? [targetedActive.reduce((best, c) => c.discount_pct > best.discount_pct ? c : best)]
-                    : [];
-
-                // Genius: pick highest level only (L1/L2/L3)
-                const bestGenius = geniusActive.length > 0
-                    ? [geniusActive.reduce((best, c) => c.discount_pct > best.discount_pct ? c : best)]
-                    : [];
-
-                appliedDiscounts = [...bestGenius, ...bestTargeted, ...bestPortfolio, ...otherActive];
-            }
-        }
-    }
-
-    // Expedia: SINGLE_DISCOUNT — only highest deal applies
-    if (selectedChannelData?.code === 'expedia' && activeDiscounts.length > 1) {
-        const best = activeDiscounts.reduce((best, c) =>
-            c.discount_pct > best.discount_pct ? c : best
-        );
-        appliedDiscounts = [best];
-    }
-
-    // ── Timing conflict resolution (Early Bird + Last-Minute are mutually exclusive) ──
-    // A guest cannot book both "early" AND "last-minute". When both are active,
-    // only the LARGER discount applies. This matches the engine's resolveTimingConflicts().
-    const EARLY_BIRD_RE = /early\s*bird/i;
-    const LAST_MINUTE_RE = /last[\s-]*minute/i;
-    const earlyBirdCamp = appliedDiscounts.find(c => EARLY_BIRD_RE.test(c.promo.name));
-    const lastMinuteCamp = appliedDiscounts.find(c => LAST_MINUTE_RE.test(c.promo.name));
-    let timingConflictWarning: string | null = null;
-
-    if (earlyBirdCamp && lastMinuteCamp) {
-        // Both exist → keep the larger discount, remove the smaller
-        const toRemove = earlyBirdCamp.discount_pct >= lastMinuteCamp.discount_pct
-            ? lastMinuteCamp : earlyBirdCamp;
-        appliedDiscounts = appliedDiscounts.filter(c => c.id !== toRemove.id);
-        timingConflictWarning = `⚠️ Early Bird + Last-Minute không cộng dồn → Bỏ "${toRemove.promo.name}" (${toRemove.discount_pct}%)`;
-    }
-
-    // @pricing-lint-suppress — Phase 03 TODO: replace with usePricingPreview hook (calc-preview API)
-    let totalDiscount: number;
-    let discountMultiplier: number;
-    if (calcType === 'SINGLE_DISCOUNT' && appliedDiscounts.length > 0) {
-        // Single discount: only highest deal
-        totalDiscount = appliedDiscounts[0].discount_pct;
-        discountMultiplier = 1 - totalDiscount / 100;
-    } else if (calcType === 'PROGRESSIVE' && appliedDiscounts.length > 0) {
-        // Progressive: effective = 1 - Π(1 - dᵢ/100)
-        discountMultiplier = appliedDiscounts.reduce((mult, c) => mult * (1 - c.discount_pct / 100), 1);
-        totalDiscount = (1 - discountMultiplier) * 100;
-    } else {
-        // Additive: sum
-        totalDiscount = appliedDiscounts.reduce((sum, c) => sum + c.discount_pct, 0);
-        discountMultiplier = totalDiscount > 0 ? (1 - totalDiscount / 100) : 1;
-    }
-    // @pricing-lint-suppress
+    // Timing conflict warnings are now inside validation.warnings from the server
+    const timingConflictWarning = validation.warnings.find(w => w.includes('Early Bird') && w.includes('Last-Minute')) || null;
 
     // V01.4: Effective commission with marketing programs
     const activeBoosters = boosters.filter(b => b.enabled);
@@ -1619,28 +1412,36 @@ export default function PromotionsTab() {
                     {/* Total Discount Summary */}
                     {selectedChannelData?.code === 'agoda' ? (
                         <div
-                            className={`px-4 py-3 rounded-lg flex items-center gap-2 ${totalDiscount > 80
+                            className={`px-4 py-3 rounded-lg flex items-center gap-2 transition-opacity ${previewRefreshing ? 'opacity-60' : ''} ${totalDiscount > 80
                                 ? 'bg-red-50 border border-red-200'
                                 : totalDiscount > 70
                                     ? 'bg-amber-50 border border-amber-200'
                                     : 'bg-[#F2F4F8] border border-[#DBE1EB]'
                                 }`}
                         >
-                            <AlertTriangle
-                                className={`w-5 h-5 ${totalDiscount > 80
-                                    ? 'text-red-600'
-                                    : totalDiscount > 70
-                                        ? 'text-amber-600'
-                                        : 'text-[#204183]'
-                                    }`}
-                            />
+                            {previewRefreshing ? (
+                                <Loader2 className="w-5 h-5 text-slate-400 animate-spin" />
+                            ) : (
+                                <AlertTriangle
+                                    className={`w-5 h-5 ${totalDiscount > 80
+                                        ? 'text-red-600'
+                                        : totalDiscount > 70
+                                            ? 'text-amber-600'
+                                            : 'text-[#204183]'
+                                        }`}
+                                />
+                            )}
                             <span className="text-sm font-medium text-slate-700">
                                 Tổng giảm giá: {totalDiscount.toFixed(1)}% (Agoda tối đa 80%)
                             </span>
                         </div>
                     ) : (
-                        <div className="px-4 py-3 rounded-lg flex items-center gap-2 bg-[#F2F4F8] border border-[#DBE1EB]">
-                            <CheckCircle className="w-5 h-5 text-emerald-600" />
+                        <div className={`px-4 py-3 rounded-lg flex items-center gap-2 bg-[#F2F4F8] border border-[#DBE1EB] transition-opacity ${previewRefreshing ? 'opacity-60' : ''}`}>
+                            {previewRefreshing ? (
+                                <Loader2 className="w-5 h-5 text-slate-400 animate-spin" />
+                            ) : (
+                                <CheckCircle className="w-5 h-5 text-emerald-600" />
+                            )}
                             <span className="text-sm font-medium text-slate-700">
                                 Tổng giảm giá: {totalDiscount.toFixed(1)}%
                                 {calcType === 'PROGRESSIVE' ? ' (lũy tiến)'
@@ -1652,7 +1453,7 @@ export default function PromotionsTab() {
                 </div>
 
                 {/* ── RIGHT: Sticky Price Calculator ── */}
-                <div className="space-y-4 lg:sticky lg:top-6">
+                <div className={`space-y-4 lg:sticky lg:top-6 transition-opacity duration-200 ${previewRefreshing ? 'opacity-70' : ''}`}>
                     {/* Price Calculator */}
                     <PriceCalculator
                         roomTypes={roomTypes}

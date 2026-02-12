@@ -69,6 +69,19 @@ export interface PreviewResult {
     bar: number;
     display: number;
     totalDiscountEffective: number;
+    calc_version: string;
+    breakdown: {
+        group: string;
+        chosenPromotionId: string;
+        chosenName: string;
+        chosenPercent: number;
+        amountDelta: number;
+        stackRule: string;
+    }[];
+    resolvedPromotions: {
+        applied: string[];
+        ignored: { id: string; name: string; reason: string }[];
+    };
     trace: { step: string; description: string; priceAfter: number }[];
     validation: { isValid: boolean; errors: string[]; warnings: string[] };
 }
@@ -165,7 +178,8 @@ export async function calculatePreview(input: PreviewInput): Promise<PreviewResu
     }));
 
     // Resolve vendor stacking + timing
-    const { resolved: stackedDiscounts } = resolveVendorStacking(channel.code, discounts);
+    const stackResult = resolveVendorStacking(channel.code, discounts);
+    const stackedDiscounts = stackResult.resolved;
 
     const { resolved: finalDiscounts, removed, hadConflict } = resolveTimingConflicts(stackedDiscounts);
 
@@ -225,7 +239,6 @@ export async function calculatePreview(input: PreviewInput): Promise<PreviewResu
         validation = result.validation;
     } else {
         // DISPLAY → BAR → NET
-        // BAR = display / (1 - effectiveDiscount%)
         display = value;
         bar = effectiveDiscount >= 100 ? 0 : Math.round(display / (1 - effectiveDiscount / 100));
         net = Math.round(display * (1 - commission / 100));
@@ -236,8 +249,9 @@ export async function calculatePreview(input: PreviewInput): Promise<PreviewResu
         ];
     }
 
-    // Add timing conflict warning to trace
+    // Add timing conflict warning to validation.warnings (not a separate violations field)
     if (hadConflict && removed) {
+        validation.warnings.push(`Early Bird + Last-Minute → Bỏ "${removed.name}" (${removed.percent}%)`);
         trace.unshift({
             step: '⚠️ Không cộng dồn',
             description: `Early Bird + Last-Minute → Bỏ "${removed.name}" (${removed.percent}%)`,
@@ -245,7 +259,31 @@ export async function calculatePreview(input: PreviewInput): Promise<PreviewResu
         });
     }
 
-    return { net, bar, display, totalDiscountEffective: effectiveDiscount, trace, validation };
+    // Build breakdown (per-group detail)
+    const breakdown = finalDiscounts.map(d => ({
+        group: d.group,
+        chosenPromotionId: d.id,
+        chosenName: d.name,
+        chosenPercent: d.percent,
+        amountDelta: Math.round(bar * d.percent / 100),
+        stackRule: stackResult.rule,
+    }));
+
+    // Build resolvedPromotions
+    const resolvedPromotions = {
+        applied: finalDiscounts.map(d => d.id),
+        ignored: stackResult.ignored,
+    };
+
+    return {
+        net, bar, display,
+        totalDiscountEffective: effectiveDiscount,
+        calc_version: 'v3.0.0',
+        breakdown,
+        resolvedPromotions,
+        trace,
+        validation,
+    };
 }
 
 // ── Matrix Calculation (DB-aware) ──────────────────────────────────
