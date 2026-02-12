@@ -43,6 +43,10 @@ model Hotel {
   room_types            RoomType[]
   users                 User[]
 
+  // Dynamic Pricing by OCC
+  season_configs        SeasonConfig[]
+  occ_tier_configs      OccTierConfig[]
+
   // Rate Shopper relations
   competitors               Competitor[]
   rate_shop_requests        RateShopRequest[]
@@ -322,7 +326,8 @@ model RoomType {
   net_price   Float
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
-  hotel       Hotel    @relation(fields: [hotel_id], references: [hotel_id], onDelete: Cascade)
+  hotel            Hotel           @relation(fields: [hotel_id], references: [hotel_id], onDelete: Cascade)
+  season_net_rates SeasonNetRate[]
 
   @@unique([hotel_id, name], name: "uq_room_type_name")
   @@index([hotel_id])
@@ -814,4 +819,62 @@ model RateShopUsageTenantMonthly {
 
   @@id([hotel_id, billing_month])
   @@map("rate_shop_usage_tenant_monthly")
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Dynamic Pricing by OCC — Season & Occupancy Tier Configuration
+// ════════════════════════════════════════════════════════════════════
+
+model SeasonConfig {
+  id          String   @id @default(uuid()) @db.Uuid
+  hotel_id    String   @db.Uuid
+  name        String   // "Normal Season", "High Season", "Holiday"
+  code        String   // "NORMAL", "HIGH", "HOLIDAY"
+  date_ranges Json     // [{"start":"2026-05-01","end":"2026-10-31"}]
+  priority    Int      @default(0) // Holiday(3) > High(2) > Normal(1)
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  hotel       Hotel    @relation(fields: [hotel_id], references: [hotel_id], onDelete: Cascade)
+  net_rates   SeasonNetRate[]
+
+  @@unique([hotel_id, code])
+  @@index([hotel_id])
+  @@map("season_configs")
+}
+
+model OccTierConfig {
+  id          String   @id @default(uuid()) @db.Uuid
+  hotel_id    String   @db.Uuid
+  tier_index  Int      // 0, 1, 2, 3
+  label       String   // "0-35%", "35-65%", "65-85%", ">85%"
+  occ_min     Float    // 0–1 decimal (e.g., 0.0, 0.35, 0.65, 0.85)
+  occ_max     Float    // 0–1 decimal (e.g., 0.35, 0.65, 0.85, 1.0)
+  multiplier  Float    // 1.0, 1.10, 1.20, 1.30
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  hotel       Hotel    @relation(fields: [hotel_id], references: [hotel_id], onDelete: Cascade)
+
+  @@unique([hotel_id, tier_index])
+  @@index([hotel_id])
+  @@map("occ_tier_configs")
+}
+
+model SeasonNetRate {
+  id              String       @id @default(uuid()) @db.Uuid
+  hotel_id        String       @db.Uuid
+  season_id       String       @db.Uuid
+  room_type_id    String       // cuid — matches RoomType.id (NOT uuid)
+  net_rate        Decimal      @db.Decimal(12, 2)
+  created_at      DateTime     @default(now())
+  updated_at      DateTime     @updatedAt
+
+  season          SeasonConfig @relation(fields: [season_id], references: [id], onDelete: Cascade)
+  room_type       RoomType     @relation(fields: [room_type_id], references: [id], onDelete: Cascade)
+
+  @@unique([season_id, room_type_id])
+  @@index([hotel_id])
+  @@map("season_net_rates")
 }

@@ -1287,6 +1287,7 @@ export default function PromotionsTab() {
         timingConflictWarning = `⚠️ Early Bird + Last-Minute không cộng dồn → Bỏ "${toRemove.promo.name}" (${toRemove.discount_pct}%)`;
     }
 
+    // @pricing-lint-suppress — Phase 03 TODO: replace with usePricingPreview hook (calc-preview API)
     let totalDiscount: number;
     let discountMultiplier: number;
     if (calcType === 'SINGLE_DISCOUNT' && appliedDiscounts.length > 0) {
@@ -1302,6 +1303,7 @@ export default function PromotionsTab() {
         totalDiscount = appliedDiscounts.reduce((sum, c) => sum + c.discount_pct, 0);
         discountMultiplier = totalDiscount > 0 ? (1 - totalDiscount / 100) : 1;
     }
+    // @pricing-lint-suppress
 
     // V01.4: Effective commission with marketing programs
     const activeBoosters = boosters.filter(b => b.enabled);

@@ -1,44 +1,58 @@
 # 4TK Hospitality - Design Specifications
 
+**Version:** V01.7 (Current)
+**Last Updated:** 2026-02-12
+**Theme:** SaaS Pro Light
+
+---
+
 ## 🏢 Brand Identity
 
-**Company:** 4TK Hospitality  
-**Tagline:** Hotel & Resort Management in Vietnam  
-**Logo File:** `/public/logo.png`
+**Company:** 4TK Hospitality
+**Tagline:** Hotel & Resort Management in Vietnam
+**Logo:** Inline SVG (white circle + "4TK" text) — NOT PNG
+**Logo Note:** PNG with transparent bg is invisible on dark backgrounds → use inline SVG
 
 ---
 
 ## 🎨 Color Palette
 
 ### Brand Colors (from Logo)
-| Name | Hex | CSS Variable | Usage |
-|------|-----|--------------|-------|
-| **Royal Blue** | `#2B4690` | `--brand-primary` | Primary brand color, buttons |
-| **Bright Blue** | `#4169E1` | `--brand-secondary` | Active states, links |
-| **Light Blue** | `#6B8DD6` | `--brand-accent` | Accents, subtle highlights |
+| Name | Hex | Usage |
+|------|-----|-------|
+| **Navy (Primary)** | `#204184` | Sidebar, logo bg, extracted from actual 4TK logo |
+| **Royal Blue** | `#1E3A8A` | Header gradient start, primary buttons |
+| **Deep Blue** | `#102A4C` | Header gradient end |
+| **Bright Blue** | `#4169E1` | Active states, links |
 
-### UI Colors (Dark Theme)
+### UI Colors (SaaS Pro Light Theme)
 | Name | Hex | CSS Variable | Usage |
 |------|-----|--------------|-------|
-| Background | `#0a1628` | `--background` | Page background |
-| Surface | `#142140` | `--surface` | Cards, modals, sidebar |
-| Surface Alt | `#1a2d54` | `--surface-alt` | Hover states |
-| Border | `#1e3a5f` | `--border` | Dividers, borders |
+| **Background** | `#F5F7FB` | `--background` | Page background (lavender gray) |
+| **Surface** | `#FFFFFF` | `--surface` | Cards, modals |
+| **Surface Hover** | `#F8FAFC` | `--surface-hover` | Card hover states |
+| **Border** | `#E2E8F0` | `--border` | Dividers, borders (slate-200/80) |
+| **Sidebar** | `#204184` | `--sidebar` | Fixed sidebar background |
+| **Sidebar Dark** | `#0f1d36` | `--sidebar-dropdown` | HotelSwitcher dropdown |
 
 ### Functional Colors
-| Name | Hex | CSS Variable | Usage |
-|------|-----|--------------|-------|
-| Success | `#10b981` | `--success` | Positive values, confirmed |
-| Warning | `#f59e0b` | `--warning` | Warnings, attention needed |
-| Danger | `#ef4444` | `--danger` | Errors, decreases |
-| Muted | `#64748b` | `--muted` | Secondary text, disabled |
+| Name | Hex | Usage |
+|------|-----|-------|
+| **Success** | `#10B981` | Positive values, confirmed, toggle ON |
+| **Warning** | `#F59E0B` | Warnings, seasonal badges, amber styling |
+| **Danger** | `#EF4444` | Errors, decreases, delete buttons |
+| **Info** | `#3B82F6` | Essential badges, info alerts |
+| **Purple** | `#8B5CF6` | Additive mode, Targeted badges |
+| **Emerald** | `#10b981` | Landing page accent |
+| **Gold** | `#d4a24e` | Landing page secondary accent |
 
 ### Text Colors
 | Name | Hex | Usage |
 |------|-----|-------|
-| Primary Text | `#f8fafc` | Main content |
-| Secondary Text | `#94a3b8` | Descriptions, labels |
-| Muted Text | `#64748b` | Placeholders, disabled |
+| Primary Text | `#1E293B` | Main content (slate-800) |
+| Secondary Text | `#64748B` | Descriptions, labels (slate-500) |
+| Muted Text | `#94A3B8` | Placeholders, disabled |
+| White Text | `#FFFFFF` | On dark backgrounds (header, sidebar) |
 
 ---
 
@@ -46,114 +60,145 @@
 
 | Element | Font | Size | Weight |
 |---------|------|------|--------|
-| H1 | Inter | 32px | 700 |
-| H2 | Inter | 24px | 600 |
-| H3 | Inter | 20px | 600 |
-| Body | Inter | 16px | 400 |
-| Small | Inter | 14px | 400 |
-| Caption | Inter | 12px | 400 |
+| H1 | Inter | 18px | 600 |
+| H2 | Inter | 16px | 600 |
+| H3 | Inter | 14px | 600 |
+| Body | Inter | 14px | 400 |
+| Small | Inter | 12px | 400 |
+| Caption | Inter | 11px | 400 |
+| Price | Inter (Mono) | 14px | 500 |
+| Tab Label | Inter | 14px | 500 |
+| Button | Inter | 14px | 500 |
+| Table Header | Inter | 12px | 600 |
+
+**Font Source:** Google Fonts — `Inter`
 
 ---
 
 ## 📐 Spacing System
 
-| Name | Value |
-|------|-------|
-| xs | 4px |
-| sm | 8px |
-| md | 16px |
-| lg | 24px |
-| xl | 32px |
-| 2xl | 48px |
+| Name | Value | Tailwind |
+|------|-------|----------|
+| xs | 4px | `gap-1` |
+| sm | 8px | `gap-2` |
+| md | 16px | `gap-4` |
+| lg | 24px | `gap-6` |
+| xl | 32px | `gap-8` |
+| 2xl | 48px | `gap-12` |
 
 ---
 
 ## 🔲 Border Radius
 
-| Name | Value | Usage |
-|------|-------|-------|
-| sm | 6px | Buttons, inputs |
-| md | 8px | Cards |
-| lg | 12px | Modals |
-| full | 9999px | Avatars, pills |
+| Name | Value | Tailwind | Usage |
+|------|-------|----------|-------|
+| sm | 4px | `rounded` | Badges, pills |
+| md | 8px | `rounded-lg` | Buttons, inputs |
+| lg | 12px | `rounded-xl` | Cards |
+| xl | 16px | `rounded-2xl` | Header, modals |
+| full | 9999px | `rounded-full` | Avatars |
 
 ---
 
 ## 📱 Logo Usage
 
-**Primary Logo File:** `public/logo.png`
+**Primary:** Inline SVG (white circle + "4TK" text)
+**Reason:** PNG with dark content is invisible on dark navbar → always use inline SVG
 
 ### Placement Guidelines:
-1. **Sidebar Header:** 180x60px, centered
-2. **Login Page:** 240x80px, centered
-3. **Reports/Exports:** 120x40px, top-left corner
-
-### Supported Formats:
-- PNG (preferred, with transparency)
-- JPG (fallback)
-- SVG (for scalable uses)
+1. **Sidebar Header:** 180x60px, centered, white on navy
+2. **Login Page:** 240x80px, centered on glassmorphism card
+3. **Landing Page Navbar:** Inline SVG, white on dark navbar
+4. **Reports/Exports:** 120x40px, top-left corner
 
 ---
 
 ## 🎯 Component Styles
 
-### Buttons
-```css
-/* Primary Button */
-.btn-primary {
-  background-color: var(--brand-primary);
-  color: white;
-  border-radius: 6px;
-  padding: 8px 16px;
-}
-.btn-primary:hover {
-  background-color: var(--primary-hover);
-}
-
-/* Secondary Button */
-.btn-secondary {
-  background-color: transparent;
-  border: 1px solid var(--brand-primary);
-  color: var(--brand-secondary);
-}
+### Page Header (Gradient)
+```tsx
+<header
+  className="rounded-2xl px-6 py-4 text-white shadow-sm"
+  style={{ background: 'linear-gradient(to right, #1E3A8A, #102A4C)' }}
+>
+  <h1 className="text-lg font-semibold">Page Title</h1>
+  <p className="text-white/70 text-sm mt-1">Subtitle</p>
+</header>
 ```
 
-### Cards
+### White Card
+```tsx
+<div className="bg-white border border-slate-200/80 rounded-xl shadow-[0_1px_2px_rgba(16,24,40,0.06)] p-6" />
+```
+
+### Sidebar (Fixed)
+```tsx
+// Desktop: fixed left, always visible
+<aside className="fixed left-0 w-64 h-screen bg-[#204184] text-white">
+  {/* Nav items */}
+  {/* HotelSwitcher (dark dropdown bg-[#0f1d36]) */}
+  {/* Logout button + user info in footer */}
+</aside>
+// Mobile: hamburger menu in fixed header, sidebar slides from left with overlay
+```
+
+### Login Page
+```tsx
+// Background: gradient from #0B1E3A → #16325F → #204183
+// Card: glassmorphism (bg-white/10 backdrop-blur-xl border-white/20)
+// Google OAuth button
+```
+
+### Buttons
 ```css
-.card {
-  background-color: var(--surface);
-  border: 1px solid var(--border);
+/* Primary */
+.btn-primary {
+  background-color: #1E3A8A;
+  color: white;
   border-radius: 8px;
-  padding: 16px;
+  padding: 8px 16px;
+  font-weight: 500;
+}
+
+/* Secondary (outline) */
+.btn-secondary {
+  background: transparent;
+  border: 1px solid #E2E8F0;
+  color: #1E3A8A;
+  border-radius: 8px;
+}
+
+/* Danger */
+.btn-danger {
+  background-color: #EF4444;
+  color: white;
 }
 ```
 
 ### Tables
 ```css
-table {
-  background-color: var(--surface);
-}
-th {
-  background-color: var(--background);
-  color: var(--muted);
-}
-tr:hover {
-  background-color: var(--surface-alt);
-}
+table { background-color: #ffffff; }
+th { color: #64748B; font-size: 12px; font-weight: 600; }
+tr:hover { background-color: #F8FAFC; }
+td { color: #1E293B; font-size: 14px; }
 ```
 
 ---
 
-## ✨ Usage Notes
+## 📱 Responsive Design
 
-1. **Keep Dark Theme** - The app uses a dark theme that matches the royal blue background in the logo
-2. **Contrast Matters** - Ensure text has sufficient contrast against dark backgrounds
-3. **Consistent Blues** - Use `--brand-primary` for all primary actions
-4. **Accent Colors** - Use success/warning/danger only for semantic meanings
+| Breakpoint | Layout |
+|------------|--------|
+| **Desktop (≥1024px)** | Fixed sidebar (w-64), main content with `ml-64`, max-w-[1400px] |
+| **Mobile (<1024px)** | Hamburger menu in fixed header, sidebar slides from left, overlay backdrop for close |
+
+**Container:** `mx-auto max-w-[1400px] px-8 py-6 space-y-6`
 
 ---
 
 ## 🚀 OTA Growth Playbook Design
+
+**Location:** Pricing page → Tab "Tối ưu OTA" (5th tab)
 
 ### Tab Navigation
 | Tab | Label (VI) | Icon |
@@ -172,9 +217,21 @@ tr:hover {
 | 60-79% | Yellow | `#F59E0B` | Cần cải thiện |
 | 0-59% | Red | `#EF4444` | Yếu |
 
-### Component Layout
-- **Tab bar**: Horizontal scroll on mobile, fixed on desktop
-- **Cards**: Light theme, rounded-2xl, subtle shadow
-- **Headers**: Gradient background `linear-gradient(to right, #1E3A8A, #102A4C)`
-- **Typography**: Inter font, consistent with main app
-- **Currency**: VND formatted with `Intl.NumberFormat`, 2 decimal places
+### Access Control
+- **Gated by** `OTAGrowthPaywall` component
+- **Free users**: See paywall with feature preview
+- **Paid users**: Full access to all 6 tabs
+- **Demo hotel**: Hidden from playbook
+- **Super Admin**: Bypasses all restrictions
+
+---
+
+## ✨ Usage Notes
+
+1. **Light Theme** — App uses SaaS Pro Light theme (`#F5F7FB` bg, white cards)
+2. **Dark Sidebar** — Only the sidebar is dark (`#204184`)
+3. **Gradient Headers** — All page headers use `linear-gradient(to right, #1E3A8A, #102A4C)`
+4. **Consistent Blues** — Use `#1E3A8A` for primary actions
+5. **Accent Colors** — Use success/warning/danger only for semantic meanings
+6. **Currency Format** — VND with `Intl.NumberFormat`, thousands separator (e.g., "495.000")
+7. **Inline SVG Logo** — Never use PNG for logo on dark backgrounds

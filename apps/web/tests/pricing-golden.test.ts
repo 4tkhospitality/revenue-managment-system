@@ -1,0 +1,248 @@
+/**
+ * Phase 00: Golden Dataset Tests for Pricing Engine/Service
+ * 
+ * Tests engine pure functions directly (NO DB, NO service layer).
+ * These are snapshot tests: output MUST be identical before/after refactor.
+ * 
+ * Run: npx tsx tests/pricing-golden.test.ts
+ * 
+ * 6 golden cases:
+ * 1. Agoda progressive + multiple discounts + timing conflict
+ * 2. Booking exclusive + Genius
+ * 3. Expedia single-discount (highest wins)
+ * 4. Trip.com same-box dedup
+ * 5. Any case × OCC multiplier 1.20
+ * 6. Reverse calc regression (bar → net roundtrip)
+ */
+
+import {
+    calcBarFromNet,
+    calcNetFromBar,
+    resolveTimingConflicts,
+    resolveVendorStacking,
+    calcEffectiveDiscount,
+    computeDisplay,
+    applyOccMultiplier,
+    normalizeVendorCode,
+} from '../lib/pricing/engine';
+import type { DiscountItem, CalcType } from '../lib/pricing/types';
+
+// ── Test Helpers (same pattern as guardrails.test.ts) ────────────
+
+let passed = 0;
+let failed = 0;
+
+function test(name: string, fn: () => void) {
+    try {
+        fn();
+        passed++;
+        console.log(`✅ PASS: ${name}`);
+    } catch (e: any) {
+        failed++;
+        console.log(`❌ FAIL: ${name}`);
+        console.log(`   ${e.message}`);
+        process.exitCode = 1;
+    }
+}
+
+function assertEqual<T>(actual: T, expected: T, msg: string) {
+    if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+        throw new Error(`${msg}\nExpected: ${JSON.stringify(expected)}\nActual: ${JSON.stringify(actual)}`);
+    }
+}
+
+function assertClose(actual: number, expected: number, tolerance: number, msg: string) {
+    if (Math.abs(actual - expected) > tolerance) {
+        throw new Error(`${msg}\nExpected: ${expected} ± ${tolerance}\nActual: ${actual}`);
+    }
+}
+
+// ── Test Data ────────────────────────────────────────────────────
+
+const agodaDiscounts: DiscountItem[] = [
+    { id: '1', name: 'Early Bird 14', percent: 15, group: 'SEASONAL', subCategory: 'EARLY_BIRD' },
+    { id: '2', name: 'Last Minute 3d', percent: 10, group: 'SEASONAL', subCategory: 'LAST_MINUTE' },
+    { id: '3', name: 'Mobile Deal', percent: 8, group: 'TARGETED', subCategory: 'MOBILE' },
+    { id: '4', name: 'Web Direct', percent: 5, group: 'TARGETED', subCategory: 'MOBILE' }, // same subcat as Mobile
+];
+
+const bookingExclusiveDiscounts: DiscountItem[] = [
+    { id: '1', name: 'Black Friday', percent: 25, group: 'CAMPAIGN' },
+    { id: '2', name: 'Summer Deal', percent: 20, group: 'CAMPAIGN' },
+    { id: '3', name: 'Genius L1', percent: 10, group: 'GENIUS' },
+    { id: '4', name: 'Genius L2', percent: 15, group: 'GENIUS' },
+    { id: '5', name: 'Country Deal', percent: 12, group: 'PORTFOLIO' },
+];
+
+const expediaDiscounts: DiscountItem[] = [
+    { id: '1', name: 'Deal A', percent: 20, group: 'PORTFOLIO' },
+    { id: '2', name: 'Deal B', percent: 15, group: 'SEASONAL' },
+    { id: '3', name: 'Deal C', percent: 10, group: 'TARGETED' },
+];
+
+const tripDiscounts: DiscountItem[] = [
+    { id: '1', name: 'Flash Sale', percent: 12, group: 'SEASONAL', subCategory: 'FLASH' },
+    { id: '2', name: 'Flash Sale 2', percent: 8, group: 'SEASONAL', subCategory: 'FLASH' }, // same box
+    { id: '3', name: 'Member Deal', percent: 10, group: 'TARGETED', subCategory: 'MEMBER' },
+];
+
+// ── Test Suite ───────────────────────────────────────────────────
+
+console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+console.log('🧪 Phase 00: Pricing Engine Golden Tests');
+console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+
+// ── Test 1: Agoda progressive + timing conflict + subcat dedup ──
+
+test('1. Agoda: Progressive + timing conflict + subcat dedup', () => {
+    // Step 1: resolveVendorStacking
+    const { resolved: stacked, rule } = resolveVendorStacking('agoda', agodaDiscounts);
+
+    // Agoda dedup: Mobile (8%) and Web Direct (5%) share subcat 'MOBILE' → keep Mobile (8%)
+    // Both Early Bird and Last Minute stay (different subcats)
+    assertEqual(rule, 'agoda: progressive + subcat dedup', 'rule');
+    const mobileDeals = stacked.filter(d => d.subCategory === 'MOBILE');
+    assertEqual(mobileDeals.length, 1, 'should dedup MOBILE subcat to 1');
+    assertEqual(mobileDeals[0].percent, 8, 'should keep higher MOBILE deal');
+
+    // Step 2: resolveTimingConflicts (Early Bird vs Last Minute)
+    const { resolved: final, hadConflict, removed } = resolveTimingConflicts(stacked);
+    assertEqual(hadConflict, true, 'should detect timing conflict');
+    assertEqual(removed?.subCategory, 'LAST_MINUTE', 'should remove Last Minute (lower)');
+
+    // Step 3: calcBarFromNet with PROGRESSIVE
+    const result = calcBarFromNet(500_000, 18, final, 'PROGRESSIVE', 'CEIL_1000', 'agoda');
+    // NET=500k, commission=18%, discounts: Early Bird 15% + Mobile 8%
+    // gross = 500000 / (1 - 0.18) = 609756.097...
+    // PROGRESSIVE: BAR = gross / [(1 - 0.15) × (1 - 0.08)] = gross / 0.782
+    const expectedGross = 500000 / (1 - 0.18);
+    const expectedBar = Math.ceil(expectedGross / (0.85 * 0.92) / 1000) * 1000;
+    assertEqual(result.bar, expectedBar, `BAR should be ${expectedBar}`);
+
+    // Step 4: calcEffectiveDiscount (PROGRESSIVE)
+    const eff = calcEffectiveDiscount(final, 'PROGRESSIVE');
+    assertClose(eff, (1 - 0.85 * 0.92) * 100, 0.01, 'effective discount %');
+
+    // Step 5: computeDisplay
+    const display = computeDisplay(result.bar, eff);
+    // display = BAR × (1 - eff%)
+    const expectedDisplay = Math.round(result.bar * (1 - eff / 100));
+    assertEqual(display, expectedDisplay, 'display price');
+});
+
+// ── Test 2: Booking exclusive + Genius ──────────────────────────
+
+test('2. Booking: Exclusive deal blocks all except best Genius', () => {
+    const { resolved, rule, removedCount } = resolveVendorStacking('booking', bookingExclusiveDiscounts);
+
+    assertEqual(rule, 'booking: exclusive + genius', 'rule');
+
+    // Should keep: best exclusive (Black Friday 25%) + best genius (L2 15%)
+    assertEqual(resolved.length, 2, 'should keep 2 discounts');
+
+    const hasBlackFriday = resolved.some(d => d.name === 'Black Friday');
+    const hasGeniusL2 = resolved.some(d => d.name === 'Genius L2');
+    assertEqual(hasBlackFriday, true, 'should keep Black Friday');
+    assertEqual(hasGeniusL2, true, 'should keep Genius L2');
+    assertEqual(removedCount, 3, 'should remove 3 discounts');
+});
+
+// ── Test 3: Expedia single-discount (highest wins) ─────────────
+
+test('3. Expedia: Only highest discount wins (SINGLE_DISCOUNT)', () => {
+    const { resolved, rule, removedCount } = resolveVendorStacking('expedia', expediaDiscounts);
+
+    assertEqual(rule, 'expedia: single_discount (highest wins)', 'rule');
+    assertEqual(resolved.length, 1, 'should keep only 1 discount');
+    assertEqual(resolved[0].percent, 20, 'should keep highest (20%)');
+    assertEqual(removedCount, 2, 'should remove 2');
+
+    // Also verify calcBarFromNet with SINGLE_DISCOUNT calc type
+    const result = calcBarFromNet(500_000, 15, expediaDiscounts, 'SINGLE_DISCOUNT', 'CEIL_1000', 'expedia');
+    // SINGLE_DISCOUNT picks max(20, 15, 10) = 20%
+    const expectedGross = 500000 / (1 - 0.15);
+    const expectedBar = Math.ceil(expectedGross / (1 - 0.20) / 1000) * 1000;
+    assertEqual(result.bar, expectedBar, `BAR should be ${expectedBar}`);
+    assertEqual(result.totalDiscount, 20, 'totalDiscount should be 20 (highest)');
+});
+
+// ── Test 4: Trip.com same-box dedup ────────────────────────────
+
+test('4. Trip.com: Same-box (subcat) dedup keeps highest per box', () => {
+    const { resolved, rule, removedCount } = resolveVendorStacking('trip', tripDiscounts);
+
+    assertEqual(rule, 'trip.com: additive + box dedup', 'rule');
+    assertEqual(removedCount, 1, 'should remove 1 (lower FLASH)');
+
+    // Flash Sale (12%) kept, Flash Sale 2 (8%) removed
+    const flash = resolved.filter(d => d.subCategory === 'FLASH');
+    assertEqual(flash.length, 1, 'should keep 1 FLASH');
+    assertEqual(flash[0].percent, 12, 'should keep higher FLASH');
+
+    // Member Deal (10%) kept
+    const member = resolved.filter(d => d.subCategory === 'MEMBER');
+    assertEqual(member.length, 1, 'should keep MEMBER');
+});
+
+// ── Test 5: OCC multiplier × any case ─────────────────────────
+
+test('5. OCC multiplier 1.20 × Agoda NET price', () => {
+    const netBase = 500_000;
+    const multiplier = 1.20;
+    const adjustedNet = applyOccMultiplier(netBase, multiplier);
+
+    assertEqual(adjustedNet, 600_000, 'adjusted NET should be 600k');
+
+    // Full pipeline: adjusted NET → BAR (Agoda, commission 18%, no discounts)
+    const result = calcBarFromNet(adjustedNet, 18, [], 'PROGRESSIVE', 'CEIL_1000', 'agoda');
+    const expectedGross = 600000 / (1 - 0.18);
+    const expectedBar = Math.ceil(expectedGross / 1000) * 1000;
+    assertEqual(result.bar, expectedBar, `BAR should be ${expectedBar}`);
+
+    // Verify it's different from without multiplier
+    const resultNoMult = calcBarFromNet(netBase, 18, [], 'PROGRESSIVE', 'CEIL_1000', 'agoda');
+    const diff = result.bar - resultNoMult.bar;
+    if (diff <= 0) throw new Error('OCC multiplier should increase BAR');
+});
+
+// ── Test 6: Reverse calc regression (BAR→NET roundtrip) ────────
+
+test('6. Reverse calc regression: NET→BAR→NET roundtrip ≈ identity', () => {
+    const originalNet = 500_000;
+    const commission = 18;
+    const discounts: DiscountItem[] = [
+        { id: '1', name: 'Promo A', percent: 10, group: 'SEASONAL' },
+        { id: '2', name: 'Promo B', percent: 5, group: 'TARGETED' },
+    ];
+    const calcType: CalcType = 'PROGRESSIVE';
+
+    // Step 1: NET → BAR
+    const forward = calcBarFromNet(originalNet, commission, discounts, calcType, 'NONE', 'agoda');
+
+    // Step 2: BAR → NET
+    const reverse = calcNetFromBar(forward.bar, commission, discounts, calcType, 'agoda');
+
+    // Step 3: roundtrip should ≈ identity (within rounding tolerance)
+    assertClose(reverse.net, originalNet, 1, 'reverse.net ≈ originalNet');
+
+    // Also verify totalDiscount is consistent
+    assertClose(forward.totalDiscount, reverse.totalDiscount, 0.01, 'totalDiscount should match');
+});
+
+// ── Bonus: Vendor code normalization ────────────────────────────
+
+test('7. Vendor normalization: booking.com → booking, ctrip → trip', () => {
+    assertEqual(normalizeVendorCode('booking.com'), 'booking', 'booking.com → booking');
+    assertEqual(normalizeVendorCode('Booking'), 'booking', 'Booking → booking');
+    assertEqual(normalizeVendorCode('ctrip'), 'trip', 'ctrip → trip');
+    assertEqual(normalizeVendorCode('trip.com'), 'trip', 'trip.com → trip');
+    assertEqual(normalizeVendorCode('Expedia'), 'expedia', 'Expedia → expedia');
+    assertEqual(normalizeVendorCode(' Agoda '), 'agoda', 'trimmed Agoda → agoda');
+    assertEqual(normalizeVendorCode('unknown_ota'), 'unknown_ota', 'unknown passes through');
+});
+
+// ── Summary ─────────────────────────────────────────────────────
+
+console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+console.log(`🎉 Golden tests: ${passed} passed, ${failed} failed`);
+console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');

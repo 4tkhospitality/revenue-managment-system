@@ -160,6 +160,30 @@ export function calcBarFromNet(
                 priceAfter: running,
             });
         });
+    } else if (calcType === 'SINGLE_DISCOUNT') {
+        // Lock #1: SINGLE_DISCOUNT — only the highest discount applies
+        // Future-proof: even if resolveVendorStacking already filtered to 1,
+        // engine must still handle >1 discount correctly.
+        totalDiscount = effectiveDiscounts.length > 0
+            ? Math.max(...effectiveDiscounts.map(d => d.percent))
+            : 0;
+
+        if (totalDiscount >= 100) {
+            return {
+                bar: 0, barRaw: 0, net, commission, totalDiscount,
+                validation: { isValid: false, errors: ['Giảm giá phải < 100%'], warnings: [] },
+                trace,
+            };
+        }
+
+        bar = gross / (1 - totalDiscount / 100);
+
+        const bestDiscount = effectiveDiscounts.reduce((b, d) => d.percent > b.percent ? d : b, effectiveDiscounts[0]);
+        trace.push({
+            step: `${bestDiscount?.name ?? 'Discount'} (highest wins)`,
+            description: `÷ (1 - ${totalDiscount}%) = ${formatVND(bar)}`,
+            priceAfter: bar,
+        });
     } else {
         // Additive: BAR = gross / (1 - Σdᵢ)
         totalDiscount = effectiveDiscounts.reduce((sum, d) => sum + d.percent, 0);
@@ -298,6 +322,27 @@ export function calcNetFromBar(
 
         totalDiscount = (1 - multiplier) * 100;
         afterDiscount = running;
+    } else if (calcType === 'SINGLE_DISCOUNT') {
+        // Lock #1: SINGLE_DISCOUNT — only highest discount
+        totalDiscount = effectiveDiscounts.length > 0
+            ? Math.max(...effectiveDiscounts.map(d => d.percent))
+            : 0;
+
+        if (totalDiscount >= 100) {
+            return {
+                bar, barRaw: bar, net: 0, commission, totalDiscount,
+                validation: { isValid: false, errors: ['Giảm giá phải < 100%'], warnings: [] },
+                trace,
+            };
+        }
+
+        afterDiscount = bar * (1 - totalDiscount / 100);
+        const bestDiscount = effectiveDiscounts.reduce((b, d) => d.percent > b.percent ? d : b, effectiveDiscounts[0]);
+        trace.push({
+            step: `${bestDiscount?.name ?? 'KM'} (highest wins)`,
+            description: `${formatVND(bar)} × (1 - ${totalDiscount.toFixed(1)}%) = ${formatVND(afterDiscount)}`,
+            priceAfter: afterDiscount,
+        });
     } else {
         // Additive: afterDiscount = BAR × (1 - Σdᵢ)
         totalDiscount = effectiveDiscounts.reduce((sum, d) => sum + d.percent, 0);
@@ -558,5 +603,194 @@ export function applyGuardrails(
         clamped,
         thresholds,
     };
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Phase 00: New pure functions (Dynamic Pricing by OCC)
+// ARCHITECTURE RULE: All pricing math lives here or in service.ts
+// Frontend must NOT compute discounts or prices.
+// ════════════════════════════════════════════════════════════════════
+
+/**
+ * Lock #2: Normalize vendor/channel codes to canonical form.
+ * DB may store 'booking.com', 'Booking', 'ctrip', etc.
+ * Engine always works with lowercase canonical names.
+ */
+export function normalizeVendorCode(code: string): string {
+    const VENDOR_MAP: Record<string, string> = {
+        'booking.com': 'booking',
+        'booking': 'booking',
+        'expedia': 'expedia',
+        'expedia.com': 'expedia',
+        'agoda': 'agoda',
+        'agoda.com': 'agoda',
+        'trip.com': 'trip',
+        'trip': 'trip',
+        'ctrip': 'trip',
+        'traveloka': 'traveloka',
+    };
+    const lower = code.toLowerCase().trim();
+    return VENDOR_MAP[lower] ?? lower;
+}
+
+/**
+ * Resolve vendor-specific discount stacking rules.
+ * Extracted from PromotionsTab.tsx to enforce single source of truth.
+ *
+ * Rules by vendor:
+ * - booking: 3-tier exclusion (Exclusive → Business Bookers → Normal stack)
+ * - expedia: SINGLE_DISCOUNT — only highest deal wins
+ * - trip.com: Additive + same-box (subcategory) dedup
+ * - agoda: Progressive + subcategory dedup
+ * - (default): No vendor-specific filtering
+ */
+export function resolveVendorStacking(
+    vendor: string,
+    discounts: DiscountItem[]
+): {
+    resolved: DiscountItem[];
+    removedCount: number;
+    rule: string;
+} {
+    const active = discounts.filter(d => d.percent > 0);
+    if (active.length <= 1) {
+        return { resolved: active, removedCount: 0, rule: 'none (≤1 discount)' };
+    }
+
+    const vendorNorm = normalizeVendorCode(vendor);
+
+    // Helper: within a group sharing the same subcategory, keep only highest
+    const dedupeBySubcategory = (items: DiscountItem[]): DiscountItem[] => {
+        const subcatMap = new Map<string, DiscountItem>();
+        const noSubcat: DiscountItem[] = [];
+        for (const d of items) {
+            const key = d.subCategory || '';
+            if (!key) { noSubcat.push(d); continue; }
+            const existing = subcatMap.get(key);
+            if (!existing || d.percent > existing.percent) {
+                subcatMap.set(key, d);
+            }
+        }
+        return [...noSubcat, ...subcatMap.values()];
+    };
+
+    // Helper: pick best Genius (only 1 level applies per booking)
+    const pickBestGenius = (items: DiscountItem[]): DiscountItem[] => {
+        const genius = items.filter(d => d.group === 'GENIUS');
+        const nonGenius = items.filter(d => d.group !== 'GENIUS');
+        if (genius.length <= 1) return items;
+        const best = genius.reduce((b, d) => d.percent > b.percent ? d : b);
+        return [...nonGenius, best];
+    };
+
+    // ── Booking.com: 3-tier exclusion engine ──
+    if (vendorNorm === 'booking') {
+        // Tier 1: Exclusive deals (Campaign group, non-stackable) block everything except Genius
+        const exclusiveDeals = active.filter(d =>
+            d.group === 'CAMPAIGN' // Getaway, Black Friday, Deal of Day, etc.
+        );
+        if (exclusiveDeals.length > 0) {
+            const geniusDeals = active.filter(d => d.group === 'GENIUS');
+            const bestExclusive = exclusiveDeals.reduce((b, d) => d.percent > b.percent ? d : b);
+            const result = pickBestGenius([...geniusDeals, bestExclusive]);
+            return { resolved: result, removedCount: active.length - result.length, rule: 'booking: exclusive + genius' };
+        }
+
+        // Tier 2: Business Bookers blocks ALL, no Genius
+        const businessBookers = active.filter(d => d.subCategory === 'BUSINESS_BOOKERS');
+        if (businessBookers.length > 0) {
+            return { resolved: [businessBookers[0]], removedCount: active.length - 1, rule: 'booking: business_bookers exclusive' };
+        }
+
+        // Tier 3: Normal stacking — Portfolio highest + Targeted subcat highest + Genius best
+        const portfolio = active.filter(d => d.group === 'PORTFOLIO');
+        const targeted = active.filter(d => d.group === 'TARGETED');
+        const genius = active.filter(d => d.group === 'GENIUS');
+        const other = active.filter(d =>
+            d.group !== 'PORTFOLIO' && d.group !== 'TARGETED' && d.group !== 'GENIUS'
+        );
+
+        const bestPortfolio = portfolio.length > 0
+            ? [portfolio.reduce((b, d) => d.percent > b.percent ? d : b)]
+            : [];
+        const bestTargeted = dedupeBySubcategory(targeted);
+        const bestGenius = genius.length > 0
+            ? [genius.reduce((b, d) => d.percent > b.percent ? d : b)]
+            : [];
+
+        const result = [...bestGenius, ...bestTargeted, ...bestPortfolio, ...other];
+        return { resolved: result, removedCount: active.length - result.length, rule: 'booking: normal stacking' };
+    }
+
+    // ── Expedia: Only highest deal wins ──
+    if (vendorNorm === 'expedia') {
+        const best = active.reduce((b, d) => d.percent > b.percent ? d : b);
+        return { resolved: [best], removedCount: active.length - 1, rule: 'expedia: single_discount (highest wins)' };
+    }
+
+    // ── Trip.com: Additive + same-box dedup ──
+    // Lock #2: normalizeVendorCode already maps 'ctrip'/'trip.com' → 'trip'
+    if (vendorNorm === 'trip') {
+        const result = dedupeBySubcategory(active);
+        return { resolved: result, removedCount: active.length - result.length, rule: 'trip.com: additive + box dedup' };
+    }
+
+    // ── Agoda: Progressive + subcategory dedup ──
+    if (vendorNorm === 'agoda') {
+        const result = dedupeBySubcategory(active);
+        return { resolved: result, removedCount: active.length - result.length, rule: 'agoda: progressive + subcat dedup' };
+    }
+
+    // Default: no vendor-specific filtering
+    return { resolved: active, removedCount: 0, rule: 'default (no vendor rules)' };
+}
+
+/**
+ * Compute display price (guest-facing) from BAR and effective discount.
+ *
+ * CRITICAL: totalDiscount is the VENDOR-SPECIFIC EFFECTIVE discount %
+ * after applying calc_type rules — NOT a raw summation.
+ * - PROGRESSIVE: effective% = (1 - Π(1 - dᵢ/100)) × 100
+ * - ADDITIVE:    effective% = Σ dᵢ
+ * - SINGLE_DISCOUNT: effective% = max(dᵢ)
+ *
+ * computeDisplay() does NOT know about calc_type — it receives
+ * the already-resolved effective number from the caller.
+ */
+export function computeDisplay(bar: number, totalDiscount: number): number {
+    return Math.round(bar * (1 - totalDiscount / 100));
+}
+
+/**
+ * Calculate effective discount percentage from resolved discounts.
+ * Uses calc_type to determine stacking mode.
+ */
+export function calcEffectiveDiscount(
+    discounts: DiscountItem[],
+    calcType: CalcType
+): number {
+    if (discounts.length === 0) return 0;
+
+    if (calcType === 'SINGLE_DISCOUNT') {
+        // Highest only
+        return Math.max(...discounts.map(d => d.percent));
+    }
+
+    if (calcType === 'PROGRESSIVE') {
+        // effective% = (1 - Π(1 - dᵢ/100)) × 100
+        const multiplier = discounts.reduce((m, d) => m * (1 - d.percent / 100), 1);
+        return (1 - multiplier) * 100;
+    }
+
+    // ADDITIVE: Σ dᵢ
+    return discounts.reduce((sum, d) => sum + d.percent, 0);
+}
+
+/**
+ * Apply OCC multiplier to NET base price.
+ * Returns integer VND (rounded, as per Rev.4 Fix #4).
+ */
+export function applyOccMultiplier(netBase: number, multiplier: number): number {
+    return Math.round(netBase * multiplier);
 }
 

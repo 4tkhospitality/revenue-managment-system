@@ -3,3 +3,4 @@ export { default as RoomTypesTab } from './RoomTypesTab';
 export { default as OTAConfigTab } from './OTAConfigTab';
 export { default as PromotionsTab } from './PromotionsTab';
 export { default as OverviewTab } from './OverviewTab';
+export { default as DynamicPricingTab } from './DynamicPricingTab';

@@ -1,7 +1,8 @@
-# Design Specifications: OTA Pricing Module V01.2
+# Design Specifications: OTA Pricing Module V01.7
 
-**Created:** 2026-02-05  
-**Module:** `/pricing`  
+**Created:** 2026-02-05
+**Last Updated:** 2026-02-12
+**Module:** `/pricing`
 **Theme:** SaaS Pro Light (RMS)
 
 ---
@@ -22,6 +23,9 @@
 | **Danger** | `#EF4444` | Delete button, errors |
 | **Info** | `#3B82F6` | Essential badge |
 | **Purple** | `#8B5CF6` | Additive mode, Targeted badge |
+| **Genius Blue** | `#1E3A8A` | Genius program badges |
+| **Portfolio Indigo** | `#6366F1` | Portfolio group badges |
+| **Campaign Teal** | `#14B8A6` | Campaign group badges |
 
 ---
 
@@ -41,26 +45,15 @@
 
 ---
 
-## 📐 Spacing System
+## 📐 Tab Structure (5 Tabs)
 
-| Name | Value | Class |
-|------|-------|-------|
-| xs | 4px | `gap-1` |
-| sm | 8px | `gap-2` |
-| md | 16px | `gap-4` |
-| lg | 24px | `gap-6` |
-| xl | 32px | `gap-8` |
-
----
-
-## 🔲 Border Radius
-
-| Name | Value | Class | Usage |
-|------|-------|-------|-------|
-| sm | 4px | `rounded` | Badges |
-| md | 8px | `rounded-lg` | Buttons, inputs |
-| lg | 12px | `rounded-xl` | Cards |
-| xl | 16px | `rounded-2xl` | Header |
+| # | Tab ID | Label (VI) | Component |
+|---|--------|------------|-----------|
+| 1 | room-types | Hạng phòng | `RoomTypesTab.tsx` |
+| 2 | ota-channels | Kênh OTA | `OTAChannelsTab.tsx` |
+| 3 | promotions | Khuyến mãi | `PromotionsTab.tsx` |
+| 4 | overview | Bảng giá | `OverviewTab.tsx` |
+| 5 | playbook | Tối ưu OTA | `OTAPlaybookGuide.tsx` |
 
 ---
 
@@ -68,12 +61,12 @@
 
 ### Header
 ```tsx
-<header 
+<header
   className="rounded-2xl px-6 py-4 text-white shadow-sm"
   style={{ background: 'linear-gradient(to right, #1E3A8A, #102A4C)' }}
 >
   <h1 className="text-lg font-semibold">💰 Tính giá OTA</h1>
-  <p className="text-white/70 text-sm mt-1">Quản lý giá hiển thị</p>
+  <p className="text-white/70 text-sm mt-1">Quản lý giá hiển thị trên 5 kênh OTA</p>
 </header>
 ```
 
@@ -90,12 +83,29 @@
 <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6" />
 ```
 
-### Category Badges
+### Category Badges (V01.6 - 2-Layer Architecture)
+
+**Engine Layer (source-of-truth for stacking rules):**
+| PromotionGroup | Stack Behavior | Color |
+|---------------|----------------|-------|
+| SEASONAL | STACKABLE | `bg-amber-100 text-amber-700` |
+| ESSENTIAL | STACKABLE | `bg-blue-100 text-blue-700` |
+| TARGETED | STACKABLE | `bg-purple-100 text-purple-700` |
+| GENIUS | STACKABLE (always passes through) | `bg-blue-100 text-blue-800` |
+| PORTFOLIO | HIGHEST_WINS | `bg-indigo-100 text-indigo-700` |
+| CAMPAIGN | EXCLUSIVE (blocks all except Genius) | `bg-teal-100 text-teal-700` |
+
+**UI Layer (vendor-specific display labels):**
+- Each vendor has custom display labels mapped from engine group types
+- Example: Booking.com shows "Genius L1/L2/L3", "Early Deals", "Last Minute Deals"
+
+### Stack Behavior Badges (V01.6)
 ```tsx
-// Seasonal (orange), Essential (blue), Targeted (purple)
-<span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs rounded">
-  Seasonal
-</span>
+// Visual indicators per promotion
+<span className="text-xs bg-green-100 text-green-700 px-1.5 rounded">STACKABLE</span>
+<span className="text-xs bg-red-100 text-red-700 px-1.5 rounded">EXCLUSIVE</span>
+<span className="text-xs bg-yellow-100 text-yellow-700 px-1.5 rounded">HIGHEST_WINS</span>
+<span className="text-xs bg-blue-100 text-blue-700 px-1.5 rounded">ONLY_WITH_GENIUS</span>
 ```
 
 ### Price Cell (Matrix Heatmap)
@@ -107,6 +117,85 @@
   {formatVND(price)}  // Higher = red
 </td>
 ```
+
+---
+
+## 🖩 Calculator Modes (V01.7 - 3 Tabs in OverviewTab)
+
+### Tab Structure
+| # | Tab Label | Input | Calculates |
+|---|-----------|-------|-----------|
+| 1 | Giá Thu về | NET price | → BAR + Display Price |
+| 2 | Giá BAR | BAR price | → NET + Display Price |
+| 3 | Giá Hiển thị | Display price | → BAR + NET |
+
+### Formulas per Calc Type
+
+**PROGRESSIVE (Booking.com 18%):**
+```
+net_to_bar:     BAR = NET / (1 - commission%)
+                Display = BAR × Π(1 - dᵢ)
+bar_to_net:     Display = BAR × Π(1 - dᵢ)
+                NET = Display × (1 - commission%)
+display_to_bar: BAR = Display / Π(1 - dᵢ)
+                NET = Display × (1 - commission%)
+```
+
+**ADDITIVE (Agoda 20%, Traveloka 15%, CTRIP 18%):**
+```
+net_to_bar:     BAR = NET / (1 - commission%)
+                Display = BAR × (1 - Σdᵢ)
+bar_to_net:     Display = BAR × (1 - Σdᵢ)
+                NET = Display × (1 - commission%)
+display_to_bar: BAR = Display / (1 - Σdᵢ)
+                NET = Display × (1 - commission%)
+```
+
+**SINGLE_DISCOUNT (Expedia 17%):**
+```
+Each promotion creates separate rate plan, no stacking.
+net_to_bar:     BAR = NET / (1 - commission%)
+                Display = BAR × (1 - d)
+```
+
+### Timing Conflict Resolution (V01.7)
+- **Rule**: Early Bird + Last-Minute are mutually exclusive
+- **Logic**: `resolveTimingConflicts()` applied in BOTH:
+  - `calc-matrix` API route
+  - `PromotionsTab` parent component (before totalDiscount computation)
+- If both active, only the highest discount is applied
+
+### Input UX (V01.7 Fix)
+- Controlled input pattern: `value={customInput}` (no fallback)
+- Default value set via `useEffect` on mode/room change
+- Allows clearing and retyping prices without snap-back
+
+---
+
+## 🔧 Free Nights Deal (V01.6)
+
+**Input:** Stay X nights / Pay Y nights
+**Formula:** `discount_pct = round((1 - Y/X) × 100)`
+**Example:** Stay 7 / Pay 6 → discount = round((1 - 6/7) × 100) = 14%
+
+---
+
+## 🛡️ OTA-Specific Validation Rules
+
+| OTA | Calc Mode | Commission | Max Discount | Stacking Rules |
+|-----|-----------|-----------|-------------|----------------|
+| **Agoda** | ADDITIVE | 20% | 80% cap | Σdᵢ sums all active |
+| **Booking.com** | PROGRESSIVE | 18% | No limit | Π(1-dᵢ) compounds; Deep Deals no-stack |
+| **Traveloka** | ADDITIVE | 15% | 80% cap | Channel Rate applied before campaigns |
+| **Trip.com (CTRIP)** | ADDITIVE | 18% | 80% cap | Same box pick 1, different boxes stack |
+| **Expedia** | SINGLE_DISCOUNT | 17% | N/A | Each promo = separate rate plan (ISOLATED) |
+
+### Booking.com Special Rules (V01.6)
+- **Genius L1/L2/L3**: Always stackable with everything (GENIUS group)
+- **Campaign EXCLUSIVE**: Blocks everything EXCEPT Genius
+- **Business Bookers**: EXCLUSIVE — blocks ALL including Genius
+- **Portfolio HIGHEST_WINS**: Only best deal in portfolio group applied
+- **Deep Deals** (Limited-time, Deal of the Day): `allow_stack = false`
 
 ---
 
@@ -124,15 +213,32 @@
 ### Tab 4: Overview Matrix
 ![Overview Matrix](file:///C:/Users/ngocp/.gemini/antigravity/brain/d75b56db-b0be-435f-9606-9fc32a483a4c/pricing_overview_matrix_1770269315462.png)
 
+### Tab 5: OTA Growth Playbook
+*(See `docs/DESIGN.md` Section 5 for component architecture)*
+
 ---
 
 ## 🎯 Interactions
 
 | Element | Behavior |
 |---------|----------|
-| Tab click | Switch content, blue underline |
+| Tab click | Switch content, blue underline indicator |
 | Add button | Open modal form |
 | Toggle switch | Animate on/off with color change |
 | Matrix cell hover | Show trace tooltip |
 | Export button | Download CSV file |
+| Calculator tab switch | Switch between NET/BAR/Display input modes |
+| Stack badge | Visual indicator of stacking behavior |
+| Free Nights input | Stay X / Pay Y → auto-calc discount % |
+| Timing conflict | Auto-resolve Early Bird vs Last-Minute (highest wins) |
 
+---
+
+## ⚠️ Critical Gotchas
+
+1. **bar_to_net mode**: Do NOT use `calcNetFromBar()` — compute `NET = display × (1 - commission%)` directly
+2. **Timing conflicts**: `resolveTimingConflicts()` must be in BOTH `calc-matrix` API AND `PromotionsTab`
+3. **PromotionGroup enum**: Must be synced across `schema.prisma`, `types.ts`, `catalog.ts`
+4. **Catalog vs DB**: `catalog.ts` constants are NOT used by API — API reads from DB. Must run `seed-pricing.ts` after updating
+5. **Free Nights rounding**: Stay 7 / Pay 6 = 14.28% → rounds to 14%
+6. **Controlled input**: `value={input || fallback}` prevents clearing — use `value={input}` directly

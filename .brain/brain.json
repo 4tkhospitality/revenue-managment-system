@@ -2,13 +2,13 @@
   "meta": {
     "schema_version": "1.5.0",
     "awf_version": "4.1.2",
-    "last_updated": "2026-02-12T00:28:00+07:00"
+    "last_updated": "2026-02-12T11:45:00+07:00"
   },
   "project": {
     "name": "revenue-management-system",
     "type": "SaaS Web App",
     "status": "Production - Deployed to Vercel (icn1 region)",
-    "description": "RMS Version 01.6 - Revenue Management System with OTB Time-Travel + OTA Pricing + OTA Growth Playbook + User Management + Performance Optimized + Comprehensive Guide. Full-stack TypeScript.",
+    "description": "RMS Version 01.7 - Revenue Management System with OTB Time-Travel + OTA Pricing (3-tab calculator, timing conflict resolution) + OTA Growth Playbook + User Management + Performance Optimized + Comprehensive Guide. Full-stack TypeScript.",
     "github": "https://github.com/4tkhospitality/revenue-managment-system",
     "landing_page": {
       "path": "apps/landing",
@@ -686,7 +686,10 @@
       "V01.6: Free Nights X/Y inverse calc can produce rounding artifacts (e.g. Stay 7 / Pay 6 = 14.28% not 14%)",
       "V01.6: Git push can hang if credential helper dialog is hidden behind other windows — terminate after 15s and retry",
       "V01.6: catalog.ts constants are NOT used by /api/pricing/catalog — the API reads from DB (prisma.promotionCatalog). Must run seed-pricing.ts after updating catalog.ts",
-      "V01.6: seed-pricing.ts group_type values must match catalog.ts groupType values — mismatch causes picker to show 0 items in tabs"
+      "V01.6: seed-pricing.ts group_type values must match catalog.ts groupType values — mismatch causes picker to show 0 items in tabs",
+      "V01.7: Early Bird + Last-Minute are mutually exclusive — resolveTimingConflicts() must be applied in BOTH calc-matrix API AND PromotionsTab parent before totalDiscount computation",
+      "V01.7: In bar_to_net mode, do NOT use calcNetFromBar() — it internally resolves conflicts creating double-discount mismatch. Compute NET=display×(1-commission%) directly",
+      "V01.7: React controlled input: value={input || fallback} prevents clearing. Use value={input} directly + initialize default via useEffect on mode/room change"
     ],
     "formulas": {
       "rooms_otb": "SUM(num_rooms) from reservations for that stay_date",

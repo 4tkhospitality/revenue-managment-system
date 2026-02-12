@@ -4,13 +4,14 @@ import { useState, useEffect } from 'react';
 import {
     BookOpen, BarChart3, TrendingUp, DollarSign, CalendarDays, Upload, Database,
     HelpCircle, Calculator, Percent, Tag, ArrowRightLeft, Lock, ChevronRight,
+    Layers, Settings, Download,
 } from 'lucide-react';
 import { validateOTBData, type ValidationResult } from '../actions/validateOTBData';
 import Link from 'next/link';
 import { useTierAccess } from '@/hooks/useTierAccess';
 import { TierPaywall } from '@/components/paywall/TierPaywall';
 
-type SectionId = 'quickstart' | 'analytics' | 'pricing' | 'data';
+type SectionId = 'quickstart' | 'analytics' | 'pricing' | 'dynamic-pricing' | 'data';
 
 const SECTIONS: { id: SectionId; label: string; icon: React.ReactNode; sub?: { id: string; label: string }[] }[] = [
     {
@@ -48,6 +49,18 @@ const SECTIONS: { id: SectionId; label: string; icon: React.ReactNode; sub?: { i
             { id: 'compare', label: 'So sánh giữa các kênh' },
             { id: 'price-matrix', label: 'Bảng giá tổng hợp' },
             { id: 'reverse', label: 'Tính ngược (BAR → NET)' },
+        ],
+    },
+    {
+        id: 'dynamic-pricing', label: 'Giá Linh Hoạt', icon: <Layers className="w-4 h-4" />,
+        sub: [
+            { id: 'dp-overview', label: 'Tổng quan' },
+            { id: 'dp-controls', label: 'Bộ điều khiển' },
+            { id: 'dp-seasons', label: 'Mùa (Seasons)' },
+            { id: 'dp-occ-tiers', label: 'Bậc OCC' },
+            { id: 'dp-matrix', label: 'Bảng giá ma trận' },
+            { id: 'dp-export', label: 'Xuất CSV' },
+            { id: 'dp-faq', label: 'Câu hỏi thường gặp' },
         ],
     },
     {
@@ -177,6 +190,7 @@ export default function GuidePage() {
                         ) : <AnalyticsSection />
                     )}
                     {activeSection === 'pricing' && <PricingSection />}
+                    {activeSection === 'dynamic-pricing' && <DynamicPricingSection />}
                     {activeSection === 'data' && <DataSection />}
                 </div>
             </div>
@@ -645,6 +659,369 @@ function PricingSection() {
                 <Link href="/pricing" className="inline-block px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">Đi tới Tính giá OTA →</Link>
             </div>
 
+        </>
+    );
+}
+
+/* ═══════════════════════ SECTION 3B: GIÁ LINH HOẠT (DYNAMIC PRICING) ═══════════════════════ */
+function DynamicPricingSection() {
+    return (
+        <>
+            <Card id="dp-overview" title="Giá Linh Hoạt — Tổng quan" icon={<Layers className="w-5 h-5 text-blue-600" />}>
+                <p className="text-gray-700">
+                    Tab <strong>"Giá Linh Hoạt"</strong> giúp bạn tự động điều chỉnh giá phòng theo <strong>công suất phòng (OCC%)</strong> và <strong>mùa (Season)</strong>.
+                    Thay vì đặt 1 giá cố định, hệ thống tính giá khác nhau cho từng mức độ lấp đầy.
+                </p>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mt-3">
+                    <p className="font-medium text-blue-700 mb-2">🎯 Ý tưởng cốt lõi:</p>
+                    <ul className="text-sm text-gray-700 space-y-1">
+                        <li>• <strong>Phòng còn nhiều</strong> (OCC thấp) → Giá thấp hơn để hút khách</li>
+                        <li>• <strong>Phòng gần hết</strong> (OCC cao) → Giá cao hơn vì cầu vượt cung</li>
+                        <li>• <strong>Mùa cao điểm</strong> → Giá NET cơ sở cao hơn mùa thường</li>
+                    </ul>
+                </div>
+
+                <div className="grid sm:grid-cols-3 gap-3 mt-3">
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-center">
+                        <div className="text-2xl mb-1">🗓️</div>
+                        <div className="font-medium text-emerald-700 text-sm">Season</div>
+                        <p className="text-xs text-gray-600 mt-1">Quyết định giá NET cơ sở</p>
+                    </div>
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-center">
+                        <div className="text-2xl mb-1">📊</div>
+                        <div className="font-medium text-blue-700 text-sm">OCC%</div>
+                        <p className="text-xs text-gray-600 mt-1">Nhân hệ số theo bậc lấp đầy</p>
+                    </div>
+                    <div className="bg-purple-50 border border-purple-200 rounded-xl p-3 text-center">
+                        <div className="text-2xl mb-1">💰</div>
+                        <div className="font-medium text-purple-700 text-sm">Giá OTA</div>
+                        <p className="text-xs text-gray-600 mt-1">Tự động tính BAR + Display</p>
+                    </div>
+                </div>
+            </Card>
+
+            <Card id="dp-controls" title="🎛️ Bộ điều khiển" icon={<Settings className="w-5 h-5 text-blue-600" />}>
+                <p className="text-gray-700 mb-3">Thanh điều khiển nằm phía trên bảng giá, gồm các thành phần:</p>
+
+                <table className="w-full text-sm">
+                    <thead className="bg-gray-100">
+                        <tr>
+                            <th className="px-3 py-2 text-left text-gray-600">Thành phần</th>
+                            <th className="px-3 py-2 text-left text-gray-600">Chức năng</th>
+                            <th className="px-3 py-2 text-left text-gray-600">Chi tiết</th>
+                        </tr>
+                    </thead>
+                    <tbody className="text-gray-700">
+                        <tr className="border-t">
+                            <td className="px-3 py-3 font-medium">📅 Ngày lưu trú</td>
+                            <td className="px-3 py-3">Chọn ngày khách ở</td>
+                            <td className="px-3 py-3 text-gray-500 text-xs">
+                                Hệ thống dùng ngày này để: (1) Tự nhận Season, (2) Lấy OCC% từ dữ liệu booking thực tế
+                            </td>
+                        </tr>
+                        <tr className="border-t bg-blue-50">
+                            <td className="px-3 py-3 font-medium">🗓️ Season (auto)</td>
+                            <td className="px-3 py-3">Chọn mùa hoặc để auto</td>
+                            <td className="px-3 py-3 text-gray-500 text-xs">
+                                <strong>Auto:</strong> Hệ thống tự khớp ngày với khoảng ngày của Season.<br />
+                                <strong>Thủ công:</strong> Ghi đè để so sánh giá giữa các mùa.
+                            </td>
+                        </tr>
+                        <tr className="border-t">
+                            <td className="px-3 py-3 font-medium">🏨 Kênh OTA</td>
+                            <td className="px-3 py-3">Chọn kênh tính giá</td>
+                            <td className="px-3 py-3 text-gray-500 text-xs">
+                                Mỗi kênh có hoa hồng + khuyến mãi khác nhau → giá BAR và Display khác.
+                            </td>
+                        </tr>
+                        <tr className="border-t bg-emerald-50">
+                            <td className="px-3 py-3 font-medium">👁️ Thu về / BAR / Hiển thị</td>
+                            <td className="px-3 py-3">Chuyển đổi góc nhìn giá</td>
+                            <td className="px-3 py-3 text-gray-500 text-xs">
+                                <strong>Thu về (NET):</strong> Tiền thực nhận.<br />
+                                <strong>BAR:</strong> Giá gốc chưa giảm KM.<br />
+                                <strong>Hiển thị:</strong> Giá khách thấy trên OTA (sau KM).
+                            </td>
+                        </tr>
+                        <tr className="border-t">
+                            <td className="px-3 py-3 font-medium">⚙️ Config</td>
+                            <td className="px-3 py-3">Mở/đóng panel cấu hình</td>
+                            <td className="px-3 py-3 text-gray-500 text-xs">
+                                Hiện 2 panel: Season config + OCC Tier config.
+                            </td>
+                        </tr>
+                        <tr className="border-t">
+                            <td className="px-3 py-3 font-medium">📥 Export</td>
+                            <td className="px-3 py-3">Xuất bảng giá CSV</td>
+                            <td className="px-3 py-3 text-gray-500 text-xs">
+                                Tải file CSV chứa toàn bộ bảng giá (NET + BAR + Display cho tất cả bậc OCC).
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 mt-3">
+                    <p className="text-sm text-emerald-700">
+                        💡 <strong>OCC Badge</strong> (thanh xanh phía dưới) hiển thị OCC% thực tế từ dữ liệu OTB,
+                        kèm tier đang áp dụng (VD: "Tier: 35-65% ×1.10").
+                        Nếu chưa có dữ liệu OTB, bạn có thể nhập tay OCC%.
+                    </p>
+                </div>
+            </Card>
+
+            <Card id="dp-seasons" title="🗓️ Quản lý Mùa (Seasons)" icon={<CalendarDays className="w-5 h-5 text-blue-600" />}>
+                <p className="text-gray-700 mb-3">
+                    <strong>Season (Mùa)</strong> quyết định giá NET cơ sở cho từng hạng phòng.
+                    Mùa cao điểm → giá NET cao hơn, mùa thường → giá NET thấp hơn.
+                </p>
+
+                <h4 className="font-semibold text-gray-800 mb-2">3 loại Season mặc định:</h4>
+                <table className="w-full text-sm mb-4">
+                    <thead className="bg-gray-100">
+                        <tr>
+                            <th className="px-3 py-2 text-left text-gray-600">Season</th>
+                            <th className="px-3 py-2 text-center text-gray-600">Ưu tiên</th>
+                            <th className="px-3 py-2 text-left text-gray-600">Khi nào dùng</th>
+                            <th className="px-3 py-2 text-right text-gray-600">NET ví dụ</th>
+                        </tr>
+                    </thead>
+                    <tbody className="text-gray-700">
+                        <tr className="border-t">
+                            <td className="px-3 py-3"><span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-xs mr-1">P1</span> Normal</td>
+                            <td className="px-3 py-3 text-center">Thấp nhất</td>
+                            <td className="px-3 py-3">Các ngày bình thường, không event</td>
+                            <td className="px-3 py-3 text-right font-mono">1.200.000đ</td>
+                        </tr>
+                        <tr className="border-t bg-amber-50">
+                            <td className="px-3 py-3"><span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded text-xs mr-1">P2</span> High</td>
+                            <td className="px-3 py-3 text-center">Trung bình</td>
+                            <td className="px-3 py-3">Cuối tuần, hè, liên hoan</td>
+                            <td className="px-3 py-3 text-right font-mono">1.500.000đ</td>
+                        </tr>
+                        <tr className="border-t bg-red-50">
+                            <td className="px-3 py-3"><span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-xs mr-1">P3</span> Holiday</td>
+                            <td className="px-3 py-3 text-center">Cao nhất</td>
+                            <td className="px-3 py-3">Tết, Noel, 30/4, 2/9</td>
+                            <td className="px-3 py-3 text-right font-mono">2.000.000đ</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h4 className="font-semibold text-gray-800 mb-2">Cách thiết lập:</h4>
+                <div className="space-y-2">
+                    <Step n={1} title="Bấm ⚙️ Config trên thanh điều khiển">
+                        <p className="text-sm text-gray-600">Panel "Mùa (Seasons)" sẽ hiện ra bên trái.</p>
+                    </Step>
+                    <Step n={2} title="Tạo Season">
+                        <p className="text-sm text-gray-600">Bấm nút <strong>+ NORMAL</strong>, <strong>+ HIGH</strong>, hoặc <strong>+ HOLIDAY</strong> để tạo season mới.</p>
+                    </Step>
+                    <Step n={3} title="Thêm khoảng ngày">
+                        <p className="text-sm text-gray-600">Mở season → <strong>+ Thêm</strong> khoảng ngày → chọn ngày bắt đầu và kết thúc.</p>
+                        <p className="text-sm text-gray-500">VD: High Season từ 01/06 đến 31/08 (mùa hè).</p>
+                    </Step>
+                    <Step n={4} title="Thiết lập NET rates">
+                        <p className="text-sm text-gray-600">Trong mỗi season, nhập giá NET mong muốn cho từng hạng phòng. Đây là giá cơ sở sẽ được nhân với hệ số OCC.</p>
+                    </Step>
+                    <Step n={5} title="Lưu">
+                        <p className="text-sm text-gray-600">Bấm <strong>Lưu</strong> để áp dụng. Bảng giá sẽ tự cập nhật.</p>
+                    </Step>
+                </div>
+
+                <Warn>
+                    <strong>Quy tắc ưu tiên (auto-detect):</strong> Nếu 1 ngày thuộc nhiều season (VD: vừa High vừa Holiday), hệ thống chọn season có <strong>priority cao nhất</strong>: Holiday (P3) {'>'} High (P2) {'>'} Normal (P1).
+                </Warn>
+            </Card>
+
+            <Card id="dp-occ-tiers" title="📊 Bậc OCC (Occupancy Tiers)" icon={<BarChart3 className="w-5 h-5 text-blue-600" />}>
+                <p className="text-gray-700 mb-3">
+                    <strong>OCC Tier</strong> là bậc thang giá theo công suất phòng. Mỗi bậc có <strong>hệ số nhân (multiplier)</strong> áp lên giá NET cơ sở.
+                </p>
+
+                <h4 className="font-semibold text-gray-800 mb-2">Ví dụ 4 bậc cơ bản:</h4>
+                <table className="w-full text-sm mb-4">
+                    <thead className="bg-gray-100">
+                        <tr>
+                            <th className="px-3 py-2 text-left text-gray-600">Bậc</th>
+                            <th className="px-3 py-2 text-center text-gray-600">OCC%</th>
+                            <th className="px-3 py-2 text-center text-gray-600">Hệ số</th>
+                            <th className="px-3 py-2 text-left text-gray-600">Ý nghĩa</th>
+                            <th className="px-3 py-2 text-right text-gray-600">NET (VD)</th>
+                        </tr>
+                    </thead>
+                    <tbody className="text-gray-700">
+                        <tr className="border-t">
+                            <td className="px-3 py-3">#0</td>
+                            <td className="px-3 py-3 text-center">0–35%</td>
+                            <td className="px-3 py-3 text-center font-mono">×1.00</td>
+                            <td className="px-3 py-3 text-gray-500">Phòng còn nhiều → giá gốc</td>
+                            <td className="px-3 py-3 text-right font-mono">1.200.000đ</td>
+                        </tr>
+                        <tr className="border-t bg-blue-50">
+                            <td className="px-3 py-3">#1</td>
+                            <td className="px-3 py-3 text-center">35–65%</td>
+                            <td className="px-3 py-3 text-center font-mono">×1.10</td>
+                            <td className="px-3 py-3 text-gray-500">Trung bình → tăng 10%</td>
+                            <td className="px-3 py-3 text-right font-mono">1.320.000đ</td>
+                        </tr>
+                        <tr className="border-t bg-amber-50">
+                            <td className="px-3 py-3">#2</td>
+                            <td className="px-3 py-3 text-center">65–85%</td>
+                            <td className="px-3 py-3 text-center font-mono">×1.20</td>
+                            <td className="px-3 py-3 text-gray-500">Gần kín → tăng 20%</td>
+                            <td className="px-3 py-3 text-right font-mono">1.440.000đ</td>
+                        </tr>
+                        <tr className="border-t bg-red-50">
+                            <td className="px-3 py-3">#3</td>
+                            <td className="px-3 py-3 text-center">{'>'}85%</td>
+                            <td className="px-3 py-3 text-center font-mono">×1.30</td>
+                            <td className="px-3 py-3 text-gray-500">Sắp hết phòng → tăng 30%</td>
+                            <td className="px-3 py-3 text-right font-mono">1.560.000đ</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div className="bg-gray-50 rounded-xl p-4 text-sm mb-3">
+                    <p className="font-medium text-gray-800 mb-1">Công thức:</p>
+                    <p className="font-mono text-center text-lg">NET động = NET cơ sở (season) × Multiplier (OCC tier)</p>
+                    <p className="text-gray-600 mt-2 text-center">VD: Normal Season NET = 1.200.000 × 1.10 (OCC 50%) = <strong>1.320.000đ</strong></p>
+                </div>
+
+                <h4 className="font-semibold text-gray-800 mb-2">Cách chỉnh:</h4>
+                <ul className="list-disc list-inside space-y-1 text-sm text-gray-700 ml-2">
+                    <li>Bấm <strong>⚙️ Config</strong> → Panel "Bậc OCC" hiện ra bên phải</li>
+                    <li>Chỉnh <strong>ngưỡng %</strong> và <strong>hệ số nhân</strong> cho từng bậc</li>
+                    <li>Bấm <strong>+</strong> để thêm bậc (tối đa 6), <strong>🗑️</strong> để xóa (tối thiểu 3)</li>
+                    <li>Bấm <strong>"Lưu bậc OCC"</strong> để áp dụng</li>
+                </ul>
+
+                <Warn>
+                    <strong>Quy tắc:</strong> Các bậc phải liền mạch (bậc trước kết thúc = bậc sau bắt đầu), bắt đầu từ 0% và kết thúc ở 100%.
+                </Warn>
+
+                <Tip>
+                    OCC% được tính tự động từ dữ liệu OTB: <strong>OCC = Số phòng đã đặt ÷ Tổng phòng khách sạn</strong>. Nếu chưa có dữ liệu, bạn có thể nhập tay.
+                </Tip>
+            </Card>
+
+            <Card id="dp-matrix" title="📋 Bảng giá Ma trận" icon={<Calculator className="w-5 h-5 text-blue-600" />}>
+                <p className="text-gray-700 mb-3">
+                    Bảng giá hiển thị giá cho <strong>tất cả hạng phòng × tất cả bậc OCC</strong> cùng lúc.
+                </p>
+
+                <h4 className="font-semibold text-gray-800 mb-2">Cách đọc bảng:</h4>
+                <table className="w-full text-sm mb-4">
+                    <thead className="bg-gray-100">
+                        <tr>
+                            <th className="px-3 py-2 text-left text-gray-600">Thành phần</th>
+                            <th className="px-3 py-2 text-left text-gray-600">Ý nghĩa</th>
+                        </tr>
+                    </thead>
+                    <tbody className="text-gray-700">
+                        <tr className="border-t">
+                            <td className="px-3 py-3 font-medium">Cột "Hạng phòng"</td>
+                            <td className="px-3 py-3">Tên hạng phòng (Deluxe, Superior, Suite...)</td>
+                        </tr>
+                        <tr className="border-t">
+                            <td className="px-3 py-3 font-medium">Cột "NET cơ sở"</td>
+                            <td className="px-3 py-3">Giá NET theo season (chưa nhân OCC)</td>
+                        </tr>
+                        <tr className="border-t bg-blue-50">
+                            <td className="px-3 py-3 font-medium">Cột bậc OCC (0-35%, 35-65%...)</td>
+                            <td className="px-3 py-3">Giá sau khi nhân hệ số OCC (tùy chế độ xem: NET/BAR/Display)</td>
+                        </tr>
+                        <tr className="border-t bg-blue-100">
+                            <td className="px-3 py-3 font-medium">Cột highlight ★ (xanh đậm)</td>
+                            <td className="px-3 py-3"><strong>Bậc đang áp dụng</strong> dựa trên OCC% thực tế. Đây là giá THỰC TẾ cho ngày đó.</td>
+                        </tr>
+                        <tr className="border-t bg-red-50">
+                            <td className="px-3 py-3 font-medium">Ô đỏ ⚠️</td>
+                            <td className="px-3 py-3"><strong>Vi phạm guardrail</strong> — giá quá cao hoặc quá thấp so với min/max của khách sạn.</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                    <p className="font-medium text-blue-700 mb-2">3 chế độ xem (toggle trên thanh điều khiển):</p>
+                    <div className="grid sm:grid-cols-3 gap-3">
+                        <div className="bg-white rounded-lg p-3 border border-blue-100">
+                            <div className="font-medium text-emerald-700 text-sm">Thu về (NET)</div>
+                            <p className="text-xs text-gray-600 mt-1">Tiền khách sạn thực nhận sau khi OTA trừ hoa hồng + KM</p>
+                        </div>
+                        <div className="bg-white rounded-lg p-3 border border-blue-100">
+                            <div className="font-medium text-blue-700 text-sm">BAR</div>
+                            <p className="text-xs text-gray-600 mt-1">Best Available Rate — giá gốc trước KM, sau hoa hồng</p>
+                        </div>
+                        <div className="bg-white rounded-lg p-3 border border-blue-100">
+                            <div className="font-medium text-purple-700 text-sm">Hiển thị (Display)</div>
+                            <p className="text-xs text-gray-600 mt-1">Giá khách thấy trên OTA (sau khi áp KM)</p>
+                        </div>
+                    </div>
+                </div>
+
+                <Tip>Chuyển đổi giữa 3 chế độ xem KHÔNG phải tải lại dữ liệu — hệ thống tính sẵn cả 3 giá trị cho mỗi ô.</Tip>
+            </Card>
+
+            <Card id="dp-export" title="📥 Xuất CSV" icon={<Download className="w-5 h-5 text-blue-600" />}>
+                <p className="text-gray-700 mb-3">
+                    Bấm nút <strong>Export</strong> (màu xanh lá) để tải bảng giá dưới dạng file CSV.
+                </p>
+                <h4 className="font-semibold text-gray-800 mb-2">File CSV chứa:</h4>
+                <ul className="list-disc list-inside space-y-1 text-sm text-gray-700 ml-2">
+                    <li>Tất cả hạng phòng</li>
+                    <li>Giá NET cơ sở</li>
+                    <li>Giá NET, BAR, Display cho từng bậc OCC</li>
+                </ul>
+                <Tip>Mở file CSV bằng Excel hoặc Google Sheets → In ra cho team Front Desk hoặc gửi cho Sales Manager để cập nhật giá lên OTA.</Tip>
+            </Card>
+
+            <Card id="dp-faq" title="❓ Câu hỏi thường gặp" icon={<HelpCircle className="w-5 h-5 text-blue-600" />}>
+                <div className="space-y-4">
+                    <div className="border-t border-gray-100 pt-4">
+                        <h4 className="font-medium text-gray-900 mb-2">"OCC chưa có dữ liệu" — Phải làm gì?</h4>
+                        <p className="text-gray-600 text-sm">
+                            OCC% tính từ dữ liệu OTB (số phòng đã đặt). Nếu chưa upload dữ liệu booking,
+                            hệ thống không có OCC → bạn có thể <strong>nhập tay OCC%</strong> vào ô input trên thanh OCC Badge.
+                        </p>
+                    </div>
+                    <div className="border-t border-gray-100 pt-4">
+                        <h4 className="font-medium text-gray-900 mb-2">Season &quot;auto&quot; chọn sai mùa?</h4>
+                        <p className="text-gray-600 text-sm">
+                            Kiểm tra khoảng ngày (date ranges) trong config Season. Nếu ngày lưu trú không nằm trong khoảng nào,
+                            hệ thống dùng season mặc định (Normal). Bạn cũng có thể <strong>ghi đè thủ công</strong> bằng dropdown Season.
+                        </p>
+                    </div>
+                    <div className="border-t border-gray-100 pt-4">
+                        <h4 className="font-medium text-gray-900 mb-2">Ô đỏ ⚠️ nghĩa là gì?</h4>
+                        <p className="text-gray-600 text-sm">
+                            Giá vi phạm <strong>guardrail</strong> (giới hạn an toàn) — quá thấp so với min_rate hoặc quá cao so với max_rate
+                            của khách sạn. Chi tiết vi phạm hiện trong hộp cảnh báo màu vàng phía trên bảng.
+                        </p>
+                    </div>
+                    <div className="border-t border-gray-100 pt-4">
+                        <h4 className="font-medium text-gray-900 mb-2">Muốn thêm bậc OCC (VD: chia nhỏ hơn)?</h4>
+                        <p className="text-gray-600 text-sm">
+                            Vào <strong>⚙️ Config → Bậc OCC → bấm +</strong>. Hệ thống hỗ trợ tối đa <strong>6 bậc</strong>.
+                            Bạn có thể chia nhỏ để kiểm soát giá chính xác hơn — VD: thêm bậc 85-93%, 93-96%, 96-100% cho các mức
+                            lấp đầy rất cao.
+                        </p>
+                    </div>
+                    <div className="border-t border-gray-100 pt-4">
+                        <h4 className="font-medium text-gray-900 mb-2">NET cơ sở lấy từ đâu?</h4>
+                        <p className="text-gray-600 text-sm">
+                            Nếu có <strong>Season NET rate</strong> (cấu hình trong Config Season) → dùng giá theo season.
+                            Nếu không → dùng giá NET mặc định của hạng phòng (tab "Hạng phòng").
+                        </p>
+                    </div>
+                </div>
+            </Card>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 text-center">
+                <p className="text-blue-700 mb-3">Sẵn sàng thiết lập Giá Linh Hoạt?</p>
+                <div className="flex flex-wrap justify-center gap-3">
+                    <a href="/pricing" className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"><Layers className="w-4 h-4" /> Đi tới tab Giá Linh Hoạt →</a>
+                </div>
+            </div>
         </>
     );
 }

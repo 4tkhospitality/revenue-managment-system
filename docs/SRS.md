@@ -1,8 +1,8 @@
 # Software Requirements Specification (SRS)
-## Revenue Management System (RMS) v01.5
+## Revenue Management System (RMS) v01.7
 
-**Document Version:** 1.5.0  
-**Last Updated:** 2026-02-10  
+**Document Version:** 1.7.0  
+**Last Updated:** 2026-02-12  
 **Status:** ✅ Production  
 **Author:** 4TK Hospitality
 
@@ -16,9 +16,10 @@ Tài liệu này mô tả đầy đủ các yêu cầu phần mềm cho Hệ th�
 ### 1.2 Scope
 RMS bao gồm các module chính:
 - **Core RMS**: Quản lý OTB, Forecast, Pricing Recommendations
-- **OTA Pricing Calculator**: Tính giá hiển thị trên các kênh OTA
+- **OTA Pricing Calculator**: Tính giá hiển thị trên các kênh OTA (3 modes: NET/BAR/Display)
 - **Analytics Layer**: STLY comparison, Pace tracking, Pickup analytics
 - **User Management**: Multi-tenant RBAC với Google OAuth
+- **SaaS Infrastructure**: Subscriptions, Team Invites, Rate Limiting
 - **OTA Growth Playbook**: Công cụ tối ưu ranking OTA (Premium feature)
 
 ### 1.3 Definitions & Acronyms
@@ -178,12 +179,13 @@ RMS là hệ thống độc lập, tích hợp với:
 
 | ID | FR-007 |
 |----|--------|
-| **Title** | NET → BAR Price Calculation |
+| **Title** | OTA Price Calculation (3 Modes) |
 | **Priority** | P0 - Critical |
 | **Formula** | `BAR = NET / (1 - commission) / (1 - promo₁) / (1 - promo₂) ...` |
 | **Supported OTAs** | Agoda, Booking.com, Expedia, Traveloka, Trip.com |
-| **Modes** | Progressive (compound) / Additive (sum) |
-| **Features** | - Room type management<br>- Channel commission config<br>- Promotion stacking rules<br>- Price matrix export |
+| **Calc Types** | Progressive (compound) / Additive (sum) / Single_Discount (isolated) |
+| **Calculator Modes** | 1. Giá Thu về (NET → BAR + Display)<br>2. Giá BAR (BAR → NET + Display)<br>3. Giá Hiển thị (Display → BAR + NET) |
+| **Features** | - Room type management<br>- Channel commission config<br>- 2-Layer Promotion Architecture (Engine + UI layers) (V01.6)<br>- 3-Tier Exclusion (EXCLUSIVE/Business Bookers/HIGHEST_WINS) (V01.6)<br>- Free Nights Deal (Stay X / Pay Y) (V01.6)<br>- Timing Conflict Resolution (Early Bird vs Last-Minute) (V01.7)<br>- Price matrix export |
 
 ### 3.8 FR-008: Dashboard
 
@@ -231,6 +233,25 @@ RMS là hệ thống độc lập, tích hợp với:
 | **Review Formula** | `newScore = (oldScore × count + newRating × newCount) / (count + newCount)` |
 | **Paywall** | Non-paid users see `OTAGrowthPaywall` with feature preview |
 | **PDF Engine** | modern-screenshot + jsPDF |
+
+### 3.12 FR-012: SaaS Infrastructure
+
+| ID | FR-012 |
+|----|--------|
+| **Title** | SaaS Infrastructure (V01.3) |
+| **Priority** | P1 - Important |
+| **Description** | Multi-tenant SaaS với subscription tiers, team invites, rate limiting |
+| **Sub-features** | 1. Subscription tiers (STANDARD/SUPERIOR/DELUXE/SUITE)<br>2. Token-based team invites with short codes<br>3. IP-based rate limiting (DB-backed for Vercel)<br>4. Product event tracking (analytics)<br>5. 4-step onboarding wizard<br>6. Trial system (7 days + 7 bonus) |
+
+### 3.13 FR-013: Comprehensive Guide
+
+| ID | FR-013 |
+|----|--------|
+| **Title** | Guide Page with OTA Documentation (V01.7) |
+| **Priority** | P1 - Important |
+| **Description** | Comprehensive guide page with 4 sections and detailed OTA pricing documentation for all 5 channels |
+| **Sections** | 1. Bắt đầu nhanh (QuickStart)<br>2. Quản lý Doanh thu (Revenue Management)<br>3. Tính giá OTA (OTA Pricing for 5 channels)<br>4. OTA Growth Playbook (Premium) |
+
 
 ---
 
@@ -303,8 +324,22 @@ Hotel (1) ──┬── (*) HotelUser ──── User
             │
             ├── (*) RoomType
             ├── (*) OtaChannel ──── (*) CampaignInstance
+            ├── (1) PricingSetting
             │
-            └── (*) PricingDecision
+            ├── (*) PricingDecision
+            │
+            ├── (*) HotelInvite          (V01.3 - Team Invites)
+            ├── (1) Subscription          (V01.3 - Billing)
+            │
+            └── (*) Competitor            (Rate Shopper - deferred)
+                    └── (*) CompetitorRate
+
+Standalone Tables:
+            ProductEvent                  (V01.3 - Analytics)
+            RateLimitHit                  (V01.3 - Security)
+            PromotionCatalog              (V01.2 - 61 items)
+            RateShopCache / RateShopRequest (deferred)
+            MarketSnapshot / RateShopRecommendation (deferred)
 ```
 
 ### 5.2 Data Retention
@@ -334,9 +369,13 @@ Hotel (1) ──┬── (*) HotelUser ──── User
 - [ ] Pace vs LY is correctly calculated
 
 ### 6.3 OTA Pricing
-- [ ] NET → BAR calculation matches formula
+- [ ] NET → BAR calculation matches formula (Progressive/Additive/Single_Discount)
 - [ ] All 5 OTAs supported with correct commissions
-- [ ] Promotion stacking follows rules
+- [ ] Promotion stacking follows 2-Layer Architecture rules (V01.6)
+- [ ] 3 Calculator modes work correctly (Giá Thu về / Giá BAR / Giá Hiển thị) (V01.7)
+- [ ] Timing conflicts resolved (Early Bird vs Last-Minute → highest wins) (V01.7)
+- [ ] Free Nights Deal calculates correct discount % (V01.6)
+- [ ] 3-Tier Exclusion Engine enforces correctly (EXCLUSIVE/Business Bookers/HIGHEST_WINS) (V01.6)
 
 ### 6.4 OTA Growth Playbook
 - [ ] Health Scorecard calculates correctly for Booking.com (7 metrics)
@@ -346,6 +385,12 @@ Hotel (1) ──┬── (*) HotelUser ──── User
 - [ ] Target Calculator shows reviews needed to reach goal
 - [ ] When to Boost shows scenario-based recommendations
 - [ ] Paywall blocks non-paid users with feature preview
+
+### 6.5 SaaS Infrastructure (V01.3)
+- [ ] Subscription tiers limit features correctly
+- [ ] Team invites generate and validate tokens
+- [ ] Rate limiting blocks excessive requests
+- [ ] Onboarding wizard completes 4 steps
 
 ---
 
@@ -358,9 +403,11 @@ Hotel (1) ──┬── (*) HotelUser ──── User
 | 1.0.0 | 2026-01-15 | Initial release |
 | 1.1.0 | 2026-01-25 | Cancellation Bridge |
 | 1.2.0 | 2026-02-01 | OTA Pricing Module |
-| 1.3.0 | 2026-02-05 | User Management |
+| 1.3.0 | 2026-02-05 | User Management, SaaS Infrastructure |
 | 1.4.0 | 2026-02-09 | Analytics Layer + Time-Travel |
 | 1.5.0 | 2026-02-10 | OTA Growth Playbook (Premium) |
+| 1.6.0 | 2026-02-11 | 2-Layer Promotion Architecture, Free Nights, 3-Tier Exclusion |
+| 1.7.0 | 2026-02-12 | 3 Calculator Modes, Timing Conflict Resolution, Guide Page |
 
 ### 7.2 Sign-off
 

@@ -1,8 +1,8 @@
 # Product Requirements Document (PRD) & Functional Requirements Document (FRD)
-## Revenue Management System (RMS) v01.5
+## Revenue Management System (RMS) v01.7
 
-**Document Version:** 1.5.0  
-**Last Updated:** 2026-02-10  
+**Document Version:** 1.7.0  
+**Last Updated:** 2026-02-12  
 **Status:** ✅ Production  
 **Product Owner:** 4TK Hospitality
 
@@ -83,22 +83,33 @@ RMS cung cấp:
 
 ### 3.1 Feature Priority Matrix
 
-| Feature | Priority | Status | MVP |
-|---------|----------|--------|-----|
-| Google OAuth Login | P0 | ✅ Done | Yes |
-| CSV/XML Upload | P0 | ✅ Done | Yes |
-| OTB Calculation | P0 | ✅ Done | Yes |
-| Dashboard + KPI | P0 | ✅ Done | Yes |
-| Price Recommendations | P0 | ✅ Done | Yes |
-| STLY Comparison | P1 | ✅ Done | Yes |
-| Pickup Analytics | P1 | ✅ Done | Yes |
-| Time-Travel OTB | P1 | ✅ Done | Yes |
-| OTA Pricing Calculator | P1 | ✅ Done | Yes |
-| Multi-Hotel Support | P1 | ✅ Done | Yes |
-| OTA Growth Playbook | P1 | ✅ Done | Yes |
-| PDF Export | P2 | ✅ Done | No |
-| Rate Shopper | P2 | ⬜ Backlog | No |
-| ML Forecasting | P3 | ⬜ Future | No |
+| Feature | Priority | Status | Version |
+|---------|----------|--------|--------|
+| Google OAuth Login | P0 | ✅ Done | V01.0 |
+| CSV/XML Upload | P0 | ✅ Done | V01.0 |
+| OTB Calculation | P0 | ✅ Done | V01.0 |
+| Dashboard + KPI | P0 | ✅ Done | V01.0 |
+| Price Recommendations | P0 | ✅ Done | V01.0 |
+| Cancellation Bridge | P1 | ✅ Done | V01.1 |
+| STLY Comparison | P1 | ✅ Done | V01.1 |
+| Pickup Analytics | P1 | ✅ Done | V01.1 |
+| OTA Pricing Calculator | P1 | ✅ Done | V01.2 |
+| Room Types CRUD | P1 | ✅ Done | V01.2 |
+| Multi-Hotel Support | P1 | ✅ Done | V01.2 |
+| SaaS Infrastructure | P1 | ✅ Done | V01.3 |
+| Team Invites | P1 | ✅ Done | V01.3 |
+| Subscription Tiers | P1 | ✅ Done | V01.3 |
+| Time-Travel OTB | P1 | ✅ Done | V01.4 |
+| OTA Growth Playbook | P1 | ✅ Done | V01.5 |
+| 2-Layer Promotion Architecture | P1 | ✅ Done | V01.6 |
+| Free Nights Deal | P1 | ✅ Done | V01.6 |
+| 3-Tier Exclusion Engine | P1 | ✅ Done | V01.6 |
+| 3 Calculator Modes | P1 | ✅ Done | V01.7 |
+| Timing Conflict Resolution | P1 | ✅ Done | V01.7 |
+| Comprehensive Guide Page | P1 | ✅ Done | V01.7 |
+| PDF Export | P2 | ✅ Done | V01.5 |
+| Rate Shopper | P2 | ⬜ Schema ready | Deferred |
+| ML Forecasting | P3 | ⬜ Future | - |
 
 ### 3.2 Feature: Dashboard
 
@@ -145,35 +156,37 @@ RMS cung cấp:
 ┌────────────────────────────────────────────────────────────┐
 │                 OTA PRICING CALCULATOR                      │
 ├────────────────────────────────────────────────────────────┤
-│  NET Price (Giá thực nhận): [   1.000.000   ] VND          │
+│  [Giá Thu về] [Giá BAR] [Giá Hiển thị]    ← 3 modes       │
 ├────────────────────────────────────────────────────────────┤
 │                                                              │
-│  Room Type: [DELUXE ▼]          OTA: [AGODA ▼] (18%)       │
+│  Room Type: [DELUXE ▼]          OTA: [AGODA ▼] (20%)       │
 │                                                              │
 │  Active Promotions:                                          │
-│  ☑ Super Sale (-10%)                                        │
-│  ☑ Member Deal (-5%)                                        │
-│  ☐ Flash Sale (-15%)                                        │
+│  ☑ Super Sale (-10%)    [STACKABLE]                         │
+│  ☑ Member Deal (-5%)    [STACKABLE]                         │
+│  ☐ Flash Sale (-15%)    [EXCLUSIVE]                         │
 │                                                              │
 ├────────────────────────────────────────────────────────────┤
-│  CALCULATED BAR:     1.434.000 VND                          │
+│  Mode: Giá Thu về (NET → BAR + Display)                     │
 │  ──────────────────────────────────────                     │
-│  Breakdown:                                                  │
-│  • NET:         1.000.000                                   │
-│  • + Commission:  219.512  (18%)                            │
-│  • + Super Sale:  135.501  (10%)                            │
-│  • + Member Deal:  78.987  (5%)                             │
+│  • NET (Input):    1.000.000                                │
+│  • BAR:            1.434.000                                │
+│  • Display Price:  1.147.000                                │
 │  ═══════════════════════════                                │
-│  = BAR:         1.434.000                                   │
+│  Stack Behavior Badges: STACKABLE / EXCLUSIVE / HIGHEST_WINS│
 └────────────────────────────────────────────────────────────┘
 ```
 
 **User Stories:**
-- [US-P01] User can enter NET price and see BAR calculation
-- [US-P02] User can manage Room Types with abbreviations
-- [US-P03] User can configure OTA channel commissions
-- [US-P04] User can add/remove promotion discounts
-- [US-P05] User can view Price Matrix for all room types + channels
+- [US-P01] User can enter NET price and see BAR + Display calculation
+- [US-P02] User can enter BAR price and see NET + Display calculation (V01.7)
+- [US-P03] User can enter Display price and see BAR + NET calculation (V01.7)
+- [US-P04] User can manage Room Types with net_price
+- [US-P05] User can configure OTA channel commissions (Progressive/Additive/Single_Discount)
+- [US-P06] User can add/remove promotion discounts with 2-Layer Architecture (V01.6)
+- [US-P07] User can view Price Matrix for all room types + channels
+- [US-P08] System resolves timing conflicts (Early Bird vs Last-Minute) automatically (V01.7)
+- [US-P09] User can configure Free Nights Deal (Stay X / Pay Y → auto discount %) (V01.6)
 
 ### 3.5 Feature: OTA Growth Playbook (Premium)
 
@@ -382,15 +395,21 @@ Morning (08:00)
 
 ### 6.6 Module: OTA Calculator (OTA)
 
-| ID | Requirement | Priority | Status |
-|----|-------------|----------|--------|
-| OTA-01 | NET → BAR calculation | P0 | ✅ |
-| OTA-02 | CRUD Room Types | P0 | ✅ |
-| OTA-03 | CRUD OTA Channels + Commissions | P0 | ✅ |
-| OTA-04 | CRUD Promotion Campaigns | P0 | ✅ |
-| OTA-05 | Apply promotions (progressive/additive) | P1 | ✅ |
-| OTA-06 | Generate Price Matrix | P1 | ✅ |
-| OTA-07 | Export Price Matrix to Excel | P2 | ✅ |
+| ID | Requirement | Priority | Status | Version |
+|----|-------------|----------|--------|---------|
+| OTA-01 | NET → BAR calculation | P0 | ✅ | V01.2 |
+| OTA-02 | CRUD Room Types | P0 | ✅ | V01.2 |
+| OTA-03 | CRUD OTA Channels + Commissions | P0 | ✅ | V01.2 |
+| OTA-04 | CRUD Promotion Campaigns | P0 | ✅ | V01.2 |
+| OTA-05 | Apply promotions (progressive/additive/single_discount) | P1 | ✅ | V01.2 |
+| OTA-06 | Generate Price Matrix | P1 | ✅ | V01.2 |
+| OTA-07 | Export Price Matrix to Excel | P2 | ✅ | V01.2 |
+| OTA-08 | 2-Layer Promotion Architecture (Engine + UI) | P1 | ✅ | V01.6 |
+| OTA-09 | Free Nights Deal (Stay X / Pay Y) | P1 | ✅ | V01.6 |
+| OTA-10 | 3-Tier Exclusion Engine | P1 | ✅ | V01.6 |
+| OTA-11 | BAR → NET calculator mode | P1 | ✅ | V01.7 |
+| OTA-12 | Display → BAR calculator mode | P1 | ✅ | V01.7 |
+| OTA-13 | Timing Conflict Resolution | P1 | ✅ | V01.7 |
 
 ### 6.7 Module: Dashboard (DASHBOARD)
 
@@ -438,6 +457,27 @@ Morning (08:00)
 | PLAYBOOK-05 | When to Boost decision guide | P1 | ✅ |
 | PLAYBOOK-06 | Interactive checklists (Booking + Agoda) | P1 | ✅ |
 | PLAYBOOK-07 | Premium paywall gating | P1 | ✅ |
+
+### 6.11 Module: SaaS Infrastructure (SAAS)
+
+| ID | Requirement | Priority | Status | Version |
+|----|-------------|----------|--------|---------|
+| SAAS-01 | Subscription tiers (STANDARD/SUPERIOR/DELUXE/SUITE) | P1 | ✅ | V01.3 |
+| SAAS-02 | Token-based team invites | P1 | ✅ | V01.3 |
+| SAAS-03 | IP-based rate limiting (DB-backed) | P1 | ✅ | V01.3 |
+| SAAS-04 | Product event tracking | P2 | ✅ | V01.3 |
+| SAAS-05 | 4-step onboarding wizard | P1 | ✅ | V01.3 |
+| SAAS-06 | Trial system (7 + 7 days) | P1 | ✅ | V01.3 |
+| SAAS-07 | Feature limits per plan tier | P1 | ✅ | V01.3 |
+
+### 6.12 Module: Guide Page (GUIDE)
+
+| ID | Requirement | Priority | Status | Version |
+|----|-------------|----------|--------|---------|
+| GUIDE-01 | QuickStart 5-step guide | P1 | ✅ | V01.4 |
+| GUIDE-02 | Revenue Management documentation | P1 | ✅ | V01.4 |
+| GUIDE-03 | OTA Pricing docs for all 5 channels | P1 | ✅ | V01.7 |
+| GUIDE-04 | OTA Growth Playbook section (premium) | P1 | ✅ | V01.5 |
 
 ---
 
@@ -546,9 +586,11 @@ const ERROR_MESSAGES = {
 | 1.0 | 2026-01-15 | PM | Initial PRD |
 | 1.1 | 2026-01-25 | PM | Added Cancellation module |
 | 1.2 | 2026-02-01 | PM | Added OTA Calculator |
-| 1.3 | 2026-02-05 | PM | Added User Management |
+| 1.3 | 2026-02-05 | PM | Added User Management, SaaS Infrastructure |
 | 1.4 | 2026-02-09 | PM | Added Analytics Layer, User Guide |
 | 1.5 | 2026-02-10 | PM | Added OTA Growth Playbook (Premium) |
+| 1.6 | 2026-02-11 | PM | 2-Layer Promotion Architecture, Free Nights, 3-Tier Exclusion |
+| 1.7 | 2026-02-12 | PM | 3 Calculator Modes, Timing Conflicts, Guide Page |
 
 ### 10.3 Sign-off
 

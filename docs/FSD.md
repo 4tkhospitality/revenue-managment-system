@@ -1,8 +1,8 @@
 # Functional Specification Document (FSD)
-## Revenue Management System (RMS) v01.5
+## Revenue Management System (RMS) v01.7
 
-**Document Version:** 1.5.0  
-**Last Updated:** 2026-02-10  
+**Document Version:** 1.7.0  
+**Last Updated:** 2026-02-12  
 **Status:** ✅ Production  
 **Author:** 4TK Hospitality Engineering
 
@@ -19,7 +19,7 @@ Tài liệu này mô tả chi tiết **hành vi chức năng** của từng modu
 - Integration points
 
 ### 1.2 Scope
-Bao gồm tất cả các module production của RMS v01.4.
+Bao gồm tất cả các module production của RMS v01.7.
 
 ### 1.3 Related Documents
 | Document | Purpose |
@@ -517,12 +517,21 @@ Where:
 - d₁, d₂... = Promotion discounts (e.g., 0.10 for 10%)
 ```
 
-### 7.2 Calculation Modes
+### 7.2 Calculation Modes (V01.7)
 
-| Mode | Formula | Use Case |
-|------|---------|----------|
-| **Progressive** (Default) | Compound discounts | Multiple promotions |
-| **Additive** | Sum discounts | Single total discount |
+| Mode | Input | Calculates | Use Case |
+|------|-------|-----------|----------|
+| **Giá Thu về** (net_to_bar) | NET price | → BAR + Display | Hotel wants desired revenue |
+| **Giá BAR** (bar_to_net) | BAR price | → NET + Display | Hotel sets public rate |
+| **Giá Hiển thị** (display_to_bar) | Display price | → BAR + NET | Check what guest sees |
+
+### 7.3 Calculation Types
+
+| Mode | Formula | OTAs |
+|------|---------|------|
+| **Progressive** | Compound discounts: BAR / Π(1-dᵢ) | Booking.com (18%) |
+| **Additive** | Sum discounts: BAR / (1 - Σdᵢ) | Agoda (20%), Traveloka (15%), CTRIP (18%) |
+| **Single Discount** | Each promo = separate rate plan | Expedia (17%) |
 
 ### 7.3 Example Calculation (Progressive)
 
@@ -606,6 +615,65 @@ Step 4: Round to nearest 1000
 │  SUITE    │ 2,168,022   │ 2,091,503     │ 2,222,222    │         │
 │                                                                   │
 └──────────────────────────────────────────────────────────────────┘
+```
+
+### 7.6 2-Layer Promotion Architecture (V01.6)
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│  ENGINE LAYER (Source of truth for stacking rules)             │
+│                                                                │
+│  PromotionGroup enum:                                          │
+│  ┌────────────────────────────────────────────────────────┐    │
+│  │ SEASONAL    → Stackable (stack with ESSENTIAL+TARGETED)│    │
+│  │ ESSENTIAL   → Stackable                               │    │
+│  │ TARGETED    → Stackable                               │    │
+│  │ GENIUS      → Always pass through (Booking.com only)  │    │
+│  │ PORTFOLIO   → HIGHEST_WINS (best deal only)           │    │
+│  │ CAMPAIGN    → EXCLUSIVE (blocks all except Genius)     │    │
+│  └────────────────────────────────────────────────────────┘    │
+├────────────────────────────────────────────────────────────────┤
+│  UI LAYER (Vendor-specific display labels)                     │
+│  Each OTA has custom display labels mapped from engine groups  │
+└────────────────────────────────────────────────────────────────┘
+```
+
+### 7.7 Timing Conflict Resolution (V01.7)
+
+| Scenario | Rule | Behavior |
+|----------|------|----------|
+| Early Bird + Last-Minute both active | Highest discount wins | `resolveTimingConflicts()` deactivates lower |
+| Applied in | `calc-matrix` API + `PromotionsTab` | Consistent across matrix and UI |
+
+### 7.8 Free Nights Deal (V01.6)
+
+| Input | Formula | Example |
+|-------|---------|--------|
+| Stay X nights / Pay Y nights | `discount = round((1 - Y/X) × 100)` | Stay 7 / Pay 6 → 14% |
+
+### 7.9 UI Specification: Pricing Module (V01.7)
+
+```
+┌────────────────────────────────────────────────────────────┐
+│  💰 Tính giá OTA                                            │
+├────────────────────────────────────────────────────────────┤
+│  TABS: [Hạng phòng] [Kênh OTA] [Khuyến mãi] [Bảng giá] [Tối ưu]│
+├────────────────────────────────────────────────────────────┤
+│  Tab: Bảng giá (Overview)                                   │
+│                                                              │
+│  Calculator: [Giá Thu về] [Giá BAR] [Giá Hiển thị]          │
+│                                                              │
+│  ┌─────────────── PRICE MATRIX ────────────────────┐        │
+│  │              │ Agoda  │ Booking │ Traveloka │    │        │
+│  ├──────────────┼────────┼─────────┼───────────┤    │        │
+│  │ STD (NET)    │ BAR    │ BAR     │ BAR       │    │        │
+│  │ DLX (NET)    │ BAR    │ BAR     │ BAR       │    │        │
+│  │ SUI (NET)    │ BAR    │ BAR     │ BAR       │    │        │
+│  └──────────────┴────────┴─────────┴───────────┘    │        │
+│                                                              │
+│  HEATMAP: Green = lower → Red = higher                       │
+│  Stack badges: [STACKABLE] [EXCLUSIVE] [HIGHEST_WINS]        │
+└────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -852,3 +920,6 @@ viewer (Level 1)
 | 1.2 | 2026-02-01 | Eng | Added OTA module |
 | 1.4 | 2026-02-09 | Eng | Added Analytics, Guide |
 | 1.5 | 2026-02-10 | Eng | Added OTA Growth Playbook module (6 tabs) |
+| 1.6 | 2026-02-11 | Eng | 2-Layer Promotion Architecture, Free Nights, 3-Tier Exclusion |
+| 1.7 | 2026-02-12 | Eng | 3 Calculator Modes, Timing Conflicts, SaaS Infrastructure |
+

@@ -1,8 +1,8 @@
 # Technical Specification
-## Revenue Management System (RMS) v01.5
+## Revenue Management System (RMS) v01.7
 
-**Document Version:** 1.5.0  
-**Last Updated:** 2026-02-10  
+**Document Version:** 1.7.0  
+**Last Updated:** 2026-02-12  
 **Status:** ✅ Production  
 **Author:** 4TK Hospitality Engineering
 
@@ -115,7 +115,7 @@ revenue-management-system/
 
 ```
 ┌────────────────┐
-│     Hotel      │──────────────────────────────────────────────┐
+│     Hotel      │──────────────────────────────────────────┐
 │────────────────│                                               │
 │ hotel_id (PK)  │◀─────────┐                                   │
 │ name           │          │                                    │
@@ -124,6 +124,7 @@ revenue-management-system/
 │ ladder_steps   │          │                                    │
 │ min_rate       │          │                                    │
 │ max_rate       │          │                                    │
+│ is_demo        │          │                                    │
 └────────────────┘          │                                    │
          │                  │                                    │
          │ 1:N              │ N:M                                │
@@ -136,7 +137,7 @@ revenue-management-system/
 │ file_hash      │    │ role        │    │ name           │     │
 │ status         │    └─────────────┘    │ role (global)  │     │
 │ snapshot_ts    │                       │ is_active      │     │
-└───────┬────────┘                       └────────────────┘     │
+└───────┴────────┘                       └────────────────┘     │
         │                                                        │
         │ 1:N                                                    │
         ▼                                                        │
@@ -144,7 +145,7 @@ revenue-management-system/
 │ ReservationsRaw│                                               │
 │────────────────│                                               │
 │ reservation_id │                                               │
-│ hotel_id (FK)  │◀──────────────────────────────────────────────┘
+│ hotel_id (FK)  │◀───────────────────────────────────────────┘
 │ job_id (FK)    │
 │ arrival_date   │
 │ departure_date │
@@ -161,9 +162,32 @@ revenue-management-system/
 │ as_of_date     │    │ as_of_date     │    │ as_of_date     │
 │ stay_date      │    │ stay_date      │    │ stay_date      │
 │ rooms_otb      │    │ stly_rooms_otb │    │ remaining_dem  │
-│ revenue_otb    │    │ pickup_t7/15/30│    │ confidence     │
-└────────────────┘    │ pace_vs_ly     │    └────────────────┘
+│ revenue_otb    │    │ pickup_t7/15/30│    └────────────────┘
+└────────────────┘    │ pace_vs_ly     │
                       └────────────────┘
+
+┌────────────────┐    ┌────────────────┐    ┌────────────────┐
+│   RoomType     │    │  OtaChannel    │    │ PricingSetting │
+│────────────────│    │────────────────│    │────────────────│
+│ V01.2          │    │ V01.2          │    │ V01.2          │
+└────────────────┘    └────────────────┘    └────────────────┘
+
+┌────────────────┐    ┌────────────────┐    ┌────────────────┐
+│  HotelInvite   │    │  Subscription  │    │  RateLimitHit  │
+│────────────────│    │────────────────│    │────────────────│
+│ V01.3          │    │ V01.3          │    │ V01.3          │
+└────────────────┘    └────────────────┘    └────────────────┘
+
+┌────────────────┐    ┌────────────────┐
+│ PromoCatalog   │    │ CampaignInst   │
+│────────────────│    │────────────────│
+│ 61 promotions  │    │ V01.2          │
+│ V01.2          │    └────────────────┘
+└────────────────┘
+
+(Rate Shopper tables: Competitor, CompetitorRate,
+ RateShopCache, RateShopRequest, MarketSnapshot,
+ RateShopRecommendation — schema ready, impl deferred)
 ```
 
 ### 2.2 Key Tables
@@ -490,32 +514,58 @@ function calculatePrice(
 
 ```typescript
 /**
- * Calculate BAR from NET with commission and promotions
- * Formula: BAR = NET / (1 - commission) / Π(1 - discount_i)
+ * Calculate prices with commission and promotions
+ * Supports 3 calc types and 3 calculator modes (V01.7)
  */
-function calculateBAR(
-    netPrice: number,
-    commissionRate: number,  // e.g., 0.18 for 18%
-    discounts: number[],     // e.g., [0.10, 0.05] for 10% + 5%
-    mode: 'PROGRESSIVE' | 'ADDITIVE' = 'PROGRESSIVE'
-): number {
-    // Step 1: Add back commission
-    let bar = netPrice / (1 - commissionRate);
-    
-    // Step 2: Add back discounts
-    if (mode === 'PROGRESSIVE') {
-        // Compound: BAR / (1-d1) / (1-d2) / ...
-        for (const discount of discounts) {
-            bar = bar / (1 - discount);
-        }
-    } else {
-        // Additive: BAR / (1 - sum(di))
-        const totalDiscount = discounts.reduce((sum, d) => sum + d, 0);
-        bar = bar / (1 - Math.min(totalDiscount, 0.99)); // Cap at 99%
+
+// MODE 1: net_to_bar (Giá Thu về)
+function calcNetToBar(netPrice: number, commRate: number, discounts: number[], calcType: string) {
+    let bar = netPrice / (1 - commRate);
+    if (calcType === 'PROGRESSIVE') {
+        for (const d of discounts) bar = bar / (1 - d);
+    } else if (calcType === 'ADDITIVE') {
+        const total = discounts.reduce((s, d) => s + d, 0);
+        bar = bar / (1 - Math.min(total, 0.99));
     }
-    
-    // Round to nearest 1000 VND
-    return Math.ceil(bar / 1000) * 1000;
+    // SINGLE_DISCOUNT: each promo = separate rate plan
+    const displayPrice = calcType === 'PROGRESSIVE'
+        ? bar * discounts.reduce((acc, d) => acc * (1 - d), 1)
+        : bar * (1 - discounts.reduce((s, d) => s + d, 0));
+    return { bar: Math.ceil(bar / 1000) * 1000, displayPrice, net: netPrice };
+}
+
+// MODE 2: bar_to_net (Giá BAR) — V01.7
+function calcBarToNet(barPrice: number, commRate: number, discounts: number[], calcType: string) {
+    const displayPrice = calcType === 'PROGRESSIVE'
+        ? barPrice * discounts.reduce((acc, d) => acc * (1 - d), 1)
+        : barPrice * (1 - discounts.reduce((s, d) => s + d, 0));
+    // NET = Display × (1 - commission) — direct calculation, no double-discount
+    const net = displayPrice * (1 - commRate);
+    return { bar: barPrice, displayPrice, net: Math.round(net) };
+}
+
+// MODE 3: display_to_bar (Giá Hiển thị) — V01.7
+function calcDisplayToBar(displayPrice: number, commRate: number, discounts: number[], calcType: string) {
+    const bar = calcType === 'PROGRESSIVE'
+        ? displayPrice / discounts.reduce((acc, d) => acc * (1 - d), 1)
+        : displayPrice / (1 - discounts.reduce((s, d) => s + d, 0));
+    const net = displayPrice * (1 - commRate);
+    return { bar: Math.ceil(bar / 1000) * 1000, displayPrice, net: Math.round(net) };
+}
+
+// Timing Conflict Resolution (V01.7)
+function resolveTimingConflicts(campaigns: Campaign[]): Campaign[] {
+    const earlyBird = campaigns.find(c => c.promo_id.includes('early_bird'));
+    const lastMinute = campaigns.find(c => c.promo_id.includes('last_minute'));
+    if (earlyBird?.is_active && lastMinute?.is_active) {
+        // Keep only the one with higher discount
+        if (earlyBird.discount_pct >= lastMinute.discount_pct) {
+            lastMinute.is_active = false;
+        } else {
+            earlyBird.is_active = false;
+        }
+    }
+    return campaigns;
 }
 ```
 
@@ -749,3 +799,16 @@ console.error(`[IngestCSV] Error: ${error.message}`, {
 - [Prisma Documentation](https://www.prisma.io/docs)
 - [NextAuth.js Documentation](https://authjs.dev)
 - [Supabase Documentation](https://supabase.com/docs)
+
+### 9.3 Document History
+
+| Version | Date | Author | Changes |
+|---------|------|--------|---------|
+| 1.0 | 2026-01-15 | Eng | Initial technical spec |
+| 1.1 | 2026-01-25 | Eng | Cancellation Bridge, timestamptz fields |
+| 1.2 | 2026-02-01 | Eng | OTA Pricing module, Room Types, OTA Channels |
+| 1.3 | 2026-02-05 | Eng | SaaS Infrastructure, Team Invites, Rate Limiting |
+| 1.4 | 2026-02-09 | Eng | Analytics Layer, Time-Travel OTB |
+| 1.5 | 2026-02-10 | Eng | OTA Growth Playbook (Premium) |
+| 1.6 | 2026-02-11 | Eng | 2-Layer Promotion Architecture, Free Nights, 3-Tier Exclusion |
+| 1.7 | 2026-02-12 | Eng | 3 Calculator Modes, Timing Conflict Resolution |

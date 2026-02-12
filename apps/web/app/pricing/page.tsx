@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Lock } from 'lucide-react';
-import { RoomTypesTab, OTAConfigTab, PromotionsTab, OverviewTab } from '@/components/pricing';
+import { RoomTypesTab, OTAConfigTab, PromotionsTab, OverviewTab, DynamicPricingTab } from '@/components/pricing';
 import { OTAPlaybookGuide } from '@/components/guide/OTAPlaybookGuide';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { useTierAccess } from '@/hooks/useTierAccess';
@@ -12,6 +12,7 @@ const TABS = [
     { id: 'ota-channels', label: 'Kênh OTA' },
     { id: 'promotions', label: 'Khuyến mãi' },
     { id: 'overview', label: 'Bảng giá' },
+    { id: 'dynamic-pricing', label: 'Giá Linh Hoạt' },
     { id: 'ota-growth', label: 'Tối ưu OTA' },
 ] as const;
 
@@ -59,6 +60,7 @@ export default function PricingPage() {
                     {activeTab === 'ota-channels' && <OTAConfigTab />}
                     {activeTab === 'promotions' && <PromotionsTab />}
                     {activeTab === 'overview' && <OverviewTab />}
+                    {activeTab === 'dynamic-pricing' && <DynamicPricingTab />}
                     {activeTab === 'ota-growth' && (
                         <OTAPlaybookGuide hasAccess={tierLoading || hasOtaAccess} />
                     )}
