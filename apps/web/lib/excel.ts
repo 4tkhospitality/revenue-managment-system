@@ -1,8 +1,9 @@
 /**
  * Excel (.xlsx) file parser for reservation uploads.
  * Converts Excel rows to the same format as CSV parser output.
+ * Uses ExcelJS (secure, MIT-licensed) instead of SheetJS/xlsx.
  */
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 
 export interface ExcelRow {
     reservation_id: string;
@@ -50,35 +51,35 @@ const HEADER_MAP: Record<string, string> = {
  * Parse Excel file buffer to array of row objects.
  * Supports both Vietnamese and English headers.
  */
-export function parseExcelToRows(buffer: Buffer): ExcelRow[] {
-    const workbook = XLSX.read(buffer, { type: 'buffer', cellDates: true });
+export async function parseExcelToRows(buffer: Buffer | ArrayBuffer): Promise<ExcelRow[]> {
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buffer as ArrayBuffer);
 
     // Use first sheet (or sheet named "Reservations")
-    const sheetName = workbook.SheetNames.includes('Reservations')
-        ? 'Reservations'
-        : workbook.SheetNames[0];
-
-    const sheet = workbook.Sheets[sheetName];
+    let sheet = workbook.getWorksheet('Reservations');
+    if (!sheet) {
+        sheet = workbook.worksheets[0];
+    }
     if (!sheet) throw new Error('Không tìm thấy sheet dữ liệu');
 
-    // Convert to JSON with raw headers
-    const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { raw: false, defval: '' });
-    if (rawRows.length === 0) throw new Error('File Excel trống, không có dữ liệu');
-
-    // Map headers
-    const firstRow = rawRows[0];
-    const headerMapping: Record<string, string> = {};
-
-    for (const rawHeader of Object.keys(firstRow)) {
-        const normalized = rawHeader.trim().toLowerCase();
-        const mappedField = HEADER_MAP[normalized];
-        if (mappedField) {
-            headerMapping[rawHeader] = mappedField;
-        }
+    // Get header row (first row)
+    const headerRow = sheet.getRow(1);
+    if (!headerRow || headerRow.cellCount === 0) {
+        throw new Error('File Excel trống, không có dữ liệu');
     }
 
+    // Build column index → field name mapping
+    const colMapping: Record<number, string> = {};
+    headerRow.eachCell((cell, colNumber) => {
+        const rawHeader = String(cell.value ?? '').trim().toLowerCase();
+        const mappedField = HEADER_MAP[rawHeader];
+        if (mappedField) {
+            colMapping[colNumber] = mappedField;
+        }
+    });
+
     // Validate required headers
-    const mappedFields = new Set(Object.values(headerMapping));
+    const mappedFields = new Set(Object.values(colMapping));
     const requiredFields = ['reservation_id', 'booking_date', 'arrival_date', 'departure_date', 'rooms', 'revenue', 'status'];
     const missingFields = requiredFields.filter(f => !mappedFields.has(f));
 
@@ -86,15 +87,27 @@ export function parseExcelToRows(buffer: Buffer): ExcelRow[] {
         throw new Error(`Thiếu cột bắt buộc: ${missingFields.join(', ')}. Hãy tải file mẫu để xem định dạng đúng.`);
     }
 
-    // Convert rows
-    return rawRows.map(raw => {
-        const row: Record<string, string> = {};
-        for (const [rawHeader, fieldName] of Object.entries(headerMapping)) {
-            const val = raw[rawHeader];
-            row[fieldName] = formatCellValue(val);
+    // Read data rows (skip header)
+    const rows: ExcelRow[] = [];
+    sheet.eachRow((row, rowNumber) => {
+        if (rowNumber === 1) return; // skip header
+
+        const rowData: Record<string, string> = {};
+        for (const [colStr, fieldName] of Object.entries(colMapping)) {
+            const colNumber = Number(colStr);
+            const cell = row.getCell(colNumber);
+            rowData[fieldName] = formatCellValue(cell.value);
         }
-        return row as unknown as ExcelRow;
+
+        // Skip completely empty rows
+        if (Object.values(rowData).every(v => v === '')) return;
+
+        rows.push(rowData as unknown as ExcelRow);
     });
+
+    if (rows.length === 0) throw new Error('File Excel trống, không có dữ liệu');
+
+    return rows;
 }
 
 /**
@@ -108,6 +121,10 @@ function formatCellValue(val: unknown): string {
         const m = String(val.getMonth() + 1).padStart(2, '0');
         const d = String(val.getDate()).padStart(2, '0');
         return `${y}-${m}-${d}`;
+    }
+    // ExcelJS can return rich text objects
+    if (typeof val === 'object' && 'richText' in (val as object)) {
+        return (val as { richText: { text: string }[] }).richText.map(r => r.text).join('');
     }
     return String(val).trim();
 }

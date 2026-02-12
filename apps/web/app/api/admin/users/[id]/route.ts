@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import prisma from '@/lib/prisma'
+import { serverLog } from '@/lib/logger'
 
 interface RouteParams {
     params: Promise<{ id: string }>
@@ -49,7 +50,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             }
         })
     } catch (error) {
-        console.error('Error getting user:', error)
+        serverLog.error('Error getting user:', error)
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
 }
@@ -100,7 +101,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
             }
         })
     } catch (error) {
-        console.error('Error updating user:', error)
+        serverLog.error('Error updating user:', error)
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
 }
@@ -124,7 +125,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         } catch (error: any) {
             // Foreign key constraint failed (e.g. user has PricingDecisions) -> Fallback to SOFT DELETE
             if (error.code === 'P2003') {
-                console.log(`[ADMIN] Hard delete failed for user ${id}, falling back to soft delete`)
+                serverLog.info(`[ADMIN] Hard delete failed for user ${id}, falling back to soft delete`)
 
                 await prisma.user.update({
                     where: { id },
@@ -138,7 +139,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({ success: true, message: 'User deactivated' })
     } catch (error) {
-        console.error('Error deactivating user:', error)
+        serverLog.error('Error deactivating user:', error)
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
 }

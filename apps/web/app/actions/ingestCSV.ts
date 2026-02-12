@@ -116,7 +116,7 @@ export async function ingestCSV(formData: FormData) {
         let rows: Record<string, string>[];
 
         if (isExcel) {
-            rows = parseExcelToRows(buffer) as unknown as Record<string, string>[];
+            rows = await parseExcelToRows(buffer) as unknown as Record<string, string>[];
         } else {
             const csvContent = buffer.toString('utf-8');
             rows = await CSVUtils.parseString(csvContent);

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { seedDefaultOTAChannels } from '@/lib/pricing/seed-defaults';
 import { getActiveHotelId } from '@/lib/pricing/get-hotel';
+import { serverLog } from '@/lib/logger';
 
 // GET /api/pricing/ota-channels - List OTA channels for active hotel
 export async function GET() {
@@ -23,9 +24,9 @@ export async function GET() {
         });
 
         if (existingCount === 0) {
-            console.log(`[Pricing] Seeding default OTA channels for hotel ${hotelId}`);
+            serverLog.info(`[Pricing] Seeding default OTA channels for hotel ${hotelId}`);
             const created = await seedDefaultOTAChannels(hotelId);
-            console.log(`[Pricing] Created ${created} default OTA channels`);
+            serverLog.info(`[Pricing] Created ${created} default OTA channels`);
         }
 
         const channels = await prisma.oTAChannel.findMany({
@@ -43,7 +44,7 @@ export async function GET() {
 
         return NextResponse.json(channels);
     } catch (error) {
-        console.error('Error fetching OTA channels:', error);
+        serverLog.error('Error fetching OTA channels:', error);
         return NextResponse.json(
             { error: 'Failed to fetch OTA channels' },
             { status: 500 }
@@ -94,7 +95,7 @@ export async function POST(request: NextRequest) {
                 { status: 409 }
             );
         }
-        console.error('Error creating OTA channel:', error);
+        serverLog.error('Error creating OTA channel:', error);
         return NextResponse.json(
             { error: 'Failed to create OTA channel' },
             { status: 500 }

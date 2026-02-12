@@ -2,6 +2,7 @@ import NextAuth from "next-auth"
 import Google from "next-auth/providers/google"
 import prisma from "./prisma"
 import { UserRole } from "@prisma/client"
+import { serverLog } from "./logger"
 
 // Admin email - super_admin access
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "phan.le@vleisure.com"
@@ -19,6 +20,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         Google({
             clientId: process.env.GOOGLE_CLIENT_ID!,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+            // SAFE: allowDangerousEmailAccountLinking is acceptable here because
+            // we only use Google as a single OAuth provider. This flag would be
+            // risky if multiple providers (e.g. GitHub + Google) shared the same email.
             allowDangerousEmailAccountLinking: true,
         }),
     ],
@@ -36,8 +40,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             if ((account && token.email) || trigger === 'update') {
                 try {
 
-
-                    // Step 1: Find user
+                    // Single query with include instead of 3 sequential queries
                     const user = await prisma.user.findUnique({
                         where: { email: token.email as string },
                         select: {
@@ -45,6 +48,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                             email: true,
                             role: true,
                             is_active: true,
+                            hotel_users: {
+                                select: {
+                                    hotel_id: true,
+                                    role: true,
+                                    is_primary: true,
+                                    hotel: {
+                                        select: { hotel_id: true, name: true }
+                                    }
+                                }
+                            }
                         }
                     })
 
@@ -61,33 +74,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                             token.isAdmin = true
                         }
 
-                        // Step 2: Find hotel assignments separately
-                        console.log(`[AUTH] JWT Callback - Existing User: ${user.email}, Role: ${user.role}, IsActive: ${user.is_active}, IsAdmin: ${token.isAdmin}`)
+                        serverLog.info(`[AUTH] JWT Callback - Existing User: ${user.email}, Role: ${user.role}, IsActive: ${user.is_active}, IsAdmin: ${token.isAdmin}`)
 
-                        const hotelUsers = await prisma.hotelUser.findMany({
-                            where: { user_id: user.id },
-                            select: {
-                                hotel_id: true,
-                                role: true,
-                                is_primary: true,
-                            }
-                        })
-
-
-
-                        // Step 3: Get hotel names
-                        const hotelIds = hotelUsers.map(hu => hu.hotel_id)
-                        const hotels = await prisma.hotel.findMany({
-                            where: { hotel_id: { in: hotelIds } },
-                            select: { hotel_id: true, name: true }
-                        })
-
-                        const hotelMap = new Map(hotels.map(h => [h.hotel_id, h.name]))
-
-                        // Map to accessibleHotels
-                        token.accessibleHotels = hotelUsers.map(hu => ({
+                        // Map to accessibleHotels directly from included data
+                        token.accessibleHotels = user.hotel_users.map(hu => ({
                             hotelId: hu.hotel_id,
-                            hotelName: hotelMap.get(hu.hotel_id) || 'Unknown Hotel',
+                            hotelName: hu.hotel?.name || 'Unknown Hotel',
                             role: hu.role,
                             isPrimary: hu.is_primary,
                         }))
@@ -109,7 +101,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                                 is_active: true,
                             }
                         })
-                        console.log(`[AUTH] Created New User: ${newUser.email}, ID: ${newUser.id} - No hotel assigned, will redirect to /welcome`)
+                        serverLog.info(`[AUTH] Created New User: ${newUser.email}, ID: ${newUser.id} - No hotel assigned, will redirect to /welcome`)
 
                         // Set token values - NO hotels assigned
                         token.userId = newUser.id
@@ -119,7 +111,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                         token.accessibleHotels = [] // Empty - triggers /welcome redirect
                     }
                 } catch (error) {
-                    console.error('[AUTH] ERROR in JWT callback:', error)
+                    serverLog.error('[AUTH] ERROR in JWT callback:', error)
                     // Fallback for DB errors
                     token.role = 'viewer'
                     token.isActive = true
@@ -163,10 +155,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                             is_active: true,
                         }
                     })
-                    console.log(`Created new user: ${user.email}`)
+                    serverLog.info(`Created new user: ${user.email}`)
                 }
             } catch (error) {
-                console.error('Error in signIn callback:', error)
+                serverLog.error('Error in signIn callback:', error)
                 // Allow sign-in even if DB write fails (handle in middleware)
             }
 

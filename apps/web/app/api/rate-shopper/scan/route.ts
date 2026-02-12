@@ -12,6 +12,7 @@ import { getActiveHotelId } from '@/lib/pricing/get-hotel';
 import { auth } from '@/lib/auth';
 import { manualScan } from '@/lib/rate-shopper/actions/manual-scan';
 import prisma from '@/lib/prisma';
+import { serverLog } from '@/lib/logger';
 import type { OffsetDay } from '@/lib/rate-shopper/constants';
 
 export async function POST(request: NextRequest) {
@@ -69,18 +70,18 @@ export async function POST(request: NextRequest) {
 
         for (const comp of competitors) {
             if (!comp.serpapi_property_token) {
-                console.log(`[Scan] Skipping ${comp.name}: no property_token`);
+                serverLog.info(`[Scan] Skipping ${comp.name}: no property_token`);
                 summary.failed++;
                 continue;
             }
             try {
-                console.log(`[Scan] Scanning ${comp.name} (offset=${offset}, token=${comp.serpapi_property_token})`);
+                serverLog.info(`[Scan] Scanning ${comp.name} (offset=${offset}, token=${comp.serpapi_property_token})`);
                 const result = await manualScan({
                     hotelId,
                     competitorPropertyToken: comp.serpapi_property_token,
                     offset: offset as OffsetDay,
                 });
-                console.log(`[Scan] Result for ${comp.name}:`, JSON.stringify(result));
+                serverLog.debug(`[Scan] Result for ${comp.name}:`, JSON.stringify(result));
                 if (result.status === 'completed') {
                     if (result.message.includes('cache')) {
                         summary.cached++;
@@ -91,10 +92,10 @@ export async function POST(request: NextRequest) {
                     summary.cached++;
                 } else {
                     summary.failed++;
-                    console.error(`[Scan] FAILED for ${comp.name}: ${result.message}`);
+                    serverLog.error(`[Scan] FAILED for ${comp.name}: ${result.message}`);
                 }
             } catch (err) {
-                console.error(`[Scan] EXCEPTION for ${comp.name}:`, err);
+                serverLog.error(`[Scan] EXCEPTION for ${comp.name}:`, err);
                 summary.failed++;
             }
         }
@@ -105,7 +106,7 @@ export async function POST(request: NextRequest) {
             summary,
         });
     } catch (error) {
-        console.error('[RateShopper][API] Scan error:', error);
+        serverLog.error('[RateShopper][API] Scan error:', error);
         return NextResponse.json(
             { error: 'Scan failed', message: error instanceof Error ? error.message : 'Unknown' },
             { status: 500 },

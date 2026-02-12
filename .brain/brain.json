@@ -2,13 +2,13 @@
   "meta": {
     "schema_version": "1.5.0",
     "awf_version": "4.1.2",
-    "last_updated": "2026-02-11T20:42:00+07:00"
+    "last_updated": "2026-02-12T00:28:00+07:00"
   },
   "project": {
     "name": "revenue-management-system",
     "type": "SaaS Web App",
     "status": "Production - Deployed to Vercel (icn1 region)",
-    "description": "RMS Version 01.5 - Revenue Management System with OTB Time-Travel + OTA Pricing + OTA Growth Playbook + User Management + Performance Optimized. Full-stack TypeScript.",
+    "description": "RMS Version 01.6 - Revenue Management System with OTB Time-Travel + OTA Pricing + OTA Growth Playbook + User Management + Performance Optimized + Comprehensive Guide. Full-stack TypeScript.",
     "github": "https://github.com/4tkhospitality/revenue-managment-system",
     "landing_page": {
       "path": "apps/landing",
@@ -184,9 +184,10 @@
         "name": "CalcType",
         "values": [
           "PROGRESSIVE",
-          "ADDITIVE"
+          "ADDITIVE",
+          "SINGLE_DISCOUNT"
         ],
-        "description": "V01.2: BAR calculation mode. PROGRESSIVE = NET/(1-comm)/Π(1-dᵢ), ADDITIVE = NET/(1-comm)/(1-Σdᵢ)"
+        "description": "V01.2: BAR calculation mode. PROGRESSIVE = NET/(1-comm)/Π(1-dᵢ), ADDITIVE = NET/(1-comm)/(1-Σdᵢ), SINGLE_DISCOUNT = only highest discount applied"
       },
       {
         "name": "PromotionGroup",
@@ -211,13 +212,13 @@
         "description": "V01.6: Engine-layer stacking rule per promotion. STACKABLE=combines with others, HIGHEST_WINS=portfolio pick best, EXCLUSIVE=blocks all, ONLY_WITH_GENIUS=blocks all except Genius."
       },
       {
-        "name": "CalcMode (conceptual)",
+        "name": "CalcMode (per channel defaults)",
         "values": [
-          "PROGRESSIVE (Agoda, Booking, Traveloka)",
-          "ADDITIVE (Trip.com/Ctrip)",
-          "ISOLATED (Expedia - no stacking)"
+          "ADDITIVE (Agoda 20%, Traveloka 15%, CTRIP 18%)",
+          "PROGRESSIVE (Booking.com 18%)",
+          "SINGLE_DISCOUNT (Expedia 17% - no stacking)"
         ],
-        "description": "OTA-specific calculation modes for promotion stacking"
+        "description": "OTA-specific calculation modes for promotion stacking. Source of truth: lib/pricing/seed-defaults.ts"
       }
     ],
     "v011_indexes": [
@@ -507,7 +508,12 @@
     "V01.6: Stack Behavior Badges - Visual STACKABLE/EXCLUSIVE/HIGHEST_WINS indicators per promotion",
     "V01.6: 3-Tier Exclusion Engine - Campaign EXCLUSIVE→Business Bookers→Portfolio HIGHEST_WINS validation pipeline",
     "V01.6: Portfolio Highest-Wins Note - UI shows 'Booking chỉ áp dụng deal tốt nhất' below Portfolio group",
-    "V01.6: Booking Toggle Label - 'Kết hợp giảm giá (lũy tiến theo Booking rules)' for Booking.com channels"
+    "V01.6: Booking Toggle Label - 'Kết hợp giảm giá (lũy tiến theo Booking rules)' for Booking.com channels",
+    "V01.7: Guide Page - Comprehensive OTA Pricing Section with 5-channel detailed documentation",
+    "V01.7: Guide Dual Formulas - NET→BAR and BAR→NET with correct formulas per calc type",
+    "V01.7: Guide Channel Cards - Agoda(ADDITIVE 20%), Booking(PROGRESSIVE 18%), Expedia(SINGLE_DISCOUNT 17%), Traveloka(ADDITIVE 15%), CTRIP(ADDITIVE 18%)",
+    "V01.7: Guide Comparison Table - Quick comparison of all 5 channels: calc type, stacking, commission",
+    "V01.7: Guide 3 Calc Types Explainer - Additive vs Progressive vs Single Discount with channel mapping"
   ],
   "cancellation_bridge_v011": {
     "status": "Implemented",
@@ -589,7 +595,7 @@
     "V01.2: Vendor-specific max discount: Agoda 80%, Booking.com no limit",
     "V01.2: Booking.com promotions mapped to existing PromotionGroup types",
     "V01.2: Demo Hotel (ID: 159fe315-79a0-48a3-adac-f47d4f56b748) as fallback for new users",
-    "V01.2: Traveloka Channel Rate - applied before campaigns (Progressive mode)",
+    "V01.2: Traveloka Channel Rate - applied before campaigns (Additive mode, 15% commission)",
     "V01.2: Trip.com ADDITIVE mode - same box pick 1, different boxes stack additively (d₁+d₂+...)",
     "V01.2: Expedia ISOLATED mode - each promotion creates separate rate plan, no stacking",
     "V01.2: Booking.com Deep Deals (Limited-time, Deal of the Day) - allow_stack=false",

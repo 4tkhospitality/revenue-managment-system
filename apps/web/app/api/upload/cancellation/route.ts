@@ -4,6 +4,7 @@ import { parseCancellationXml } from "@/lib/parseCancellationXml"
 import { normalizeKey } from "@/lib/normalize"
 import { bridgeCancellations } from "@/lib/cancellationBridge"
 import { invalidateStatsCache } from "@/lib/cachedStats"
+import { serverLog } from "@/lib/logger"
 import crypto from "crypto"
 
 export async function POST(req: NextRequest) {
@@ -22,9 +23,9 @@ export async function POST(req: NextRequest) {
         const xmlContent = await file.text()
         const fileName = file.name
 
-        console.log(`\n========== [CANCEL API] ${fileName} ==========`)
-        console.log(`[CANCEL API] File size: ${(xmlContent.length / 1024).toFixed(1)} KB`)
-        console.log(`[CANCEL API] Hotel ID: ${hotelId}`)
+        serverLog.info(`\n========== [CANCEL API] ${fileName} ==========`)
+        serverLog.info(`[CANCEL API] File size: ${(xmlContent.length / 1024).toFixed(1)} KB`)
+        serverLog.info(`[CANCEL API] Hotel ID: ${hotelId}`)
 
         // 0. Validate hotel exists — fallback to Demo Hotel if not
         let step0Start = Date.now()
@@ -57,7 +58,7 @@ export async function POST(req: NextRequest) {
         timings['2_check_duplicate'] = Date.now() - step2Start
 
         if (existingJob) {
-            console.log(`[CANCEL API] ⚠️ DUPLICATE FILE - already processed`)
+            serverLog.info(`[CANCEL API] ⚠️ DUPLICATE FILE - already processed`)
             return NextResponse.json({
                 success: false,
                 error: `File này đã được import trước đó (Job ID: ${existingJob.job_id})`,
@@ -80,9 +81,9 @@ export async function POST(req: NextRequest) {
         try {
             // 4. Parse XML
             let step4Start = Date.now()
-            console.log(`[CANCEL API] About to call parseCancellationXml...`)
+            serverLog.debug(`[CANCEL API] About to call parseCancellationXml...`)
             const { asOfDate, records } = parseCancellationXml(xmlContent)
-            console.log(`[CANCEL API] parseCancellationXml returned ${records.length} records`)
+            serverLog.debug(`[CANCEL API] parseCancellationXml returned ${records.length} records`)
             timings['4_parse_xml'] = Date.now() - step4Start
 
             if (records.length === 0) {
@@ -100,7 +101,7 @@ export async function POST(req: NextRequest) {
                 })
             }
 
-            console.log(`[CANCEL API] Parsed ${records.length} cancellations`)
+            serverLog.info(`[CANCEL API] Parsed ${records.length} cancellations`)
 
             // 5. Transform data (same as ingestCancellationXml action)
             let step5Start = Date.now()
@@ -175,14 +176,14 @@ export async function POST(req: NextRequest) {
 
             // Log all timings
             const totalTime = Date.now() - totalStart
-            console.log(`\n[CANCEL API] ✅ SUCCESS - ${records.length} records`)
-            console.log(`[CANCEL API] Bridge: ${bridgeResult?.matched || 0} matched, ${bridgeResult?.unmatched || 0} unmatched`)
-            console.log(`[CANCEL API] -------- TIMING BREAKDOWN --------`)
+            serverLog.info(`\n[CANCEL API] ✅ SUCCESS - ${records.length} records`)
+            serverLog.info(`[CANCEL API] Bridge: ${bridgeResult?.matched || 0} matched, ${bridgeResult?.unmatched || 0} unmatched`)
+            serverLog.debug(`[CANCEL API] -------- TIMING BREAKDOWN --------`)
             Object.entries(timings).forEach(([step, ms]) => {
                 const pct = ((ms / totalTime) * 100).toFixed(1)
-                console.log(`[CANCEL API]   ${step}: ${ms}ms (${pct}%)`)
+                serverLog.debug(`[CANCEL API]   ${step}: ${ms}ms (${pct}%)`)
             })
-            console.log(`[CANCEL API] Total: ${totalTime}ms`)
+            serverLog.debug(`[CANCEL API] Total: ${totalTime}ms`)
 
             return NextResponse.json({
                 success: true,
@@ -197,7 +198,7 @@ export async function POST(req: NextRequest) {
             })
 
         } catch (parseError) {
-            console.error(`[CANCEL API] Parse/Process error:`, parseError)
+            serverLog.error(`[CANCEL API] Parse/Process error:`, parseError)
             await prisma.importJob.update({
                 where: { job_id: job.job_id },
                 data: {
@@ -213,7 +214,7 @@ export async function POST(req: NextRequest) {
         }
 
     } catch (error) {
-        console.error(`[CANCEL API] Error:`, error)
+        serverLog.error(`[CANCEL API] Error:`, error)
         return NextResponse.json({
             success: false,
             error: error instanceof Error ? error.message : "Unknown error",
