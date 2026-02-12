@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { BasicValidationResult } from '@/app/actions/validateOTBData'
+import { Lock } from 'lucide-react'
 
 interface AuditTeaserProps {
     basicResult: BasicValidationResult
@@ -73,7 +74,7 @@ export function AuditTeaser({ basicResult, isPro, onUpgrade }: AuditTeaserProps)
                         </div>
                         <div className="flex-1">
                             <h4 className="font-medium text-white mb-1">
-                                🔒 Báo cáo Audit đầy đủ
+                                <Lock className="w-4 h-4 inline mr-1" /> Báo cáo Audit đầy đủ
                             </h4>
                             <ul className="text-sm text-gray-400 space-y-1 mb-3">
                                 <li>• Phân tích độ hoàn thiện dữ liệu</li>

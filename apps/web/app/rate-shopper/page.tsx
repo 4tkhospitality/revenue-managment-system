@@ -73,9 +73,9 @@ const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }>
 };
 
 const CONFIDENCE_BADGES: Record<string, { color: string; label: string }> = {
-    HIGH: { color: '#16A34A', label: '🟢 Cao' },
-    MED: { color: '#CA8A04', label: '🟡 T.Bình' },
-    LOW: { color: '#C62828', label: '🔴 Thấp' },
+    HIGH: { color: '#16A34A', label: 'Cao' },
+    MED: { color: '#CA8A04', label: 'T.Bình' },
+    LOW: { color: '#C62828', label: 'Thấp' },
 };
 
 // ──────────────────────────────────────────────────
@@ -316,10 +316,10 @@ function RateShopperContent() {
                                                 : '#6B7280',
                                 }}
                             >
-                                {isScanning ? '⏳ Đang quét...'
-                                    : isLoading ? '⏳ Tải...'
-                                        : hasData ? '✅ Có dữ liệu'
-                                            : '⬜ Chưa quét'}
+                                {isScanning ? 'Đang quét...'
+                                    : isLoading ? 'Tải...'
+                                        : hasData ? 'Có dữ liệu'
+                                            : 'Chưa quét'}
                             </span>
                         </button>
                     );
@@ -355,7 +355,7 @@ function RateShopperContent() {
                                 style={{ backgroundColor: '#204184', color: '#fff' }}
                             >
                                 <Zap className="w-4 h-4" />
-                                🔄 Quét lại giá
+                                Quét lại giá
                             </button>
                             {currentState.message && (
                                 <span className="text-xs text-green-600 bg-green-50 px-3 py-1 rounded-full">
@@ -482,7 +482,7 @@ function RateShopperContent() {
                             Tìm giá {OFFSET_LABELS[selectedOffset]}
                         </button>
                         <p className="text-xs text-gray-400">
-                            ⚡ Mỗi lần quét tiêu 1 credit SerpApi / đối thủ
+                            Mỗi lần quét tiêu 1 credit SerpApi / đối thủ
                         </p>
                     </div>
                 </div>
@@ -573,7 +573,7 @@ function CompetitorRow({
                 <td className="px-5 py-4 text-right text-sm text-gray-400">—</td>
                 <td className="px-5 py-4 text-center text-xs text-gray-400">Không có giá</td>
                 <td className="px-5 py-4 text-center">
-                    <span className="text-xs font-medium" style={{ color: '#C62828' }}>🔴 Thấp</span>
+                    <span className="text-xs font-medium" style={{ color: '#C62828' }}>Thấp</span>
                 </td>
                 <td className="px-5 py-4 text-right text-xs text-gray-400">{timeAgo(comp.scraped_at)}</td>
             </tr>

@@ -2,8 +2,9 @@
 
 import { useState, useMemo } from 'react';
 import {
-    LineChart,
+    ComposedChart,
     Line,
+    Area,
     XAxis,
     YAxis,
     CartesianGrid,
@@ -24,7 +25,7 @@ interface OtbChartProps {
 type DayFilter = 14 | 30 | 60 | 90;
 
 // Surface styling - consistent with KpiCards
-const surface = "rounded-2xl bg-white border border-slate-200/80 shadow-[0_1px_2px_rgba(16,24,40,0.06)]";
+const surface = "rounded-[var(--card-radius)] bg-white border border-slate-200/80 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-card-hover)] transition-shadow duration-200";
 
 export function OtbChart({ data }: OtbChartProps) {
     const [dayFilter, setDayFilter] = useState<DayFilter>(14);
@@ -60,12 +61,12 @@ export function OtbChart({ data }: OtbChartProps) {
                                 <button
                                     key={value}
                                     onClick={() => setDayFilter(value)}
-                                    className={`px-3 py-1.5 text-xs font-medium transition-colors ${dayFilter === value
-                                            ? 'text-white'
-                                            : 'text-gray-600 hover:text-gray-900'
+                                    className={`px-3 py-1.5 text-xs font-medium transition-all ${dayFilter === value
+                                        ? 'text-white shadow-sm'
+                                        : 'text-gray-600 hover:text-gray-900 hover:bg-slate-100'
                                         }`}
                                     style={{
-                                        backgroundColor: dayFilter === value ? '#2D4A8C' : '#f8fafc'
+                                        backgroundColor: dayFilter === value ? '#2D4A8C' : undefined
                                     }}
                                 >
                                     {label}
@@ -93,7 +94,17 @@ export function OtbChart({ data }: OtbChartProps) {
             {/* Chart */}
             <div className="p-6">
                 <ResponsiveContainer width="100%" height={350}>
-                    <LineChart data={filteredData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                    <ComposedChart data={filteredData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                        <defs>
+                            <linearGradient id="otbCurrentFill" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#2D4A8C" stopOpacity={0.15} />
+                                <stop offset="95%" stopColor="#2D4A8C" stopOpacity={0.02} />
+                            </linearGradient>
+                            <linearGradient id="otbStlyFill" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#94a3b8" stopOpacity={0.08} />
+                                <stop offset="95%" stopColor="#94a3b8" stopOpacity={0.01} />
+                            </linearGradient>
+                        </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                         <XAxis
                             dataKey="date"
@@ -116,32 +127,56 @@ export function OtbChart({ data }: OtbChartProps) {
                             contentStyle={{
                                 backgroundColor: '#ffffff',
                                 border: '1px solid #e2e8f0',
-                                borderRadius: '8px',
+                                borderRadius: '12px',
                                 color: '#1e293b',
-                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                                boxShadow: '0 4px 12px -2px rgba(0, 0, 0, 0.12)',
+                                padding: '10px 14px',
                             }}
-                            labelStyle={{ color: '#64748b' }}
+                            labelStyle={{ color: '#64748b', fontWeight: 600, marginBottom: 4 }}
+                            itemStyle={{ fontSize: 13 }}
                         />
+                        {/* Area fills — rendered behind lines */}
+                        <Area
+                            type="monotone"
+                            dataKey="otbCurrent"
+                            fill="url(#otbCurrentFill)"
+                            stroke="none"
+                            name="OTB Fill"
+                            legendType="none"
+                            tooltipType="none"
+                        />
+                        {hasStlyData && (
+                            <Area
+                                type="monotone"
+                                dataKey="otbLastYear"
+                                fill="url(#otbStlyFill)"
+                                stroke="none"
+                                name="STLY Fill"
+                                legendType="none"
+                                tooltipType="none"
+                            />
+                        )}
+                        {/* Lines — on top */}
                         <Line
                             type="monotone"
                             dataKey="otbCurrent"
                             name="OTB Năm nay"
                             stroke="#2D4A8C"
-                            strokeWidth={2}
+                            strokeWidth={2.5}
                             dot={false}
-                            activeDot={{ r: 4, fill: '#2D4A8C' }}
+                            activeDot={{ r: 5, fill: '#2D4A8C', stroke: '#fff', strokeWidth: 2 }}
                         />
                         <Line
                             type="monotone"
                             dataKey="otbLastYear"
                             name="Năm trước"
                             stroke="#94a3b8"
-                            strokeWidth={2}
-                            strokeDasharray="5 5"
+                            strokeWidth={1.5}
+                            strokeDasharray="6 4"
                             dot={false}
-                            activeDot={{ r: 4, fill: '#94a3b8' }}
+                            activeDot={{ r: 4, fill: '#94a3b8', stroke: '#fff', strokeWidth: 2 }}
                         />
-                    </LineChart>
+                    </ComposedChart>
                 </ResponsiveContainer>
             </div>
         </div>

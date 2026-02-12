@@ -15,7 +15,7 @@ export default function DashboardLayout({
             {/* pt-14 lg:pt-0 = add top padding on mobile for fixed header */}
             <main
                 className="lg:ml-64 flex-1 min-h-screen pt-14 lg:pt-0 overflow-x-hidden"
-                style={{ backgroundColor: '#F5F7FB' }}
+                style={{ backgroundColor: 'var(--background)' }}
             >
                 {children}
             </main>

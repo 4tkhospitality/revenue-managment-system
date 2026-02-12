@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { BarChart3, Users, Search, Star } from 'lucide-react'
 
 interface PaywallModalProps {
     isOpen: boolean
@@ -12,25 +13,25 @@ interface PaywallModalProps {
 
 const FEATURE_INFO = {
     export: {
-        icon: '📊',
+        icon: <BarChart3 className="w-10 h-10 text-blue-400" />,
         title: 'Nâng cấp để xuất thêm dữ liệu',
         description: 'Gói miễn phí chỉ cho phép 3 lượt xuất dữ liệu mỗi tuần.',
         cta: 'Nâng cấp để xuất không giới hạn',
     },
     team: {
-        icon: '👥',
+        icon: <Users className="w-10 h-10 text-blue-400" />,
         title: 'Mời thêm thành viên',
         description: 'Gói miễn phí chỉ cho phép 1 thành viên.',
         cta: 'Nâng cấp để mở rộng team',
     },
     audit: {
-        icon: '🔍',
+        icon: <Search className="w-10 h-10 text-blue-400" />,
         title: 'Báo cáo kiểm tra dữ liệu chi tiết',
         description: 'Phân tích sâu về chất lượng dữ liệu chỉ có ở gói Pro.',
         cta: 'Nâng cấp để xem báo cáo đầy đủ',
     },
     generic: {
-        icon: '⭐',
+        icon: <Star className="w-10 h-10 text-amber-400" />,
         title: 'Tính năng cao cấp',
         description: 'Tính năng này yêu cầu nâng cấp gói.',
         cta: 'Xem các gói nâng cấp',
@@ -91,8 +92,7 @@ export default function PaywallModal({
 
                 {/* Content */}
                 <div className="text-center">
-                    {/* Icon */}
-                    <div className="text-5xl mb-4">{info.icon}</div>
+                    <div className="mb-4">{info.icon}</div>
 
                     {/* Current tier badge */}
                     <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-xs text-white/60 mb-4">

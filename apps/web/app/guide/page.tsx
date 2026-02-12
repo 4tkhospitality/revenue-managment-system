@@ -41,11 +41,11 @@ const SECTIONS: { id: SectionId; label: string; icon: React.ReactNode; sub?: { i
             { id: 'room-types', label: 'Hạng phòng' },
             { id: 'channels', label: 'Kênh OTA & Hoa hồng' },
             { id: 'promos', label: 'Khuyến mãi & Stacking' },
-            { id: 'agoda-engine', label: '🟡 Agoda' },
-            { id: 'booking-engine', label: '🔵 Booking.com' },
-            { id: 'expedia-engine', label: '🟣 Expedia' },
-            { id: 'traveloka-engine', label: '🟢 Traveloka' },
-            { id: 'ctrip-engine', label: '🔴 CTRIP/Trip.com' },
+            { id: 'agoda-engine', label: 'Agoda' },
+            { id: 'booking-engine', label: 'Booking.com' },
+            { id: 'expedia-engine', label: 'Expedia' },
+            { id: 'traveloka-engine', label: 'Traveloka' },
+            { id: 'ctrip-engine', label: 'CTRIP/Trip.com' },
             { id: 'compare', label: 'So sánh giữa các kênh' },
             { id: 'price-matrix', label: 'Bảng giá tổng hợp' },
             { id: 'reverse', label: 'Tính ngược (BAR → NET)' },
@@ -313,12 +313,12 @@ function AnalyticsSection() {
 
             <Card id="kpi" title="Các thẻ KPI (Chỉ số chính)" icon={<BarChart3 className="w-5 h-5 text-blue-600" />}>
                 <div className="space-y-3">
-                    <KPIExplain color="blue" emoji="📊" name="Rooms OTB" desc="Tổng số phòng đã được đặt (On The Books) trong 30 ngày tới." />
-                    <KPIExplain color="purple" emoji="🏨" name="Remaining Supply" desc="Số phòng còn trống có thể bán trong 30 ngày tới." />
+                    <KPIExplain color="blue" emoji="●" name="Rooms OTB" desc="Tổng số phòng đã được đặt (On The Books) trong 30 ngày tới." />
+                    <KPIExplain color="purple" emoji="●" name="Remaining Supply" desc="Số phòng còn trống có thể bán trong 30 ngày tới." />
                     <div className="bg-emerald-50 p-4 rounded-xl border-l-4 border-emerald-500">
-                        <div className="text-emerald-700 font-medium mb-2">📈 Avg Pickup T7</div>
+                        <div className="text-emerald-700 font-medium mb-2">Avg Pickup T7</div>
                         <p className="text-sm text-gray-700"><strong>Ý nghĩa:</strong> Trung bình số phòng được đặt THÊM trong 7 ngày qua.</p>
-                        <p className="text-sm text-amber-600 mt-2"><strong>💡 Insight:</strong> Pickup cao = demand đang tăng → có thể tăng giá.</p>
+                        <p className="text-sm text-amber-600 mt-2"><strong>Insight:</strong> Pickup cao = demand đang tăng → có thể tăng giá.</p>
                     </div>
                 </div>
             </Card>
@@ -454,10 +454,10 @@ function PricingSection() {
                 <p className="text-gray-700 mb-3">Các loại khuyến mãi phổ biến và quy tắc kết hợp:</p>
                 <div className="grid gap-3">
                     {[
-                        { emoji: '🌙', name: 'Early Bird', desc: 'Đặt sớm trước 7-30 ngày, giảm 10-20%', color: 'blue' },
-                        { emoji: '📱', name: 'Mobile Deal', desc: 'Đặt qua app, giảm 5-10%', color: 'purple' },
-                        { emoji: '⚡', name: 'Last Minute', desc: 'Đặt gấp trong 24h, giảm 15-25%', color: 'amber' },
-                        { emoji: '🔒', name: 'Member Deal', desc: 'Thành viên VIP (Genius, Agoda VIP), giảm 5-20%', color: 'emerald' },
+                        { emoji: '●', name: 'Early Bird', desc: 'Đặt sớm trước 7-30 ngày, giảm 10-20%', color: 'blue' },
+                        { emoji: '●', name: 'Mobile Deal', desc: 'Đặt qua app, giảm 5-10%', color: 'purple' },
+                        { emoji: '●', name: 'Last Minute', desc: 'Đặt gấp trong 24h, giảm 15-25%', color: 'amber' },
+                        { emoji: '●', name: 'Member Deal', desc: 'Thành viên VIP (Genius, Agoda VIP), giảm 5-20%', color: 'emerald' },
                     ].map(p => (
                         <div key={p.name} className={`bg-${p.color}-50 p-3 rounded-xl border border-${p.color}-100`}>
                             <div className={`font-medium text-${p.color}-700`}>{p.emoji} {p.name}</div>
@@ -478,7 +478,7 @@ function PricingSection() {
             {/* ═══ ALL CHANNELS ═══ */}
 
             {/* Agoda */}
-            <Card id="agoda-engine" title="🟡 Agoda — Chi tiết cách tính">
+            <Card id="agoda-engine" title="Agoda — Chi tiết cách tính">
                 <p className="text-gray-700 mb-3">Agoda sử dụng <strong>ADDITIVE (Cộng dồn)</strong> — tất cả KM được <strong>cộng thẳng</strong> vào nhau. Commission mặc định <strong>20%</strong>.</p>
 
                 <h4 className="font-semibold text-gray-800 mb-2">3 nhóm khuyến mãi:</h4>
@@ -498,12 +498,12 @@ function PricingSection() {
                 </div>
 
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mt-3">
-                    <p className="text-sm text-amber-700"><strong>📢 Commission Boosters:</strong> AGP (10-15%), AGX (5%), Sponsored Listing (5%) — đây là phí quảng cáo trả thêm cho Agoda, <strong>không giảm giá cho khách</strong>, cộng dồn vào commission.</p>
+                    <p className="text-sm text-amber-700"><strong>Commission Boosters:</strong> AGP (10-15%), AGX (5%), Sponsored Listing (5%) — đây là phí quảng cáo trả thêm cho Agoda, <strong>không giảm giá cho khách</strong>, cộng dồn vào commission.</p>
                 </div>
             </Card>
 
             {/* Booking.com */}
-            <Card id="booking-engine" title="🔵 Booking.com — Chi tiết cách tính">
+            <Card id="booking-engine" title="Booking.com — Chi tiết cách tính">
                 <p className="text-gray-700 mb-4">Booking.com sử dụng <strong>Progressive (Lũy tiến)</strong> với hệ thống 4 nhóm khuyến mãi và 3 tầng ưu tiên.</p>
 
                 {/* 4 groups */}
@@ -537,17 +537,17 @@ function PricingSection() {
 
                 {/* Example */}
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mt-4">
-                    <p className="font-medium text-amber-700 mb-2">📝 Ví dụ thực tế:</p>
+                    <p className="font-medium text-amber-700 mb-2">Ví dụ thực tế:</p>
                     <div className="text-sm text-gray-700 space-y-1 font-mono">
                         <p>NET = 1.000.000đ, Commission = 18%, Genius L3 = 20%, Early Booker = 15%</p>
                         <p className="mt-2">Bước 1: Gross = 1.000.000 ÷ (1 - 18%) = 1.219.512đ</p>
                         <p>Bước 2: BAR = 1.219.512 ÷ 0.80 ÷ 0.85 = <strong>1.793.400đ</strong></p>
-                        <p className="mt-2 text-emerald-700">Kiểm tra: 1.793.400 × 0.80 × 0.85 = 1.219.512 → trừ 18% = <strong>1.000.000đ ✅</strong></p>
+                        <p className="mt-2 text-emerald-700">Kiểm tra: 1.793.400 × 0.80 × 0.85 = 1.219.512 → trừ 18% = <strong>1.000.000đ ✓</strong></p>
                     </div>
                 </div>
 
                 <div className="bg-red-50 border border-red-200 rounded-xl p-4 mt-4">
-                    <p className="text-red-700 text-sm"><strong>⚠️ Giới hạn:</strong></p>
+                    <p className="text-red-700 text-sm"><strong>Giới hạn:</strong></p>
                     <ul className="text-sm text-red-700 mt-1 space-y-1">
                         <li>• Tối đa <strong>3 promotions</strong> cùng lúc</li>
                         <li>• Cùng nhóm/subcategory → chỉ áp deal cao nhất</li>

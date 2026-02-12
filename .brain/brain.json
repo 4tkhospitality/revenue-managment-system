@@ -1,14 +1,14 @@
 {
   "meta": {
-    "schema_version": "1.5.0",
+    "schema_version": "1.6.0",
     "awf_version": "4.1.2",
-    "last_updated": "2026-02-12T11:45:00+07:00"
+    "last_updated": "2026-02-12T17:30:00+07:00"
   },
   "project": {
     "name": "revenue-management-system",
     "type": "SaaS Web App",
     "status": "Production - Deployed to Vercel (icn1 region)",
-    "description": "RMS Version 01.7 - Revenue Management System with OTB Time-Travel + OTA Pricing (3-tab calculator, timing conflict resolution) + OTA Growth Playbook + User Management + Performance Optimized + Comprehensive Guide. Full-stack TypeScript.",
+    "description": "RMS Version 01.8 - Revenue Management System with OTB Time-Travel + OTA Pricing + Dynamic Pricing by OCC (occupancy-based tier pricing with seasons, guardrails, trace engine) + OTA Growth Playbook + User Management + Performance Optimized + Comprehensive Guide. Full-stack TypeScript.",
     "github": "https://github.com/4tkhospitality/revenue-managment-system",
     "landing_page": {
       "path": "apps/landing",
@@ -167,6 +167,21 @@
         "name": "subscriptions",
         "description": "V01.3: Hotel subscription plans (FREE/STARTER/GROWTH/PRO) with feature limits.",
         "v013_new": true
+      },
+      {
+        "name": "occ_tiers",
+        "description": "V01.8: Occupancy-based pricing tiers. Each tier has label, occ_min/occ_max (0-1), multiplier. Per-hotel. Indexed by hotel_id.",
+        "v018_new": true
+      },
+      {
+        "name": "seasons",
+        "description": "V01.8: Named date ranges (Peak, Shoulder, Off-Peak, Tet, etc) with multiplier. Per-hotel. Validates no overlapping date ranges.",
+        "v018_new": true
+      },
+      {
+        "name": "season_rates",
+        "description": "V01.8: Override BAR per room_type × season. Links to seasons and room_types. Unique constraint on (season_id, room_type_id).",
+        "v018_new": true
       }
     ],
     "enums": [
@@ -402,6 +417,31 @@
       "path": "DELETE /api/data/delete-by-month?includeOtb=true",
       "explained": "Deletes reservations, cancellations, and optionally OTB+FeaturesDaily by month. Hotel_id filtered.",
       "v02_new": true
+    },
+    {
+      "path": "GET/POST /api/pricing/occ-tiers",
+      "explained": "V01.8: CRUD occupancy tiers per hotel. POST replaces all tiers atomically in transaction.",
+      "v018_new": true
+    },
+    {
+      "path": "GET/POST /api/pricing/seasons + DELETE /api/pricing/seasons/[id]",
+      "explained": "V01.8: CRUD seasons per hotel. Validates no overlapping date ranges.",
+      "v018_new": true
+    },
+    {
+      "path": "GET/POST /api/pricing/season-rates + POST /api/pricing/season-rates/import",
+      "explained": "V01.8: Season rate overrides per room_type×season. Import bulk-creates rates.",
+      "v018_new": true
+    },
+    {
+      "path": "POST /api/pricing/dynamic-matrix",
+      "explained": "V01.8: Calculate dynamic pricing matrix. Returns per-cell finalPrice, trace[], violations[], effectiveDiscount. Inputs: room_types, channels, campaigns, occ_tiers, seasons, stayDate.",
+      "v018_new": true
+    },
+    {
+      "path": "POST /api/pricing/calc-preview",
+      "explained": "V01.8: Quick preview of pricing for a single room×channel with full trace.",
+      "v018_new": true
     }
   ],
   "features": [
@@ -513,7 +553,20 @@
     "V01.7: Guide Dual Formulas - NET→BAR and BAR→NET with correct formulas per calc type",
     "V01.7: Guide Channel Cards - Agoda(ADDITIVE 20%), Booking(PROGRESSIVE 18%), Expedia(SINGLE_DISCOUNT 17%), Traveloka(ADDITIVE 15%), CTRIP(ADDITIVE 18%)",
     "V01.7: Guide Comparison Table - Quick comparison of all 5 channels: calc type, stacking, commission",
-    "V01.7: Guide 3 Calc Types Explainer - Additive vs Progressive vs Single Discount with channel mapping"
+    "V01.7: Guide 3 Calc Types Explainer - Additive vs Progressive vs Single Discount with channel mapping",
+    "V01.8: Dynamic Pricing by OCC - Occupancy-based tier pricing with season multipliers, guardrails (min_rate, max_discount), trace engine",
+    "V01.8: OCC Tier Editor - CRUD with dirty-state tracking, inline row errors, beforeunload warning, disable Save when clean",
+    "V01.8: Season Config Panel - Named seasons with date ranges, multiplier, color-coded labels",
+    "V01.8: Season Rate Editor - Override BAR per room_type × season, import from CSV",
+    "V01.8: Dynamic Pricing Matrix - Grid view (Room × Channel), cell-level guardrail borders (red left border + tooltip), sticky headers",
+    "V01.8: Context Bar Chips - 3 chips: OCC% (blue/purple), Season (emerald/purple), Tier (indigo) + Override toggle",
+    "V01.8: Cell Drill-Down Panel - Click cell → 320px side panel, read-only trace[], guardrail status, effective discount",
+    "V01.8: Effective Discount Label - Shows 'Effective discount: X%' when BAR≠Display price, per-cell -X% tag",
+    "V01.8: Enriched CSV Export - 8-line metadata header (hotel/channel/stayDate/season/occPct/tier/asOfTs/roundingStep) + viewMode-aware",
+    "V01.8: Pricing page 6 tabs: Hạng phòng, Kênh OTA, Khuyến mãi, Bảng giá, Giá Linh Hoạt, Tối ưu OTA",
+    "V01.8: Architecture doc ARCHITECTURE_PRICING.md - Describes engine pipeline, trace format, guardrail system",
+    "V01.8: Golden tests pricing-golden.test.ts - Snapshot tests for pricing engine correctness",
+    "V01.8: Lint script lint-pricing-architecture.ts - Validates no direct DB calls in engine, no client recompute"
   ],
   "cancellation_bridge_v011": {
     "status": "Implemented",
@@ -616,7 +669,13 @@
     "Performance: Vercel Functions must be in same region as DB (icn1=Seoul) to minimize query latency",
     "Performance: cachedStats used findMany + JS reduce without hotel_id filter = full table scan",
     "Performance: Dashboard had 3 sequential batches, batch 3 only needed actualOtbDate (known after batch 1)",
-    "Performance: CancellationSection had 3 sequential queries without hotel_id = full table scan x3"
+    "Performance: CancellationSection had 3 sequential queries without hotel_id = full table scan x3",
+    "V01.8: Dynamic Pricing engine is pure function (no DB calls) — all data passed as params",
+    "V01.8: Cell drill-down panel reads trace[] from API response — NO client-side recompute",
+    "V01.8: CSV export includes metadata and respects current viewMode (BAR/Display/NET)",
+    "V01.8: OCC tiers saved atomically via $transaction (delete all + create all)",
+    "V01.8: Season date ranges validated server-side for no overlaps within same hotel",
+    "V01.8: Guardrails are advisory (red border + tooltip) not blocking — GM can still save"
   ],
   "ui_design": {
     "theme": "SaaS Pro Light",
@@ -689,7 +748,10 @@
       "V01.6: seed-pricing.ts group_type values must match catalog.ts groupType values — mismatch causes picker to show 0 items in tabs",
       "V01.7: Early Bird + Last-Minute are mutually exclusive — resolveTimingConflicts() must be applied in BOTH calc-matrix API AND PromotionsTab parent before totalDiscount computation",
       "V01.7: In bar_to_net mode, do NOT use calcNetFromBar() — it internally resolves conflicts creating double-discount mismatch. Compute NET=display×(1-commission%) directly",
-      "V01.7: React controlled input: value={input || fallback} prevents clearing. Use value={input} directly + initialize default via useEffect on mode/room change"
+      "V01.7: React controlled input: value={input || fallback} prevents clearing. Use value={input} directly + initialize default via useEffect on mode/room change",
+      "V01.8: Git commit can hang when GPG sign is configured but agent is hidden — use --no-gpg-sign flag or terminate after 30s",
+      "V01.8: PowerShell && operator not supported in older versions — use semicolons (;) to chain commands",
+      "V01.8: UUPM skill installed to .agent/skills/ (project-level) not global — __pycache__ should be gitignored"
     ],
     "formulas": {
       "rooms_otb": "SUM(num_rooms) from reservations for that stay_date",

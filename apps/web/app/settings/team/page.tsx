@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
+import { Users, Ticket, AlertTriangle, Lock } from 'lucide-react'
 
 interface InviteData {
     inviteId: string
@@ -120,7 +121,7 @@ export default function TeamSettingsPage() {
                 className="rounded-2xl px-4 sm:px-6 py-4 text-white shadow-sm"
                 style={{ background: 'linear-gradient(to right, #1E3A8A, #102A4C)' }}
             >
-                <h1 className="text-lg font-semibold">👥 Quản lý Team</h1>
+                <h1 className="text-lg font-semibold"><Users className="w-5 h-5 inline mr-1" /> Quản lý Team</h1>
                 <p className="text-white/70 text-sm mt-1">Mời thành viên và quản lý quyền truy cập</p>
             </header>
 
@@ -134,7 +135,7 @@ export default function TeamSettingsPage() {
             {isAdmin && (
                 <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6">
                     <div className="flex items-center justify-between mb-4">
-                        <h2 className="font-semibold text-gray-900">🎟️ Mời thành viên</h2>
+                        <h2 className="font-semibold text-gray-900"><Ticket className="w-4 h-4 inline mr-1" /> Mời thành viên</h2>
                         {seats && seats.max > 0 && (
                             <span className={`text-sm font-medium px-3 py-1 rounded-full ${atLimit ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'
                                 }`}>
@@ -145,7 +146,7 @@ export default function TeamSettingsPage() {
 
                     {atLimit && (
                         <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
-                            ⚠️ Đã đạt giới hạn thành viên cho gói <strong>{seats?.plan}</strong>.
+                            <AlertTriangle className="w-4 h-4 inline mr-1" /> Đã đạt giới hạn thành viên cho gói <strong>{seats?.plan}</strong>.
                             <a href="/pricing-plans" className="ml-1 text-blue-600 hover:underline font-medium">Nâng cấp gói →</a>
                         </div>
                     )}
@@ -184,7 +185,7 @@ export default function TeamSettingsPage() {
                             className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             title={atLimit ? 'Đã đạt giới hạn thành viên' : ''}
                         >
-                            {inviteLoading ? 'Đang tạo...' : atLimit ? '🔒 Đã đạt giới hạn' : '+ Tạo mã mời mới'}
+                            {inviteLoading ? 'Đang tạo...' : atLimit ? 'Đã đạt giới hạn' : '+ Tạo mã mời mới'}
                         </button>
                     )}
                 </div>
@@ -193,7 +194,7 @@ export default function TeamSettingsPage() {
             {/* Members List */}
             <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
                 <div className="p-4 border-b border-gray-100">
-                    <h2 className="font-semibold text-gray-900">👥 Thành viên ({members.length})</h2>
+                    <h2 className="font-semibold text-gray-900"><Users className="w-4 h-4 inline mr-1" /> Thành viên ({members.length})</h2>
                 </div>
 
                 {loading ? (

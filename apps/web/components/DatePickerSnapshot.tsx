@@ -155,10 +155,10 @@ export function DatePickerSnapshot({ onDateChange, defaultDate }: DatePickerSnap
                             onClick={() => { setSelected(snapshots[0].as_of_date); onDateChange(snapshots[0].as_of_date); }}
                             disabled={isSingle}
                             className={`px-2.5 py-1.5 text-xs font-medium rounded-md transition-colors ${selected === snapshots[0].as_of_date
-                                    ? 'bg-blue-600 text-white'
-                                    : isSingle
-                                        ? 'bg-gray-50 text-gray-300 cursor-not-allowed'
-                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                ? 'bg-blue-600 text-white'
+                                : isSingle
+                                    ? 'bg-gray-50 text-gray-300 cursor-not-allowed'
+                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                 }`}
                             title="Snapshot mới nhất"
                         >
@@ -182,10 +182,10 @@ export function DatePickerSnapshot({ onDateChange, defaultDate }: DatePickerSnap
                                 }}
                                 disabled={!hasTarget}
                                 className={`px-2.5 py-1.5 text-xs font-medium rounded-md transition-colors ${hasTarget
-                                        ? selected === target
-                                            ? 'bg-blue-600 text-white'
-                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                        : 'bg-gray-50 text-gray-300 cursor-not-allowed'
+                                    ? selected === target
+                                        ? 'bg-blue-600 text-white'
+                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    : 'bg-gray-50 text-gray-300 cursor-not-allowed'
                                     }`}
                                 title={hasTarget ? `Gần ngày ${formatDate(target)}` : `Chưa có snapshot ${days} ngày trước`}
                             >
@@ -206,7 +206,7 @@ export function DatePickerSnapshot({ onDateChange, defaultDate }: DatePickerSnap
             {/* Missing snapshot warning */}
             {selected && !hasSnapshot && (
                 <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-sm text-amber-700 flex items-center gap-2">
-                    ⚠️ Chưa có snapshot cho ngày này.
+                    Chưa có snapshot cho ngày này.
                     <button
                         onClick={handleBuildSnapshot}
                         disabled={building}

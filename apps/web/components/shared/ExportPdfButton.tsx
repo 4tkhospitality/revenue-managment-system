@@ -9,7 +9,7 @@
  */
 
 import { useState } from 'react';
-import { FileDown, Loader2 } from 'lucide-react';
+import { FileDown, Loader2, AlertTriangle } from 'lucide-react';
 import { exportToPdf, getRecommendedOrientation, type PdfExportOptions } from '@/lib/pdf/exportToPdf';
 
 type PageType = 'dashboard' | 'analytics' | 'daily';
@@ -98,7 +98,7 @@ export function ExportPdfButton({
             {/* Error tooltip */}
             {error && (
                 <div className="absolute top-full mt-2 right-0 bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2 rounded-lg shadow-lg z-50 whitespace-nowrap">
-                    ⚠️ {error}
+                    <AlertTriangle className="w-4 h-4 inline mr-1" />{error}
                     <button
                         onClick={() => setError(null)}
                         className="ml-2 text-red-500 hover:text-red-700"

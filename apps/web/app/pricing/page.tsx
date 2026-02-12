@@ -23,7 +23,7 @@ export default function PricingPage() {
     const { hasAccess: hasOtaAccess, loading: tierLoading } = useTierAccess('SUPERIOR');
 
     return (
-        <div className="min-h-screen bg-[#F5F7FB]">
+        <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>
             <div className="mx-auto max-w-[1400px] px-4 sm:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
                 {/* Header */}
                 <PageHeader

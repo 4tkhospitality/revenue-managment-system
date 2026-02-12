@@ -178,17 +178,17 @@ export default function DailyPage() {
             {/* PDF Content Container */}
             <div id="daily-pdf-content" className="space-y-4 sm:space-y-6">
                 {data && (
-                    <div className="rounded-2xl bg-white border border-slate-200/80 shadow-[0_1px_2px_rgba(16,24,40,0.06)] px-5 py-3">
+                    <div className="rounded-[var(--card-radius)] bg-white border border-slate-200/80 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-card-hover)] transition-shadow duration-200 px-5 py-3">
                         <div className="flex items-center gap-4 text-sm">
                             <span className="text-gray-500">Base Rate:</span>
                             <span className="font-semibold" style={{ color: '#2D4A8C' }}>{formatVND(data.base_rate)}</span>
                             <span className="text-gray-300">|</span>
                             <span className="text-gray-500">Nguồn:</span>
                             <span className="text-gray-700">
-                                {data.base_rate_source === 'hotel_setting' && '⚙️ Cài đặt khách sạn'}
-                                {data.base_rate_source === 'last_decision' && '📝 Quyết định gần nhất'}
-                                {data.base_rate_source === 'otb_derived' && '📊 Tính từ dữ liệu OTB'}
-                                {data.base_rate_source === 'user_input' && '⚠️ Chưa có - cần nhập'}
+                                {data.base_rate_source === 'hotel_setting' && 'Cài đặt khách sạn'}
+                                {data.base_rate_source === 'last_decision' && 'Quyết định gần nhất'}
+                                {data.base_rate_source === 'otb_derived' && 'Tính từ dữ liệu OTB'}
+                                {data.base_rate_source === 'user_input' && 'Chưa có - cần nhập'}
                             </span>
                         </div>
                     </div>
@@ -197,19 +197,19 @@ export default function DailyPage() {
                 {/* Summary Cards - Matching Dashboard KPI style */}
                 {data && (
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                        <div className="rounded-2xl bg-white border border-slate-200/80 shadow-[0_1px_2px_rgba(16,24,40,0.06)] p-4 text-center">
+                        <div className="rounded-[var(--card-radius)] bg-white border border-slate-200/80 shadow-[var(--shadow-card)] p-4 text-center">
                             <div className="text-2xl font-bold text-gray-900">{data.summary.total}</div>
                             <div className="text-sm text-gray-500">Tổng ngày</div>
                         </div>
-                        <div className="rounded-2xl bg-emerald-50 border border-emerald-200 shadow-[0_1px_2px_rgba(16,185,129,0.1)] p-4 text-center">
+                        <div className="rounded-[var(--card-radius)] bg-emerald-50 border border-emerald-200 shadow-[var(--shadow-sm)] p-4 text-center">
                             <div className="text-2xl font-bold text-emerald-600">{data.summary.increases}</div>
                             <div className="text-sm text-emerald-600">Tăng giá</div>
                         </div>
-                        <div className="rounded-2xl bg-slate-50 border border-slate-200 shadow-[0_1px_2px_rgba(16,24,40,0.04)] p-4 text-center">
+                        <div className="rounded-[var(--card-radius)] bg-slate-50 border border-slate-200 shadow-[var(--shadow-sm)] p-4 text-center">
                             <div className="text-2xl font-bold text-slate-600">{data.summary.keeps}</div>
                             <div className="text-sm text-slate-500">Giữ giá</div>
                         </div>
-                        <div className="rounded-2xl bg-rose-50 border border-rose-200 shadow-[0_1px_2px_rgba(244,63,94,0.1)] p-4 text-center">
+                        <div className="rounded-[var(--card-radius)] bg-rose-50 border border-rose-200 shadow-[var(--shadow-sm)] p-4 text-center">
                             <div className="text-2xl font-bold text-rose-600">{data.summary.decreases}</div>
                             <div className="text-sm text-rose-600">Giảm giá</div>
                         </div>
@@ -233,7 +233,7 @@ export default function DailyPage() {
 
                 {/* Actions Table - Matching Dashboard Style */}
                 {data && !loading && (
-                    <div className="rounded-2xl bg-white border border-slate-200/80 shadow-[0_1px_2px_rgba(16,24,40,0.06)] overflow-hidden">
+                    <div className="rounded-[var(--card-radius)] bg-white border border-slate-200/80 shadow-[var(--shadow-card)] overflow-hidden">
                         {/* Table Header */}
                         <div className="px-5 py-4 border-b border-slate-100">
                             <div className="flex items-center justify-between">
@@ -358,7 +358,7 @@ export default function DailyPage() {
                         {/* Footer Legend */}
                         <div className="px-4 py-3 border-t bg-gray-50 space-y-1" style={{ borderColor: '#e2e8f0' }}>
                             <div className="text-[10px] text-gray-400">
-                                🟡 Cuối tuần (T7/CN) | 🟢 Đã chấp nhận | 📈 Tăng giá | 📉 Giảm giá | ➡️ Giữ nguyên
+                                Cuối tuần (T7/CN) · Đã chấp nhận · ↑ Tăng giá · ↓ Giảm giá · → Giữ nguyên
                             </div>
                         </div>
                     </div>

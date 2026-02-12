@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Upload, FileText, CheckCircle, XCircle, Loader2, FileSpreadsheet, FileCode, Lock, Files, Download } from 'lucide-react';
+import { Upload, FileText, CheckCircle, XCircle, Loader2, FileSpreadsheet, FileCode, Lock, Files, Download, Package, Lightbulb } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { ingestCSV } from '../actions/ingestCSV';
 import { ingestXML } from '../actions/ingestXML';
@@ -258,7 +258,7 @@ export default function UploadPage() {
                 {/* Active Hotel Banner */}
                 {activeHotelName && (
                     <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 flex items-center gap-2">
-                        <span className="text-blue-500">📦</span>
+                        <Package className="w-4 h-4 text-blue-500" />
                         <span className="text-sm text-blue-800">
                             Đang upload dữ liệu cho: <strong>{activeHotelName}</strong>
                         </span>
@@ -313,8 +313,8 @@ export default function UploadPage() {
                         }`}>
                         <p className={`text-sm ${activeTab === 'booked' ? 'text-blue-700' : 'text-rose-700'}`}>
                             {activeTab === 'booked'
-                                ? '📥 Upload báo cáo "Reservation Booked On Date" từ PMS. Chọn nhiều file cùng lúc (Ctrl+Click hoặc kéo thả).'
-                                : '📤 Upload báo cáo "Reservation Cancelled" từ PMS. Chọn nhiều file cùng lúc.'}
+                                ? 'Upload báo cáo "Reservation Booked On Date" từ PMS. Chọn nhiều file cùng lúc (Ctrl+Click hoặc kéo thả).'
+                                : 'Upload báo cáo "Reservation Cancelled" từ PMS. Chọn nhiều file cùng lúc.'}
                         </p>
                     </div>
                 )}
@@ -377,7 +377,7 @@ export default function UploadPage() {
                                     className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 transition-colors"
                                 >
                                     <Download className="w-4 h-4" />
-                                    📥 Tải file mẫu Excel {activeTab === 'booked' ? '(Đặt phòng)' : '(Huỷ phòng)'}
+                                    Tải file mẫu Excel {activeTab === 'booked' ? '(Đặt phòng)' : '(Huỷ phòng)'}
                                 </a>
                                 <p className="text-xs text-gray-400 mt-1">
                                     {activeTab === 'booked'
@@ -405,11 +405,11 @@ export default function UploadPage() {
                             {isDone && (
                                 <div className="flex items-center gap-3">
                                     <span className="text-xs text-emerald-600 font-medium">
-                                        ✅ {successCount} thành công
+                                        ✓ {successCount} thành công
                                     </span>
                                     {errorCount > 0 && (
                                         <span className="text-xs text-rose-600 font-medium">
-                                            ❌ {errorCount} lỗi
+                                            ✗ {errorCount} lỗi
                                         </span>
                                     )}
                                     <span className="text-xs text-gray-500">
@@ -540,7 +540,7 @@ export default function UploadPage() {
 
                         <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
                             <p className="text-sm text-amber-700">
-                                <strong>💡 Mẹo:</strong> Dùng Ctrl+A (chọn tất cả) hoặc Ctrl+Click để chọn nhiều file cùng lúc.
+                                <strong><Lightbulb className="w-4 h-4 inline mr-0.5" />Mẹo:</strong> Dùng Ctrl+A (chọn tất cả) hoặc Ctrl+Click để chọn nhiều file cùng lúc.
                                 Hệ thống sẽ tự động import từng file theo thứ tự.
                             </p>
                         </div>

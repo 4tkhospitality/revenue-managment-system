@@ -1,14 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Save, Hotel, AlertCircle, CheckCircle, Lock } from 'lucide-react';
+import { Save, Hotel, AlertCircle, CheckCircle, Lock, Settings, DollarSign, Lightbulb, Zap, Target, Rocket } from 'lucide-react';
 import Link from 'next/link';
 
 // Ladder presets
 const LADDER_PRESETS = {
-    conservative: { name: '⚡ Conservative (±10%)', steps: [-0.10, -0.05, 0, 0.05, 0.10] },
-    standard: { name: '🎯 Standard (±20%)', steps: [-0.20, -0.10, -0.05, 0, 0.05, 0.10, 0.20] },
-    aggressive: { name: '🚀 Aggressive (±30%)', steps: [-0.30, -0.20, -0.10, 0, 0.10, 0.20, 0.30] },
+    conservative: { name: 'Conservative (±10%)', steps: [-0.10, -0.05, 0, 0.05, 0.10] },
+    standard: { name: 'Standard (±20%)', steps: [-0.20, -0.10, -0.05, 0, 0.05, 0.10, 0.20] },
+    aggressive: { name: 'Aggressive (±30%)', steps: [-0.30, -0.20, -0.10, 0, 0.10, 0.20, 0.30] },
 };
 
 const TIMEZONES = [
@@ -303,7 +303,7 @@ export default function SettingsPage() {
 
                     {/* Advanced Settings Section */}
                     <div className="border-t border-gray-200 pt-6">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">⚙️ Cài đặt nâng cao</h3>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4"><Settings className="w-5 h-5 inline mr-1.5" />Cài đặt nâng cao</h3>
 
                         {/* Timezone */}
                         <div className="mb-4">
@@ -383,7 +383,7 @@ export default function SettingsPage() {
 
                     {/* Pricing Section */}
                     <div className="border-t border-gray-200 pt-6">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">💰 Cài đặt giá</h3>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4"><DollarSign className="w-5 h-5 inline mr-1.5" />Cài đặt giá</h3>
 
                         {/* Default Base Rate */}
                         <div className="mb-4">
@@ -469,7 +469,7 @@ export default function SettingsPage() {
                 {/* Info Box */}
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
                     <p className="text-sm text-amber-700">
-                        <strong>💡 Lưu ý:</strong> Các thay đổi sẽ ảnh hưởng đến tính toán trong Dashboard.
+                        <strong><Lightbulb className="w-4 h-4 inline mr-0.5" />Lưu ý:</strong> Các thay đổi sẽ ảnh hưởng đến tính toán trong Dashboard.
                         Số phòng (Capacity) quyết định cách tính Occupancy và Remaining Supply.
                     </p>
                 </div>

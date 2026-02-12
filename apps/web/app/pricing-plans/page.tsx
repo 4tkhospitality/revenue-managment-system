@@ -341,7 +341,7 @@ export default function PricingPlansPage() {
         return (
             <div className="min-h-screen flex">
                 <Sidebar />
-                <main className="lg:ml-64 flex-1 min-h-screen bg-[#F5F7FB] pt-14 lg:pt-0">
+                <main className="lg:ml-64 flex-1 min-h-screen pt-14 lg:pt-0" style={{ backgroundColor: 'var(--background)' }}>
                     <div className="p-4 sm:p-8">
                         <PricingContent />
                     </div>

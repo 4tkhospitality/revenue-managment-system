@@ -7,6 +7,7 @@
 
 import { FeatureKey, getUpgradeTierName, TIER_CONFIGS } from '@/lib/tier/tierConfig';
 import { PlanTier } from '@prisma/client';
+import { Lock } from 'lucide-react';
 
 interface UpgradeBannerProps {
     feature: FeatureKey;
@@ -63,7 +64,7 @@ export function UpgradeBanner({ feature, currentTier = 'STANDARD', className = '
                 {/* Content */}
                 <div className="flex-1">
                     <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                        🔒 Tính năng dành cho {requiredTier}
+                        <Lock className="w-4 h-4 inline mr-1" /> Tính năng dành cho {requiredTier}
                     </h3>
                     <p className="text-gray-600 mb-4">
                         <strong>{featureDesc}</strong> — Nâng cấp để mở khóa tính năng này và tiết kiệm thời gian mỗi ngày.
@@ -77,23 +78,23 @@ export function UpgradeBanner({ feature, currentTier = 'STANDARD', className = '
                         <ul className="text-sm text-gray-600 space-y-1">
                             {requiredTier === 'Assistant' && (
                                 <>
-                                    <li>✅ Gợi ý giá hàng ngày (Daily Actions)</li>
-                                    <li>✅ Xuất Excel để upload OTA</li>
-                                    <li>✅ Lịch giá 30 ngày</li>
+                                    <li>✓ Gợi ý giá hàng ngày (Daily Actions)</li>
+                                    <li>✓ Xuất Excel để upload OTA</li>
+                                    <li>✓ Lịch giá 30 ngày</li>
                                 </>
                             )}
                             {requiredTier === 'RMS Lite' && (
                                 <>
-                                    <li>✅ Tất cả tính năng Assistant</li>
-                                    <li>✅ Cảnh báo giá (Guardrails)</li>
-                                    <li>✅ Báo cáo phân tích</li>
+                                    <li>✓ Tất cả tính năng Assistant</li>
+                                    <li>✓ Cảnh báo giá (Guardrails)</li>
+                                    <li>✓ Báo cáo phân tích</li>
                                 </>
                             )}
                             {requiredTier === 'Professional' && (
                                 <>
-                                    <li>✅ Tất cả tính năng RMS Lite</li>
-                                    <li>✅ Quản lý nhiều khách sạn</li>
-                                    <li>✅ Theo dõi giá đối thủ</li>
+                                    <li>✓ Tất cả tính năng RMS Lite</li>
+                                    <li>✓ Quản lý nhiều khách sạn</li>
+                                    <li>✓ Theo dõi giá đối thủ</li>
                                 </>
                             )}
                         </ul>
@@ -132,7 +133,7 @@ export function UpgradeTooltip({ feature }: { feature: FeatureKey }) {
     const requiredTier = getUpgradeTierName(feature);
     return (
         <span className="text-xs text-amber-600 font-medium">
-            🔒 Cần gói {requiredTier}
+            <Lock className="w-3 h-3 inline mr-0.5" /> Cần gói {requiredTier}
         </span>
     );
 }

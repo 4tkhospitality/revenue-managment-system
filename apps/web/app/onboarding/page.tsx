@@ -248,7 +248,7 @@ export default function OnboardingPage() {
                     {currentStep === 1 && (
                         <>
                             <h1 className="text-2xl font-semibold text-white mb-2">
-                                Thông tin khách sạn 🏨
+                                Thông tin khách sạn
                             </h1>
                             <p className="text-white/70 mb-6 text-[15px]">
                                 Bước 1/4: Nhập thông tin cơ bản
@@ -337,7 +337,7 @@ export default function OnboardingPage() {
                     {currentStep === 2 && (
                         <>
                             <h1 className="text-2xl font-semibold text-white mb-2">
-                                Cấu hình giá 💰
+                                Cấu hình giá
                             </h1>
                             <p className="text-white/70 mb-6 text-[15px]">
                                 Bước 2/4: Thiết lập giá phòng (tùy chọn, có thể bỏ qua)
@@ -383,7 +383,7 @@ export default function OnboardingPage() {
                                 </div>
 
                                 <p className="text-white/50 text-sm">
-                                    💡 Bạn có thể thiết lập sau trong phần Cài đặt
+                                    Bạn có thể thiết lập sau trong phần Cài đặt
                                 </p>
                             </div>
 
@@ -413,7 +413,7 @@ export default function OnboardingPage() {
                     {currentStep === 3 && (
                         <>
                             <h1 className="text-2xl font-semibold text-white mb-2">
-                                Nhập dữ liệu 📊
+                                Nhập dữ liệu
                             </h1>
                             <p className="text-white/70 mb-6 text-[15px]">
                                 Bước 3/4: Upload dữ liệu đặt phòng để bắt đầu phân tích
@@ -440,7 +440,7 @@ export default function OnboardingPage() {
 
                                         {/* Sample file download */}
                                         <div className="mt-4 p-4 bg-white/5 rounded-xl border border-white/10">
-                                            <p className="text-white/70 text-sm mb-2">📋 <strong>Các trường bắt buộc:</strong></p>
+                                            <p className="text-white/70 text-sm mb-2"><strong>Các trường bắt buộc:</strong></p>
                                             <ul className="text-white/50 text-xs space-y-1 mb-3">
                                                 <li>• <code className="bg-white/10 px-1 rounded">arrival_date</code> - Ngày nhận phòng (YYYY-MM-DD)</li>
                                                 <li>• <code className="bg-white/10 px-1 rounded">departure_date</code> - Ngày trả phòng (YYYY-MM-DD)</li>
@@ -476,7 +476,7 @@ export default function OnboardingPage() {
                                         <p className="text-white font-medium mb-1">Đã nhập {importResult.count} bản ghi</p>
                                         {importResult.valid ? (
                                             <p className="text-green-300 text-sm">
-                                                🎉 Đủ điều kiện nhận 7 ngày dùng thử Pro!
+                                                Đủ điều kiện nhận 7 ngày dùng thử Pro!
                                             </p>
                                         ) : (
                                             <p className="text-yellow-300 text-sm">
@@ -516,7 +516,7 @@ export default function OnboardingPage() {
                     {currentStep === 4 && (
                         <>
                             <h1 className="text-2xl font-semibold text-white mb-2">
-                                Hoàn tất! 🎉
+                                Hoàn tất!
                             </h1>
                             <p className="text-white/70 mb-6 text-[15px]">
                                 Bước 4/4: Xác nhận và bắt đầu sử dụng
@@ -526,18 +526,18 @@ export default function OnboardingPage() {
                                 <div className="bg-white/10 rounded-2xl p-6">
                                     <h3 className="text-white font-medium mb-3">Tổng kết thiết lập:</h3>
                                     <div className="space-y-2 text-white/80 text-sm">
-                                        <p>🏨 <strong>{formData.name}</strong></p>
-                                        <p>🛏️ {formData.capacity} phòng</p>
-                                        <p>💵 {formData.currency}</p>
+                                        <p><strong>{formData.name}</strong></p>
+                                        <p>{formData.capacity} phòng</p>
+                                        <p>{formData.currency}</p>
                                         {importResult?.count && (
-                                            <p>📊 {importResult.count} đặt phòng đã nhập</p>
+                                            <p>{importResult.count} đặt phòng đã nhập</p>
                                         )}
                                     </div>
                                 </div>
 
                                 {importResult?.valid && (
                                     <div className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 rounded-2xl p-6 text-center">
-                                        <p className="text-white font-medium mb-1">🌟 Bạn đã được tặng 7 ngày Pro Trial!</p>
+                                        <p className="text-white font-medium mb-1">Bạn đã được tặng 7 ngày Pro Trial!</p>
                                         <p className="text-white/60 text-sm">Trải nghiệm đầy đủ tính năng phân tích & báo cáo</p>
                                     </div>
                                 )}

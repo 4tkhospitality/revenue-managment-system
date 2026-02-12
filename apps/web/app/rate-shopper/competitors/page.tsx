@@ -233,7 +233,7 @@ export default function CompetitorManagementPage() {
                                 border: `1px solid ${searchFromCache ? '#a7f3d0' : '#bfdbfe'}`,
                                 whiteSpace: 'nowrap',
                             }}>
-                                {searchFromCache ? '⚡ Cache' : '🌐 SerpApi'}
+                                {searchFromCache ? 'Cache' : 'SerpApi'}
                             </span>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -430,7 +430,7 @@ export default function CompetitorManagementPage() {
                 background: '#f8fafc', border: '1px solid #e2e8f0',
                 fontSize: '0.85rem', color: '#64748b', lineHeight: 1.6,
             }}>
-                <strong style={{ color: '#475569' }}>💡 Cách hoạt động:</strong>
+                <strong style={{ color: '#475569' }}>Cách hoạt động:</strong>
                 <ul style={{ margin: '8px 0 0 20px', padding: 0 }}>
                     <li>Tìm khách sạn đối thủ qua Google Hotels → Thêm vào danh sách</li>
                     <li>Hệ thống tự động thu thập giá 5 mốc: 7, 14, 30, 60, 90 ngày</li>

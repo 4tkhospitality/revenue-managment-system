@@ -3,6 +3,7 @@
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { Building2 } from 'lucide-react';
 
 const ACTIVE_HOTEL_COOKIE = 'rms_active_hotel';
 
@@ -60,7 +61,7 @@ export default function SelectHotelPage() {
         <div className="min-h-screen flex items-center justify-center bg-gray-50">
             <div className="max-w-lg w-full bg-white rounded-xl shadow-lg p-8">
                 <div className="text-center mb-6">
-                    <div className="text-4xl mb-3">🏨</div>
+                    <div className="text-4xl mb-3"><Building2 className="w-10 h-10 text-blue-500 mx-auto" /></div>
                     <h1 className="text-2xl font-bold text-gray-900">
                         Chọn khách sạn
                     </h1>
@@ -77,8 +78,8 @@ export default function SelectHotelPage() {
                             onClick={() => handleSelectHotel(hotel.hotelId)}
                             disabled={selecting !== null}
                             className={`w-full p-4 border rounded-lg text-left transition-all ${selecting === hotel.hotelId
-                                    ? 'border-blue-500 bg-blue-50'
-                                    : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
+                                ? 'border-blue-500 bg-blue-50'
+                                : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
                                 } ${selecting !== null && selecting !== hotel.hotelId ? 'opacity-50' : ''}`}
                         >
                             <div className="flex items-center justify-between">
