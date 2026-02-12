@@ -121,6 +121,7 @@ export interface MatrixCell {
     roomTypeId: string;
     channelId: string;
     bar: number;
+    display: number;          // Guest-facing price (BAR after discounts, before commission)
     net: number;
     commission: number;
     totalDiscount: number;

@@ -1,13 +1,14 @@
-// V01.2: Calculate Price Matrix API
+// V01.3: Calculate Price Matrix API
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { auth } from '@/lib/auth';
-import { calcBarFromNet, calcNetFromBar } from '@/lib/pricing/engine';
+import { calcBarFromNet, resolveTimingConflicts, formatVND } from '@/lib/pricing/engine';
 import type { CalcType, DiscountItem, MatrixCell, PriceMatrixResponse } from '@/lib/pricing/types';
 
 interface CalcMatrixRequest {
     mode?: 'net_to_bar' | 'bar_to_net';
-    displayPrice?: number; // Used when mode = bar_to_net
+    displayPrice?: number; // Legacy: single uniform price
+    displayPrices?: Record<string, number>; // Per room type: { roomTypeId: displayPrice }
 }
 
 // POST /api/pricing/calc-matrix - Calculate full price matrix
@@ -22,7 +23,8 @@ export async function POST(request: NextRequest) {
         }
 
         const mode = body.mode || 'net_to_bar';
-        const displayPrice = body.displayPrice;
+        const displayPrices = body.displayPrices || {}; // per room type
+        const displayPriceFallback = body.displayPrice; // legacy single price
 
         // Read cookie directly from request
         let hotelId = request.cookies.get('rms_active_hotel')?.value;
@@ -85,24 +87,60 @@ export async function POST(request: NextRequest) {
 
                 const key = `${roomType.id}:${channel.id}`;
 
-                if (mode === 'bar_to_net' && displayPrice) {
-                    // Reverse mode: Calculate NET from uniform display price
-                    const result = calcNetFromBar(
-                        displayPrice,
-                        channel.commission,
-                        discounts,
-                        channel.calc_type as CalcType
+                if (mode === 'bar_to_net') {
+                    // Per-room-type display price
+                    const dpForRoom = displayPrices[roomType.id] || displayPriceFallback;
+                    if (!dpForRoom) {
+                        continue;
+                    }
+
+                    // Step 1: Resolve timing conflicts (same as engine)
+                    const { resolved: effectiveDiscounts, removed, hadConflict } = resolveTimingConflicts(discounts);
+                    const trace: { step: string; description: string; priceAfter: number }[] = [];
+
+                    if (hadConflict && removed) {
+                        trace.push({
+                            step: '⚠️ Không cộng dồn',
+                            description: `Early Bird + Last-Minute → Bỏ "${removed.name}" (${removed.percent}%)`,
+                            priceAfter: dpForRoom,
+                        });
+                    }
+
+                    // Step 2: Compute totalDiscount from RESOLVED discounts
+                    let totalDiscount = 0;
+                    if ((channel.calc_type as CalcType) === 'PROGRESSIVE') {
+                        let multiplier = 1;
+                        effectiveDiscounts.forEach((d) => { multiplier *= (1 - d.percent / 100); });
+                        totalDiscount = (1 - multiplier) * 100;
+                    } else {
+                        totalDiscount = effectiveDiscounts.reduce((sum, d) => sum + d.percent, 0);
+                    }
+
+                    // Step 3: BAR = displayPrice / (1 - totalDiscount%)
+                    // BAR is what hotel enters in Channel Manager
+                    const bar = totalDiscount >= 100 ? 0 : dpForRoom / (1 - totalDiscount / 100);
+                    const barRounded = Math.round(bar);
+
+                    // Step 4: NET = displayPrice × (1 - commission%)
+                    // Guest pays displayPrice, OTA takes commission% from it
+                    const net = Math.round(dpForRoom * (1 - channel.commission / 100));
+
+                    trace.push(
+                        { step: 'Giá khách thấy', description: `Hiển thị trên OTA = ${formatVND(dpForRoom)}`, priceAfter: dpForRoom },
+                        { step: 'Tính BAR', description: `BAR = ${formatVND(dpForRoom)} / (1 - ${totalDiscount.toFixed(1)}%) = ${formatVND(barRounded)}`, priceAfter: barRounded },
+                        { step: 'Hoa hồng OTA', description: `Thu về = ${formatVND(dpForRoom)} × (1 - ${channel.commission}%) = ${formatVND(net)}`, priceAfter: net },
                     );
 
                     matrix[key] = {
                         roomTypeId: roomType.id,
                         channelId: channel.id,
-                        bar: displayPrice,
-                        net: result.net,
-                        commission: result.commission,
-                        totalDiscount: result.totalDiscount,
-                        validation: result.validation,
-                        trace: result.trace,
+                        bar: barRounded,
+                        display: dpForRoom,
+                        net,
+                        commission: channel.commission,
+                        totalDiscount,
+                        validation: { isValid: true, errors: [], warnings: [] },
+                        trace,
                     };
                 } else {
                     // Normal mode: Calculate BAR from NET
@@ -114,10 +152,14 @@ export async function POST(request: NextRequest) {
                         roundingRule
                     );
 
+                    // display = guest-facing price (= BAR after discounts)
+                    const guestPrice = result.bar * (1 - result.totalDiscount / 100);
+
                     matrix[key] = {
                         roomTypeId: roomType.id,
                         channelId: channel.id,
                         bar: result.bar,
+                        display: Math.round(guestPrice),
                         net: result.net,
                         commission: result.commission,
                         totalDiscount: result.totalDiscount,

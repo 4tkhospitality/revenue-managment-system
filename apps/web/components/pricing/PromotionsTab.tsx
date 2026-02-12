@@ -36,19 +36,19 @@ const GROUP_CONFIG = {
 // Vendor-specific group labels (UI Layer — display only)
 const VENDOR_GROUP_LABELS: Record<string, Partial<Record<keyof typeof GROUP_CONFIG, string>>> = {
     agoda: {
-        SEASONAL: 'Seasonal (Theo mùa)',
-        ESSENTIAL: 'Essential (Cơ bản)',
-        TARGETED: 'Targeted (Mục tiêu)',
+        SEASONAL: 'Theo mùa',
+        ESSENTIAL: 'Cơ bản',
+        TARGETED: 'Mục tiêu',
     },
     booking: {
-        TARGETED: 'Targeted Rates (Nhắm theo thị trường)',
-        GENIUS: 'Genius (Loyalty)',
-        PORTFOLIO: 'Portfolio Deals (Cơ bản)',
-        CAMPAIGN: 'Campaign / Exclusive Deals',
+        TARGETED: 'Nhắm mục tiêu',
+        GENIUS: 'Genius',
+        PORTFOLIO: 'Cơ bản',
+        CAMPAIGN: 'Campaign',
     },
     expedia: {
-        ESSENTIAL: 'Deals (Khuyến mãi)',
-        TARGETED: 'Audience Rates',
+        ESSENTIAL: 'Khuyến mãi',
+        TARGETED: 'Audience',
     },
 };
 
@@ -129,11 +129,11 @@ function PromotionGroup({
     return (
         <div className="bg-[#E9ECF3] border border-[#DBE1EB] rounded-xl overflow-hidden">
             {/* Group Header */}
-            <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="w-full flex items-center justify-between px-4 py-3 hover:bg-[#DBE1EB] transition-colors"
-            >
-                <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between px-4 py-3 hover:bg-[#DBE1EB] transition-colors">
+                <button
+                    onClick={() => setIsOpen(!isOpen)}
+                    className="flex items-center gap-3 flex-1"
+                >
                     {isOpen ? (
                         <ChevronDown className="w-4 h-4 text-[#204183]" />
                     ) : (
@@ -141,11 +141,20 @@ function PromotionGroup({
                     )}
                     <span className={`w-2.5 h-2.5 rounded-full ${config.dotColor}`} />
                     <span className="font-medium text-slate-800">{label}</span>
-                </div>
-                <span className="text-xs text-slate-500 uppercase tracking-wide">
-                    {count} items
-                </span>
-            </button>
+                    <span className="text-xs text-slate-500 uppercase tracking-wide">
+                        {count} items
+                    </span>
+                </button>
+                {/* Quick Add (+) button */}
+                <button
+                    onClick={(e) => { e.stopPropagation(); onAddClick(group); }}
+                    className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-[#204183] hover:bg-[#204183] hover:text-white rounded-lg border border-[#204183]/30 hover:border-[#204183] transition-colors"
+                    title={`Thêm khuyến mãi ${label}`}
+                >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Thêm</span>
+                </button>
+            </div>
 
             {/* Group Content */}
             {isOpen && (
@@ -160,6 +169,13 @@ function PromotionGroup({
                         </button>
                     ) : (
                         <div className="space-y-2">
+                            {/* Guide header row */}
+                            <div className="grid grid-cols-[1fr_80px_52px_36px] items-center px-4 py-1.5 text-[11px] font-medium text-slate-400 uppercase tracking-wider gap-3">
+                                <span>Tên khuyến mãi</span>
+                                <span className="text-right">Giảm giá</span>
+                                <span className="text-center">Trạng thái</span>
+                                <span className="text-center">Xóa</span>
+                            </div>
                             {campaigns.map((c) => {
                                 // Check if this is a Free Nights deal
                                 const isFreeNights = c.promo.name.toLowerCase().includes('free night');
@@ -175,27 +191,20 @@ function PromotionGroup({
                                 return (
                                     <div
                                         key={c.id}
-                                        className="flex items-center justify-between px-4 py-3 bg-white border border-[#DBE1EB] rounded-lg"
+                                        className="grid grid-cols-[1fr_80px_52px_36px] items-center px-4 py-3 bg-white border border-[#DBE1EB] rounded-lg gap-3"
                                     >
-                                        <div className="flex flex-col">
-                                            <div className="flex items-center gap-2">
-                                                <span className="font-medium text-slate-800">{c.promo.name}</span>
-                                                {/* Stack behavior badge */}
-                                                <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${badgeConfig.bg} ${badgeConfig.text}`}>
-                                                    {badgeConfig.label}
-                                                </span>
-                                            </div>
-                                            {c.promo.sub_category && (
-                                                <span className="text-xs text-slate-500 uppercase tracking-wide mt-0.5">
-                                                    {c.promo.sub_category}
-                                                </span>
-                                            )}
+                                        <div className="flex items-center gap-1.5 min-w-0">
+                                            <span className="font-medium text-slate-800 text-sm truncate">{c.promo.name}</span>
+                                            {/* Stack behavior badge */}
+                                            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap shrink-0 ${badgeConfig.bg} ${badgeConfig.text}`}>
+                                                {badgeConfig.label}
+                                            </span>
                                         </div>
-                                        <div className="flex items-center gap-4">
+                                        <div className="flex items-center">
                                             {/* Free Nights: Stay X / Pay Y input */}
                                             {isFreeNights ? (
-                                                <div className="flex items-center gap-1 text-sm">
-                                                    <span className="text-slate-500">Stay</span>
+                                                <div className="flex items-center gap-1 text-xs">
+                                                    <span className="text-slate-500">S</span>
                                                     <input
                                                         type="number"
                                                         min="2"
@@ -203,13 +212,13 @@ function PromotionGroup({
                                                         value={Math.round(100 / (100 - c.discount_pct)) || 4}
                                                         onChange={(e) => {
                                                             const x = Math.max(2, parseInt(e.target.value) || 2);
-                                                            const y = x - 1; // Default: Pay (X-1)
+                                                            const y = x - 1;
                                                             const pct = Math.round((1 - y / x) * 100);
                                                             onUpdateDiscount(c.id, pct);
                                                         }}
-                                                        className="w-10 text-center text-sm font-semibold text-[#204183] bg-slate-50 border border-[#DBE1EB] rounded px-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-[#204183]"
+                                                        className="w-8 text-center text-xs font-semibold text-[#204183] bg-slate-50 border border-[#DBE1EB] rounded px-0.5 py-0.5 focus:outline-none focus:ring-2 focus:ring-[#204183]"
                                                     />
-                                                    <span className="text-slate-500">Pay</span>
+                                                    <span className="text-slate-500">P</span>
                                                     <input
                                                         type="number"
                                                         min="1"
@@ -217,13 +226,13 @@ function PromotionGroup({
                                                         value={Math.round(100 / (100 - c.discount_pct)) - 1 || 3}
                                                         onChange={(e) => {
                                                             const y = Math.max(1, parseInt(e.target.value) || 1);
-                                                            const x = y + 1; // Infer X from Y
+                                                            const x = y + 1;
                                                             const pct = Math.round((1 - y / x) * 100);
                                                             onUpdateDiscount(c.id, pct);
                                                         }}
-                                                        className="w-10 text-center text-sm font-semibold text-[#204183] bg-slate-50 border border-[#DBE1EB] rounded px-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-[#204183]"
+                                                        className="w-8 text-center text-xs font-semibold text-[#204183] bg-slate-50 border border-[#DBE1EB] rounded px-0.5 py-0.5 focus:outline-none focus:ring-2 focus:ring-[#204183]"
                                                     />
-                                                    <span className="text-xs text-slate-400 ml-1">→ {c.discount_pct}%</span>
+                                                    <span className="text-[10px] text-slate-400">→{c.discount_pct}%</span>
                                                 </div>
                                             ) : (
                                                 /* Regular discount percentage input */
@@ -242,23 +251,23 @@ function PromotionGroup({
                                                     <span className="text-sm font-semibold text-[#204183] ml-0.5">%</span>
                                                 </div>
                                             )}
-                                            <button
-                                                onClick={() => onToggle(c)}
-                                                className={`relative w-11 h-6 rounded-full transition-colors ${c.is_active ? 'bg-emerald-500' : 'bg-slate-300'
-                                                    }`}
-                                            >
-                                                <span
-                                                    className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${c.is_active ? 'left-6' : 'left-1'
-                                                        }`}
-                                                />
-                                            </button>
-                                            <button
-                                                onClick={() => onDelete(c.id)}
-                                                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
                                         </div>
+                                        <button
+                                            onClick={() => onToggle(c)}
+                                            className={`relative w-11 h-6 rounded-full transition-colors ${c.is_active ? 'bg-emerald-500' : 'bg-slate-300'
+                                                }`}
+                                        >
+                                            <span
+                                                className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${c.is_active ? 'left-6' : 'left-1'
+                                                    }`}
+                                            />
+                                        </button>
+                                        <button
+                                            onClick={() => onDelete(c.id)}
+                                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
                                     </div>
                                 );
                             })}
@@ -409,7 +418,7 @@ function PriceCalculator({
     channelName: string;
     calcType: 'PROGRESSIVE' | 'ADDITIVE' | 'SINGLE_DISCOUNT';
 }) {
-    const [calcMode, setCalcMode] = useState<'net_to_display' | 'display_to_net'>('net_to_display');
+    const [calcMode, setCalcMode] = useState<'net_to_display' | 'display_to_net' | 'guest_price'>('net_to_display');
     const [customInput, setCustomInput] = useState<string>('');
 
     const selectedRoom = roomTypes.find((r) => r.id === selectedRoomId);
@@ -426,32 +435,40 @@ function PriceCalculator({
         return parseFloat(s.replace(/\./g, '').replace(/,/g, '')) || 0;
     };
 
-    // Calculate 3 prices:
-    // barPrice = giá nhập Channel Manager (trước discount)
-    // guestPrice = giá khách thấy = BAR × discountMultiplier
-    // netRevenue = giá thu về = guestPrice × commissionMultiplier
+    // Default value based on mode
+    const getDefaultForMode = (m: typeof calcMode) => {
+        if (m === 'net_to_display') return formatNumber(baseNetPrice);
+        if (m === 'display_to_net') return formatNumber(baseNetPrice / discountMultiplier / commissionMultiplier);
+        return formatNumber(baseNetPrice / commissionMultiplier);
+    };
+
+    // Initialize input with default when mode or room changes
+    useEffect(() => {
+        setCustomInput(getDefaultForMode(calcMode));
+    }, [selectedRoomId, calcMode, baseNetPrice]);
+
+    // Calculate 3 prices from the current input
+    const inputValue = parseNumber(customInput);
     let barPrice: number;
     let guestPrice: number;
     let netRevenue: number;
 
-    const inputValue = customInput ? parseNumber(customInput) : 0;
-
     if (calcMode === 'net_to_display') {
-        // Giá thu về → Tính ngược lên
-        netRevenue = customInput ? inputValue : baseNetPrice;
+        // Giá thu về → Tính ngược lên BAR + Display
+        netRevenue = inputValue || baseNetPrice;
         guestPrice = commissionMultiplier > 0 ? netRevenue / commissionMultiplier : netRevenue;
         barPrice = discountMultiplier > 0 ? guestPrice / discountMultiplier : guestPrice;
-    } else {
-        // Giá BAR (Channel Manager) → Tính xuống
-        barPrice = customInput ? inputValue : baseNetPrice / discountMultiplier / commissionMultiplier;
+    } else if (calcMode === 'display_to_net') {
+        // Giá BAR (Channel Manager) → Tính xuống Display + NET
+        barPrice = inputValue || (baseNetPrice / discountMultiplier / commissionMultiplier);
         guestPrice = barPrice * discountMultiplier;
         netRevenue = guestPrice * commissionMultiplier;
+    } else {
+        // Giá hiển thị (khách thấy) → Tính ngược BAR + tính xuống NET
+        guestPrice = inputValue || (baseNetPrice / commissionMultiplier);
+        barPrice = discountMultiplier > 0 ? guestPrice / discountMultiplier : guestPrice;
+        netRevenue = guestPrice * commissionMultiplier;
     }
-
-    // Reset input when room changes
-    useEffect(() => {
-        setCustomInput('');
-    }, [selectedRoomId]);
 
     if (roomTypes.length === 0) {
         return (
@@ -474,25 +491,34 @@ function PriceCalculator({
                 Tính giá - {channelName} ({commissionPct}% hoa hồng)
             </h3>
 
-            {/* Mode Toggle */}
+            {/* Mode Toggle — 3 tabs */}
             <div className="flex mb-4 bg-white rounded-lg border border-[#DBE1EB] overflow-hidden">
                 <button
-                    onClick={() => { setCalcMode('net_to_display'); setCustomInput(''); }}
-                    className={`flex-1 px-3 py-2 text-xs font-medium transition-colors ${calcMode === 'net_to_display'
+                    onClick={() => setCalcMode('net_to_display')}
+                    className={`flex-1 px-2 py-2 text-xs font-medium transition-colors ${calcMode === 'net_to_display'
                         ? 'bg-[#204183] text-white'
                         : 'text-slate-600 hover:bg-slate-50'
                         }`}
                 >
-                    Thu về → BAR
+                    Giá Thu về
                 </button>
                 <button
-                    onClick={() => { setCalcMode('display_to_net'); setCustomInput(''); }}
-                    className={`flex-1 px-3 py-2 text-xs font-medium transition-colors ${calcMode === 'display_to_net'
+                    onClick={() => setCalcMode('display_to_net')}
+                    className={`flex-1 px-2 py-2 text-xs font-medium transition-colors ${calcMode === 'display_to_net'
                         ? 'bg-[#204183] text-white'
                         : 'text-slate-600 hover:bg-slate-50'
                         }`}
                 >
-                    BAR → Thu về
+                    Giá BAR
+                </button>
+                <button
+                    onClick={() => setCalcMode('guest_price')}
+                    className={`flex-1 px-2 py-2 text-xs font-medium transition-colors ${calcMode === 'guest_price'
+                        ? 'bg-[#204183] text-white'
+                        : 'text-slate-600 hover:bg-slate-50'
+                        }`}
+                >
+                    Giá Hiển thị
                 </button>
             </div>
 
@@ -512,17 +538,27 @@ function PriceCalculator({
             {/* Input field */}
             <div className="mb-4">
                 <label className="block text-xs font-medium text-slate-600 mb-1">
-                    {calcMode === 'net_to_display' ? 'Nhập giá thu về mong muốn:' : 'Nhập giá BAR (Channel Manager):'}
+                    {calcMode === 'net_to_display'
+                        ? 'Nhập giá thu về mong muốn:'
+                        : calcMode === 'display_to_net'
+                            ? 'Nhập giá BAR (Channel Manager):'
+                            : 'Nhập giá khách thấy trên OTA:'
+                    }
                 </label>
                 <div className="relative">
                     <input
                         type="text"
-                        value={customInput || formatNumber(calcMode === 'net_to_display' ? baseNetPrice : baseNetPrice / discountMultiplier / commissionMultiplier)}
+                        value={customInput}
                         onChange={(e) => {
-                            const num = parseNumber(e.target.value);
-                            setCustomInput(num > 0 ? formatNumber(num) : '');
+                            const raw = e.target.value.replace(/[^0-9]/g, '');
+                            if (raw === '') {
+                                setCustomInput('');
+                            } else {
+                                const num = parseInt(raw, 10);
+                                setCustomInput(formatNumber(num));
+                            }
                         }}
-                        placeholder={calcMode === 'net_to_display' ? 'VD: 1.000.000' : 'VD: 1.500.000'}
+                        placeholder={calcMode === 'net_to_display' ? 'VD: 1.000.000' : calcMode === 'display_to_net' ? 'VD: 1.500.000' : 'VD: 1.200.000'}
                         className="w-full px-3 py-2 pr-8 bg-white border border-[#DBE1EB] rounded-lg text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-[#204183]"
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">đ</span>
@@ -1234,6 +1270,23 @@ export default function PromotionsTab() {
         appliedDiscounts = [best];
     }
 
+    // ── Timing conflict resolution (Early Bird + Last-Minute are mutually exclusive) ──
+    // A guest cannot book both "early" AND "last-minute". When both are active,
+    // only the LARGER discount applies. This matches the engine's resolveTimingConflicts().
+    const EARLY_BIRD_RE = /early\s*bird/i;
+    const LAST_MINUTE_RE = /last[\s-]*minute/i;
+    const earlyBirdCamp = appliedDiscounts.find(c => EARLY_BIRD_RE.test(c.promo.name));
+    const lastMinuteCamp = appliedDiscounts.find(c => LAST_MINUTE_RE.test(c.promo.name));
+    let timingConflictWarning: string | null = null;
+
+    if (earlyBirdCamp && lastMinuteCamp) {
+        // Both exist → keep the larger discount, remove the smaller
+        const toRemove = earlyBirdCamp.discount_pct >= lastMinuteCamp.discount_pct
+            ? lastMinuteCamp : earlyBirdCamp;
+        appliedDiscounts = appliedDiscounts.filter(c => c.id !== toRemove.id);
+        timingConflictWarning = `⚠️ Early Bird + Last-Minute không cộng dồn → Bỏ "${toRemove.promo.name}" (${toRemove.discount_pct}%)`;
+    }
+
     let totalDiscount: number;
     let discountMultiplier: number;
     if (calcType === 'SINGLE_DISCOUNT' && appliedDiscounts.length > 0) {
@@ -1418,6 +1471,14 @@ export default function PromotionsTab() {
                             baseCommission={commissionPct}
                             vendor={selectedChannelData?.code || 'agoda'}
                         />
+                    )}
+
+                    {/* Timing conflict warning */}
+                    {timingConflictWarning && (
+                        <div className="px-4 py-2 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-700 flex items-center gap-2">
+                            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                            {timingConflictWarning}
+                        </div>
                     )}
 
                     {/* Total Discount - Only show 80% limit for Agoda */}

@@ -175,7 +175,7 @@ export default function RoomTypesTab() {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Giá NET (VND) *</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Giá thu về (VND) *</label>
                                 <input
                                     type="text"
                                     value={formData.net_price}
@@ -219,7 +219,7 @@ export default function RoomTypesTab() {
                             <tr>
                                 <th className="px-4 py-3 text-left text-slate-600 font-medium">Hạng phòng</th>
                                 <th className="px-4 py-3 text-left text-slate-600 font-medium">Mô tả</th>
-                                <th className="px-4 py-3 text-right text-slate-600 font-medium">Giá NET</th>
+                                <th className="px-4 py-3 text-right text-slate-600 font-medium">Giá thu về</th>
                                 <th className="px-4 py-3 text-center text-slate-600 font-medium">Thao tác</th>
                             </tr>
                         </thead>

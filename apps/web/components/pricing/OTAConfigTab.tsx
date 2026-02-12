@@ -191,7 +191,7 @@ export default function OTAConfigTab() {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Commission (%) *</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Hoa hồng (%) *</label>
                                 <input
                                     type="number"
                                     value={formData.commission}
@@ -210,8 +210,8 @@ export default function OTAConfigTab() {
                                     onChange={(e) => setFormData({ ...formData, calc_type: e.target.value as any })}
                                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 >
-                                    <option value="PROGRESSIVE">Progressive (Nhân)</option>
-                                    <option value="ADDITIVE">Additive (Cộng)</option>
+                                    <option value="PROGRESSIVE">Lũy tiến — Progressive</option>
+                                    <option value="ADDITIVE">Cộng dồn — Additive</option>
                                 </select>
                             </div>
                             <div className="flex items-center gap-2">
@@ -258,7 +258,7 @@ export default function OTAConfigTab() {
                             <tr>
                                 <th className="px-4 py-3 text-left text-slate-600 font-medium">Kênh OTA</th>
                                 <th className="px-4 py-3 text-left text-slate-600 font-medium">Mã</th>
-                                <th className="px-4 py-3 text-center text-slate-600 font-medium">Commission</th>
+                                <th className="px-4 py-3 text-center text-slate-600 font-medium">Hoa hồng</th>
                                 <th className="px-4 py-3 text-center text-slate-600 font-medium">Chế độ tính</th>
                                 <th className="px-4 py-3 text-center text-slate-600 font-medium">Trạng thái</th>
                                 <th className="px-4 py-3 text-center text-slate-600 font-medium">Thao tác</th>
@@ -275,7 +275,7 @@ export default function OTAConfigTab() {
                                             ? 'bg-blue-100 text-blue-700'
                                             : 'bg-purple-100 text-purple-700'
                                             }`}>
-                                            {ch.calc_type === 'PROGRESSIVE' ? 'Progressive' : 'Additive'}
+                                            {ch.calc_type === 'PROGRESSIVE' ? 'Lũy tiến' : 'Cộng dồn'}
                                         </span>
                                     </td>
                                     <td className="px-4 py-3 text-center">
