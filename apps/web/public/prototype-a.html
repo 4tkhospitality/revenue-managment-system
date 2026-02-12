@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Option A — Sidebar Channel Layout</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Inter', sans-serif; background: #F5F7FB; color: #1e293b; }
+
+.page { display: flex; height: 100vh; }
+
+/* === LEFT SIDEBAR === */
+.sidebar {
+    width: 280px;
+    background: #fff;
+    border-right: 1px solid #DBE1EB;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+}
+.sidebar-header {
+    padding: 20px 20px 16px;
+    border-bottom: 1px solid #DBE1EB;
+}
+.sidebar-header h1 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #204183;
+}
+.sidebar-header p {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-top: 2px;
+}
+
+.channel-list { padding: 12px; }
+.channel-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    margin-bottom: 4px;
+}
+.channel-item:hover { background: #F2F4F8; }
+.channel-item.active {
+    background: #204183;
+    color: #fff;
+}
+.channel-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.channel-name {
+    font-weight: 600;
+    font-size: 14px;
+    flex: 1;
+}
+.channel-badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 500;
+}
+.channel-item.active .channel-badge {
+    background: rgba(255,255,255,0.2);
+    color: #fff;
+}
+.channel-item:not(.active) .channel-badge {
+    background: #F2F4F8;
+    color: #64748b;
+}
+
+.sidebar-divider {
+    height: 1px;
+    background: #DBE1EB;
+    margin: 8px 12px;
+}
+
+/* Price Calculator in sidebar */
+.price-calc {
+    padding: 16px;
+    flex: 1;
+    overflow-y: auto;
+}
+.price-calc-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #204183;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.room-select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #DBE1EB;
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: inherit;
+    background: #F2F4F8;
+    margin-bottom: 12px;
+    color: #1e293b;
+}
+.calc-mode-tabs {
+    display: flex;
+    background: #F2F4F8;
+    border-radius: 8px;
+    padding: 3px;
+    margin-bottom: 12px;
+}
+.calc-mode-tab {
+    flex: 1;
+    padding: 6px 4px;
+    border: none;
+    background: transparent;
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    border-radius: 6px;
+    font-family: inherit;
+    transition: all 0.15s;
+}
+.calc-mode-tab.active {
+    background: #204183;
+    color: #fff;
+}
+.calc-input-wrap {
+    position: relative;
+    margin-bottom: 12px;
+}
+.calc-input-label {
+    font-size: 11px;
+    color: #64748b;
+    margin-bottom: 4px;
+    display: block;
+}
+.calc-input {
+    width: 100%;
+    padding: 8px 28px 8px 10px;
+    border: 1px solid #DBE1EB;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: 'Inter', monospace;
+    font-weight: 600;
+    color: #204183;
+}
+.calc-input:focus { outline: 2px solid #204183; border-color: transparent; }
+.calc-suffix {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    font-size: 13px;
+    margin-top: 9px;
+}
+
+.price-step {
+    border-radius: 8px;
+    padding: 10px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+.price-step .label {
+    font-size: 11px;
+    color: #64748b;
+}
+.price-step .value {
+    font-size: 16px;
+    font-weight: 700;
+    font-family: 'Inter', monospace;
+}
+.price-step.bar { background: #EFF1F8; }
+.price-step.bar .value { color: #204183; }
+.price-step.display { background: #FFF7ED; border: 1px solid #FED7AA; }
+.price-step.display .value { color: #EA580C; }
+.price-step.net { background: #ECFDF5; border: 1px solid #A7F3D0; }
+.price-step.net .value { color: #059669; }
+
+.price-arrow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 12px;
+    font-size: 11px;
+    color: #94a3b8;
+}
+.price-arrow .deduct { margin-left: auto; font-weight: 500; color: #EA580C; }
+
+.validation-ok {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: #ECFDF5;
+    border-radius: 8px;
+    font-size: 12px;
+    color: #059669;
+    font-weight: 500;
+    margin-top: 8px;
+}
+
+/* === MAIN CONTENT === */
+.main {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 32px;
+}
+.main-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+.main-header h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1e293b;
+}
+.main-header .commission {
+    font-size: 13px;
+    color: #64748b;
+    font-weight: 400;
+    margin-left: 8px;
+}
+.btn-add {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: #204183;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s;
+}
+.btn-add:hover { background: #1a3469; }
+
+/* Promotion Group */
+.promo-group {
+    background: #E9ECF3;
+    border: 1px solid #DBE1EB;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    overflow: hidden;
+}
+.group-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: background 0.1s;
+}
+.group-header:hover { background: #DBE1EB; }
+.group-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.group-chevron { color: #204183; font-size: 14px; }
+.group-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+.group-label {
+    font-weight: 600;
+    font-size: 14px;
+    color: #1e293b;
+}
+.group-count {
+    font-size: 11px;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+.btn-group-add {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border: 1px solid rgba(32,65,131,0.3);
+    background: transparent;
+    color: #204183;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+}
+.btn-group-add:hover {
+    background: #204183;
+    color: #fff;
+    border-color: #204183;
+}
+
+/* Card grid */
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    padding: 0 16px 16px;
+}
+.promo-card {
+    background: #fff;
+    border: 1px solid #DBE1EB;
+    border-left: 3px solid;
+    border-radius: 10px;
+    padding: 14px;
+    transition: box-shadow 0.15s;
+}
+.promo-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+.promo-card.active { border-left-color: #10b981; }
+.promo-card.inactive { border-left-color: #cbd5e1; }
+.card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+}
+.card-name {
+    font-weight: 600;
+    font-size: 13px;
+    color: #1e293b;
+}
+.card-badge {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 8px;
+    font-weight: 600;
+}
+.badge-stackable { background: #ECFDF5; color: #059669; }
+.badge-exclusive { background: #FEF2F2; color: #DC2626; }
+.badge-highest { background: #EFF6FF; color: #2563EB; }
+.card-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.card-discount {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+.card-discount input {
+    width: 48px;
+    text-align: right;
+    padding: 4px 6px;
+    border: 1px solid #DBE1EB;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #204183;
+    font-family: 'Inter', monospace;
+    background: #F8FAFC;
+}
+.card-discount input:focus { outline: 2px solid #204183; border-color: transparent; }
+.card-discount span { font-size: 14px; font-weight: 700; color: #204183; }
+.card-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.toggle {
+    position: relative;
+    width: 40px;
+    height: 22px;
+    border-radius: 11px;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.toggle.on { background: #10b981; }
+.toggle.off { background: #cbd5e1; }
+.toggle-knob {
+    position: absolute;
+    top: 3px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    transition: left 0.2s;
+}
+.toggle.on .toggle-knob { left: 21px; }
+.toggle.off .toggle-knob { left: 3px; }
+.btn-delete {
+    padding: 4px;
+    border: none;
+    background: transparent;
+    color: #cbd5e1;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.1s;
+}
+.btn-delete:hover { color: #EF4444; background: #FEF2F2; }
+
+/* Marketing Programs */
+.marketing-section {
+    background: #E9ECF3;
+    border: 1px solid #DBE1EB;
+    border-radius: 12px;
+    padding: 16px;
+}
+.marketing-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    color: #1e293b;
+    margin-bottom: 12px;
+}
+.marketing-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+.mkt-card {
+    background: #fff;
+    border: 1px solid #DBE1EB;
+    border-radius: 10px;
+    padding: 12px;
+}
+.mkt-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+.mkt-card-name {
+    font-weight: 600;
+    font-size: 13px;
+    color: #1e293b;
+}
+.mkt-card-desc {
+    font-size: 11px;
+    color: #94a3b8;
+}
+.tier-buttons {
+    display: flex;
+    gap: 4px;
+    margin-top: 8px;
+}
+.tier-btn {
+    flex: 1;
+    padding: 5px 4px;
+    border: 1px solid #DBE1EB;
+    background: #F2F4F8;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.1s;
+}
+.tier-btn.active {
+    background: #204183;
+    color: #fff;
+    border-color: #204183;
+}
+.mkt-pct {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    margin-top: 8px;
+}
+.mkt-pct input {
+    width: 44px;
+    text-align: right;
+    padding: 4px 6px;
+    border: 1px solid #DBE1EB;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #204183;
+    font-family: inherit;
+    background: #F8FAFC;
+}
+.mkt-pct span { font-size: 13px; font-weight: 600; color: #204183; }
+
+.commission-total {
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: #FFF7ED;
+    border: 1px solid #FED7AA;
+    border-radius: 8px;
+    font-size: 12px;
+    color: #9A3412;
+    font-weight: 500;
+}
+
+/* Option label */
+.option-label {
+    position: fixed;
+    top: 12px;
+    right: 16px;
+    background: #204183;
+    color: #fff;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    z-index: 100;
+    letter-spacing: 0.5px;
+}
+</style>
+</head>
+<body>
+<div class="option-label">OPTION A — Sidebar</div>
+
+<div class="page">
+    <!-- LEFT SIDEBAR -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h1>Khuyến mãi</h1>
+            <p>Quản lý chương trình KM theo kênh OTA</p>
+        </div>
+
+        <div class="channel-list">
+            <div class="channel-item active" onclick="selectChannel(this, 'agoda')">
+                <span class="channel-dot" style="background: #FF5722"></span>
+                <span class="channel-name">Agoda</span>
+                <span class="channel-badge">5 active</span>
+            </div>
+            <div class="channel-item" onclick="selectChannel(this, 'booking')">
+                <span class="channel-dot" style="background: #003580"></span>
+                <span class="channel-name">Booking.com</span>
+                <span class="channel-badge">3 active</span>
+            </div>
+            <div class="channel-item" onclick="selectChannel(this, 'expedia')">
+                <span class="channel-dot" style="background: #FBBC04"></span>
+                <span class="channel-name">Expedia</span>
+                <span class="channel-badge">2 active</span>
+            </div>
+        </div>
+
+        <div class="sidebar-divider"></div>
+
+        <!-- Price Calculator -->
+        <div class="price-calc">
+            <div class="price-calc-title">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#204183" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="10" y2="10"/><line x1="14" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="10" y2="14"/><line x1="14" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="16" y2="18"/></svg>
+                Tính giá
+            </div>
+
+            <select class="room-select">
+                <option>Deluxe Ocean View — 1.200.000đ (Net)</option>
+                <option>Standard Room — 800.000đ (Net)</option>
+                <option>Suite — 2.500.000đ (Net)</option>
+            </select>
+
+            <div class="calc-mode-tabs">
+                <button class="calc-mode-tab active">Thu về</button>
+                <button class="calc-mode-tab">BAR</button>
+                <button class="calc-mode-tab">Display</button>
+            </div>
+
+            <div class="calc-input-wrap">
+                <span class="calc-input-label">Nhập giá thu về mong muốn:</span>
+                <input type="text" class="calc-input" value="1.200.000">
+                <span class="calc-suffix">đ</span>
+            </div>
+
+            <div class="price-step bar">
+                <span class="label">① Giá BAR</span>
+                <span class="value">1.764.706đ</span>
+            </div>
+            <div class="price-arrow">
+                <span>↓</span>
+                <span>KM −15% (lũy tiến)</span>
+                <span class="deduct">−264.706đ</span>
+            </div>
+            <div class="price-step display">
+                <span class="label">② Khách thấy</span>
+                <span class="value">1.500.000đ</span>
+            </div>
+            <div class="price-arrow">
+                <span>↓</span>
+                <span>Hoa hồng −20%</span>
+                <span class="deduct">−300.000đ</span>
+            </div>
+            <div class="price-step net">
+                <span class="label">③ Thu về</span>
+                <span class="value">1.200.000đ</span>
+            </div>
+
+            <div class="validation-ok">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                Validation OK
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="main">
+        <div class="main-header">
+            <h2>Agoda <span class="commission">· Hoa hồng 20%</span></h2>
+            <button class="btn-add" onclick="alert('Mở Promotion Picker')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Thêm khuyến mãi
+            </button>
+        </div>
+
+        <!-- Group: Seasonal -->
+        <div class="promo-group">
+            <div class="group-header" onclick="this.parentElement.classList.toggle('collapsed')">
+                <div class="group-left">
+                    <span class="group-chevron">▼</span>
+                    <span class="group-dot" style="background: #F97316"></span>
+                    <span class="group-label">Theo mùa</span>
+                    <span class="group-count">2 items</span>
+                </div>
+                <button class="btn-group-add">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Thêm
+                </button>
+            </div>
+            <div class="card-grid">
+                <div class="promo-card active">
+                    <div class="card-top">
+                        <span class="card-name">Early Bird Discount</span>
+                        <span class="card-badge badge-stackable">Stackable</span>
+                    </div>
+                    <div class="card-bottom">
+                        <div class="card-discount">
+                            <input type="number" value="15">
+                            <span>%</span>
+                        </div>
+                        <div class="card-actions">
+                            <button class="toggle on"><span class="toggle-knob"></span></button>
+                            <button class="btn-delete">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="promo-card active">
+                    <div class="card-top">
+                        <span class="card-name">Last Minute Deal</span>
+                        <span class="card-badge badge-stackable">Stackable</span>
+                    </div>
+                    <div class="card-bottom">
+                        <div class="card-discount">
+                            <input type="number" value="20">
+                            <span>%</span>
+                        </div>
+                        <div class="card-actions">
+                            <button class="toggle on"><span class="toggle-knob"></span></button>
+                            <button class="btn-delete">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Group: Essential -->
+        <div class="promo-group">
+            <div class="group-header" onclick="this.parentElement.classList.toggle('collapsed')">
+                <div class="group-left">
+                    <span class="group-chevron">▼</span>
+                    <span class="group-dot" style="background: #204183"></span>
+                    <span class="group-label">Cơ bản</span>
+                    <span class="group-count">2 items</span>
+                </div>
+                <button class="btn-group-add">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Thêm
+                </button>
+            </div>
+            <div class="card-grid">
+                <div class="promo-card active">
+                    <div class="card-top">
+                        <span class="card-name">Mobile Rate</span>
+                        <span class="card-badge badge-stackable">Stackable</span>
+                    </div>
+                    <div class="card-bottom">
+                        <div class="card-discount">
+                            <input type="number" value="10">
+                            <span>%</span>
+                        </div>
+                        <div class="card-actions">
+                            <button class="toggle on"><span class="toggle-knob"></span></button>
+                            <button class="btn-delete">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="promo-card inactive">
+                    <div class="card-top">
+                        <span class="card-name">Insider Deals</span>
+                        <span class="card-badge badge-exclusive">Exclusive</span>
+                    </div>
+                    <div class="card-bottom">
+                        <div class="card-discount">
+                            <input type="number" value="25">
+                            <span>%</span>
+                        </div>
+                        <div class="card-actions">
+                            <button class="toggle off"><span class="toggle-knob"></span></button>
+                            <button class="btn-delete">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Group: Targeted -->
+        <div class="promo-group">
+            <div class="group-header">
+                <div class="group-left">
+                    <span class="group-chevron">▼</span>
+                    <span class="group-dot" style="background: #10B981"></span>
+                    <span class="group-label">Mục tiêu</span>
+                    <span class="group-count">1 item</span>
+                </div>
+                <button class="btn-group-add">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Thêm
+                </button>
+            </div>
+            <div class="card-grid">
+                <div class="promo-card active">
+                    <div class="card-top">
+                        <span class="card-name">Country Rate (VN)</span>
+                        <span class="card-badge badge-highest">Highest Wins</span>
+                    </div>
+                    <div class="card-bottom">
+                        <div class="card-discount">
+                            <input type="number" value="12">
+                            <span>%</span>
+                        </div>
+                        <div class="card-actions">
+                            <button class="toggle on"><span class="toggle-knob"></span></button>
+                            <button class="btn-delete">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Marketing Programs -->
+        <div class="marketing-section">
+            <div class="marketing-title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#204183" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+                Marketing Programs (Agoda)
+                <span style="margin-left: auto; font-size: 12px; color: #EA580C; background: #FFF7ED; padding: 3px 10px; border-radius: 12px; font-weight: 600;">+5% commission</span>
+            </div>
+            <div class="marketing-grid">
+                <div class="mkt-card">
+                    <div class="mkt-card-top">
+                        <span class="mkt-card-name">AGP</span>
+                        <button class="toggle on" style="width: 36px; height: 20px;"><span class="toggle-knob" style="width: 14px; height: 14px; top: 3px;"></span></button>
+                    </div>
+                    <span class="mkt-card-desc">Agoda Growth Program</span>
+                    <div class="tier-buttons">
+                        <button class="tier-btn">Silver (2%)</button>
+                        <button class="tier-btn active">Gold (4%)</button>
+                        <button class="tier-btn">Plat (6%)</button>
+                    </div>
+                </div>
+                <div class="mkt-card">
+                    <div class="mkt-card-top">
+                        <span class="mkt-card-name">AGX</span>
+                        <button class="toggle on" style="width: 36px; height: 20px;"><span class="toggle-knob" style="width: 14px; height: 14px; top: 3px;"></span></button>
+                    </div>
+                    <span class="mkt-card-desc">Extra Commission</span>
+                    <div class="mkt-pct">
+                        <input type="number" value="1">
+                        <span>%</span>
+                    </div>
+                </div>
+                <div class="mkt-card">
+                    <div class="mkt-card-top">
+                        <span class="mkt-card-name">Spotlight</span>
+                        <button class="toggle off" style="width: 36px; height: 20px;"><span class="toggle-knob" style="width: 14px; height: 14px; top: 3px; left: 3px;"></span></button>
+                    </div>
+                    <span class="mkt-card-desc">Boost visibility</span>
+                    <div class="mkt-pct">
+                        <input type="number" value="3" disabled style="opacity: 0.4;">
+                        <span style="opacity: 0.4;">%</span>
+                    </div>
+                </div>
+            </div>
+            <div class="commission-total">
+                Commission: Base 20% + AGP Gold 4% + AGX 1% = <strong>25%</strong>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function selectChannel(el, name) {
+    document.querySelectorAll('.channel-item').forEach(i => i.classList.remove('active'));
+    el.classList.add('active');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bảng giá v2 – Context-Aware Cells</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #F5F7FB;
+            color: #1E293B;
+            padding: 24px;
+        }
+
+        /* === RMS Design System === */
+        :root {
+            --navy: #204184;
+            --royal-blue: #1E3A8A;
+            --deep-blue: #102A4C;
+            --bright-blue: #4169E1;
+            --surface: #FFFFFF;
+            --bg: #F5F7FB;
+            --border: #E2E8F0;
+            --text: #1E293B;
+            --text-sec: #64748B;
+            --text-muted: #94A3B8;
+            --success: #10B981;
+            --success-bg: #ECFDF5;
+            --warning: #F59E0B;
+            --warning-bg: #FFFBEB;
+            --danger: #EF4444;
+            --danger-bg: #FEF2F2;
+        }
+
+        .container {
+            max-width: 1144px;
+            margin: 0 auto;
+        }
+
+        /* Info label above the table */
+        .info-banner {
+            background: linear-gradient(to right, var(--royal-blue), var(--deep-blue));
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .info-banner h1 {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .info-banner .subtitle {
+            font-size: 12px;
+            opacity: 0.7;
+            margin-top: 2px;
+        }
+
+        /* Mode toggle */
+        .controls {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px 16px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .toggle-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .toggle-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .toggle-pills {
+            display: flex;
+            background: #F1F5F9;
+            border-radius: 8px;
+            padding: 3px;
+        }
+
+        .toggle-pill {
+            padding: 6px 14px;
+            font-size: 12px;
+            font-weight: 500;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            background: transparent;
+            color: var(--text-sec);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .toggle-pill.active {
+            background: var(--navy);
+            color: white;
+            box-shadow: 0 2px 4px rgba(32, 65, 132, 0.3);
+        }
+
+        .toggle-pill .dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+        }
+
+        .toggle-pill.net .dot {
+            background: var(--success);
+        }
+
+        .toggle-pill.display .dot {
+            background: var(--warning);
+        }
+
+        .toggle-pill:not(.active) .dot {
+            background: var(--text-muted);
+        }
+
+        .hint {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-style: italic;
+            border-left: 1px solid var(--border);
+            padding-left: 12px;
+            line-height: 1.4;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 6px 14px;
+            font-size: 12px;
+            font-weight: 500;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: background 0.15s;
+        }
+
+        .btn:hover {
+            background: #F8FAFC;
+        }
+
+        .btn-primary {
+            background: var(--royal-blue);
+            color: white;
+            border-color: var(--royal-blue);
+        }
+
+        .btn-primary:hover {
+            background: var(--navy);
+        }
+
+        /* Legend */
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 16px;
+            padding: 8px 14px;
+            background: #F8FAFC;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 11px;
+            color: var(--text-sec);
+            margin-bottom: 12px;
+        }
+
+        .legend-title {
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .legend-swatch {
+            width: 10px;
+            height: 10px;
+            border-radius: 3px;
+        }
+
+        .legend .retention-badges {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 10px;
+        }
+
+        .badge {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 10px;
+        }
+
+        .badge-green {
+            background: var(--success-bg);
+            color: #065F46;
+        }
+
+        .badge-amber {
+            background: var(--warning-bg);
+            color: #92400E;
+        }
+
+        .badge-red {
+            background: var(--danger-bg);
+            color: #991B1B;
+        }
+
+        /* Table */
+        .table-wrapper {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        thead th {
+            background: #F8FAFC;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-sec);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 10px 8px;
+            border-bottom: 1px solid var(--border);
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        thead th:first-child {
+            text-align: left;
+            padding-left: 14px;
+        }
+
+        thead th:nth-child(2) {
+            text-align: right;
+            padding-right: 10px;
+        }
+
+        thead th .ch-name {
+            font-size: 12px;
+            color: var(--text);
+            text-transform: none;
+            letter-spacing: normal;
+        }
+
+        thead th .ch-comm {
+            font-size: 9px;
+            font-weight: 400;
+            color: var(--text-muted);
+            background: #E2E8F0;
+            padding: 2px 6px;
+            border-radius: 99px;
+            display: inline-block;
+            margin-top: 3px;
+        }
+
+        /* Column widths */
+        col.col-room {
+            width: 120px;
+        }
+
+        col.col-input {
+            width: 115px;
+        }
+
+        col.col-channel {
+            /* auto-fill remaining */
+        }
+
+        tbody tr {
+            border-top: 1px solid #F1F5F9;
+            transition: background 0.1s;
+        }
+
+        tbody tr:hover {
+            background: #FAFBFD;
+        }
+
+        td {
+            padding: 8px;
+            vertical-align: middle;
+        }
+
+        td:first-child {
+            padding-left: 14px;
+        }
+
+        .room-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .room-base {
+            font-size: 10px;
+            color: var(--text-muted);
+            font-family: 'Inter', monospace;
+            margin-top: 2px;
+        }
+
+        /* Input cell */
+        .input-cell {
+            text-align: right;
+            padding-right: 10px !important;
+        }
+
+        .net-base {
+            font-size: 15px;
+            font-weight: 700;
+            font-family: 'Inter', monospace;
+            color: #059669;
+        }
+
+        .net-label {
+            font-size: 9px;
+            color: #10B981;
+            font-weight: 500;
+        }
+
+        .display-input {
+            width: 100%;
+            text-align: right;
+            font-size: 13px;
+            font-weight: 600;
+            font-family: 'Inter', monospace;
+            color: #D97706;
+            padding: 5px 8px;
+            border: 1px solid #FCD34D;
+            border-radius: 6px;
+            background: #FFFBEB;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+
+        .display-input:focus {
+            border-color: var(--warning);
+            box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.15);
+        }
+
+        .display-input::placeholder {
+            color: #FCD34D;
+        }
+
+        .input-hint {
+            font-size: 9px;
+            color: #D97706;
+            text-align: right;
+            margin-top: 2px;
+            font-weight: 500;
+        }
+
+        /* Channel cell — Context-Aware */
+        .cell {
+            border: 1px solid #E8ECF1;
+            border-radius: 8px;
+            overflow: hidden;
+            transition: box-shadow 0.2s, border-color 0.2s;
+            cursor: default;
+        }
+
+        .cell:hover {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            border-color: #CBD5E1;
+        }
+
+        .cell-main {
+            padding: 6px 8px;
+            text-align: center;
+        }
+
+        .cell-main-label {
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 1px;
+        }
+
+        .cell-main-value {
+            font-size: 14px;
+            font-weight: 700;
+            font-family: 'Inter', monospace;
+            line-height: 1.2;
+        }
+
+        /* Mode: Net → Display → main cell is orange */
+        .cell-main.display-output {
+            background: linear-gradient(135deg, #FFFBEB, #FEF3C7);
+        }
+
+        .cell-main.display-output .cell-main-label {
+            color: #D97706;
+        }
+
+        .cell-main.display-output .cell-main-value {
+            color: #B45309;
+        }
+
+        /* Mode: Display → Net → main cell is green */
+        .cell-main.net-output {
+            background: linear-gradient(135deg, #ECFDF5, #D1FAE5);
+        }
+
+        .cell-main.net-output .cell-main-label {
+            color: #059669;
+        }
+
+        .cell-main.net-output .cell-main-value {
+            color: #047857;
+        }
+
+        /* BAR row */
+        .cell-bar {
+            background: #F8FAFC;
+            border-top: 1px solid #F1F5F9;
+            padding: 4px 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .bar-label {
+            font-size: 8px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .bar-value {
+            font-size: 11px;
+            font-weight: 700;
+            font-family: 'Inter', monospace;
+            color: #475569;
+        }
+
+        .retention-chip {
+            font-size: 9px;
+            font-weight: 700;
+            padding: 1px 5px;
+            border-radius: 4px;
+        }
+
+        /* Empty cell for bar_to_net mode */
+        .cell-empty {
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed #E2E8F0;
+            border-radius: 8px;
+            color: var(--text-muted);
+            font-size: 10px;
+            font-style: italic;
+        }
+
+        /* Annotations */
+        .annotation {
+            margin-top: 16px;
+            padding: 10px 14px;
+            background: #F8FAFC;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 11px;
+            color: var(--text-sec);
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .annotation strong {
+            color: var(--text);
+        }
+
+        /* Mode label */
+        .mode-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 4px;
+            margin-bottom: 4px;
+        }
+
+        .mode-label.net-mode {
+            background: var(--success-bg);
+            color: #065F46;
+        }
+
+        .mode-label.display-mode {
+            background: var(--warning-bg);
+            color: #92400E;
+        }
+
+        /* Visual separator for modes */
+        .section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text);
+            margin: 32px 0 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--navy);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title .num {
+            background: var(--navy);
+            color: white;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+
+        <!-- Header -->
+        <div class="info-banner">
+            <div>
+                <h1>Bảng giá – Prototype v2 (Context-Aware Cells)</h1>
+                <div class="subtitle">Loại bỏ thông tin trùng lặp, tối ưu cho 5 kênh, không cần kéo ngang</div>
+            </div>
+        </div>
+
+        <!-- ===================== MODE 1: Net → Display ===================== -->
+        <div class="section-title">
+            <span class="num">1</span>
+            Chế độ: Thu về → Hiển thị
+        </div>
+
+        <div class="controls">
+            <div class="toggle-group">
+                <span class="toggle-label">Chế độ:</span>
+                <div class="toggle-pills">
+                    <button class="toggle-pill net active">
+                        <span class="dot"></span>
+                        Thu về → Hiển thị
+                    </button>
+                    <button class="toggle-pill display">
+                        <span class="dot"></span>
+                        Hiển thị → Thu về
+                    </button>
+                </div>
+                <span class="hint">Nhập giá Net mong muốn → Tính ra giá BAR & Giá khách thấy</span>
+            </div>
+            <div class="btn-group">
+                <button class="btn">📄 PDF</button>
+                <button class="btn btn-primary">⬇ CSV</button>
+            </div>
+        </div>
+
+        <div class="legend">
+            <span class="legend-title">Mỗi ô hiển thị:</span>
+            <div class="legend-item">
+                <span class="legend-swatch" style="background:linear-gradient(135deg,#FFFBEB,#FCD34D);"></span>
+                <span>Giá khách thấy (Display)</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-swatch" style="background:#E2E8F0;"></span>
+                <span>Giá BAR (nhập CM)</span>
+            </div>
+            <div class="retention-badges">
+                <span>Tỷ lệ giữ lại:</span>
+                <span class="badge badge-green">&gt; 75%</span>
+                <span class="badge badge-amber">50–75%</span>
+                <span class="badge badge-red">&lt; 50%</span>
+            </div>
+        </div>
+
+        <div class="table-wrapper">
+            <table>
+                <colgroup>
+                    <col class="col-room">
+                    <col class="col-input">
+                    <col class="col-channel">
+                    <col class="col-channel">
+                    <col class="col-channel">
+                    <col class="col-channel">
+                    <col class="col-channel">
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th>Hạng phòng</th>
+                        <th style="text-align:right;">
+                            <span style="color:#059669;">💰 Giá Net cơ sở</span>
+                        </th>
+                        <th><span class="ch-name">Agoda</span><br><span class="ch-comm">HH 20%</span></th>
+                        <th><span class="ch-name">Booking.com</span><br><span class="ch-comm">HH 18%</span></th>
+                        <th><span class="ch-name">Ctrip</span><br><span class="ch-comm">HH 18%</span></th>
+                        <th><span class="ch-name">Expedia</span><br><span class="ch-comm">HH 17%</span></th>
+                        <th><span class="ch-name">Traveloka</span><br><span class="ch-comm">HH 17%</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Deluxe -->
+                    <tr>
+                        <td>
+                            <div class="room-name">Deluxe</div>
+                            <div class="room-base">1.500.000</div>
+                        </td>
+                        <td class="input-cell">
+                            <div class="net-base">1.500.000</div>
+                            <div class="net-label">Thu về (Net)</div>
+                        </td>
+                        <!-- Agoda: Display output -->
+                        <td>
+                            <div class="cell">
+                                <div class="cell-main display-output">
+                                    <div class="cell-main-label">Khách thấy</div>
+                                    <div class="cell-main-value">1.875.000</div>
+                                </div>
+                                <div class="cell-bar">
+                                    <div>
+                                        <span class="bar-label">BAR</span>
+                                        <span class="bar-value">3.750.000</span>
+                                    </div>
+                                    <span class="retention-chip badge-red">40%</span>
+                                </div>
+                            </div>
+                        </td>
+                        <!-- Booking -->
+                        <td>
+                            <div class="cell">
+                                <div class="cell-main display-output">
+                                    <div class="cell-main-label">Khách thấy</div>
+                                    <div class="cell-main-value">1.829.434</div>
+                                </div>
+                                <div class="cell-bar">
+                                    <div>
+                                        <span class="bar-label">BAR</span>
+                                        <span class="bar-value">3.529.000</span>
+                                    </div>
+                                    <span class="retention-chip badge-red">43%</span>
+                                </div>
+                            </div>
+                        </td>
+                        <!-- Ctrip -->
+                        <td>
+                            <div class="cell">
+                                <div class="cell-main display-output">
+                                    <div class="cell-main-label">Khách thấy</div>
+                                    <div class="cell-main-value">1.829.600</div>
+                                </div>
+                                <div class="cell-bar">
+                                    <div>
+                                        <span class="bar-label">BAR</span>
+                                        <span class="bar-value">2.287.000</span>
+                                    </div>
+                                    <span class="retention-chip badge-amber">66%</span>
+                                </div>
+                            </div>
+                        </td>
+                        <!-- Expedia -->
+                        <td>
+                            <div class="cell">
+                                <div class="cell-main display-output">
+                                    <div class="cell-main-label">Khách thấy</div>
+                                    <div class="cell-main-value">1.807.280</div>
+                                </div>
+                                <div class="cell-bar">
+                                    <div>
+                                        <span class="bar-label">BAR</span>
+                                        <span class="bar-value">2.204.000</span>
+                                    </div>
+                                    <span class="retention-chip badge-amber">68%</span>
+                                </div>
+                            </div>
+                        </td>
+                        <!-- Traveloka -->
+                        <td>
+                            <div class="cell">
+                                <div class="cell-main display-output">
+                                    <div class="cell-main-label">Khách thấy</div>
+                                    <div class="cell-main-value">1.807.800</div>
+                                </div>
+                                <div class="cell-bar">
+                                    <div>
+                                        <span class="bar-label">BAR</span>
+                                        <span class="bar-value">3.013.000</span>
+                                    </div>
+                                    <span class="retention-chip badge-red">50%</span>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- Superior -->
+                    <tr>
+                        <td>
+                            <div class="room-name">Superior</div>
+                            <div class="room-base">1.000.000</div>
+                        </td>
+                        <td class="input-cell">
+                            <div class="net-base">1.000.000</div>
+                            <div class="net-label">Thu về (Net)</div>
+                        </td>
+                        <td>
+                            <div class="cell">
+                                <div class="cell-main display-output">
+                                    <div class="cell-main-label">Khách thấy</div>
+                                    <div class="cell-main-value">1.250.000</div>
+                                </div>
+                                <div class="cell-bar">
+                                    <div>
+                                        <span class="bar-label">BAR</span>
+                                        <span class="bar-value">2.500.000</span>
+                                    </div>
+                                    <span class="retention-chip badge-red">40%</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="cell">
+                                <div class="cell-main display-output">
+                                    <div class="cell-main-label">Khách thấy</div>
+                                    <div class="cell-main-value">1.219.795</div>
+                                </div>
+                                <div class="cell-bar">
+                                    <div>
+                                        <span class="bar-label">BAR</span>
+                                        <span class="bar-value">2.353.000</span>
+                                    </div>
+                                    <span class="retention-chip badge-red">42%</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="cell">
+                                <div class="cell-main display-output">
+                                    <div class="cell-main-label">Khách thấy</div>
+                                    <div class="cell-main-value">1.220.000</div>
+                                </div>
+                                <div class="cell-bar">
+                                    <div>
+                                        <span class="bar-label">BAR</span>
+                                        <span class="bar-value">1.525.000</span>
+                                    </div>
+                                    <span class="retention-chip badge-amber">66%</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="cell">
+                                <div class="cell-main display-output">
+                                    <div class="cell-main-label">Khách thấy</div>
+                                    <div class="cell-main-value">1.205.400</div>
+                                </div>
+                                <div class="cell-bar">
+                                    <div>
+                                        <span class="bar-label">BAR</span>
+                                        <span class="bar-value">1.470.000</span>
+                                    </div>
+                                    <span class="retention-chip badge-amber">68%</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="cell">
+                                <div class="cell-main display-output">
+                                    <div class="cell-main-label">Khách thấy</div>
+                                    <div class="cell-main-value">1.205.400</div>
+                                </div>
+                                <div class="cell-bar">
+                                    <div>
+                                        <span class="bar-label">BAR</span>
+                                        <span class="bar-value">2.009.000</span>
+                                    </div>
+                                    <span class="retention-chip badge-red">50%</span>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="annotation">
+            <span><strong>💡 Logic:</strong> Cột "Giá Net" = INPUT (đã biết) → Mỗi ô chỉ hiện OUTPUT: Giá khách thấy +
+                BAR</span>
+            <span><strong>❌ Bỏ:</strong> Không lặp lại "Thu về" trong mỗi ô (vì đã có ở cột đầu)</span>
+        </div>
+
+        <!-- ===================== MODE 2: Display → Net ===================== -->
+        <div class="section-title">
+            <span class="num">2</span>
+            Chế độ: Hiển thị → Thu về
+        </div>
+
+        <div class="controls">
+            <div class="toggle-group">
+                <span class="toggle-label">Chế độ:</span>
+                <div class="toggle-pills">
+                    <button class="toggle-pill net">
+                        <span class="dot"></span>
+                        Thu về → Hiển thị
+                    </button>
+                    <button class="toggle-pill display active">
+                        <span class="dot"></span>
+                        Hiển thị → Thu về
+                    </button>
+                </div>
+                <span class="hint">Nhập giá muốn khách thấy → Tính ra giá BAR & doanh thu thu về</span>
+            </div>
+            <div class="btn-group">
+                <button class="btn">📄 PDF</button>
+                <button class="btn btn-primary">⬇ CSV</button>
+            </div>
+        </div>
+
+        <div class="legend">
+            <span class="legend-title">Mỗi ô hiển thị:</span>
+            <div class="legend-item">
+                <span class="legend-swatch" style="background:linear-gradient(135deg,#ECFDF5,#A7F3D0);"></span>
+                <span>Doanh thu thu về (Net)</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-swatch" style="background:#E2E8F0;"></span>
+                <span>Giá BAR (nhập CM)</span>
+            </div>
+            <div class="retention-badges">
+                <span>Tỷ lệ giữ lại:</span>
+                <span class="badge badge-green">&gt; 75%</span>
+                <span class="badge badge-amber">50–75%</span>
+                <span class="badge badge-red">&lt; 50%</span>
+            </div>
+        </div>
+
+        <div class="table-wrapper">
+            <table>
+                <colgroup>
+                    <col class="col-room">
+                    <col class="col-input">
+                    <col class="col-channel">
+                    <col class="col-channel">
+                    <col class="col-channel">
+                    <col class="col-channel">
+                    <col class="col-channel">
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th>Hạng phòng</th>
+                        <th style="text-align:right;">
+                            <span style="color:#D97706;">🎯 Nhập giá hiển thị</span>
+                        </th>
+                        <th><span class="ch-name">Agoda</span><br><span class="ch-comm">HH 20%</span></th>
+                        <th><span class="ch-name">Booking.com</span><br><span class="ch-comm">HH 18%</span></th>
+                        <th><span class="ch-name">Ctrip</span><br><span class="ch-comm">HH 18%</span></th>
+                        <th><span class="ch-name">Expedia</span><br><span class="ch-comm">HH 17%</span></th>
+                        <th><span class="ch-name">Traveloka</span><br><span class="ch-comm">HH 17%</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Deluxe -->
+                    <tr>
+                        <td>
+                            <div class="room-name">Deluxe</div>
+                            <div class="room-base">1.500.000</div>
+                        </td>
+                        <td class="input-cell">
+                            <input type="text" class="display-input" value="1.800.000" />
+                            <div class="input-hint">Khách thấy</div>
+                        </td>
+                        <!-- Agoda: Net output -->
+                        <td>
+                            <div class="cell">
+                                <div class="cell-main net-output">
+                                    <div class="cell-main-label">Thu về</div>
+                                    <div class="cell-main-value">1.440.000</div>
+                                </div>
+                                <div class="cell-bar">
+                                    <div>
+                                        <span class="bar-label">BAR</span>
+                                        <span class="bar-value">3.600.000</span>
+                                    </div>
+                                    <span class="retention-chip badge-red">40%</span>
+                                </div>
+                            </div>
+                        </td>
+                        <!-- Booking -->
+                        <td>
+                            <div class="cell">
+                                <div class="cell-main net-output">
+                                    <div class="cell-main-label">Thu về</div>
+                                    <div class="cell-main-value">1.476.000</div>
+                                </div>
+                                <div class="cell-bar">
+                                    <div>
+                                        <span class="bar-label">BAR</span>
+                                        <span class="bar-value">3.387.000</span>
+                                    </div>
+                                    <span class="retention-chip badge-red">44%</span>
+                                </div>
+                            </div>
+                        </td>
+                        <!-- Ctrip -->
+                        <td>
+                            <div class="cell">
+                                <div class="cell-main net-output">
+                                    <div class="cell-main-label">Thu về</div>
+                                    <div class="cell-main-value">1.476.000</div>
+                                </div>
+                                <div class="cell-bar">
+                                    <div>
+                                        <span class="bar-label">BAR</span>
+                                        <span class="bar-value">2.195.000</span>
+                                    </div>
+                                    <span class="retention-chip badge-amber">67%</span>
+                                </div>
+                            </div>
+                        </td>
+                        <!-- Expedia -->
+                        <td>
+                            <div class="cell">
+                                <div class="cell-main net-output">
+                                    <div class="cell-main-label">Thu về</div>
+                                    <div class="cell-main-value">1.494.000</div>
+                                </div>
+                                <div class="cell-bar">
+                                    <div>
+                                        <span class="bar-label">BAR</span>
+                                        <span class="bar-value">2.116.000</span>
+                                    </div>
+                                    <span class="retention-chip badge-amber">71%</span>
+                                </div>
+                            </div>
+                        </td>
+                        <!-- Traveloka -->
+                        <td>
+                            <div class="cell">
+                                <div class="cell-main net-output">
+                                    <div class="cell-main-label">Thu về</div>
+                                    <div class="cell-main-value">1.494.000</div>
+                                </div>
+                                <div class="cell-bar">
+                                    <div>
+                                        <span class="bar-label">BAR</span>
+                                        <span class="bar-value">2.891.000</span>
+                                    </div>
+                                    <span class="retention-chip badge-amber">52%</span>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- Superior (chưa nhập) -->
+                    <tr>
+                        <td>
+                            <div class="room-name">Superior</div>
+                            <div class="room-base">1.000.000</div>
+                        </td>
+                        <td class="input-cell">
+                            <input type="text" class="display-input" placeholder="Nhập giá..." value="" />
+                            <div class="input-hint">Khách thấy</div>
+                        </td>
+                        <td>
+                            <div class="cell-empty">Chưa nhập giá</div>
+                        </td>
+                        <td>
+                            <div class="cell-empty">Chưa nhập giá</div>
+                        </td>
+                        <td>
+                            <div class="cell-empty">Chưa nhập giá</div>
+                        </td>
+                        <td>
+                            <div class="cell-empty">Chưa nhập giá</div>
+                        </td>
+                        <td>
+                            <div class="cell-empty">Chưa nhập giá</div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="annotation">
+            <span><strong>💡 Logic:</strong> Cột "Nhập giá hiển thị" = INPUT → Mỗi ô chỉ hiện OUTPUT: Thu về (Net) +
+                BAR</span>
+            <span><strong>❌ Bỏ:</strong> Không lặp lại "Khách thấy" trong mỗi ô (vì đã có ở cột đầu)</span>
+        </div>
+
+        <!-- Design Notes -->
+        <div
+            style="margin-top: 32px; padding: 16px; background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 12px;">
+            <h3 style="font-size: 13px; font-weight: 700; color: var(--navy); margin-bottom: 8px;">📐 Thiết kế
+                Context-Aware – Tại sao?</h3>
+            <div style="font-size: 12px; color: var(--text-sec); line-height: 1.6;">
+                <p style="margin-bottom: 6px;"><strong>Vấn đề:</strong> Nếu cả 3 giá trị (Display + Net + BAR) đều nằm
+                    trong 1 ô → cần cell rộng (~220px) → 5 kênh = 1100px → phải kéo ngang.</p>
+                <p style="margin-bottom: 6px;"><strong>Giải pháp:</strong> INPUT đã có ở cột riêng → mỗi ô chỉ hiện 2
+                    giá trị OUTPUT → cell chỉ cần ~160px → 5 kênh = 800px → <strong>vừa màn hình!</strong></p>
+                <p><strong>Kết quả:</strong> GM nhìn vào biết ngay: Giá cột trái = INPUT (đã biết) → Giá trong mỗi ô =
+                    kết quả tính ra.</p>
+            </div>
+        </div>
+
+    </div>
+</body>
+
+</html>

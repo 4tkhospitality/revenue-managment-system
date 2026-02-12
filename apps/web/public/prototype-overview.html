@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bảng giá — Redesign Prototype</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #F5F7FB;
+            color: #1e293b;
+            padding: 24px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* ===== MODE TOGGLE BAR ===== */
+        .mode-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #fff;
+            border: 1px solid #DBE1EB;
+            border-radius: 14px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+        }
+
+        .mode-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .mode-label {
+            font-size: 13px;
+            font-weight: 500;
+            color: #64748b;
+        }
+
+        .mode-switch {
+            display: flex;
+            background: #F2F4F8;
+            border-radius: 10px;
+            padding: 3px;
+        }
+
+        .mode-btn {
+            padding: 8px 16px;
+            border: none;
+            background: transparent;
+            font-size: 13px;
+            font-weight: 600;
+            color: #64748b;
+            cursor: pointer;
+            border-radius: 8px;
+            font-family: inherit;
+            transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .mode-btn.active {
+            background: #204183;
+            color: #fff;
+            box-shadow: 0 2px 6px rgba(32, 65, 131, 0.3);
+        }
+
+        .mode-hint {
+            font-size: 11px;
+            color: #94a3b8;
+            max-width: 280px;
+        }
+
+        .mode-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-action {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            border: 1px solid #DBE1EB;
+            background: #fff;
+            color: #64748b;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 8px;
+            font-family: inherit;
+            transition: all 0.15s;
+        }
+
+        .btn-action:hover {
+            background: #F8FAFC;
+            color: #204183;
+            border-color: #204183;
+        }
+
+        .btn-primary {
+            background: #204183;
+            color: #fff;
+            border-color: #204183;
+        }
+
+        .btn-primary:hover {
+            background: #1a3569;
+        }
+
+        /* ===== TABLE CARD ===== */
+        .table-card {
+            background: #fff;
+            border: 1px solid #DBE1EB;
+            border-radius: 14px;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+
+        /* Header row */
+        .price-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .price-table thead th {
+            padding: 14px 12px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #DBE1EB;
+            background: #FAFBFD;
+        }
+
+        .price-table thead th.room-col {
+            text-align: left;
+            padding-left: 20px;
+            min-width: 160px;
+        }
+
+        .price-table thead th.input-col {
+            text-align: right;
+            min-width: 140px;
+        }
+
+        .price-table thead th.channel-col {
+            text-align: center;
+            min-width: 200px;
+            position: relative;
+        }
+
+        .channel-header-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: #1e293b;
+            text-transform: none;
+            letter-spacing: 0;
+        }
+
+        .channel-header-commission {
+            font-size: 10px;
+            font-weight: 500;
+            color: #94a3b8;
+            text-transform: none;
+            letter-spacing: 0;
+            margin-top: 2px;
+        }
+
+        /* Data cells */
+        .price-table tbody td {
+            padding: 0;
+            border-bottom: 1px solid #F2F4F8;
+            vertical-align: middle;
+        }
+
+        .price-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .price-table tbody tr:hover {
+            background: #FAFBFE;
+        }
+
+        /* Room type column */
+        .room-cell {
+            padding: 16px 12px 16px 20px !important;
+        }
+
+        .room-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .room-base {
+            font-size: 11px;
+            color: #94a3b8;
+            margin-top: 2px;
+        }
+
+        /* NET price input column */
+        .input-cell {
+            padding: 12px !important;
+            text-align: right;
+        }
+
+        .net-value {
+            font-family: 'Inter', monospace;
+            font-size: 15px;
+            font-weight: 700;
+            color: #059669;
+        }
+
+        .net-label {
+            font-size: 10px;
+            color: #94a3b8;
+            margin-top: 2px;
+        }
+
+        .price-input {
+            width: 130px;
+            text-align: right;
+            padding: 8px 10px;
+            border: 1px solid #ea580c;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            font-family: 'Inter', monospace;
+            color: #ea580c;
+            background: #FFF7ED;
+        }
+
+        .price-input:focus {
+            outline: 2px solid #ea580c;
+            border-color: transparent;
+        }
+
+        .price-input::placeholder {
+            color: #fed7aa;
+            font-weight: 500;
+        }
+
+        /* ===== CHANNEL DATA CELL ===== */
+        .channel-cell {
+            padding: 10px 12px !important;
+            text-align: center;
+        }
+
+        /* Two-column layout: Hiển thị | Thu về */
+        .cell-dual {
+            display: flex;
+            align-items: stretch;
+            gap: 0;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid #E9ECF3;
+        }
+
+        .cell-half {
+            flex: 1;
+            padding: 10px 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .cell-half-display {
+            background: #FFFAF5;
+            border-right: 1px solid #E9ECF3;
+        }
+
+        .cell-half-net {
+            background: #F0FDF4;
+        }
+
+        .cell-tag {
+            font-size: 9px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .cell-tag-display {
+            color: #ea580c;
+        }
+
+        .cell-tag-net {
+            color: #059669;
+        }
+
+        .cell-amount {
+            font-family: 'Inter', monospace;
+            font-size: 14px;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .cell-amount-display {
+            color: #9a3412;
+        }
+
+        .cell-amount-net {
+            color: #047857;
+        }
+
+        .cell-bar {
+            font-size: 9px;
+            color: #94a3b8;
+            font-family: 'Inter', monospace;
+        }
+
+        /* Retention badge */
+        .cell-retention {
+            font-size: 9px;
+            font-weight: 700;
+            padding: 1px 6px;
+            border-radius: 4px;
+            margin-top: 2px;
+        }
+
+        .retention-good {
+            color: #059669;
+            background: #DCFCE7;
+        }
+
+        .retention-mid {
+            color: #D97706;
+            background: #FEF3C7;
+        }
+
+        .retention-bad {
+            color: #DC2626;
+            background: #FEE2E2;
+        }
+
+        /* Placeholder cell */
+        .cell-placeholder {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 60px;
+            color: #cbd5e1;
+            font-size: 11px;
+            font-style: italic;
+        }
+
+        /* ===== LEGEND BAR ===== */
+        .legend-bar {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            padding: 10px 20px;
+            background: #FAFBFD;
+            border: 1px solid #E9ECF3;
+            border-radius: 10px;
+            margin-bottom: 12px;
+        }
+
+        .legend-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: #64748b;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: #64748b;
+        }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 3px;
+        }
+
+        .legend-dot-display {
+            background: #FED7AA;
+        }
+
+        .legend-dot-net {
+            background: #86EFAC;
+        }
+
+        .legend-dot-bar {
+            background: #CBD5E1;
+        }
+
+        /* Retention legend */
+        .legend-retention {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-left: auto;
+        }
+
+        .retention-sample {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 10px;
+        }
+
+        .retention-sample span {
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-weight: 600;
+        }
+
+        /* ===== TIMESTAMP ===== */
+        .timestamp {
+            text-align: right;
+            font-size: 11px;
+            color: #94a3b8;
+            padding: 4px 0;
+        }
+
+        /* Option label */
+        .option-label {
+            position: fixed;
+            top: 12px;
+            right: 16px;
+            background: #204183;
+            color: #fff;
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            z-index: 100;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="option-label">Bảng giá — Redesign</div>
+
+    <div class="container">
+
+        <!-- ===== MODE TOGGLE BAR ===== -->
+        <div class="mode-bar">
+            <div class="mode-left">
+                <span class="mode-label">Chế độ:</span>
+                <div class="mode-switch">
+                    <button class="mode-btn active" onclick="switchMode(this, 'net')">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                        </svg>
+                        Thu về → Hiển thị
+                    </button>
+                    <button class="mode-btn" onclick="switchMode(this, 'bar')">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <polyline points="17 1 21 5 17 9" />
+                            <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+                            <polyline points="7 23 3 19 7 15" />
+                            <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+                        </svg>
+                        Hiển thị → Thu về
+                    </button>
+                </div>
+                <span class="mode-hint">Từ giá thu về NET → Tính giá BAR và giá khách thấy trên OTA</span>
+            </div>
+            <div class="mode-right">
+                <button class="btn-action">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="1 4 1 10 7 10" />
+                        <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+                    </svg>
+                    Tính lại
+                </button>
+                <button class="btn-action btn-primary">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    Export CSV
+                </button>
+            </div>
+        </div>
+
+        <!-- ===== LEGEND BAR ===== -->
+        <div class="legend-bar">
+            <span class="legend-title">Mỗi ô chứa:</span>
+            <div class="legend-item">
+                <span class="legend-dot legend-dot-display"></span>
+                Khách thấy (Display)
+            </div>
+            <div class="legend-item">
+                <span class="legend-dot legend-dot-net"></span>
+                KS thu về (Net)
+            </div>
+            <div class="legend-item">
+                <span class="legend-dot legend-dot-bar"></span>
+                BAR (nhập Channel Manager)
+            </div>
+            <div class="legend-retention">
+                <div class="retention-sample">
+                    Giữ lại:
+                    <span class="retention-good">78%</span>
+                    <span class="retention-mid">56%</span>
+                    <span class="retention-bad">42%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== MATRIX TABLE ===== -->
+        <div class="table-card">
+            <table class="price-table">
+                <thead>
+                    <tr>
+                        <th class="room-col">Hạng phòng</th>
+                        <th class="input-col">Giá thu về (NET)</th>
+                        <th class="channel-col">
+                            <div class="channel-header-name">Agoda</div>
+                            <div class="channel-header-commission">Hoa hồng 20%</div>
+                        </th>
+                        <th class="channel-col">
+                            <div class="channel-header-name">Booking.com</div>
+                            <div class="channel-header-commission">Hoa hồng 18%</div>
+                        </th>
+                        <th class="channel-col">
+                            <div class="channel-header-name">Expedia</div>
+                            <div class="channel-header-commission">Hoa hồng 22%</div>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Row 1: Deluxe Ocean View -->
+                    <tr>
+                        <td class="room-cell">
+                            <div class="room-name">Deluxe Ocean View</div>
+                            <div class="room-base">1.200.000đ / đêm</div>
+                        </td>
+                        <td class="input-cell">
+                            <div class="net-value">1.200.000đ</div>
+                            <div class="net-label">Giá cơ sở</div>
+                        </td>
+                        <!-- Agoda cell -->
+                        <td class="channel-cell">
+                            <div class="cell-dual">
+                                <div class="cell-half cell-half-display">
+                                    <span class="cell-tag cell-tag-display">Khách thấy</span>
+                                    <span class="cell-amount cell-amount-display">1.275.000</span>
+                                    <span class="cell-bar">BAR 1.500.000</span>
+                                </div>
+                                <div class="cell-half cell-half-net">
+                                    <span class="cell-tag cell-tag-net">Thu về</span>
+                                    <span class="cell-amount cell-amount-net">1.200.000</span>
+                                    <span class="cell-retention retention-good">80%</span>
+                                </div>
+                            </div>
+                        </td>
+                        <!-- Booking cell -->
+                        <td class="channel-cell">
+                            <div class="cell-dual">
+                                <div class="cell-half cell-half-display">
+                                    <span class="cell-tag cell-tag-display">Khách thấy</span>
+                                    <span class="cell-amount cell-amount-display">1.243.902</span>
+                                    <span class="cell-bar">BAR 1.463.414</span>
+                                </div>
+                                <div class="cell-half cell-half-net">
+                                    <span class="cell-tag cell-tag-net">Thu về</span>
+                                    <span class="cell-amount cell-amount-net">1.200.000</span>
+                                    <span class="cell-retention retention-good">82%</span>
+                                </div>
+                            </div>
+                        </td>
+                        <!-- Expedia cell -->
+                        <td class="channel-cell">
+                            <div class="cell-dual">
+                                <div class="cell-half cell-half-display">
+                                    <span class="cell-tag cell-tag-display">Khách thấy</span>
+                                    <span class="cell-amount cell-amount-display">1.307.692</span>
+                                    <span class="cell-bar">BAR 1.538.461</span>
+                                </div>
+                                <div class="cell-half cell-half-net">
+                                    <span class="cell-tag cell-tag-net">Thu về</span>
+                                    <span class="cell-amount cell-amount-net">1.200.000</span>
+                                    <span class="cell-retention retention-good">78%</span>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    <!-- Row 2: Standard Room -->
+                    <tr>
+                        <td class="room-cell">
+                            <div class="room-name">Standard Room</div>
+                            <div class="room-base">800.000đ / đêm</div>
+                        </td>
+                        <td class="input-cell">
+                            <div class="net-value">800.000đ</div>
+                            <div class="net-label">Giá cơ sở</div>
+                        </td>
+                        <!-- Agoda cell -->
+                        <td class="channel-cell">
+                            <div class="cell-dual">
+                                <div class="cell-half cell-half-display">
+                                    <span class="cell-tag cell-tag-display">Khách thấy</span>
+                                    <span class="cell-amount cell-amount-display">850.000</span>
+                                    <span class="cell-bar">BAR 1.000.000</span>
+                                </div>
+                                <div class="cell-half cell-half-net">
+                                    <span class="cell-tag cell-tag-net">Thu về</span>
+                                    <span class="cell-amount cell-amount-net">800.000</span>
+                                    <span class="cell-retention retention-good">80%</span>
+                                </div>
+                            </div>
+                        </td>
+                        <!-- Booking cell -->
+                        <td class="channel-cell">
+                            <div class="cell-dual">
+                                <div class="cell-half cell-half-display">
+                                    <span class="cell-tag cell-tag-display">Khách thấy</span>
+                                    <span class="cell-amount cell-amount-display">829.268</span>
+                                    <span class="cell-bar">BAR 975.609</span>
+                                </div>
+                                <div class="cell-half cell-half-net">
+                                    <span class="cell-tag cell-tag-net">Thu về</span>
+                                    <span class="cell-amount cell-amount-net">800.000</span>
+                                    <span class="cell-retention retention-good">82%</span>
+                                </div>
+                            </div>
+                        </td>
+                        <!-- Expedia cell -->
+                        <td class="channel-cell">
+                            <div class="cell-dual">
+                                <div class="cell-half cell-half-display">
+                                    <span class="cell-tag cell-tag-display">Khách thấy</span>
+                                    <span class="cell-amount cell-amount-display">871.794</span>
+                                    <span class="cell-bar">BAR 1.025.641</span>
+                                </div>
+                                <div class="cell-half cell-half-net">
+                                    <span class="cell-tag cell-tag-net">Thu về</span>
+                                    <span class="cell-amount cell-amount-net">800.000</span>
+                                    <span class="cell-retention retention-good">78%</span>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    <!-- Row 3: Suite -->
+                    <tr>
+                        <td class="room-cell">
+                            <div class="room-name">Suite</div>
+                            <div class="room-base">2.500.000đ / đêm</div>
+                        </td>
+                        <td class="input-cell">
+                            <div class="net-value">2.500.000đ</div>
+                            <div class="net-label">Giá cơ sở</div>
+                        </td>
+                        <!-- Agoda cell -->
+                        <td class="channel-cell">
+                            <div class="cell-dual">
+                                <div class="cell-half cell-half-display">
+                                    <span class="cell-tag cell-tag-display">Khách thấy</span>
+                                    <span class="cell-amount cell-amount-display">2.656.250</span>
+                                    <span class="cell-bar">BAR 3.125.000</span>
+                                </div>
+                                <div class="cell-half cell-half-net">
+                                    <span class="cell-tag cell-tag-net">Thu về</span>
+                                    <span class="cell-amount cell-amount-net">2.500.000</span>
+                                    <span class="cell-retention retention-good">80%</span>
+                                </div>
+                            </div>
+                        </td>
+                        <!-- Booking cell -->
+                        <td class="channel-cell">
+                            <div class="cell-dual">
+                                <div class="cell-half cell-half-display">
+                                    <span class="cell-tag cell-tag-display">Khách thấy</span>
+                                    <span class="cell-amount cell-amount-display">2.590.244</span>
+                                    <span class="cell-bar">BAR 3.048.780</span>
+                                </div>
+                                <div class="cell-half cell-half-net">
+                                    <span class="cell-tag cell-tag-net">Thu về</span>
+                                    <span class="cell-amount cell-amount-net">2.500.000</span>
+                                    <span class="cell-retention retention-good">82%</span>
+                                </div>
+                            </div>
+                        </td>
+                        <!-- Expedia cell -->
+                        <td class="channel-cell">
+                            <div class="cell-dual">
+                                <div class="cell-half cell-half-display">
+                                    <span class="cell-tag cell-tag-display">Khách thấy</span>
+                                    <span class="cell-amount cell-amount-display">2.724.359</span>
+                                    <span class="cell-bar">BAR 3.205.128</span>
+                                </div>
+                                <div class="cell-half cell-half-net">
+                                    <span class="cell-tag cell-tag-net">Thu về</span>
+                                    <span class="cell-amount cell-amount-net">2.500.000</span>
+                                    <span class="cell-retention retention-good">78%</span>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    <!-- Row 4: Family Room -->
+                    <tr>
+                        <td class="room-cell">
+                            <div class="room-name">Family Room</div>
+                            <div class="room-base">1.800.000đ / đêm</div>
+                        </td>
+                        <td class="input-cell">
+                            <div class="net-value">1.800.000đ</div>
+                            <div class="net-label">Giá cơ sở</div>
+                        </td>
+                        <!-- Agoda cell — with heavy discount showing retention-mid -->
+                        <td class="channel-cell">
+                            <div class="cell-dual">
+                                <div class="cell-half cell-half-display">
+                                    <span class="cell-tag cell-tag-display">Khách thấy</span>
+                                    <span class="cell-amount cell-amount-display">1.530.000</span>
+                                    <span class="cell-bar">BAR 2.250.000</span>
+                                </div>
+                                <div class="cell-half cell-half-net">
+                                    <span class="cell-tag cell-tag-net">Thu về</span>
+                                    <span class="cell-amount cell-amount-net">1.224.000</span>
+                                    <span class="cell-retention retention-mid">54%</span>
+                                </div>
+                            </div>
+                        </td>
+                        <!-- Booking cell -->
+                        <td class="channel-cell">
+                            <div class="cell-dual">
+                                <div class="cell-half cell-half-display">
+                                    <span class="cell-tag cell-tag-display">Khách thấy</span>
+                                    <span class="cell-amount cell-amount-display">1.865.854</span>
+                                    <span class="cell-bar">BAR 2.195.122</span>
+                                </div>
+                                <div class="cell-half cell-half-net">
+                                    <span class="cell-tag cell-tag-net">Thu về</span>
+                                    <span class="cell-amount cell-amount-net">1.800.000</span>
+                                    <span class="cell-retention retention-good">82%</span>
+                                </div>
+                            </div>
+                        </td>
+                        <!-- Expedia cell — bad retention -->
+                        <td class="channel-cell">
+                            <div class="cell-dual">
+                                <div class="cell-half cell-half-display">
+                                    <span class="cell-tag cell-tag-display">Khách thấy</span>
+                                    <span class="cell-amount cell-amount-display">1.384.615</span>
+                                    <span class="cell-bar">BAR 2.307.692</span>
+                                </div>
+                                <div class="cell-half cell-half-net">
+                                    <span class="cell-tag cell-tag-net">Thu về</span>
+                                    <span class="cell-amount cell-amount-net">1.080.000</span>
+                                    <span class="cell-retention retention-bad">47%</span>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    <!-- Row 5: Superior -->
+                    <tr>
+                        <td class="room-cell">
+                            <div class="room-name">Superior</div>
+                            <div class="room-base">950.000đ / đêm</div>
+                        </td>
+                        <td class="input-cell">
+                            <div class="net-value">950.000đ</div>
+                            <div class="net-label">Giá cơ sở</div>
+                        </td>
+                        <td class="channel-cell">
+                            <div class="cell-dual">
+                                <div class="cell-half cell-half-display">
+                                    <span class="cell-tag cell-tag-display">Khách thấy</span>
+                                    <span class="cell-amount cell-amount-display">1.009.375</span>
+                                    <span class="cell-bar">BAR 1.187.500</span>
+                                </div>
+                                <div class="cell-half cell-half-net">
+                                    <span class="cell-tag cell-tag-net">Thu về</span>
+                                    <span class="cell-amount cell-amount-net">950.000</span>
+                                    <span class="cell-retention retention-good">80%</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="channel-cell">
+                            <div class="cell-dual">
+                                <div class="cell-half cell-half-display">
+                                    <span class="cell-tag cell-tag-display">Khách thấy</span>
+                                    <span class="cell-amount cell-amount-display">984.634</span>
+                                    <span class="cell-bar">BAR 1.158.536</span>
+                                </div>
+                                <div class="cell-half cell-half-net">
+                                    <span class="cell-tag cell-tag-net">Thu về</span>
+                                    <span class="cell-amount cell-amount-net">950.000</span>
+                                    <span class="cell-retention retention-good">82%</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="channel-cell">
+                            <div class="cell-dual">
+                                <div class="cell-half cell-half-display">
+                                    <span class="cell-tag cell-tag-display">Khách thấy</span>
+                                    <span class="cell-amount cell-amount-display">1.035.256</span>
+                                    <span class="cell-bar">BAR 1.217.948</span>
+                                </div>
+                                <div class="cell-half cell-half-net">
+                                    <span class="cell-tag cell-tag-net">Thu về</span>
+                                    <span class="cell-amount cell-amount-net">950.000</span>
+                                    <span class="cell-retention retention-good">78%</span>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Timestamp -->
+        <div class="timestamp">
+            Cập nhật lúc: 12/02/2026, 21:30:00
+        </div>
+    </div>
+
+    <script>
+        function switchMode(el, mode) {
+            document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+            el.classList.add('active');
+        }
+    </script>
+</body>
+
+</html>

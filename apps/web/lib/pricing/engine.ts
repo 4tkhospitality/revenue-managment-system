@@ -633,6 +633,19 @@ export function normalizeVendorCode(code: string): string {
     return VENDOR_MAP[lower] ?? lower;
 }
 
+import * as fs from 'fs';
+import * as path from 'path';
+
+function logDebug(msg: string) {
+    try {
+        // Write to project root for easy access
+        const logPath = path.resolve(process.cwd(), 'pricing-debug.log');
+        fs.appendFileSync(logPath, `[${new Date().toISOString()}] ${msg}\n`);
+    } catch (e) {
+        console.error('FAILED TO WRITE LOG:', e);
+    }
+}
+
 /**
  * Resolve vendor-specific discount stacking rules.
  * Extracted from PromotionsTab.tsx to enforce single source of truth.
@@ -653,10 +666,6 @@ export function resolveVendorStacking(
     rule: string;
 } {
     const active = discounts.filter(d => d.percent > 0);
-    if (active.length <= 1) {
-        return { resolved: active, removedCount: 0, rule: 'none (≤1 discount)' };
-    }
-
     const vendorNorm = normalizeVendorCode(vendor);
 
     // Helper: within a group sharing the same subcategory, keep only highest
@@ -713,13 +722,23 @@ export function resolveVendorStacking(
         const bestPortfolio = portfolio.length > 0
             ? [portfolio.reduce((b, d) => d.percent > b.percent ? d : b)]
             : [];
-        const bestTargeted = dedupeBySubcategory(targeted);
+
+        // Fix: Targeting Promotions (Mobile, Country, etc.) do NOT stack.
+        // Choose only the highest %.
+        const bestTargeted = targeted.length > 0
+            ? [targeted.reduce((b, d) => d.percent > b.percent ? d : b)]
+            : [];
+
         const bestGenius = genius.length > 0
             ? [genius.reduce((b, d) => d.percent > b.percent ? d : b)]
             : [];
 
         const result = [...bestGenius, ...bestTargeted, ...bestPortfolio, ...other];
-        return { resolved: result, removedCount: active.length - result.length, rule: 'booking: normal stacking' };
+        return {
+            resolved: result,
+            removedCount: active.length - result.length,
+            rule: 'booking: normal stacking'
+        };
     }
 
     // ── Expedia: Only highest deal wins ──

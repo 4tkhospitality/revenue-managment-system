@@ -166,6 +166,7 @@ export async function calculatePreview(input: PreviewInput): Promise<PreviewResu
 
     // Resolve vendor stacking + timing
     const { resolved: stackedDiscounts } = resolveVendorStacking(channel.code, discounts);
+
     const { resolved: finalDiscounts, removed, hadConflict } = resolveTimingConflicts(stackedDiscounts);
 
     const calcType = channel.calc_type as CalcType;

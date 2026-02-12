@@ -307,85 +307,111 @@ function PromotionPicker({
     });
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col border border-[#DBE1EB]">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col border border-[#DBE1EB]">
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-[#DBE1EB]">
-                    <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                        <Plus className="w-5 h-5 text-orange-500" />
-                        Thêm Khuyến mãi {channelName}
-                    </h3>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
-                        <X className="w-5 h-5" />
+                <div className="flex items-center justify-between px-6 py-5 border-b border-[#DBE1EB] bg-white">
+                    <div>
+                        <h3 className="text-xl font-bold text-[#204183] flex items-center gap-2">
+                            <Plus className="w-6 h-6 text-orange-500" />
+                            Thêm Khuyến mãi {channelName}
+                        </h3>
+                        <p className="text-sm text-slate-500 mt-1">Chọn chương trình khuyến mãi từ danh mục có sẵn</p>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="p-2 -mr-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
+                    >
+                        <X className="w-6 h-6" />
                     </button>
                 </div>
 
-                {/* Tabs — dynamic per vendor */}
-                <div className="flex border-b border-[#DBE1EB]">
-                    {(VENDOR_PICKER_TABS[vendor] || ['SEASONAL', 'ESSENTIAL', 'TARGETED']).map((group) => {
-                        const isActive = activeTab === group;
-                        return (
-                            <button
-                                key={group}
-                                onClick={() => setActiveTab(group)}
-                                className={`flex-1 py-3 text-sm font-medium transition-colors ${isActive
-                                    ? 'bg-orange-500 text-white'
-                                    : 'text-slate-500 hover:text-[#204183] hover:bg-[#F2F4F8]'
-                                    }`}
-                            >
-                                {getGroupLabel(group, vendor)}
-                            </button>
-                        );
-                    })}
+                {/* Tabs — Navy Pill Design */}
+                <div className="bg-[#F8FAFC] px-6 py-4 border-b border-[#DBE1EB]">
+                    <div className="flex p-1 bg-white rounded-lg border border-[#DBE1EB] shadow-sm">
+                        {(VENDOR_PICKER_TABS[vendor] || ['SEASONAL', 'ESSENTIAL', 'TARGETED']).map((group) => {
+                            const isActive = activeTab === group;
+                            return (
+                                <button
+                                    key={group}
+                                    onClick={() => setActiveTab(group)}
+                                    className={`flex-1 py-2.5 text-sm font-semibold rounded-md transition-all ${isActive
+                                        ? 'bg-[#204183] text-white shadow-md'
+                                        : 'text-slate-500 hover:text-[#204183] hover:bg-slate-50'
+                                        }`}
+                                >
+                                    {getGroupLabel(group, vendor)}
+                                </button>
+                            );
+                        })}
+                    </div>
                 </div>
 
                 {/* Search */}
-                <div className="px-4 py-3 border-b border-[#DBE1EB] bg-[#F2F4F8]">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <div className="px-6 py-4 bg-white border-b border-[#DBE1EB]">
+                    <div className="relative group">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-[#204183] transition-colors" />
                         <input
                             type="text"
                             placeholder="Tìm kiếm chương trình..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 bg-white border border-[#DBE1EB] rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#204183]"
+                            className="w-full pl-10 pr-4 py-3 bg-white border border-[#DBE1EB] rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#204183]/20 focus:border-[#204183] transition-all shadow-sm"
                         />
                     </div>
                 </div>
 
                 {/* Promo List */}
-                <div className="flex-1 overflow-y-auto px-4 py-2 bg-[#F2F4F8]">
+                <div className="flex-1 overflow-y-auto bg-[#F8FAFC] p-6">
                     {filteredPromos.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-12 text-slate-400">
-                            <Tag className="w-8 h-8 mb-2 opacity-50" />
-                            <span className="text-sm">Không có chương trình nào</span>
+                        <div className="flex flex-col items-center justify-center py-16 text-slate-400">
+                            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                                <Tag className="w-8 h-8 opacity-50" />
+                            </div>
+                            <span className="text-base font-medium">Không tìm thấy chương trình nào</span>
+                            <p className="text-sm mt-1">Thử tìm kiếm với từ khóa khác</p>
                         </div>
                     ) : (
-                        <div className="space-y-1">
+                        <div className="grid gap-3">
                             {filteredPromos.map((promo) => (
                                 <div
                                     key={promo.id}
-                                    className="flex items-center justify-between px-4 py-3 bg-white rounded-lg border border-[#DBE1EB] hover:border-[#204183] transition-colors"
+                                    className="group flex items-center justify-between p-4 bg-white rounded-xl border border-[#DBE1EB] hover:border-[#204183] hover:shadow-md transition-all duration-200"
                                 >
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-2">
-                                            <span className="font-medium text-slate-800">{promo.name}</span>
+                                    <div className="flex-1 min-w-0 pr-4">
+                                        <div className="flex items-center gap-3 mb-1">
+                                            <span className="text-base font-bold text-[#204183] truncate">
+                                                {promo.name}
+                                            </span>
                                             {promo.sub_category && (
-                                                <span className="px-2 py-0.5 text-xs font-medium bg-[#E9ECF3] text-[#204183] rounded uppercase">
+                                                <span className="px-2.5 py-0.5 text-xs font-semibold bg-[#E0E7FF] text-[#3730A3] rounded-full uppercase tracking-wide">
                                                     {promo.sub_category}
                                                 </span>
                                             )}
                                         </div>
-                                        {promo.description && (
-                                            <p className="text-sm text-slate-500 mt-0.5">{promo.description}</p>
-                                        )}
+
+                                        <div className="flex items-center gap-4 text-sm text-slate-500">
+                                            {promo.default_pct && (
+                                                <div className="flex items-center gap-1.5 text-emerald-600 font-medium bg-emerald-50 px-2 py-0.5 rounded-md">
+                                                    <TrendingUp className="w-3.5 h-3.5" />
+                                                    Giảm {promo.default_pct}%
+                                                </div>
+                                            )}
+                                            {promo.description && (
+                                                <span className="truncate max-w-[300px]" title={promo.description}>
+                                                    {promo.description}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
+
                                     <button
                                         onClick={() => onAdd(promo)}
                                         disabled={saving}
-                                        className="ml-4 px-4 py-2 bg-[#204183] hover:bg-[#1a3469] text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                                        className="flex items-center gap-2 px-5 py-2.5 bg-white border-2 border-[#204183] text-[#204183] hover:bg-[#204183] hover:text-white font-semibold rounded-lg transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed group-hover:bg-[#204183] group-hover:text-white"
                                     >
-                                        + Thêm
+                                        <Plus className="w-4 h-4" />
+                                        Thêm
                                     </button>
                                 </div>
                             ))}
@@ -1250,8 +1276,11 @@ export default function PromotionsTab() {
                     ? [portfolioActive.reduce((best, c) => c.discount_pct > best.discount_pct ? c : best)]
                     : [];
 
-                // Targeted: same subcategory picks highest only (Mobile vs Country = same sub)
-                const bestTargeted = dedupeBySubcategory(targetedActive);
+                // Targeted: Booking.com allows only 1 targeted promotion (Mobile OR Country)
+                // Even though they might share subcategory, we enforce strict single-choice to prevent stacking
+                const bestTargeted = targetedActive.length > 0
+                    ? [targetedActive.reduce((best, c) => c.discount_pct > best.discount_pct ? c : best)]
+                    : [];
 
                 // Genius: pick highest level only (L1/L2/L3)
                 const bestGenius = geniusActive.length > 0
