@@ -27,6 +27,20 @@ const ROLE_RANK: Record<string, number> = {
 export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl
 
+    // 0. Referral link: capture ?ref= param → set 30-day cookie (before any auth check)
+    const refCode = request.nextUrl.searchParams.get('ref')
+    let referralResponse: NextResponse | null = null
+    if (refCode && refCode.length >= 3) {
+        referralResponse = NextResponse.next()
+        referralResponse.cookies.set('rms_referral', refCode.toUpperCase(), {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 30 * 24 * 60 * 60, // 30 days
+            path: '/',
+        })
+    }
+
     // 1. Allow public routes
     if (publicRoutes.some(route => pathname.startsWith(route))) {
         return NextResponse.next()

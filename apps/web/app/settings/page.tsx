@@ -1,8 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Save, Hotel, AlertCircle, CheckCircle, Lock, Settings, DollarSign, Lightbulb, Zap, Target, Rocket } from 'lucide-react';
+import { Save, Hotel, AlertCircle, CheckCircle, Lock, Settings, DollarSign, Lightbulb, Zap, Target, Rocket, Tag, CreditCard } from 'lucide-react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
+
+const BillingCard = dynamic(() => import('@/components/billing/BillingCard').then(mod => ({ default: mod.BillingCard })), { ssr: false });
+const PromoRedeemCard = dynamic(() => import('@/components/billing/PromoRedeemCard'), { ssr: false });
 
 // Ladder presets
 const LADDER_PRESETS = {
@@ -444,6 +448,18 @@ export default function SettingsPage() {
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                {/* Billing & Subscription Section */}
+                <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-4 shadow-sm">
+                    <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                        <CreditCard className="w-5 h-5" />
+                        Gói đăng ký & Khuyến mãi
+                    </h3>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <BillingCard hotelId={getHotelId()} />
+                        <PromoRedeemCard hotelId={getHotelId()} />
                     </div>
                 </div>
 

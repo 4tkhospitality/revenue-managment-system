@@ -65,6 +65,14 @@ export async function ingestXML(formData: FormData) {
         return { success: false, message: "File already processed", error: "DUPLICATE_FILE" };
     }
 
+    // 2.1 Clean up stale/failed jobs for this file (prevents unique constraint violation)
+    if (existingJob) {
+        console.log(`[UPLOAD] 🧹 Cleaning up stale job ${existingJob.job_id} (status: ${existingJob.status})`);
+        // Delete any reservations linked to the failed job first
+        await prisma.reservationsRaw.deleteMany({ where: { job_id: existingJob.job_id } });
+        await prisma.importJob.delete({ where: { job_id: existingJob.job_id } });
+    }
+
     // 3. Create Job
     let step3Start = Date.now();
     const job = await prisma.importJob.create({

@@ -305,13 +305,25 @@ export function Sidebar() {
                                 href="/admin/users"
                                 className="flex items-center gap-3 px-6 py-2.5 text-sm font-medium transition-all duration-200 mx-2 rounded-lg"
                                 style={{
-                                    backgroundColor: pathname.startsWith('/admin') ? 'rgba(255,255,255,0.2)' : 'transparent',
+                                    backgroundColor: pathname === '/admin/users' ? 'rgba(255,255,255,0.2)' : 'transparent',
                                     color: '#ffffff',
                                 }}
                                 onClick={() => setIsOpen(false)}
                             >
                                 <Shield className="w-5 h-5" />
                                 Admin Panel
+                            </Link>
+                            <Link
+                                href="/admin/plg"
+                                className="flex items-center gap-3 px-6 py-2.5 text-sm font-medium transition-all duration-200 mx-2 rounded-lg"
+                                style={{
+                                    backgroundColor: pathname === '/admin/plg' ? 'rgba(255,255,255,0.2)' : 'transparent',
+                                    color: '#ffffff',
+                                }}
+                                onClick={() => setIsOpen(false)}
+                            >
+                                <Crown className="w-5 h-5" />
+                                PLG Admin
                             </Link>
                         </div>
                     )}
