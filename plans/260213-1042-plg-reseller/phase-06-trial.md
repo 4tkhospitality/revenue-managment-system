@@ -24,8 +24,8 @@ If 2/3 conditions met within 7 days:
   → Show celebration toast
 
 After trial expires:
-  → status changes to ACTIVE (free STANDARD limits apply)
-  → Gating kicks in naturally
+  → status changes to ACTIVE (effectivePlan reverts to actual plan)
+  → Gating kicks in naturally (Starter limits apply)
 ```
 
 ## Implementation Steps
@@ -50,8 +50,9 @@ After trial expires:
 4. [ ] Integrate trial start into hotel creation flow
    - When user uploads real data → call `startTrial(hotelId)`
 
-5. [ ] Add trial expiry handling to `getEntitlements()`
-   - If TRIAL && trial_ends_at < now → return STANDARD limits (expired)
+5. [ ] Add trial handling to `getEntitlements()`
+   - If TRIAL && trial_ends_at > now → `effectivePlan = DELUXE` (full feature access)
+   - If TRIAL && trial_ends_at < now → `effectivePlan = subscription.plan` (expired, revert)
 
 6. [ ] Create trial progress UI component
    - Part of TrialBanner (Phase 05)

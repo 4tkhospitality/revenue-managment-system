@@ -2,7 +2,7 @@
 
 **Source**: [BRIEF-plg-growth.md](file:///c:/Apps/Antigravity/revenue-management-system/docs/BRIEF-plg-growth.md)
 **Plan**: [plan.md](file:///c:/Apps/Antigravity/revenue-management-system/plans/260213-1042-plg-reseller/plan.md)
-**Date**: 2026-02-13 | **Rev**: 3 (post-review)
+**Date**: 2026-02-13 | **Rev**: 4 (edge-case fixes)
 
 ---
 
@@ -19,8 +19,11 @@
 | I5 | Commission only on paid invoices | `Invoice.status = PAID` required; past_due = 0 commission |
 | I6 | Attribution history never deleted | Close via `effective_to` + `ended_reason`, never DELETE |
 | I7 | Commission idempotent per invoice | `@@unique([invoice_id, contract_id, rule_version, entry_type])` |
-| I8 | Quota enforced inline, not by cron | Billable events increment UsageMonthly in same transaction |
-| I9 | Export is quota, not feature flag | All plans CAN export; limits differ by tier |
+| I8 | Quota enforced inline, not by cron | Billable events increment UsageMonthly/UsageDaily in same transaction |
+| I9 | Export is quota, not feature flag | All plans CAN export; daily limits in UsageDaily |
+| I10 | Seats = real-time count, not counter | `requireQuota('users')` = `COUNT(HotelUser WHERE is_active)` |
+| I11 | Trial unlocks DELUXE features | `effectivePlan = DELUXE` during TRIAL_ACTIVE; reverts on expiry |
+| I12 | Session dedup is absolute | `@@unique([hotel_id, event_type, session_id])` — not 30-min window |
 
 ### Glossary
 
@@ -32,7 +35,8 @@
 | **Grace period** | 60d after subscription lapse; attribution survives within grace |
 | **Soft gate** | Feature visible but output/actions blocked → upgrade CTA |
 | **Hard gate** | Feature completely blocked (e.g., multi-hotel) |
-| **Inline increment** | UsageMonthly counter updated atomically in same tx as billable action |
+| **Inline increment** | UsageMonthly/UsageDaily counter updated atomically in same tx as billable action |
+| **effectivePlan** | Plan used for feature resolution; = DELUXE during trial, = actual plan after |
 
 ---
 
@@ -75,7 +79,7 @@ erDiagram
 
 | Sprint | New Models | Modified Models |
 |--------|-----------|----------------|
-| S1 | UsageMonthly | Subscription (+trial fields), Hotel (+active_promo_code_id), ProductEvent (+session_id) |
+| S1 | UsageMonthly, **UsageDaily** | Subscription (+trial fields), Hotel (+active_promo_code_id), ProductEvent (+session_id **unique**) |
 | S2 | Reseller, ResellerAttribution, ResellerContract, PromoCode, PromoRedemption | — |
 | S3 | Invoice, PaymentReceipt, CommissionLedger, Payout, ResellerSession | — |
 
@@ -105,7 +109,8 @@ lib/shared/       → errors, authz (RBAC), idempotency
 | `entitlements` | `getEntitlements(hotelId)` | plan, status, limits, features, isTrialExpired |
 | `guard` | `requireFeature(hotelId, key)` | void or throws PaywallError |
 | `guard` | `requireQuota(hotelId, key)` | void or throws QuotaExceededError |
-| `usage` | `incrementUsage(hotelId, field)` | atomic upsert UsageMonthly (inline) |
+| `usage` | `incrementMonthlyUsage(hotelId, field)` | atomic upsert UsageMonthly |
+| `usage` | `incrementDailyUsage(hotelId, field)` | atomic upsert UsageDaily |
 | `events` | `logSessionEvent(userId, hotelId, type, sessionId)` | deduped ProductEvent |
 | `trial` | `checkTrialBonus(hotelId)` | { conditions[], bonusGranted } |
 | `attribution` | `attributeHotel(hotelId, resellerId, method)` | ResellerAttribution |
@@ -118,11 +123,22 @@ Route: POST /api/data/import
   → requireHotelAccess(userId, hotelId)       // RBAC
   → requireQuota(hotelId, 'imports')           // check UsageMonthly < limit
   → ... do import ...
-  → incrementUsage(hotelId, 'imports')         // atomic upsert (same tx)
+  → incrementMonthlyUsage(hotelId, 'imports')  // atomic upsert
   → logEvent(userId, hotelId, 'import_success')
 
+Route: POST /api/pricing/export
+  → requireQuota(hotelId, 'exports')           // check UsageDaily < daily limit
+  → ... do export ...
+  → incrementDailyUsage(hotelId, 'exports')    // atomic upsert
+
+Seats: requireQuota('users')
+  → COUNT(HotelUser WHERE is_active AND hotel_id)  // real-time, not counter
+
+Session dedup: logSessionEvent()
+  → INSERT ProductEvent ... ON CONFLICT (hotel_id, event_type, session_id) DO NOTHING
+
 Cron (daily 2AM): reconciliation only
-  → recount events → fix UsageMonthly if drifted
+  → recount events → fix UsageMonthly/UsageDaily if drifted
 ```
 
 ---
@@ -198,14 +214,17 @@ interface QuotaExceededError {
 ## 7. Business Rules
 
 1. **Scenarios**: Starter = session-based (Zustand, max 3, no persist)
-2. **Trial**: 7 + 7 bonus (2/3: IMPORT ≥1, DASHBOARD_SESSION ≥3, PRICING_SESSION ≥2; anti-abuse cap 3 sessions/day/type)
-3. **Gating**: OTA Calculator free; Bulk/Playbook gated; Multi-hotel hard-gated
-4. **Attribution**: Lifetime + active condition + 60d grace
-5. **Commission**: 20% flat net collected, append-only ledger, idempotent per invoice
-6. **Discount**: Best discount wins, no stacking, tie-breaker: highest % → CAMPAIGN > GLOBAL > RESELLER → oldest
-7. **Promo**: 1 hotel = 1 active code, transactional redemption with row-lock
-8. **Invoice**: Billing Core (Invoice + PaymentReceipt) = source of truth for commission
-9. **Reseller Auth**: Custom magic-link + token table, separate from hotel NextAuth
+2. **Trial**: 7 + 7 bonus; effectivePlan = DELUXE during trial (all features unlocked)
+3. **Trial bonus**: 2/3 conditions (IMPORT ≥1, DASHBOARD_SESSION ≥3, PRICING_SESSION ≥2; anti-abuse cap 3/day/type)
+4. **Gating**: OTA Calculator free; Bulk/Playbook gated; Multi-hotel hard-gated
+5. **Attribution**: Lifetime + active condition + 60d grace
+6. **Commission**: 20% flat net collected, append-only ledger, idempotent per invoice
+7. **Discount**: Best discount wins, no stacking, tie-breaker: highest % → CAMPAIGN > GLOBAL > RESELLER → oldest
+8. **Promo**: 1 hotel = 1 active code, transactional redemption with row-lock
+9. **Invoice**: Billing Core (Invoice + PaymentReceipt) = source of truth for commission
+10. **Reseller Auth**: Custom magic-link + token table, separate from hotel NextAuth
+11. **Seats**: Real-time COUNT(HotelUser), not usage counter
+12. **Daily quotas**: Export uses UsageDaily (not UsageMonthly)
 
 ---
 

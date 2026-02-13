@@ -23,7 +23,10 @@ Create reseller management and hotel attribution system. Support 3 methods of at
 - [ ] `PromoCode` (atomic counter, templates)
 - [ ] `PromoRedemption` (usage audit)
 - [ ] Add Prisma relations
-- [ ] Run `npx prisma db push` + `npx prisma generate`
+- [ ] Migration strategy:
+  - **Dev**: `npx prisma db push`
+  - **Staging/Prod**: `npx prisma migrate dev` → `npx prisma migrate deploy`
+- [ ] `npx prisma generate`
 
 ## Implementation Steps
 

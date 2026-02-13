@@ -11,9 +11,15 @@ Create central `getEntitlements(hotel_id)` service that resolves plan, limits, a
 ```
 getEntitlements(hotel_id)
   → reads Subscription (plan, status, limits)
-  → returns: { plan, status, limits, features, isTrialExpired }
+  → returns: { plan, effectivePlan, status, limits, features, isTrialExpired }
 
-features = {
+// Trial override: during TRIAL_ACTIVE, effectivePlan = DELUXE
+// UI shows "Starter (Trial)" but enforcement uses effectivePlan
+effectivePlan = subscription.status === 'TRIAL'
+  ? 'DELUXE'         // full features during trial
+  : subscription.plan // actual plan after trial
+
+features = resolveFeatures(effectivePlan) = {
   canBulkPricing: boolean      // SUPERIOR+
   canPlaybook: boolean         // DELUXE+
   canAnalytics: boolean        // DELUXE+

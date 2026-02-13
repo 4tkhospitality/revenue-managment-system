@@ -28,8 +28,8 @@ Log meaningful billable events to ProductEvent. **Quota-critical events incremen
 
 1. [ ] Create `lib/plg/events.ts`
    - `logEvent(userId, hotelId, eventType, eventData?)` → insert ProductEvent
-   - `logSessionEvent(userId, hotelId, eventType, sessionId)` → dedup by session
-   - Session dedup: check if event with same `session_id` exists in last 30 min
+   - `logSessionEvent(userId, hotelId, eventType, sessionId)` → dedup by **unique constraint** `@@unique([hotel_id, event_type, session_id])`
+   - On duplicate → catch unique violation → skip (no-op, idempotent)
 
 2. [ ] Create session ID utility
    - Client-side: `getSessionId()` → read/create from sessionStorage
@@ -43,11 +43,9 @@ Log meaningful billable events to ProductEvent. **Quota-critical events incremen
 
 ### Inline Quota Increment (Issue A fix)
 
-4. [ ] Create `lib/plg/usage.ts` with `incrementUsage(hotelId, field)`
-   - **Quota-critical events** MUST increment `UsageMonthly` inline at the route:
-     - `import_success` → `incrementUsage(hotelId, 'imports')`
-     - `export_success` → `incrementUsage(hotelId, 'exports')`
-     - `seat_added` → `incrementUsage(hotelId, 'active_users')`
+4. [ ] Create `lib/plg/usage.ts`
+   - **`incrementMonthlyUsage(hotelId, field)`** — for monthly quotas:
+     - `import_success` → `incrementMonthlyUsage(hotelId, 'imports')`
    - Uses `prisma.usageMonthly.upsert()` with atomic increment:
      ```ts
      prisma.usageMonthly.upsert({
@@ -56,9 +54,24 @@ Log meaningful billable events to ProductEvent. **Quota-critical events incremen
        update: { imports: { increment: 1 } }
      })
      ```
-   - Wrapped in same transaction as the billable action
-   - `getUsage(hotelId, month?)` → read UsageMonthly
-   - `getCurrentMonthUsage(hotelId)` → convenience wrapper
+
+   - **`incrementDailyUsage(hotelId, field)`** — for daily quotas:
+     - `export_success` → `incrementDailyUsage(hotelId, 'exports')`
+   - Uses `prisma.usageDaily.upsert()` with atomic increment:
+     ```ts
+     prisma.usageDaily.upsert({
+       where: { hotel_id_date: { hotel_id, date: today } },
+       create: { hotel_id, date: today, exports: 1 },
+       update: { exports: { increment: 1 } }
+     })
+     ```
+
+   - **Seats/users** = real-time COUNT (not counter):
+     - `requireQuota('users')` → `COUNT(HotelUser WHERE is_active=true AND hotel_id=X)`
+     - NOT stored in UsageMonthly; no incrementUsage for seats
+
+   - `getMonthlyUsage(hotelId)` → read UsageMonthly
+   - `getDailyUsage(hotelId)` → read UsageDaily
    - `isNearLimit(hotelId, quotaKey)` → returns true if ≥ 80%
 
 ### Usage Reconciliation Cron (not primary enforcement)
@@ -82,16 +95,17 @@ Log meaningful billable events to ProductEvent. **Quota-critical events incremen
 - `app/api/cron/usage-rollup/route.ts` — Daily cron (idempotent + incremental)
 
 ## Files to Modify
-- `app/api/data/import/route.ts` — Log import events + `incrementUsage('imports')`
-- `app/api/pricing/export/route.ts` — Log export events + `incrementUsage('exports')`
+- `app/api/data/import/route.ts` — Log import events + `incrementMonthlyUsage('imports')`
+- `app/api/pricing/export/route.ts` — Log export events + `incrementDailyUsage('exports')`
 - `vercel.json` — Add cron schedule
 
 ## Test Criteria
-- [ ] Events logged to ProductEvent with correct dedup (session_id)
-- [ ] **Import route increments UsageMonthly.imports inline** (not waiting for cron)
-- [ ] **Export route increments UsageMonthly.exports inline**
+- [ ] Events logged to ProductEvent with correct dedup (unique constraint)
+- [ ] **Import route increments UsageMonthly.imports inline**
+- [ ] **Export route increments UsageDaily.exports inline**
+- [ ] **Seats quota uses real-time COUNT(HotelUser), not counter**
+- [ ] Duplicate session events rejected by DB unique constraint (no-op)
 - [ ] Cron reconciliation corrects drift if any
-- [ ] `getUsage()` returns correct counts
 - [ ] `isNearLimit()` returns true at 80%
 
 ---

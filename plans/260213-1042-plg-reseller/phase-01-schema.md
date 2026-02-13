@@ -8,8 +8,9 @@ Add PLG-core models only. Reseller/Promo/Ledger models will be added in S2/S3 mi
 
 ## Migration Scope (S1 only)
 
-### New Model
-- [ ] `UsageMonthly` — hotel usage counters, roll-up monthly
+### New Models
+- [ ] `UsageMonthly` — hotel usage counters (monthly quotas: imports)
+- [ ] `UsageDaily` — hotel daily counters (daily quotas: exports, trial session cap)
 
 ### Modified Models
 - [ ] `Subscription` → add `trial_ends_at` (DateTime?), `trial_bonus_granted` (Boolean @default(false))
@@ -27,13 +28,25 @@ Add PLG-core models only. Reseller/Promo/Ledger models will be added in S2/S3 mi
      hotel_id        String   @db.Uuid
      month           DateTime // First day of month
      imports         Int      @default(0)
-     exports         Int      @default(0)
      playbook_views  Int      @default(0)
-     active_users    Int      @default(0)
      last_rollup_at  DateTime?
      hotel           Hotel    @relation(fields: [hotel_id], references: [hotel_id], onDelete: Cascade)
      @@unique([hotel_id, month])
      @@map("usage_monthly")
+   }
+   ```
+   > **Note**: `exports` removed (daily quota → UsageDaily). `active_users` removed (seats = real-time COUNT, not counter).
+
+2. [ ] Add `UsageDaily` model
+   ```prisma
+   model UsageDaily {
+     id        String   @id @default(uuid()) @db.Uuid
+     hotel_id  String   @db.Uuid
+     date      DateTime @db.Date  // Calendar day
+     exports   Int      @default(0)
+     hotel     Hotel    @relation(fields: [hotel_id], references: [hotel_id], onDelete: Cascade)
+     @@unique([hotel_id, date])
+     @@map("usage_daily")
    }
    ```
 
@@ -48,11 +61,12 @@ Add PLG-core models only. Reseller/Promo/Ledger models will be added in S2/S3 mi
    active_promo_code_id  String?   @db.Uuid
    ```
 
-4. [ ] Add `session_id` to ProductEvent
+4. [ ] Add `session_id` to ProductEvent + **unique constraint for absolute dedup**
    ```prisma
    session_id  String?
-   @@index([hotel_id, event_type, session_id])  // dedup index
+   @@unique([hotel_id, event_type, session_id])  // absolute dedup (not 30-min window)
    ```
+   > Replaces the "check exists in last 30 min" approach. DB enforces 1 row per (hotel, event, session) forever.
 
 5. [ ] Add Hotel relation to UsageMonthly
 
@@ -77,7 +91,8 @@ Add PLG-core models only. Reseller/Promo/Ledger models will be added in S2/S3 mi
 - [ ] `usage_monthly` table visible in Supabase
 - [ ] Subscription has trial fields
 - [ ] Hotel has active_promo_code_id
-- [ ] ProductEvent has session_id + index
+- [ ] ProductEvent has session_id + unique constraint
+- [ ] `usage_daily` table visible in Supabase
 
 ---
 Next Phase: [Phase 02 — Entitlements Service](./phase-02-entitlements.md)
