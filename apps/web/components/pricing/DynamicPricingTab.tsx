@@ -459,7 +459,7 @@ export default function DynamicPricingTab() {
                                 <div className="flex items-center justify-between">
                                     <span className="text-sm font-semibold text-slate-700">{data.channel.name}</span>
                                     <span className="text-xs font-semibold text-red-500 bg-red-50 px-2.5 py-1 rounded-full">
-                                        HH {(data.channel.commission * 100).toFixed(0)}%
+                                        HH {data.channel.commission}%
                                     </span>
                                 </div>
                             </div>
