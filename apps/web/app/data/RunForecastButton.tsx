@@ -29,8 +29,9 @@ export function RunForecastButton() {
                 return;
             }
 
-            const asOfDate = new Date(featuresData.latestAsOfDate);
-            asOfDate.setHours(0, 0, 0, 0);
+            // Parse as UTC date (avoid setHours which uses local timezone)
+            const dateStr = featuresData.latestAsOfDate.split('T')[0]; // "2026-02-27"
+            const asOfDate = new Date(dateStr + 'T00:00:00.000Z'); // Force UTC midnight
 
             const res = await runForecast(hotelId, asOfDate);
             setResult(res);
