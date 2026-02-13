@@ -1,6 +1,6 @@
-# 🎨 DESIGN: RMS Version 01.7 - Production
+# 🎨 DESIGN: RMS Version 01.8 - Production
 
-> **Based on:** `docs/spec-v01.md` & iterative development (V01.0 → V01.7)
+> **Based on:** `docs/spec-v01.md` & iterative development (V01.0 → V01.8)
 > **Goal:** Full-featured SaaS Revenue Management System with OTA Pricing, Time-Travel OTB, and Growth Playbook.
 
 ---
@@ -251,9 +251,10 @@ erDiagram
 
 #### 1. `reservations_raw`
 - **Purpose**: Append-only storage for each import.
-- **Idempotency**: `file_hash` in ImportJob prevents duplicate files.
-- **Unique**: `(hotel_id, reservation_id, job_id)` for history tracking.
+- **Idempotency**: `file_hash` in ImportJob prevents duplicate files. Stale/failed jobs auto-cleaned on retry (V01.8).
+- **Unique**: `(hotel_id, reservation_id, job_id, room_code)` for history tracking.
 - **V01.1 Fields**: `book_time`, `cancel_time` (timestamptz) for time-travel accuracy.
+- **V01.8 GM Fields**: `guest_group_name`, `salesperson_name`, `net_rate_per_room_night`, `pax`, `room_nights`, `nights`, `account_name_norm`, `segment`, `create_clerk`.
 
 #### 2. `daily_otb` (Time-Travel Core)
 - **Concept**: Snapshot of booking state at each `as_of_date`.
@@ -278,14 +279,15 @@ erDiagram
 
 ### A. Ingestion Module (Server Actions)
 - `ingestCSV(formData)`: Auto-detects CSV vs Excel, validates hotel_id, parses with Papaparse/exceljs
-- `ingestXML(formData)`: Crystal Reports format, aggregates by ConfirmNum
+- `ingestXML(formData)`: Crystal Reports format, aggregates by ConfirmNum, extracts GM fields (V01.8)
 - `ingestCancellationXml(formData)`: Parses cancellation XML, runs bridge (V01.1)
+- **Stale Job Cleanup** (V01.8): Deletes `PROCESSING`/`FAILED` jobs with same `file_hash` before creating new import
 
 ### B. Core RMS Jobs (Server Actions)
 - `buildDailyOTB(hotelId, asOfTs)`: Time-travel with book_time fallback, advisory lock
 - `backfillOTB(hotelId)`: Batch backfill with generate_series, chunked (limit 3) (V01.4)
 - `buildFeaturesDaily(hotelId)`: Pickup T-30/15/7/5/3, STLY, pace
-- `generateForecast(hotelId)`: Uses max(as_of_date) from features_daily
+- `generateForecast(hotelId)`: Uses max(as_of_date) from features_daily, UTC-safe date handling (V01.8 fix)
 - `runPricingEngine(hotelId)`: Ladder Strategy
 
 ### C. OTA Pricing Module (API Routes) (V01.2+)
@@ -420,3 +422,6 @@ All tests run in context of `hotel_id`.
 - [ ] **TC-07 Cancellation Bridge**: Cancel record auto-matches reservation by normalized keys.
 - [ ] **TC-08 OTA Pricing**: NET→BAR→Display calculation consistent across all 3 tabs.
 - [ ] **TC-09 Timing Conflict**: Early Bird + Last-Minute → only highest discount applied.
+- [ ] **TC-10 GM Reporting**: XML import populates guest_group_name, salesperson_name, net_rate, pax, segment.
+- [ ] **TC-11 Stale Cleanup**: Re-uploading same file with previous FAILED status → old job deleted, new job created.
+- [ ] **TC-12 Forecast UTC**: Running forecast from GMT+7 browser produces correct non-zero results.

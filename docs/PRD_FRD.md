@@ -1,8 +1,8 @@
 # Product Requirements Document (PRD) & Functional Requirements Document (FRD)
-## Revenue Management System (RMS) v01.7
+## Revenue Management System (RMS) v01.8
 
-**Document Version:** 1.7.0  
-**Last Updated:** 2026-02-12  
+**Document Version:** 1.8.0  
+**Last Updated:** 2026-02-13  
 **Status:** ✅ Production  
 **Product Owner:** 4TK Hospitality
 
@@ -107,6 +107,9 @@ RMS cung cấp:
 | 3 Calculator Modes | P1 | ✅ Done | V01.7 |
 | Timing Conflict Resolution | P1 | ✅ Done | V01.7 |
 | Comprehensive Guide Page | P1 | ✅ Done | V01.7 |
+| GM Reporting Dimensions | P1 | ✅ Done | V01.8 |
+| Forecast Timezone Fix | P0 | ✅ Done | V01.8 |
+| Import Job Stale Cleanup | P1 | ✅ Done | V01.8 |
 | PDF Export | P2 | ✅ Done | V01.5 |
 | Rate Shopper | P2 | ⬜ Schema ready | Deferred |
 | ML Forecasting | P3 | ⬜ Future | - |
@@ -358,6 +361,8 @@ Morning (08:00)
 | IMPORT-06 | Track import status in import_jobs | P1 | ✅ |
 | IMPORT-07 | Accept Cancellations file | P1 | ✅ |
 | IMPORT-08 | Apply Cancellation Bridge | P1 | ✅ |
+| IMPORT-09 | Auto-cleanup stale PROCESSING/FAILED jobs on retry (V01.8) | P1 | ✅ |
+| IMPORT-10 | Parse GM reporting fields from XML (V01.8) | P1 | ✅ |
 
 ### 6.3 Module: OTB Engine (OTB)
 
@@ -591,6 +596,7 @@ const ERROR_MESSAGES = {
 | 1.5 | 2026-02-10 | PM | Added OTA Growth Playbook (Premium) |
 | 1.6 | 2026-02-11 | PM | 2-Layer Promotion Architecture, Free Nights, 3-Tier Exclusion |
 | 1.7 | 2026-02-12 | PM | 3 Calculator Modes, Timing Conflicts, Guide Page |
+| 1.8 | 2026-02-13 | PM | GM Reporting Dimensions, Forecast Timezone Fix, Import Job Stale Cleanup |
 
 ### 10.3 Sign-off
 

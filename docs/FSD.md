@@ -1,8 +1,8 @@
 # Functional Specification Document (FSD)
-## Revenue Management System (RMS) v01.7
+## Revenue Management System (RMS) v01.8
 
-**Document Version:** 1.7.0  
-**Last Updated:** 2026-02-12  
+**Document Version:** 1.8.0  
+**Last Updated:** 2026-02-13  
 **Status:** ✅ Production  
 **Author:** 4TK Hospitality Engineering
 
@@ -165,6 +165,12 @@ User                    RMS                     Google              DB
 | `booking_date` / `book_time` | book_time | No | NOW() |
 | `status` | status | No | 'confirmed' |
 | `channel` / `source` | channel_code | No | NULL |
+| `guest_group` / `group_name` | guest_group_name | No | NULL | (V01.8)
+| `salesperson` / `sls_name` | salesperson_name | No | NULL | (V01.8)
+| `net_rate` / `g_net_rate` | net_rate_per_room_night | No | NULL | (V01.8)
+| `pax` / `num_pax` | pax | No | NULL | (V01.8)
+| `room_nights` / `rnight` | room_nights | No | NULL | (V01.8)
+| `nights` | nights | No | NULL | (V01.8)
 
 ### 3.4 XML Node Mapping (Opera Crystal Report)
 
@@ -177,6 +183,15 @@ User                    RMS                     Google              DB
     <Revenue> → revenue
     <BookingDate> → book_time
     <Status> → status
+    <!-- GM Reporting Fields (V01.8) -->
+    <GroupName> → guest_group_name
+    <SlsName> → salesperson_name
+    <GNetRate> → net_rate_per_room_night
+    <NumPax> → pax
+    <Rnight> → room_nights
+    <@night> → nights
+    <ClientName> → company_name
+    <createclerk> → create_clerk
 </Reservation>
 ```
 
@@ -190,6 +205,7 @@ User                    RMS                     Google              DB
 | Future departure | departure < today | Warning only |
 | Revenue range | revenue < 0 | "Doanh thu không được âm" |
 | Duplicate file | hash exists | "File đã import trước đó" |
+| Stale job | PROCESSING/FAILED job with same hash | Auto-cleanup before retry (V01.8) |
 
 ### 3.6 UI Specification: Upload Page
 
@@ -922,4 +938,5 @@ viewer (Level 1)
 | 1.5 | 2026-02-10 | Eng | Added OTA Growth Playbook module (6 tabs) |
 | 1.6 | 2026-02-11 | Eng | 2-Layer Promotion Architecture, Free Nights, 3-Tier Exclusion |
 | 1.7 | 2026-02-12 | Eng | 3 Calculator Modes, Timing Conflicts, SaaS Infrastructure |
+| 1.8 | 2026-02-13 | Eng | GM Reporting Fields, Forecast Timezone Fix, Import Job Stale Cleanup |
 

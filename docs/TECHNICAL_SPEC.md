@@ -1,8 +1,8 @@
 # Technical Specification
-## Revenue Management System (RMS) v01.7
+## Revenue Management System (RMS) v01.8
 
-**Document Version:** 1.7.0  
-**Last Updated:** 2026-02-12  
+**Document Version:** 1.8.0  
+**Last Updated:** 2026-02-13  
 **Status:** ✅ Production  
 **Author:** 4TK Hospitality Engineering
 
@@ -223,12 +223,26 @@ CREATE TABLE reservations_raw (
     status          VARCHAR(50) DEFAULT 'confirmed',
     -- Normalized fields for matching
     reservation_id_norm VARCHAR(255),
-    room_code_norm  VARCHAR(50)
+    room_code       VARCHAR(50),
+    room_code_norm  VARCHAR(50),
+    company_name    VARCHAR(255),
+    -- GM Reporting Dimensions (V01.8)
+    guest_group_name  VARCHAR(255),       -- GroupName from XML
+    salesperson_name  VARCHAR(255),       -- SlsName from XML
+    net_rate_per_room_night DECIMAL,      -- GNetRate from XML
+    pax               INT,               -- NumPax from XML
+    room_nights       INT,               -- Rnight from XML (rooms × nights)
+    nights            INT,               -- @night from XML or departure - arrival
+    account_name_norm VARCHAR(255),       -- Normalized: UPPER(TRIM(company_name))
+    segment           VARCHAR(50),        -- Inferred: OTA / AGENT / DIRECT / UNKNOWN
+    create_clerk      VARCHAR(255)        -- createclerk from XML
 );
 
 -- Performance indexes
 CREATE INDEX idx_res_raw_otb ON reservations_raw 
     (hotel_id, book_time, cancel_time, arrival_date, departure_date);
+CREATE INDEX idx_res_raw_segment ON reservations_raw
+    (hotel_id, segment, arrival_date);
 ```
 
 #### 2.2.3 daily_otb
@@ -812,3 +826,4 @@ console.error(`[IngestCSV] Error: ${error.message}`, {
 | 1.5 | 2026-02-10 | Eng | OTA Growth Playbook (Premium) |
 | 1.6 | 2026-02-11 | Eng | 2-Layer Promotion Architecture, Free Nights, 3-Tier Exclusion |
 | 1.7 | 2026-02-12 | Eng | 3 Calculator Modes, Timing Conflict Resolution |
+| 1.8 | 2026-02-13 | Eng | GM Reporting Dimensions, Forecast Timezone Fix, Import Job Stale Cleanup |

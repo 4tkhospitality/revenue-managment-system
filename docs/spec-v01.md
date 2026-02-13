@@ -1,11 +1,11 @@
-# RMS – VERSION 01.7 (Production)
+# RMS – VERSION 01.8 (Production)
 
-**Last Updated:** 2026-02-12
+**Last Updated:** 2026-02-13
 **Status:** Production — Deployed to Vercel (icn1 region)
 
 ## SCOPE – WHAT'S IN V01
 
-### ✅ Implemented (V01.0 → V01.7)
+### ✅ Implemented (V01.0 → V01.8)
 - PMS-agnostic CSV/Excel/XML Import
 - Crystal Reports XML Import (reservation + cancellation)
 - Cancellation Bridge with auto-matching (V01.1)
@@ -41,6 +41,10 @@
 - SaaS Pro Light Theme (consistent across all pages)
 - Loading Skeletons for all pages
 - Mobile Responsive Layout with Hamburger Menu
+- GM Reporting Dimensions in reservations_raw (guest_group, salesperson, net_rate, pax, segment) (V01.8)
+- Forecast Timezone Fix — UTC-safe as_of_date handling (V01.8)
+- Import Job Stale Cleanup — auto-cleanup failed/processing jobs on retry (V01.8)
+- Updated Excel/CSV Templates with GM reporting fields (V01.8)
 
 ### ❌ NOT in V01 (Deferred)
 - No PMS integration (no booking lifecycle, no room assignment)
@@ -84,7 +88,18 @@ Trong 14 ngày pilot, GM/RM có thể:
 - company_name (OTA/Agent name from XML)
 - last_modified_time (timestamptz)
 
-## 3. DATA MODEL (V01.7)
+### 2.4 GM Reporting Dimensions (V01.8)
+- guest_group_name (string) — GroupName from XML
+- salesperson_name (string) — SlsName from XML
+- net_rate_per_room_night (decimal) — GNetRate from XML
+- pax (int) — NumPax from XML
+- room_nights (int) — Rnight from XML (rooms × nights)
+- nights (int) — @night from XML or departure - arrival
+- account_name_norm (string) — Normalized: UPPER(TRIM(company_name))
+- segment (string) — Inferred: OTA / AGENT / DIRECT / UNKNOWN
+- create_clerk (string) — createclerk from XML
+
+## 3. DATA MODEL (V01.8)
 
 ### Core Tables
 - `hotels` — Tenant root (capacity, timezone, ladder_steps, is_demo)
@@ -128,14 +143,16 @@ Cancellation XML → cancellations_raw → Bridge → reservations_raw (cancel_t
 ```
 
 ### as_of_date Semantics
-| Step | as_of_date Source |
-|------|------------------|
-| Build OTB | `loaded_at` (upload date) |
-| Build Features | `new Date()` (today) |
-| Run Forecast | `max(as_of_date)` from `features_daily` |
+| Step | as_of_date Source | Timezone |
+|------|------------------|----------|
+| Build OTB | `loaded_at` (upload date) | UTC |
+| Build Features | `new Date()` (today) | UTC |
+| Run Forecast | `max(as_of_date)` from `features_daily` | UTC (V01.8 fix) |
+
+> **V01.8 Fix**: Forecast button previously used `setHours(0,0,0,0)` which converted UTC date to local timezone (GMT+7), causing 7-hour shift and zero results. Fixed to parse ISO date string directly as UTC midnight.
 
 ## 5. MODULE DESIGN
-- **Ingestion Engine**: Multi-format with auto-detect, hotel validation before import
+- **Ingestion Engine**: Multi-format with auto-detect, hotel validation before import, stale job cleanup (V01.8)
 - **Core RMS Engine**: Time-travel OTB, advisory lock, chunked backfill
 - **Feature Engine**: Pickup rates, STLY, pace, supply
 - **Pricing Engine**: Ladder Strategy, configurable presets

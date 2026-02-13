@@ -1,8 +1,8 @@
 # Software Requirements Specification (SRS)
-## Revenue Management System (RMS) v01.7
+## Revenue Management System (RMS) v01.8
 
-**Document Version:** 1.7.0  
-**Last Updated:** 2026-02-12  
+**Document Version:** 1.8.0  
+**Last Updated:** 2026-02-13  
 **Status:** ✅ Production  
 **Author:** 4TK Hospitality
 
@@ -123,8 +123,8 @@ RMS là hệ thống độc lập, tích hợp với:
 | **Actors** | Hotel Admin, Manager |
 | **Preconditions** | User assigned to hotel |
 | **Accepted Formats** | CSV (Cloudbeds, RoomRaccoon), XML (Opera Crystal Reports) |
-| **Validation** | - File hash dedup<br>- Required fields check<br>- Date format validation<br>- Duplicate reservation_id detection |
-| **Postconditions** | Data stored in reservations_raw/cancellations_raw |
+| **Validation** | - File hash dedup<br>- Required fields check<br>- Date format validation<br>- Duplicate reservation_id detection<br>- Stale job cleanup on retry (V01.8) |
+| **Postconditions** | Data stored in reservations_raw/cancellations_raw with GM reporting fields (V01.8) |
 
 ### 3.3 FR-003: OTB Calculation
 
@@ -163,6 +163,7 @@ RMS là hệ thống độc lập, tích hợp với:
 | **Algorithm** | Weighted average of historical pickup patterns |
 | **Inputs** | OTB, Pickup T-7/15/30, STLY, Day-of-Week, Seasonality |
 | **Output** | Predicted remaining demand per stay_date |
+| **Timezone** | All date comparisons in UTC; `as_of_date` parsed as UTC midnight (V01.8 fix) |
 
 ### 3.6 FR-006: Price Recommendations
 
@@ -408,6 +409,7 @@ Standalone Tables:
 | 1.5.0 | 2026-02-10 | OTA Growth Playbook (Premium) |
 | 1.6.0 | 2026-02-11 | 2-Layer Promotion Architecture, Free Nights, 3-Tier Exclusion |
 | 1.7.0 | 2026-02-12 | 3 Calculator Modes, Timing Conflict Resolution, Guide Page |
+| 1.8.0 | 2026-02-13 | GM Reporting Dimensions, Forecast Timezone Fix, Import Job Stale Cleanup |
 
 ### 7.2 Sign-off
 
