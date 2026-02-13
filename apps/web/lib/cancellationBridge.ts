@@ -167,10 +167,28 @@ export async function bridgeCancellations(
         if (matchResult.status === 'matched' && matchResult.reservation) {
             const reservation = matchResult.reservation;
 
-            // Update reservation
+            // V02: Cascade cancel to ALL room-type rows for this booking
+            // Case A: cancellation has room_code → partial cancel (only that room type)
+            // Case B: cancellation has no room_code → full booking cancel (all lines)
+            const cascadeWhere: Prisma.ReservationsRawWhereInput = {
+                hotel_id: hotelId,
+                reservation_id_norm: reservation.reservation_id_norm,
+                arrival_date: reservation.arrival_date,
+                // Guardrail: only cancel rows booked before the cancel event
+                book_time: cancellation.cancel_time
+                    ? { lte: cancellation.cancel_time }
+                    : undefined,
+            };
+
+            // If cancellation specifies a room_code, only cancel that room type
+            if (roomCodeNorm) {
+                cascadeWhere.room_code_norm = roomCodeNorm;
+            }
+
+            // Update all matching reservation rows (cascade)
             reservationUpdates.push(
-                prisma.reservationsRaw.update({
-                    where: { id: reservation.id },
+                prisma.reservationsRaw.updateMany({
+                    where: cascadeWhere,
                     data: {
                         cancel_time: cancellation.cancel_time,
                         cancel_date: cancellation.cancel_time,

@@ -94,12 +94,42 @@ export async function ingestXML(formData: FormData) {
 
         console.log(`[UPLOAD] Parsed ${parseResult.reservations.length} reservations`);
 
-        // 5. Convert to database format
+        // 5. Convert to database format (v2 — full GM dimensions)
         let step5Start = Date.now();
         const today = new Date().toISOString().split('T')[0];
 
+        // Segment inference based on account name (ClientName)
+        function inferSegment(accountName: string | null | undefined): string {
+            if (!accountName) return 'UNKNOWN';
+            const norm = accountName.toUpperCase().trim();
+            if (norm.includes('AGODA')) return 'OTA';
+            if (norm.includes('BOOKING')) return 'OTA';
+            if (norm.includes('CTRIP') || norm.includes('TRIP.COM')) return 'OTA';
+            if (norm.includes('EXPEDIA')) return 'OTA';
+            if (norm.includes('TRAVELOKA')) return 'OTA';
+            if (norm.includes('HOTELS.COM')) return 'OTA';
+            if (norm.includes('HOSTELWORLD')) return 'OTA';
+            if (norm === '' || norm === 'UNKNOWN') return 'UNKNOWN';
+            return 'AGENT';
+        }
+
+        let crossCheckWarnings = 0;
+
         const validRows = parseResult.reservations.map((r: ParsedReservation) => {
             const bookingDateStr = r.bookingDate || today;
+
+            // Cross-check: room_nights should equal rooms × nights
+            const expectedRoomNights = r.rooms * r.nights;
+            if (r.roomNights !== expectedRoomNights) {
+                crossCheckWarnings++;
+                console.warn(`[UPLOAD] ⚠️ Cross-check: ${r.confirmNum} room_type=${r.roomType} — Rnight=${r.roomNights} vs rooms×nights=${expectedRoomNights}`);
+            }
+
+            const companyName = r.companyName || null;
+            const accountNorm = companyName
+                ? companyName.toUpperCase().trim().replace(/\s+/g, ' ')
+                : null;
+
             return {
                 hotel_id: validHotelId,
                 job_id: job.job_id,
@@ -111,9 +141,31 @@ export async function ingestXML(formData: FormData) {
                 revenue: r.revenue,
                 status: r.status,
                 cancel_date: r.status === 'cancelled' ? new Date(bookingDateStr) : null,
-                company_name: r.companyName || null,
+                // --- Source/Account (ClientName) ---
+                company_name: companyName,
+                account_name_norm: accountNorm,
+                segment: inferSegment(companyName),
+                // --- Room Type ---
+                room_code: r.roomType || null,
+                // --- Guest / Group ---
+                guest_group_name: r.guestName || null,
+                // --- Sales Rep ---
+                salesperson_name: r.salespersonName || null,
+                // --- Revenue/Rate ---
+                net_rate_per_room_night: r.ratePerRoomNight || null,
+                // --- Quantities ---
+                pax: r.pax || null,
+                room_nights: r.roomNights || null,
+                nights: r.nights || null,
+                // --- Clerk ---
+                create_clerk: r.createClerk || null,
             };
         });
+
+        if (crossCheckWarnings > 0) {
+            console.warn(`[UPLOAD] ⚠️ ${crossCheckWarnings} cross-check warnings (Rnight ≠ rooms×nights)`);
+        }
+
         timings['5_transform_data'] = Date.now() - step5Start;
 
         // 6. Insert

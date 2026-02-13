@@ -106,7 +106,7 @@ export async function buildDailyOTB(params?: BuildOTBParams): Promise<BuildOTBRe
         // Tenant-safe join: j.hotel_id = r.hotel_id
         // Overlap filter: arrival < stayDateTo AND departure > stayDateFrom
         const reservations = await prisma.$queryRaw<RawReservationRow[]>`
-            SELECT DISTINCT ON (r.reservation_id)
+            SELECT DISTINCT ON (r.reservation_id, COALESCE(r.room_code, ''))
                 r.reservation_id,
                 r.booking_date,
                 r.book_time,
@@ -127,7 +127,7 @@ export async function buildDailyOTB(params?: BuildOTBParams): Promise<BuildOTBRe
               -- Performance: overlap filter
               AND r.arrival_date < ${stayDateTo}::date
               AND r.departure_date > ${stayDateFrom}::date
-            ORDER BY r.reservation_id, COALESCE(j.snapshot_ts, j.created_at) DESC
+            ORDER BY r.reservation_id, COALESCE(r.room_code, ''), COALESCE(j.snapshot_ts, j.created_at) DESC
         `;
 
         if (reservations.length === 0) {
