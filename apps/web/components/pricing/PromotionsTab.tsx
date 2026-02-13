@@ -34,23 +34,14 @@ const GROUP_CONFIG = {
     },
 } as const;
 
-// Vendor-specific group labels (UI Layer — display only)
-const VENDOR_GROUP_LABELS: Record<string, Partial<Record<keyof typeof GROUP_CONFIG, string>>> = {
-    agoda: {
-        SEASONAL: 'Theo mùa',
-        ESSENTIAL: 'Cơ bản',
-        TARGETED: 'Mục tiêu',
-    },
-    booking: {
-        TARGETED: 'Nhắm mục tiêu',
-        GENIUS: 'Genius',
-        PORTFOLIO: 'Cơ bản',
-        CAMPAIGN: 'Campaign',
-    },
-    expedia: {
-        ESSENTIAL: 'Khuyến mãi',
-        TARGETED: 'Audience',
-    },
+// Unified group labels — same Vietnamese names across ALL vendors
+const UNIFIED_GROUP_LABELS: Record<keyof typeof GROUP_CONFIG, string> = {
+    SEASONAL: 'Theo mùa',
+    ESSENTIAL: 'Cơ bản',
+    TARGETED: 'Mục tiêu',
+    GENIUS: 'Genius',
+    PORTFOLIO: 'Gói ưu đãi',
+    CAMPAIGN: 'Chiến dịch',
 };
 
 // Vendor-specific tab groups for PromotionPicker
@@ -60,9 +51,9 @@ const VENDOR_PICKER_TABS: Record<string, GroupType[]> = {
     expedia: ['ESSENTIAL', 'TARGETED'],
 };
 
-// Get label by vendor
-function getGroupLabel(group: keyof typeof GROUP_CONFIG, vendor: string): string {
-    return VENDOR_GROUP_LABELS[vendor]?.[group] || GROUP_CONFIG[group].label;
+// Get label (unified — no per-vendor differences)
+function getGroupLabel(group: keyof typeof GROUP_CONFIG, _vendor: string): string {
+    return UNIFIED_GROUP_LABELS[group] || GROUP_CONFIG[group].label;
 }
 
 type GroupType = keyof typeof GROUP_CONFIG;
@@ -1167,14 +1158,14 @@ export default function PromotionsTab() {
         ctrip: 'bg-red-500',
     };
 
-    // Group pill config for table
+    // Group pill config for table — short labels match UNIFIED_GROUP_LABELS
     const groupPillConfig: Record<string, { bg: string; text: string; dot: string; short: string }> = {
-        SEASONAL: { bg: 'bg-orange-50', text: 'text-orange-700', dot: 'bg-orange-500', short: 'Mùa' },
-        ESSENTIAL: { bg: 'bg-[#EFF1F8]', text: 'text-[#204183]', dot: 'bg-[#204183]', short: 'CB' },
-        TARGETED: { bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-500', short: 'MT' },
+        SEASONAL: { bg: 'bg-orange-50', text: 'text-orange-700', dot: 'bg-orange-500', short: 'Theo mùa' },
+        ESSENTIAL: { bg: 'bg-[#EFF1F8]', text: 'text-[#204183]', dot: 'bg-[#204183]', short: 'Cơ bản' },
+        TARGETED: { bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-500', short: 'Mục tiêu' },
         GENIUS: { bg: 'bg-indigo-50', text: 'text-indigo-700', dot: 'bg-indigo-500', short: 'Genius' },
-        PORTFOLIO: { bg: 'bg-teal-50', text: 'text-teal-700', dot: 'bg-teal-500', short: 'PF' },
-        CAMPAIGN: { bg: 'bg-rose-50', text: 'text-rose-700', dot: 'bg-rose-500', short: 'Camp' },
+        PORTFOLIO: { bg: 'bg-teal-50', text: 'text-teal-700', dot: 'bg-teal-500', short: 'Gói ưu đãi' },
+        CAMPAIGN: { bg: 'bg-rose-50', text: 'text-rose-700', dot: 'bg-rose-500', short: 'Chiến dịch' },
     };
 
     // Active campaign count for badge
@@ -1278,7 +1269,7 @@ export default function PromotionsTab() {
                                         }[stackBehavior]!;
                                         const pill = groupPillConfig[c.promo.group_type] || groupPillConfig.ESSENTIAL;
                                         const vendorCode = selectedChannelData?.code || 'agoda';
-                                        const groupLabel = VENDOR_GROUP_LABELS[vendorCode]?.[c.promo.group_type as keyof typeof GROUP_CONFIG] || pill.short;
+                                        const groupLabel = UNIFIED_GROUP_LABELS[c.promo.group_type as keyof typeof GROUP_CONFIG] || pill.short;
 
                                         return (
                                             <tr key={c.id} className="border-t border-[#F2F4F8] hover:bg-[#FAFBFD] transition-colors">

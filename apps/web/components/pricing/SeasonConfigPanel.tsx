@@ -159,7 +159,10 @@ export default function SeasonConfigPanel({ onSeasonsChange }: Props) {
     return (
         <div className="p-4 bg-white border border-slate-200 rounded-xl space-y-3">
             <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-slate-700">🗓️ Mùa (Seasons)</h3>
+                <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-blue-500" />
+                    <h3 className="text-sm font-semibold text-slate-700">Mùa (Seasons)</h3>
+                </div>
                 <div className="flex gap-1">
                     {SEASON_PRESETS.filter(p => !usedCodes.has(p.code)).map(preset => (
                         <button
@@ -175,7 +178,7 @@ export default function SeasonConfigPanel({ onSeasonsChange }: Props) {
                 </div>
             </div>
 
-            {error && <div className="text-xs text-red-600">❌ {error}</div>}
+            {error && <div className="text-xs text-red-600 flex items-center gap-1"><span className="font-medium">Lỗi:</span> {error}</div>}
 
             {seasons.length === 0 && (
                 <div className="text-center py-4 text-sm text-slate-400">

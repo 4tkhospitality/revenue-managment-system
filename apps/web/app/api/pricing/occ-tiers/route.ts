@@ -6,10 +6,10 @@ import { getActiveHotelId } from '@/lib/pricing/get-hotel';
 
 // Default 4 tiers for new hotels
 const DEFAULT_TIERS = [
-    { tier_index: 0, label: '0-35%', occ_min: 0.0, occ_max: 0.35, multiplier: 1.0 },
-    { tier_index: 1, label: '35-65%', occ_min: 0.35, occ_max: 0.65, multiplier: 1.10 },
-    { tier_index: 2, label: '65-85%', occ_min: 0.65, occ_max: 0.85, multiplier: 1.20 },
-    { tier_index: 3, label: '>85%', occ_min: 0.85, occ_max: 1.0, multiplier: 1.30 },
+    { tier_index: 0, label: '0-35%', occ_min: 0.0, occ_max: 0.35, multiplier: 1.0, adjustment_type: 'MULTIPLY', fixed_amount: 0 },
+    { tier_index: 1, label: '35-65%', occ_min: 0.35, occ_max: 0.65, multiplier: 1.10, adjustment_type: 'MULTIPLY', fixed_amount: 0 },
+    { tier_index: 2, label: '65-85%', occ_min: 0.65, occ_max: 0.85, multiplier: 1.20, adjustment_type: 'MULTIPLY', fixed_amount: 0 },
+    { tier_index: 3, label: '>85%', occ_min: 0.85, occ_max: 1.0, multiplier: 1.30, adjustment_type: 'MULTIPLY', fixed_amount: 0 },
 ];
 
 // GET /api/pricing/occ-tiers — List tiers (returns defaults if none configured)
@@ -83,6 +83,17 @@ function validateTiers(tiers: any[]): string | null {
         // Check multiplier
         if (typeof t.multiplier !== 'number' || t.multiplier < 0) {
             return `Tier ${i}: multiplier must be a non-negative number`;
+        }
+
+        // Check adjustment_type (per-tier: MULTIPLY or FIXED)
+        const adjType = t.adjustment_type ?? 'MULTIPLY';
+        if (adjType !== 'MULTIPLY' && adjType !== 'FIXED') {
+            return `Tier ${i}: adjustment_type must be 'MULTIPLY' or 'FIXED'`;
+        }
+
+        // Check fixed_amount is a number when present
+        if (t.fixed_amount !== undefined && typeof t.fixed_amount !== 'number') {
+            return `Tier ${i}: fixed_amount must be a number`;
         }
 
         // Check contiguous with next tier
@@ -159,6 +170,8 @@ export async function PUT(request: NextRequest) {
                             occ_min: t.occ_min,
                             occ_max: t.occ_max,
                             multiplier: t.multiplier,
+                            adjustment_type: t.adjustment_type ?? 'MULTIPLY',
+                            fixed_amount: t.fixed_amount ?? 0,
                         },
                     })
                 )

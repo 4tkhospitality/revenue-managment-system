@@ -601,31 +601,31 @@ export const GROUP_COLORS: Record<PromotionGroup, { bg: string; text: string; la
     CAMPAIGN: { bg: 'bg-rose-100', text: 'text-rose-700', label: 'Campaign' },
 };
 
-// Vendor-specific group labels (UI Layer — display only, not engine source-of-truth)
+// Unified group labels — same Vietnamese names across ALL vendors (no per-vendor variation)
 export const VENDOR_GROUP_LABELS: Record<string, Record<PromotionGroup, string>> = {
     agoda: {
-        SEASONAL: 'Seasonal (Theo mùa)',
-        ESSENTIAL: 'Essential (Cơ bản)',
-        TARGETED: 'Targeted (Mục tiêu)',
+        SEASONAL: 'Theo mùa',
+        ESSENTIAL: 'Cơ bản',
+        TARGETED: 'Mục tiêu',
         GENIUS: 'Genius',
-        PORTFOLIO: 'Portfolio',
-        CAMPAIGN: 'Campaign',
+        PORTFOLIO: 'Gói ưu đãi',
+        CAMPAIGN: 'Chiến dịch',
     },
     booking: {
-        SEASONAL: 'Seasonal',
-        ESSENTIAL: 'Essential',
-        TARGETED: 'Targeted Rates (Nhắm theo thị trường)',
-        GENIUS: 'Genius (Loyalty)',
-        PORTFOLIO: 'Portfolio Deals (Cơ bản)',
-        CAMPAIGN: 'Campaign / Exclusive Deals',
+        SEASONAL: 'Theo mùa',
+        ESSENTIAL: 'Cơ bản',
+        TARGETED: 'Mục tiêu',
+        GENIUS: 'Genius',
+        PORTFOLIO: 'Gói ưu đãi',
+        CAMPAIGN: 'Chiến dịch',
     },
     expedia: {
-        SEASONAL: 'Seasonal',
-        ESSENTIAL: 'Deals (Khuyến mãi)',
-        TARGETED: 'Audience Rates',
+        SEASONAL: 'Theo mùa',
+        ESSENTIAL: 'Cơ bản',
+        TARGETED: 'Mục tiêu',
         GENIUS: 'Genius',
-        PORTFOLIO: 'Portfolio',
-        CAMPAIGN: 'Campaign',
+        PORTFOLIO: 'Gói ưu đãi',
+        CAMPAIGN: 'Chiến dịch',
     },
 };
 

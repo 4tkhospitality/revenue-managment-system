@@ -14,6 +14,7 @@ import {
     resolveVendorStacking,
     calcEffectiveDiscount,
     computeDisplay,
+    applyOccAdjustment,
     applyOccMultiplier,
     applyGuardrails,
     normalizeVendorCode,
@@ -44,6 +45,8 @@ export interface ChannelPricingInput {
     boosters?: CommissionBooster[];
     roundingRule?: 'CEIL_1000' | 'ROUND_100' | 'NONE';
     occMultiplier?: number;
+    occAdjustmentType?: 'MULTIPLY' | 'FIXED';
+    occFixedAmount?: number;
     seasonNetRate?: number;
 }
 
@@ -100,8 +103,14 @@ export function calculateCell(input: ChannelPricingInput): MatrixCell {
         effectiveNet = input.seasonNetRate;
     }
 
-    if (input.occMultiplier !== undefined && input.occMultiplier !== 1) {
-        effectiveNet = applyOccMultiplier(effectiveNet, input.occMultiplier);
+    // Apply OCC adjustment (per-tier: MULTIPLY or FIXED)
+    const adjType = input.occAdjustmentType ?? 'MULTIPLY';
+    const adjMultiplier = input.occMultiplier ?? 1;
+    const adjFixed = input.occFixedAmount ?? 0;
+    if (adjType === 'FIXED' && adjFixed !== 0) {
+        effectiveNet = applyOccAdjustment(effectiveNet, 'FIXED', 1, adjFixed);
+    } else if (adjType === 'MULTIPLY' && adjMultiplier !== 1) {
+        effectiveNet = applyOccAdjustment(effectiveNet, 'MULTIPLY', adjMultiplier, 0);
     }
 
     // Step 2: Resolve vendor stacking
@@ -187,8 +196,10 @@ export async function calculatePreview(input: PreviewInput): Promise<PreviewResu
     const effectiveDiscount = calcEffectiveDiscount(finalDiscounts, calcType);
     const commission = channel.commission;
 
-    // Determine OCC multiplier
+    // Determine OCC adjustment (per-tier: MULTIPLY or FIXED)
     let occMultiplier = 1;
+    let occAdjustmentType: 'MULTIPLY' | 'FIXED' = 'MULTIPLY';
+    let occFixedAmount = 0;
     if (occPct !== undefined) {
         const occTiers = await prisma.occTierConfig.findMany({
             where: { hotel_id: hotelId },
@@ -198,7 +209,9 @@ export async function calculatePreview(input: PreviewInput): Promise<PreviewResu
             const min = Number(tier.occ_min);
             const max = Number(tier.occ_max);
             if (occPct >= min && (occPct < max || (max === 1.0 && occPct === 1.0))) {
+                occAdjustmentType = (tier.adjustment_type as 'MULTIPLY' | 'FIXED') ?? 'MULTIPLY';
                 occMultiplier = Number(tier.multiplier);
+                occFixedAmount = Number(tier.fixed_amount ?? 0);
                 break;
             }
         }
@@ -221,7 +234,11 @@ export async function calculatePreview(input: PreviewInput): Promise<PreviewResu
         // NET → BAR → Display
         let effectiveNet = value;
         if (seasonNetRate !== undefined) effectiveNet = seasonNetRate;
-        if (occMultiplier !== 1) effectiveNet = applyOccMultiplier(effectiveNet, occMultiplier);
+        if (occAdjustmentType === 'FIXED' && occFixedAmount !== 0) {
+            effectiveNet = applyOccAdjustment(effectiveNet, 'FIXED', 1, occFixedAmount);
+        } else if (occMultiplier !== 1) {
+            effectiveNet = applyOccAdjustment(effectiveNet, 'MULTIPLY', occMultiplier, 0);
+        }
 
         const result = calcBarFromNet(effectiveNet, commission, finalDiscounts, calcType, 'CEIL_1000', channel.code);
         net = effectiveNet;
@@ -467,7 +484,7 @@ export interface Violation {   // BA fix #1: structured violations
 }
 
 export interface DynamicMatrixResponse {
-    tiers: { tierIndex: number; occMin: number; occMax: number; multiplier: number; label: string }[];
+    tiers: { tierIndex: number; occMin: number; occMax: number; multiplier: number; adjustmentType: string; fixedAmount: number; label: string }[];
     matrix: Record<string, DynamicCell>; // key = "roomTypeId:tierIndex"
     roomTypes: { id: string; name: string; netBase: number }[];
     season: { id: string; name: string; type: string; autoDetected: boolean };
@@ -630,6 +647,8 @@ export async function calculateDynamicMatrix(
 
         for (const tier of occTiers) {
             const multiplier = Number(tier.multiplier);
+            const tierAdjType = (tier.adjustment_type as 'MULTIPLY' | 'FIXED') ?? 'MULTIPLY';
+            const tierFixedAmt = Number(tier.fixed_amount ?? 0);
             const key = `${rt.id}:${tier.tier_index}`;
 
             const cell = calculateCell({
@@ -642,6 +661,8 @@ export async function calculateDynamicMatrix(
                 discounts,
                 roundingRule,
                 occMultiplier: multiplier,
+                occAdjustmentType: tierAdjType,
+                occFixedAmount: tierFixedAmt,
                 seasonNetRate: netBase !== rt.net_price ? netBase : undefined,
             });
 
@@ -687,6 +708,8 @@ export async function calculateDynamicMatrix(
             occMin: Number(t.occ_min),
             occMax: Number(t.occ_max),
             multiplier: Number(t.multiplier),
+            adjustmentType: (t.adjustment_type as string) ?? 'MULTIPLY',
+            fixedAmount: Number(t.fixed_amount ?? 0),
             label: t.label,
         })),
         matrix,

@@ -845,15 +845,17 @@ model SeasonConfig {
 }
 
 model OccTierConfig {
-  id          String   @id @default(uuid()) @db.Uuid
-  hotel_id    String   @db.Uuid
-  tier_index  Int      // 0, 1, 2, 3
-  label       String   // "0-35%", "35-65%", "65-85%", ">85%"
-  occ_min     Float    // 0–1 decimal (e.g., 0.0, 0.35, 0.65, 0.85)
-  occ_max     Float    // 0–1 decimal (e.g., 0.35, 0.65, 0.85, 1.0)
-  multiplier  Float    // 1.0, 1.10, 1.20, 1.30
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
+  id              String   @id @default(uuid()) @db.Uuid
+  hotel_id        String   @db.Uuid
+  tier_index      Int      // 0, 1, 2, 3
+  label           String   // "0-35%", "35-65%", "65-85%", ">85%"
+  occ_min         Float    // 0–1 decimal (e.g., 0.0, 0.35, 0.65, 0.85)
+  occ_max         Float    // 0–1 decimal (e.g., 0.35, 0.65, 0.85, 1.0)
+  multiplier      Float    // 1.0, 1.10, 1.20, 1.30 — used when adjustment_type = MULTIPLY
+  adjustment_type String   @default("MULTIPLY") // "MULTIPLY" | "FIXED"
+  fixed_amount    Float    @default(0)           // VND amount — used when adjustment_type = FIXED
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
 
   hotel       Hotel    @relation(fields: [hotel_id], references: [hotel_id], onDelete: Cascade)
 

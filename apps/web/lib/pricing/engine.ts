@@ -827,10 +827,26 @@ export function calcEffectiveDiscount(
 }
 
 /**
- * Apply OCC multiplier to NET base price.
+ * Apply OCC adjustment to NET base price.
+ * Supports MULTIPLY (netBase × multiplier) and FIXED (netBase + fixedAmount).
  * Returns integer VND (rounded, as per Rev.4 Fix #4).
  */
-export function applyOccMultiplier(netBase: number, multiplier: number): number {
+export function applyOccAdjustment(
+    netBase: number,
+    adjustmentType: 'MULTIPLY' | 'FIXED',
+    multiplier: number,
+    fixedAmount: number
+): number {
+    if (adjustmentType === 'FIXED') {
+        return Math.round(netBase + fixedAmount);
+    }
     return Math.round(netBase * multiplier);
+}
+
+/**
+ * @deprecated Use applyOccAdjustment instead. Kept for backward compatibility.
+ */
+export function applyOccMultiplier(netBase: number, multiplier: number): number {
+    return applyOccAdjustment(netBase, 'MULTIPLY', multiplier, 0);
 }
 
