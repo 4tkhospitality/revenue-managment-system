@@ -1102,6 +1102,13 @@ export default function PromotionsTab() {
     const activeCampaignIds = campaigns.filter(c => c.is_active).map(c => c.id);
     const selectedRoom = roomTypes.find(r => r.id === selectedRoomId);
 
+    // Fingerprint: changes when discount % values change → triggers re-fetch
+    const discountFingerprint = campaigns
+        .filter(c => c.is_active)
+        .map(c => `${c.id}:${c.discount_pct}`)
+        .sort()
+        .join('|');
+
     const { result: previewData, isLoading: previewLoading, isRefreshing: previewRefreshing } = usePricingPreview({
         channelId: selectedChannel || undefined,
         roomTypeId: selectedRoomId || undefined,
@@ -1109,6 +1116,7 @@ export default function PromotionsTab() {
         value: selectedRoom?.net_price || 0,
         selectedCampaignInstanceIds: activeCampaignIds,
         debounceMs: 250,
+        discountFingerprint,
     });
 
     // Derive display values from API response (no client-side math)

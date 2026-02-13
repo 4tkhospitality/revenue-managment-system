@@ -10,6 +10,9 @@ import { PageHeader } from '@/components/shared/PageHeader';
 import { ExportPdfButton } from '@/components/shared/ExportPdfButton';
 import { DashboardToolbarCard } from '@/components/dashboard/DashboardToolbarCard';
 import { DashboardPdfWrapper } from '@/components/dashboard/DashboardPdfWrapper';
+import { DashboardTabs } from '@/components/dashboard/DashboardTabs';
+import { InsightsPanel } from '@/components/dashboard/InsightsPanel';
+import { AnalyticsTabContent } from '@/components/analytics/AnalyticsTabContent';
 import { Suspense } from 'react';
 
 export const dynamic = 'force-dynamic';
@@ -148,7 +151,7 @@ async function fetchDashboardData(hotelId: string, today: Date) {
 export default async function DashboardPage({
     searchParams
 }: {
-    searchParams: Promise<{ as_of_date?: string }>
+    searchParams: Promise<{ as_of_date?: string; tab?: string }>
 }) {
     const pageStart = Date.now();
     const params = await searchParams;
@@ -337,6 +340,14 @@ export default async function DashboardPage({
 
     console.log(`[Dashboard] Total page render: ${Date.now() - pageStart}ms`);
 
+    // Calculate pricing action count (days where price differs from recommended)
+    const pricingActionCount = tableData.filter(
+        (d) => d.recommendedPrice !== d.currentPrice && !d.isStopSell
+    ).length;
+
+    // Check if analytics data has missing fields (for warning badge)
+    const asOfDateStr = otbData[0]?.as_of_date?.toISOString().split('T')[0];
+
     return (
         <div className="mx-auto max-w-[1400px] px-4 sm:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
             {/* Row 1: Clean gradient header — title + PDF action */}
@@ -355,66 +366,83 @@ export default async function DashboardPage({
                 }
             />
 
-            {/* Row 2: Toolbar — data status + time-travel picker */}
-            <Suspense fallback={<div className="h-16 bg-white rounded-xl animate-pulse" />}>
-                <DashboardToolbarCard
-                    latestReservationDate={
-                        latestReservation
-                            ? DateUtils.format(latestReservation.booking_date, 'dd/MM/yyyy')
-                            : null
-                    }
-                    latestCancellationDate={
-                        latestCancellation
-                            ? DateUtils.format(latestCancellation.date, 'dd/MM/yyyy')
-                            : null
-                    }
-                    otbAsOfDate={dataAsOf}
-                    currentAsOfDate={
-                        dataAsOf ? otbData[0]?.as_of_date?.toISOString().split('T')[0] : undefined
-                    }
-                />
-            </Suspense>
+            {/* Empty State */}
+            {otbData.length === 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                    <p className="text-amber-700">
+                        Chưa có dữ liệu OTB. Vui lòng <a href="/upload" className="underline hover:text-amber-900">tải lên reservations</a> và <a href="/data" className="underline hover:text-amber-900">build OTB</a>.
+                    </p>
+                </div>
+            )}
 
-            {/* Divider — separates controls from report */}
-            <div className="border-t border-gray-200" />
+            {/* Setup Warning */}
+            {needsSetup && (
+                <div className="bg-rose-50 border border-rose-200 rounded-lg p-4">
+                    <p className="text-rose-700">
+                        Chưa cấu hình khách sạn! <a href="/settings" className="underline hover:text-rose-900">Vào Cài đặt</a> để nhập Số phòng và các thông tin khác.
+                    </p>
+                </div>
+            )}
 
             {/* Main Content - wrapped for PDF export */}
             <DashboardPdfWrapper>
-                {/* Empty State */}
-                {otbData.length === 0 && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                        <p className="text-amber-700">
-                            ⚠️ Chưa có dữ liệu OTB. Vui lòng <a href="/upload" className="underline hover:text-amber-900">tải lên reservations</a> và <a href="/data" className="underline hover:text-amber-900">build OTB</a>.
-                        </p>
-                    </div>
-                )}
+                <DashboardTabs
+                    pricingActionCount={pricingActionCount}
+                    hasDataWarning={featuresData.length === 0 && otbData.length > 0}
+                    contextBar={
+                        <DashboardToolbarCard
+                            latestReservationDate={
+                                latestReservation
+                                    ? DateUtils.format(latestReservation.booking_date, 'dd/MM/yyyy')
+                                    : null
+                            }
+                            latestCancellationDate={
+                                latestCancellation
+                                    ? DateUtils.format(latestCancellation.date, 'dd/MM/yyyy')
+                                    : null
+                            }
+                            otbAsOfDate={dataAsOf}
+                            currentAsOfDate={
+                                dataAsOf ? otbData[0]?.as_of_date?.toISOString().split('T')[0] : undefined
+                            }
+                        />
+                    }
+                    overviewContent={
+                        <>
+                            {/* KPI Cards — 5-card row */}
+                            <KpiCards data={kpiData} hotelCapacity={hotelCapacity} />
 
-                {/* Setup Warning */}
-                {needsSetup && (
-                    <div className="bg-rose-50 border border-rose-200 rounded-lg p-4">
-                        <p className="text-rose-700">
-                            ⚠️ Chưa cấu hình khách sạn! <a href="/settings" className="underline hover:text-rose-900">Vào Cài đặt</a> để nhập Số phòng và các thông tin khác.
-                        </p>
-                    </div>
-                )}
+                            {/* OTB Chart (60%) + Insights (40%) side-by-side */}
+                            <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+                                <div className="lg:col-span-3">
+                                    <OtbChart data={chartData} />
+                                </div>
+                                <div className="lg:col-span-2">
+                                    <InsightsPanel data={kpiData} hotelCapacity={hotelCapacity} />
+                                </div>
+                            </div>
 
-                {/* KPI Cards */}
-                <KpiCards data={kpiData} hotelCapacity={hotelCapacity} />
-
-                {/* OTB Chart */}
-                <OtbChart data={chartData} />
-
-                {/* Analytics Panel - STLY, Pace, Pickup */}
-                <AnalyticsPanel
-                    hotelId={hotelId}
-                    asOfDate={otbData[0]?.as_of_date?.toISOString().split('T')[0]}
-                />
-
-                {/* Recommendation Table */}
-                <RecommendationTable
-                    data={tableData}
-                    onAccept={handleAccept}
-                    onOverride={handleOverride}
+                            {/* Analytics Table — 7 day preview */}
+                            <AnalyticsPanel
+                                hotelId={hotelId}
+                                asOfDate={asOfDateStr}
+                                maxDays={7}
+                            />
+                        </>
+                    }
+                    analyticsContent={
+                        <AnalyticsTabContent
+                            hotelId={hotelId}
+                            asOfDate={asOfDateStr}
+                        />
+                    }
+                    pricingContent={
+                        <RecommendationTable
+                            data={tableData}
+                            onAccept={handleAccept}
+                            onOverride={handleOverride}
+                        />
+                    }
                 />
             </DashboardPdfWrapper>
         </div>

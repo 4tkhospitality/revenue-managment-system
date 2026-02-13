@@ -7,6 +7,18 @@ import { revalidatePath } from 'next/cache';
 import { invalidateStatsCache } from '../../lib/cachedStats';
 
 /**
+ * Convert a date to local midnight (Asia/Ho_Chi_Minh) stored as UTC.
+ * VN = UTC+7, so local midnight = UTC 17:00 previous day.
+ * Example: booking_date "2026-01-15" → book_time "2026-01-14T17:00:00Z"
+ */
+function toLocalMidnightUTC(date: Date, tzOffsetHours: number = 7): Date {
+    const d = new Date(date);
+    d.setUTCHours(0, 0, 0, 0);
+    d.setUTCHours(d.getUTCHours() - tzOffsetHours);
+    return d;
+}
+
+/**
  * Ingest Crystal Reports XML file (Booked or Cancelled report)
  * Performance logging enabled for optimization analysis
  */
@@ -167,6 +179,9 @@ export async function ingestXML(formData: FormData) {
                 nights: r.nights || null,
                 // --- Clerk ---
                 create_clerk: r.createClerk || null,
+                // --- Time-travel timestamps (P0: local midnight → UTC) ---
+                book_time: toLocalMidnightUTC(new Date(bookingDateStr)),
+                cancel_time: r.status === 'cancelled' ? toLocalMidnightUTC(new Date(bookingDateStr)) : null,
             };
         });
 

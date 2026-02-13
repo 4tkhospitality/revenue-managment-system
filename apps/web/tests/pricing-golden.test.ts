@@ -132,24 +132,22 @@ test('1. Agoda: Progressive + timing conflict + subcat dedup', () => {
 
 // ── Test 2: Booking exclusive + Genius ──────────────────────────
 
-test('2. Booking: Exclusive deal blocks all except best Genius', () => {
+test('2. Booking: Exclusive/Campaign deal blocks ALL including Genius', () => {
     const { resolved, rule, removedCount } = resolveVendorStacking('booking', bookingExclusiveDiscounts);
 
-    assertEqual(rule, 'booking: exclusive + genius', 'rule');
+    assertEqual(rule, 'booking: campaign_exclusive (blocks all)', 'rule');
 
-    // Should keep: best exclusive (Black Friday 25%) + best genius (L2 15%)
-    assertEqual(resolved.length, 2, 'should keep 2 discounts');
+    // Should keep: ONLY best exclusive (Black Friday 25%) — Genius is blocked
+    assertEqual(resolved.length, 1, 'should keep only 1 discount (Campaign)');
 
     const hasBlackFriday = resolved.some(d => d.name === 'Black Friday');
-    const hasGeniusL2 = resolved.some(d => d.name === 'Genius L2');
     assertEqual(hasBlackFriday, true, 'should keep Black Friday');
-    assertEqual(hasGeniusL2, true, 'should keep Genius L2');
-    assertEqual(removedCount, 3, 'should remove 3 discounts');
+    assertEqual(removedCount, 4, 'should remove 4 discounts (including Genius)');
 });
 
 // ── Test 3: Expedia single-discount (highest wins) ─────────────
 
-test('3. Expedia: Only highest discount wins (SINGLE_DISCOUNT)', () => {
+test('3. Expedia: No Member → highest discount wins (SINGLE_DISCOUNT)', () => {
     const { resolved, rule, removedCount } = resolveVendorStacking('expedia', expediaDiscounts);
 
     assertEqual(rule, 'expedia: single_discount (highest wins)', 'rule');
@@ -164,6 +162,26 @@ test('3. Expedia: Only highest discount wins (SINGLE_DISCOUNT)', () => {
     const expectedBar = Math.ceil(expectedGross / (1 - 0.20) / 1000) * 1000;
     assertEqual(result.bar, expectedBar, `BAR should be ${expectedBar}`);
     assertEqual(result.totalDiscount, 20, 'totalDiscount should be 20 (highest)');
+});
+
+// ── Test 3b: Expedia with Member deal ──────────────────────────
+
+test('3b. Expedia: Member deal stacks with best non-member', () => {
+    const expediaWithMember: DiscountItem[] = [
+        { id: '1', name: 'Same Day Deal', percent: 20, group: 'ESSENTIAL' },
+        { id: '2', name: 'Multi-Night Deal', percent: 15, group: 'ESSENTIAL' },
+        { id: '3', name: 'Member Only', percent: 10, group: 'TARGETED', subCategory: 'MEMBER' },
+    ];
+    const { resolved, rule, removedCount } = resolveVendorStacking('expedia', expediaWithMember);
+
+    assertEqual(rule, 'expedia: member_plus_one', 'rule');
+    assertEqual(resolved.length, 2, 'should keep 2 (Member + best non-member)');
+
+    const hasMember = resolved.some(d => d.name === 'Member Only');
+    const hasSameDay = resolved.some(d => d.name === 'Same Day Deal');
+    assertEqual(hasMember, true, 'should keep Member Only');
+    assertEqual(hasSameDay, true, 'should keep Same Day Deal (highest non-member)');
+    assertEqual(removedCount, 1, 'should remove 1 (Multi-Night)');
 });
 
 // ── Test 4: Trip.com same-box dedup ────────────────────────────

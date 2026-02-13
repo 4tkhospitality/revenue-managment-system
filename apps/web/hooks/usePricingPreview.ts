@@ -39,6 +39,8 @@ export interface UsePricingPreviewInput {
     seasonId?: string;
     occPct?: number;
     debounceMs?: number;
+    /** Fingerprint that changes when discount % values change — triggers re-fetch */
+    discountFingerprint?: string;
 }
 
 export interface UsePricingPreviewReturn {
@@ -142,6 +144,7 @@ export function usePricingPreview(input: UsePricingPreviewInput): UsePricingPrev
         JSON.stringify(input.selectedCampaignInstanceIds),
         input.seasonId,
         input.occPct,
+        input.discountFingerprint,
     ]);
 
     useEffect(() => {

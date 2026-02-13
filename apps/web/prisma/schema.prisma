@@ -208,6 +208,9 @@ model ReservationsRaw {
   @@index([hotel_id, reservation_id_norm, arrival_date], map: "idx_res_raw_match2")
   @@index([hotel_id, book_time, cancel_time, arrival_date, departure_date], map: "idx_res_raw_otb")
   @@index([hotel_id, segment, arrival_date], map: "idx_res_raw_segment")
+  @@index([hotel_id, account_name_norm, arrival_date], map: "idx_res_raw_account")
+  @@index([hotel_id, room_code, arrival_date], map: "idx_res_raw_roomcode")
+  @@index([hotel_id, book_time, arrival_date], map: "idx_res_raw_booktime")
   @@map("reservations_raw")
 }
 

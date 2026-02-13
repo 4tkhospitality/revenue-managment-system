@@ -8,6 +8,7 @@
  */
 
 import Link from 'next/link';
+import { BarChart3, CalendarDays } from 'lucide-react';
 import { DatePickerSnapshot } from '@/components/DatePickerSnapshot';
 
 interface DataStatusItem {
@@ -112,8 +113,9 @@ export function DashboardToolbarCard({
             <div className="flex flex-col sm:flex-row divide-y sm:divide-y-0 sm:divide-x divide-gray-100">
                 {/* Left: Data Status */}
                 <div className="flex-1 p-4">
-                    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                        📊 Trạng thái dữ liệu
+                    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                        <BarChart3 className="w-3.5 h-3.5" aria-hidden="true" />
+                        Trạng thái dữ liệu
                     </h3>
                     <div className="space-y-0.5">
                         {statusItems.map((item) => (
@@ -124,8 +126,9 @@ export function DashboardToolbarCard({
 
                 {/* Right: Time-Travel OTB Picker */}
                 <div className="flex-1 p-4">
-                    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                        🗓️ Xem OTB tại
+                    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                        <CalendarDays className="w-3.5 h-3.5" aria-hidden="true" />
+                        Xem OTB tại
                     </h3>
                     <DatePickerSnapshot
                         onDateChange={handleDateChange}

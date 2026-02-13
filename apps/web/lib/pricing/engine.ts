@@ -651,8 +651,8 @@ function logDebug(msg: string) {
  * Extracted from PromotionsTab.tsx to enforce single source of truth.
  *
  * Rules by vendor:
- * - booking: 3-tier exclusion (Exclusive → Business Bookers → Normal stack)
- * - expedia: SINGLE_DISCOUNT — only highest deal wins
+ * - booking: 3-tier exclusion (Campaign blocks ALL → Business Bookers → Normal stack)
+ * - expedia: MEMBER_PLUS_ONE — Member deal stacks with best non-member; else highest wins
  * - trip.com: Additive + same-box (subcategory) dedup
  * - agoda: Progressive + subcategory dedup
  * - (default): No vendor-specific filtering
@@ -715,20 +715,19 @@ export function resolveVendorStacking(
 
     // ── Booking.com: 3-tier exclusion engine ──
     if (vendorNorm === 'booking') {
-        // Tier 1: Exclusive deals (Campaign group) block everything except Genius
+        // Tier 1: Exclusive/Campaign deals (Deep Deal, Deal of Day, Black Friday...)
+        // BA rule: Campaign deals block ALL other promos including Genius.
+        // Giảm trực tiếp từ BAR, không cộng lũy tiến với bất kỳ KM nào.
         const exclusiveDeals = active.filter(d => d.group === 'CAMPAIGN');
         if (exclusiveDeals.length > 0) {
-            const geniusDeals = active.filter(d => d.group === 'GENIUS');
-            const { best: bestExclusive, ignored: exclIgnored } = pickBest(exclusiveDeals, 'Exclusive deal: chỉ giữ deal cao nhất');
-            const { best: bestGenius, ignored: geniusIgnored } = pickBest(geniusDeals, 'Genius: chỉ giữ level cao nhất');
-            const resolved = [bestGenius, bestExclusive].filter(Boolean) as DiscountItem[];
-            const blockedOthers = active.filter(d => d.group !== 'CAMPAIGN' && d.group !== 'GENIUS')
-                .map(d => ({ id: d.id, name: d.name, reason: `Bị chặn bởi Exclusive deal "${bestExclusive!.name}"` }));
+            const { best: bestExclusive, ignored: exclIgnored } = pickBest(exclusiveDeals, 'Campaign/Exclusive: chỉ giữ deal cao nhất');
+            const blockedOthers = active.filter(d => d.group !== 'CAMPAIGN')
+                .map(d => ({ id: d.id, name: d.name, reason: `Bị chặn bởi Campaign deal "${bestExclusive!.name}" (Deep Deal không cộng dồn)` }));
             return {
-                resolved,
-                ignored: [...exclIgnored, ...geniusIgnored, ...blockedOthers],
-                removedCount: active.length - resolved.length,
-                rule: 'booking: exclusive + genius'
+                resolved: bestExclusive ? [bestExclusive] : [],
+                ignored: [...exclIgnored, ...blockedOthers],
+                removedCount: active.length - (bestExclusive ? 1 : 0),
+                rule: 'booking: campaign_exclusive (blocks all)'
             };
         }
 
@@ -762,10 +761,31 @@ export function resolveVendorStacking(
         };
     }
 
-    // ── Expedia: Only highest deal wins ──
+    // ── Expedia: Member deal stacks with best non-member; else highest wins ──
+    // BA rule: Promotions only combine with Member deals (subCategory: 'MEMBER').
+    // If Member exists: keep Member + best non-member (2 deals max).
+    // If no Member: only highest deal wins (SINGLE_DISCOUNT).
     if (vendorNorm === 'expedia') {
         if (active.length === 0) return { resolved: [], ignored: [], removedCount: 0, rule: 'expedia: none' };
-        const { best, ignored } = pickBest(active, 'Expedia: chỉ cho phép 1 discount');
+
+        const memberDeals = active.filter(d => d.subCategory === 'MEMBER');
+        const nonMemberDeals = active.filter(d => d.subCategory !== 'MEMBER');
+
+        if (memberDeals.length > 0) {
+            // Keep best Member + best non-member
+            const { best: bestMember, ignored: memberIgnored } = pickBest(memberDeals, 'Member: chỉ giữ deal cao nhất');
+            const { best: bestNonMember, ignored: nonMemberIgnored } = pickBest(nonMemberDeals, 'Non-member: chỉ giữ deal cao nhất (stack với Member)');
+            const resolved = [bestMember, bestNonMember].filter(Boolean) as DiscountItem[];
+            return {
+                resolved,
+                ignored: [...memberIgnored, ...nonMemberIgnored],
+                removedCount: active.length - resolved.length,
+                rule: 'expedia: member_plus_one'
+            };
+        }
+
+        // No member deals → only highest wins
+        const { best, ignored } = pickBest(active, 'Expedia: chỉ cho phép 1 discount (không có Member)');
         return { resolved: best ? [best] : [], ignored, removedCount: active.length - 1, rule: 'expedia: single_discount (highest wins)' };
     }
 

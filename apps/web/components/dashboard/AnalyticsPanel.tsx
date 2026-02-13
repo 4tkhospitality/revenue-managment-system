@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { TrendingUp, TrendingDown, Minus, Calendar, Users, DollarSign, AlertCircle, ArrowRight, Info } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Calendar, Users, DollarSign, AlertCircle, ArrowRight, Info, ChevronRight } from 'lucide-react';
 
 // Metric tooltips for non-Revenue users (GM/Owner)
 const METRIC_TIPS: Record<string, { label: string; tip: string; good: string }> = {
@@ -84,9 +84,11 @@ interface AnalyticsData {
 interface AnalyticsPanelProps {
     hotelId: string;
     asOfDate?: string;
+    /** Limit displayed table rows (e.g., 7 for Tab 1 preview) */
+    maxDays?: number;
 }
 
-export default function AnalyticsPanel({ hotelId, asOfDate }: AnalyticsPanelProps) {
+export default function AnalyticsPanel({ hotelId, asOfDate, maxDays }: AnalyticsPanelProps) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [data, setData] = useState<AnalyticsData[]>([]);
@@ -391,7 +393,7 @@ export default function AnalyticsPanel({ hotelId, asOfDate }: AnalyticsPanelProp
                                 </tr>
                             </thead>
                             <tbody>
-                                {data.slice(0, 7).map((row, idx) => (
+                                {data.slice(0, maxDays || 7).map((row, idx) => (
                                     <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
                                         <td className="py-2 px-2 font-medium">
                                             {new Date(row.stay_date).toLocaleDateString('vi-VN', {
@@ -422,6 +424,19 @@ export default function AnalyticsPanel({ hotelId, asOfDate }: AnalyticsPanelProp
                             </tbody>
                         </table>
                     </div>
+                </div>
+            )}
+
+            {/* "Xem thêm" link — only shown when maxDays limits the view */}
+            {maxDays && data.length > maxDays && (
+                <div className="mt-3 pt-3 border-t border-slate-100 text-center">
+                    <Link
+                        href="?tab=pricing"
+                        className="inline-flex items-center gap-1 text-sm font-medium text-blue-700 hover:text-blue-900 transition-colors"
+                    >
+                        Xem thêm {data.length - maxDays} ngày
+                        <ChevronRight className="w-4 h-4" />
+                    </Link>
                 </div>
             )}
         </div>
