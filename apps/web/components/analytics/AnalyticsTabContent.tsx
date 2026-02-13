@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Suspense } from 'react';
 import {
     AnalyticsKpiRow,
-    DodChips,
     DatesToWatchPanel,
     StlyComparisonChart,
     SupplyChart,
@@ -137,7 +136,7 @@ export function AnalyticsTabContent({ hotelId, asOfDate: initialAsOf }: Analytic
     };
 
     return (
-        <div className="space-y-4 sm:space-y-6">
+        <div className="space-y-3 sm:space-y-4">
             {/* ── Controls ────────────────────────────────── */}
             <AnalyticsControls
                 selectedAsOf={selectedAsOf}
@@ -149,24 +148,15 @@ export function AnalyticsTabContent({ hotelId, asOfDate: initialAsOf }: Analytic
                 loading={loading}
             />
 
-            {/* ── KPI Cards ──────────────────────────────── */}
+            {/* ── KPI Strip (compact, DOD merged inline) ── */}
             <AnalyticsKpiRow
                 kpi={data.kpi}
                 viewMode={viewMode}
                 avgAdr={avgAdr}
             />
 
-            {/* ── DOD Chips ──────────────────────────────── */}
-            <DodChips kpi={data.kpi} viewMode={viewMode} />
-
-            {/* ── Dates to Watch ──────────────────────────── */}
-            <DatesToWatchPanel
-                dates={data.datesToWatch}
-                viewMode={viewMode}
-            />
-
-            {/* ── Charts Row ─────────────────────────────── */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            {/* ── Charts Row 1: STLY + Supply (above fold!) ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
                 <StlyComparisonChart
                     rows={data.rows}
                     capacity={data.capacity}
@@ -178,7 +168,29 @@ export function AnalyticsTabContent({ hotelId, asOfDate: initialAsOf }: Analytic
                 />
             </div>
 
-            {/* ── Pace Table ─────────────────────────────── */}
+            {/* ── Charts Row 2: Room Mix + Lead-time ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+                <Suspense fallback={<div className="h-64 bg-white rounded-xl animate-pulse" />}>
+                    <RoomLosMixPanel
+                        hotelId={hotelId}
+                        asOfDate={selectedAsOf || ''}
+                    />
+                </Suspense>
+                <Suspense fallback={<div className="h-64 bg-white rounded-xl animate-pulse" />}>
+                    <LeadTimeBuckets
+                        hotelId={hotelId}
+                        asOfDate={selectedAsOf || ''}
+                    />
+                </Suspense>
+            </div>
+
+            {/* ── Dates to Watch (horizontal chip strip) ── */}
+            <DatesToWatchPanel
+                dates={data.datesToWatch}
+                viewMode={viewMode}
+            />
+
+            {/* ── Pace Table (collapsed by default) ─────── */}
             <PaceTable
                 rows={enrichedRows}
                 expanded={tableExpanded}
@@ -189,30 +201,13 @@ export function AnalyticsTabContent({ hotelId, asOfDate: initialAsOf }: Analytic
                 kpi={data.kpi}
             />
 
-            {/* ── Mix Drivers (existing Phase A widgets) ── */}
-            <div className="border-t border-slate-200 pt-4 sm:pt-6 space-y-4 sm:space-y-6">
-                <Suspense fallback={<div className="h-48 bg-white rounded-xl animate-pulse" />}>
-                    <TopAccountsTable
-                        hotelId={hotelId}
-                        asOfDate={selectedAsOf || ''}
-                    />
-                </Suspense>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <Suspense fallback={<div className="h-64 bg-white rounded-xl animate-pulse" />}>
-                        <RoomLosMixPanel
-                            hotelId={hotelId}
-                            asOfDate={selectedAsOf || ''}
-                        />
-                    </Suspense>
-                    <Suspense fallback={<div className="h-64 bg-white rounded-xl animate-pulse" />}>
-                        <LeadTimeBuckets
-                            hotelId={hotelId}
-                            asOfDate={selectedAsOf || ''}
-                        />
-                    </Suspense>
-                </div>
-            </div>
+            {/* ── Top Accounts ────────────────────────────── */}
+            <Suspense fallback={<div className="h-48 bg-white rounded-xl animate-pulse" />}>
+                <TopAccountsTable
+                    hotelId={hotelId}
+                    asOfDate={selectedAsOf || ''}
+                />
+            </Suspense>
         </div>
     );
 }

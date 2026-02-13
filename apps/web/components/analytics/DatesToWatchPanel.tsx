@@ -5,9 +5,9 @@ import { TrendingDown, Flame, Eye, Target } from 'lucide-react';
 import type { DateToWatch, ViewMode } from './types';
 
 const categoryStyles = {
-    under_pace: { border: 'border-l-rose-500 bg-rose-50/50', icon: TrendingDown },
-    tight_supply: { border: 'border-l-amber-500 bg-amber-50/50', icon: Flame },
-    mixed: { border: 'border-l-blue-500 bg-blue-50/50', icon: Eye },
+    under_pace: { bg: 'bg-rose-50 border-rose-200 text-rose-700', icon: TrendingDown },
+    tight_supply: { bg: 'bg-amber-50 border-amber-200 text-amber-700', icon: Flame },
+    mixed: { bg: 'bg-blue-50 border-blue-200 text-blue-700', icon: Eye },
 } as const;
 
 export function DatesToWatchPanel({
@@ -25,63 +25,41 @@ export function DatesToWatchPanel({
 
     return (
         <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-            {/* Header */}
-            <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/80 flex items-center gap-2">
-                <Target className="w-4 h-4 text-slate-500" />
-                <span className="text-sm font-semibold text-slate-700">Dates to Watch</span>
-                <span className="text-xs text-slate-400">Top {visibleDates.length} ngày cần ưu tiên</span>
-            </div>
+            {/* Header inline */}
+            <div className="px-4 py-2 flex items-center gap-2">
+                <Target className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <span className="text-xs font-semibold text-slate-600 shrink-0">Dates to Watch</span>
 
-            {/* List */}
-            <div className="divide-y divide-slate-100">
-                {visibleDates.map((d) => {
-                    const cat = categoryStyles[d.category];
-                    const Icon = cat.icon;
+                {/* Horizontal scrollable chip strip */}
+                <div className="flex-1 overflow-x-auto scrollbar-thin">
+                    <div className="flex items-center gap-1.5 py-0.5">
+                        {visibleDates.map((d) => {
+                            const cat = categoryStyles[d.category];
+                            const Icon = cat.icon;
 
-                    return (
-                        <div
-                            key={d.stay_date}
-                            className={`flex items-center gap-3 px-4 py-2.5 border-l-4 ${cat.border} hover:bg-slate-50/50 transition-colors`}
-                        >
-                            <Icon className="w-4 h-4 shrink-0 text-slate-500" />
-                            <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-sm font-semibold text-slate-800 font-mono">{d.stay_date}</span>
-                                    <span className="text-xs text-slate-400">({d.dow})</span>
-                                    <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${d.score > 50
-                                            ? 'bg-rose-100 text-rose-700'
-                                            : d.score > 20
-                                                ? 'bg-amber-100 text-amber-700'
-                                                : 'bg-blue-100 text-blue-700'
-                                        }`}>
-                                        Score: {d.score}
-                                    </span>
-                                </div>
-                                <div className="text-xs text-slate-500 mt-0.5 truncate">
-                                    {d.impact}
-                                </div>
-                            </div>
-
-                            {/* Right stats */}
-                            <div className="flex items-center gap-3 text-xs text-slate-500 shrink-0">
-                                <span>OTB: <strong className="text-slate-700">{d.rooms_otb}</strong></span>
-                                {d.vs_ly !== null && (
-                                    <span className={d.vs_ly >= 0 ? 'text-emerald-600' : 'text-rose-600'}>
-                                        vs LY: {d.vs_ly > 0 ? '+' : ''}{d.vs_ly}
-                                    </span>
-                                )}
-                                <span>Avail: <strong>{d.remaining_supply}</strong></span>
-                            </div>
-
-                            <Link
-                                href={`/daily-actions?date=${d.stay_date}`}
-                                className="text-xs text-blue-600 hover:text-blue-800 hover:underline shrink-0 font-medium"
-                            >
-                                Actions →
-                            </Link>
-                        </div>
-                    );
-                })}
+                            return (
+                                <Link
+                                    key={d.stay_date}
+                                    href={`/daily-actions?date=${d.stay_date}`}
+                                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 
+                                        rounded-full border text-xs font-medium whitespace-nowrap
+                                        hover:shadow-sm transition-all cursor-pointer shrink-0
+                                        ${cat.bg}`}
+                                >
+                                    <Icon className="w-3 h-3 shrink-0" />
+                                    <span className="font-mono font-bold">{d.stay_date.slice(5)}</span>
+                                    <span className="opacity-70">({d.dow})</span>
+                                    <span className="font-bold">OTB:{d.rooms_otb}</span>
+                                    {d.vs_ly !== null && (
+                                        <span className={`font-bold ${d.vs_ly >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                                            {d.vs_ly > 0 ? '↑' : '↓'}{Math.abs(d.vs_ly)}
+                                        </span>
+                                    )}
+                                </Link>
+                            );
+                        })}
+                    </div>
+                </div>
             </div>
         </div>
     );
