@@ -132,17 +132,34 @@ test('1. Agoda: Progressive + timing conflict + subcat dedup', () => {
 
 // ── Test 2: Booking exclusive + Genius ──────────────────────────
 
-test('2. Booking: Exclusive/Campaign deal blocks ALL including Genius', () => {
-    const { resolved, rule, removedCount } = resolveVendorStacking('booking', bookingExclusiveDiscounts);
+test('2. Booking: Campaign + Genius scenario vs no-campaign (scenario-based)', () => {
+    const { resolved, rule, removedCount, ignored } = resolveVendorStacking('booking', bookingExclusiveDiscounts);
 
-    assertEqual(rule, 'booking: campaign_exclusive (blocks all)', 'rule');
+    // Scenario analysis:
+    // Scenario 0 (no campaign): Genius L2 15% + Country 12% → eff = 1-(0.85*0.88) = 25.2%
+    // Scenario c1 (Black Friday): BF 25% + Genius L2 15% → eff = 1-(0.75*0.85) = 36.25%
+    // Scenario c2 (Summer Deal): SD 20% + Genius L2 15% → eff = 1-(0.80*0.85) = 32.0%
+    // Winner: Black Friday scenario (36.25% > 25.2%)
 
-    // Should keep: ONLY best exclusive (Black Friday 25%) — Genius is blocked
-    assertEqual(resolved.length, 1, 'should keep only 1 discount (Campaign)');
+    // Rule should indicate campaign_with_genius won
+    if (!rule.includes('campaign_with_genius')) {
+        throw new Error(`Rule should be campaign_with_genius, got: ${rule}`);
+    }
+
+    // Should keep: Black Friday 25% + Genius L2 15%
+    assertEqual(resolved.length, 2, 'should keep 2 discounts (Campaign + Genius)');
 
     const hasBlackFriday = resolved.some(d => d.name === 'Black Friday');
+    const hasGeniusL2 = resolved.some(d => d.name === 'Genius L2');
     assertEqual(hasBlackFriday, true, 'should keep Black Friday');
-    assertEqual(removedCount, 4, 'should remove 4 discounts (including Genius)');
+    assertEqual(hasGeniusL2, true, 'should keep Genius L2');
+    assertEqual(removedCount, 3, 'should remove 3 discounts');
+
+    // Verify Country Deal (PORTFOLIO) is blocked by campaign
+    const blockedCountry = ignored.find(i => i.name === 'Country Deal');
+    if (!blockedCountry || !blockedCountry.reason.includes('PORTFOLIO')) {
+        throw new Error(`Country Deal should be blocked with PORTFOLIO reason, got: ${blockedCountry?.reason}`);
+    }
 });
 
 // ── Test 3: Expedia single-discount (highest wins) ─────────────
