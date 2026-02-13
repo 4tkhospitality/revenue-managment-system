@@ -713,14 +713,14 @@ export function resolveVendorStacking(
         return { best, ignored };
     };
 
-    // ── Booking.com: Scenario-based exclusion engine ──
-    // Dev team analysis: Campaign deals stack WITH Genius (ONLY_WITH_GENIUS),
-    // but block TARGETED and PORTFOLIO. Engine builds multiple scenarios
-    // and picks the one yielding the highest effective discount.
+    // ── Booking.com: 3-branch scenario-based exclusion engine ──
+    // BA confirmed rules from Partner Hub:
+    //   1. Deep deals (EXCLUSIVE): "never stackable with other pricing offers such as Genius"
+    //   2. Getaway/similar (ONLY_WITH_GENIUS): "can be combined with Genius, but no others"
+    //   3. Normal promos: Genius + best Targeted + best Portfolio (scenario-based)
     //
-    // Scenario 0 (no campaign): best Genius + best Targeted + best Portfolio
-    // Scenario c (each campaign): campaign c + best Genius; blocks TARGETED/PORTFOLIO
-    // Winner: scenario with highest effective discount (= lowest displayPrice)
+    // Engine builds scenarios for ALL campaign types + no-campaign,
+    // then picks the one yielding the highest effective discount (lowest displayPrice).
     if (vendorNorm === 'booking') {
         const campaigns = active.filter(d => d.group === 'CAMPAIGN');
         if (campaigns.length > 0) {
@@ -738,60 +738,98 @@ export function resolveVendorStacking(
                 return (1 - product) * 100;
             };
 
-            // ── Scenario 0: No campaign → Genius + Targeted + Portfolio ──
-            const s0Discounts = [bestGenius, bestTargeted, bestPortfolio].filter(Boolean) as DiscountItem[];
-            const s0Eff = scenarioEff(s0Discounts);
+            // ── Build all scenarios ──
+            type Scenario = {
+                label: string;
+                discounts: DiscountItem[];
+                eff: number;
+                blockedGroups: string[];   // Groups blocked by this scenario
+                campaign?: DiscountItem;
+            };
 
-            // ── Scenario c: For each campaign → Campaign + Genius (blocks TARGETED/PORTFOLIO) ──
-            type Scenario = { discounts: DiscountItem[]; eff: number; campaign: DiscountItem };
-            const campaignScenarios: Scenario[] = campaigns.map(c => {
-                const discounts = [c, bestGenius].filter(Boolean) as DiscountItem[];
-                return { discounts, eff: scenarioEff(discounts), campaign: c };
+            const scenarios: Scenario[] = [];
+
+            // Scenario 0: No campaign → Genius + Targeted + Portfolio
+            const s0Discounts = [bestGenius, bestTargeted, bestPortfolio].filter(Boolean) as DiscountItem[];
+            scenarios.push({
+                label: 'no-campaign',
+                discounts: s0Discounts,
+                eff: scenarioEff(s0Discounts),
+                blockedGroups: [],
             });
 
-            // Pick best campaign scenario
-            const bestCampaignScenario = campaignScenarios.sort((a, b) => b.eff - a.eff)[0];
+            // Campaign scenarios (based on stackBehavior)
+            for (const c of campaigns) {
+                const behavior = c.stackBehavior ?? 'EXCLUSIVE'; // Default safe = EXCLUSIVE
 
-            // Compare: campaign scenario vs no-campaign scenario
-            if (bestCampaignScenario && bestCampaignScenario.eff >= s0Eff) {
-                // Campaign wins → keep campaign + genius, block targeted/portfolio
-                const resolved = bestCampaignScenario.discounts;
-                const allIgnored: { id: string; name: string; reason: string }[] = [];
-
-                // Ignored campaigns (those not picked)
-                campaigns.filter(c => c.id !== bestCampaignScenario.campaign.id)
-                    .forEach(c => allIgnored.push({ id: c.id, name: c.name, reason: `Campaign "${bestCampaignScenario.campaign.name}" có discount cao hơn` }));
-                // Ignored genius (lower levels)
-                geniusDeals.filter(g => !bestGenius || g.id !== bestGenius.id)
-                    .forEach(g => allIgnored.push({ id: g.id, name: g.name, reason: `Genius: "${bestGenius!.name}" có level cao hơn` }));
-                // Blocked targeted & portfolio
-                targeted.forEach(d => allIgnored.push({ id: d.id, name: d.name, reason: `Bị chặn bởi Campaign "${bestCampaignScenario.campaign.name}" (TARGETED không stack với Campaign)` }));
-                portfolio.forEach(d => allIgnored.push({ id: d.id, name: d.name, reason: `Bị chặn bởi Campaign "${bestCampaignScenario.campaign.name}" (PORTFOLIO không stack với Campaign)` }));
-
-                return {
-                    resolved,
-                    ignored: allIgnored,
-                    removedCount: active.length - resolved.length,
-                    rule: `booking: campaign_with_genius (${bestCampaignScenario.campaign.name} ${bestCampaignScenario.eff.toFixed(1)}% > no-campaign ${s0Eff.toFixed(1)}%)`
-                };
+                if (behavior === 'EXCLUSIVE') {
+                    // Deep Deal: campaign ONLY — blocks ALL including Genius
+                    scenarios.push({
+                        label: `exclusive:${c.name}`,
+                        discounts: [c],
+                        eff: c.percent,
+                        blockedGroups: ['GENIUS', 'TARGETED', 'PORTFOLIO'],
+                        campaign: c,
+                    });
+                } else if (behavior === 'ONLY_WITH_GENIUS') {
+                    // Getaway: campaign + best Genius — blocks TARGETED/PORTFOLIO
+                    const discounts = [c, bestGenius].filter(Boolean) as DiscountItem[];
+                    scenarios.push({
+                        label: `genius:${c.name}`,
+                        discounts,
+                        eff: scenarioEff(discounts),
+                        blockedGroups: ['TARGETED', 'PORTFOLIO'],
+                        campaign: c,
+                    });
+                }
+                // STACKABLE campaigns would fall into normal stacking — rare for Booking
             }
 
-            // Scenario 0 wins → ignore all campaigns, keep normal stacking
+            // Pick winning scenario (highest effective discount)
+            scenarios.sort((a, b) => b.eff - a.eff);
+            const winner = scenarios[0];
+
+            // Build ignored list
             const allIgnored: { id: string; name: string; reason: string }[] = [];
-            campaigns.forEach(c => allIgnored.push({ id: c.id, name: c.name, reason: `Scenario không campaign (${s0Eff.toFixed(1)}%) > Campaign "${c.name}" scenario (${campaignScenarios.find(s => s.campaign.id === c.id)?.eff.toFixed(1)}%)` }));
-            // Fall through to Tier 2/3 with campaigns removed
-            const activeWithoutCampaigns = active.filter(d => d.group !== 'CAMPAIGN');
-            // Re-run normal stacking on remaining promos (Genius + Targeted + Portfolio)
-            const { best: bg, ignored: gi } = pickBest(geniusDeals, 'Genius: chỉ giữ level cao nhất');
-            const { best: bt, ignored: ti } = pickBest(targeted, 'Targeted: chỉ giữ cao nhất');
-            const { best: bp, ignored: pi } = pickBest(portfolio, 'Portfolio: chỉ giữ cao nhất');
-            const other = activeWithoutCampaigns.filter(d => d.group !== 'GENIUS' && d.group !== 'TARGETED' && d.group !== 'PORTFOLIO');
-            const resolved = [bg, bt, bp, ...other].filter(Boolean) as DiscountItem[];
+            const resolvedIds = new Set(winner.discounts.map(d => d.id));
+
+            // Ignored campaigns (not in winning scenario)
+            campaigns.filter(c => !resolvedIds.has(c.id))
+                .forEach(c => allIgnored.push({
+                    id: c.id, name: c.name,
+                    reason: winner.campaign
+                        ? `Scenario "${winner.label}" (${winner.eff.toFixed(1)}%) thắng`
+                        : `Scenario không campaign (${winner.eff.toFixed(1)}%) thắng`
+                }));
+
+            // Ignored genius (blocked or lower level)
+            geniusDeals.filter(g => !resolvedIds.has(g.id))
+                .forEach(g => {
+                    const reason = winner.blockedGroups.includes('GENIUS')
+                        ? `Bị chặn bởi Deep Deal "${winner.campaign!.name}" (EXCLUSIVE — không stack với Genius)`
+                        : bestGenius ? `Genius: "${bestGenius.name}" có level cao hơn` : 'Genius bị loại';
+                    allIgnored.push({ id: g.id, name: g.name, reason });
+                });
+
+            // Blocked targeted & portfolio
+            if (winner.blockedGroups.includes('TARGETED')) {
+                targeted.forEach(d => allIgnored.push({
+                    id: d.id, name: d.name,
+                    reason: `Bị chặn bởi Campaign "${winner.campaign!.name}" (TARGETED không stack với Campaign)`
+                }));
+            }
+            if (winner.blockedGroups.includes('PORTFOLIO')) {
+                portfolio.forEach(d => allIgnored.push({
+                    id: d.id, name: d.name,
+                    reason: `Bị chặn bởi Campaign "${winner.campaign!.name}" (PORTFOLIO không stack với Campaign)`
+                }));
+            }
+
             return {
-                resolved,
-                ignored: [...allIgnored, ...gi, ...ti, ...pi],
-                removedCount: active.length - resolved.length,
-                rule: `booking: no-campaign wins (${s0Eff.toFixed(1)}% > best campaign ${bestCampaignScenario?.eff.toFixed(1)}%)`
+                resolved: winner.discounts,
+                ignored: allIgnored,
+                removedCount: active.length - winner.discounts.length,
+                rule: `booking: ${winner.label} (${winner.eff.toFixed(1)}%)`
             };
         }
 

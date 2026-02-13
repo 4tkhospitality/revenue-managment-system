@@ -23,6 +23,7 @@ export interface DiscountItem {
     percent: number;          // % (0-100)
     group: PromotionGroup;
     subCategory?: string;     // For TARGETED
+    stackBehavior?: StackBehavior; // From catalog: EXCLUSIVE, ONLY_WITH_GENIUS, etc.
 }
 
 // Commission booster (marketing program that increases effective commission)

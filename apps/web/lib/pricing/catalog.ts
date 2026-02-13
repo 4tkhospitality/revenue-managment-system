@@ -430,7 +430,7 @@ export const BOOKING_COM_PROMOTIONS: PromotionCatalogItem[] = [
         allowStack: false,
         maxOneInGroup: true,
         maxOnePerSubcategory: false,
-        stackBehavior: 'EXCLUSIVE',
+        stackBehavior: 'ONLY_WITH_GENIUS', // "can be combined with Genius discounts, but no others"
     },
     {
         id: 'booking-late-escape',
@@ -560,6 +560,14 @@ export function getPromotionsByVendor(vendor: 'agoda' | 'booking' | 'expedia'): 
     if (vendor === 'booking') return BOOKING_COM_PROMOTIONS;
     if (vendor === 'expedia') return EXPEDIA_PROMOTIONS;
     return [];
+}
+
+// Look up stackBehavior from static catalog by promo ID
+const _catalogMap = new Map<string, PromotionCatalogItem>();
+[...AGODA_PROMOTIONS, ...BOOKING_COM_PROMOTIONS, ...EXPEDIA_PROMOTIONS].forEach(p => _catalogMap.set(p.id, p));
+
+export function getCatalogItem(promoId: string): PromotionCatalogItem | undefined {
+    return _catalogMap.get(promoId);
 }
 
 // Get promotions by group for a vendor

@@ -132,34 +132,77 @@ test('1. Agoda: Progressive + timing conflict + subcat dedup', () => {
 
 // ── Test 2: Booking exclusive + Genius ──────────────────────────
 
-test('2. Booking: Campaign + Genius scenario vs no-campaign (scenario-based)', () => {
-    const { resolved, rule, removedCount, ignored } = resolveVendorStacking('booking', bookingExclusiveDiscounts);
+test('2a. Booking: Deep Deal (EXCLUSIVE) blocks ALL including Genius', () => {
+    // Deep Deal = stackBehavior EXCLUSIVE → blocks ALL
+    const discounts: DiscountItem[] = [
+        { id: '1', name: 'Deal of the Day', percent: 50, group: 'CAMPAIGN', stackBehavior: 'EXCLUSIVE' },
+        { id: '2', name: 'Genius L2', percent: 15, group: 'GENIUS' },
+        { id: '3', name: 'Mobile Rate', percent: 10, group: 'TARGETED', subCategory: 'MOBILE' },
+        { id: '4', name: 'Basic Deal', percent: 10, group: 'PORTFOLIO' },
+    ];
+    const { resolved, rule, removedCount, ignored } = resolveVendorStacking('booking', discounts);
 
-    // Scenario analysis:
-    // Scenario 0 (no campaign): Genius L2 15% + Country 12% → eff = 1-(0.85*0.88) = 25.2%
-    // Scenario c1 (Black Friday): BF 25% + Genius L2 15% → eff = 1-(0.75*0.85) = 36.25%
-    // Scenario c2 (Summer Deal): SD 20% + Genius L2 15% → eff = 1-(0.80*0.85) = 32.0%
-    // Winner: Black Friday scenario (36.25% > 25.2%)
+    // Deep Deal 50% EXCLUSIVE wins → only 1 discount
+    assertEqual(resolved.length, 1, 'should keep only 1 discount');
+    assertEqual(resolved[0].name, 'Deal of the Day', 'should keep Deal of the Day');
+    assertEqual(removedCount, 3, 'should remove 3');
 
-    // Rule should indicate campaign_with_genius won
-    if (!rule.includes('campaign_with_genius')) {
-        throw new Error(`Rule should be campaign_with_genius, got: ${rule}`);
+    // Genius should be blocked (EXCLUSIVE blocks Genius)
+    const blockedGenius = ignored.find(i => i.name === 'Genius L2');
+    if (!blockedGenius || !blockedGenius.reason.includes('EXCLUSIVE')) {
+        throw new Error(`Genius should be blocked with EXCLUSIVE reason, got: ${blockedGenius?.reason}`);
     }
+});
 
-    // Should keep: Black Friday 25% + Genius L2 15%
-    assertEqual(resolved.length, 2, 'should keep 2 discounts (Campaign + Genius)');
+test('2b. Booking: Getaway (ONLY_WITH_GENIUS) stacks with Genius', () => {
+    // Getaway = stackBehavior ONLY_WITH_GENIUS → stacks with Genius
+    const discounts: DiscountItem[] = [
+        { id: '1', name: 'Getaway Deal', percent: 15, group: 'CAMPAIGN', stackBehavior: 'ONLY_WITH_GENIUS' },
+        { id: '2', name: 'Genius L2', percent: 15, group: 'GENIUS' },
+        { id: '3', name: 'Genius L1', percent: 10, group: 'GENIUS' },
+        { id: '4', name: 'Country Rate', percent: 10, group: 'TARGETED', subCategory: 'COUNTRY' },
+    ];
+    const { resolved, rule, ignored } = resolveVendorStacking('booking', discounts);
 
-    const hasBlackFriday = resolved.some(d => d.name === 'Black Friday');
+    // Getaway 15% + Genius L2 15% → eff = 1-(0.85*0.85) = 27.75%
+    // vs no-campaign: Genius L2 15% + Country 10% → eff = 1-(0.85*0.90) = 23.5%
+    // Getaway wins
+
+    // Should keep Getaway + Genius L2
+    assertEqual(resolved.length, 2, 'should keep 2 (Getaway + Genius)');
+    const hasGetaway = resolved.some(d => d.name === 'Getaway Deal');
     const hasGeniusL2 = resolved.some(d => d.name === 'Genius L2');
-    assertEqual(hasBlackFriday, true, 'should keep Black Friday');
+    assertEqual(hasGetaway, true, 'should keep Getaway');
     assertEqual(hasGeniusL2, true, 'should keep Genius L2');
-    assertEqual(removedCount, 3, 'should remove 3 discounts');
 
-    // Verify Country Deal (PORTFOLIO) is blocked by campaign
-    const blockedCountry = ignored.find(i => i.name === 'Country Deal');
-    if (!blockedCountry || !blockedCountry.reason.includes('PORTFOLIO')) {
-        throw new Error(`Country Deal should be blocked with PORTFOLIO reason, got: ${blockedCountry?.reason}`);
+    // Country Rate should be blocked (TARGETED)
+    const blockedCountry = ignored.find(i => i.name === 'Country Rate');
+    if (!blockedCountry || !blockedCountry.reason.includes('TARGETED')) {
+        throw new Error(`Country Rate should be blocked, got: ${blockedCountry?.reason}`);
     }
+});
+
+test('2c. Booking: Scenario comparison — best scenario wins', () => {
+    // Mix of EXCLUSIVE + ONLY_WITH_GENIUS campaigns
+    const discounts: DiscountItem[] = [
+        { id: '1', name: 'Black Friday', percent: 25, group: 'CAMPAIGN', stackBehavior: 'EXCLUSIVE' },
+        { id: '2', name: 'Getaway Deal', percent: 15, group: 'CAMPAIGN', stackBehavior: 'ONLY_WITH_GENIUS' },
+        { id: '3', name: 'Genius L2', percent: 15, group: 'GENIUS' },
+        { id: '4', name: 'Country Deal', percent: 12, group: 'PORTFOLIO' },
+    ];
+    const { resolved, rule, removedCount } = resolveVendorStacking('booking', discounts);
+
+    // Scenarios:
+    // S0 (no campaign): Genius 15% + Country 12% → eff = 1-(0.85*0.88) = 25.2%
+    // S1 (Black Friday EXCLUSIVE): 25% → eff = 25%
+    // S2 (Getaway + Genius): 15% + 15% → eff = 1-(0.85*0.85) = 27.75%
+    // Winner: Getaway + Genius (27.75%)
+
+    assertEqual(resolved.length, 2, 'should keep 2 (Getaway + Genius wins)');
+    const hasGetaway = resolved.some(d => d.name === 'Getaway Deal');
+    const hasGenius = resolved.some(d => d.name === 'Genius L2');
+    assertEqual(hasGetaway, true, 'should keep Getaway');
+    assertEqual(hasGenius, true, 'should keep Genius L2');
 });
 
 // ── Test 3: Expedia single-discount (highest wins) ─────────────

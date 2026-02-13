@@ -5,6 +5,7 @@
 // - Uses 'server-only' to prevent client-side usage
 // - API routes must import THIS file, never engine.ts directly
 import 'server-only';
+import { getCatalogItem } from './catalog';
 
 import prisma from '@/lib/prisma';
 import {
@@ -184,6 +185,7 @@ export async function calculatePreview(input: PreviewInput): Promise<PreviewResu
         percent: c.discount_pct,
         group: (c.promo?.group_type as DiscountItem['group']) ?? 'ESSENTIAL',
         subCategory: c.promo?.sub_category ?? undefined,
+        stackBehavior: getCatalogItem(c.promo_id)?.stackBehavior,
     }));
 
     // Resolve vendor stacking + timing
@@ -373,6 +375,7 @@ export async function calculateMatrix(
             percent: c.discount_pct,
             group: (c.promo?.group_type as DiscountItem['group']) ?? 'ESSENTIAL',
             subCategory: c.promo?.sub_category ?? undefined,
+            stackBehavior: getCatalogItem(c.promo_id)?.stackBehavior,
         });
     }
 
@@ -636,6 +639,7 @@ export async function calculateDynamicMatrix(
         percent: c.discount_pct,
         group: (c.promo?.group_type as DiscountItem['group']) ?? 'ESSENTIAL',
         subCategory: c.promo?.sub_category ?? undefined,
+        stackBehavior: getCatalogItem(c.promo_id)?.stackBehavior,
     }));
 
     // ── Step 6+7: Calculate matrix for ALL tiers ── BA fix #2: guardrailConfig reuse
