@@ -186,14 +186,19 @@ export async function calculatePreview(input: PreviewInput): Promise<PreviewResu
             include: { promo: true },
         });
 
-    const discounts: DiscountItem[] = campaigns.map(c => ({
-        id: c.id,
-        name: c.promo?.name ?? 'Unknown',
-        percent: c.discount_pct,
-        group: (c.promo?.group_type as DiscountItem['group']) ?? 'ESSENTIAL',
-        subCategory: c.promo?.sub_category ?? undefined,
-        stackBehavior: getCatalogItem(c.promo_id)?.stackBehavior,
-    }));
+    const discounts: DiscountItem[] = campaigns.map(c => {
+        const catalogItem = getCatalogItem(c.promo_id);
+        return {
+            id: c.id,
+            name: c.promo?.name ?? 'Unknown',
+            percent: c.discount_pct,
+            // Self-healing: prefer static catalog groupType over DB group_type
+            // (DB may have stale/wrong values, e.g. Trip.com Campaign was SEASONAL)
+            group: (catalogItem?.groupType || c.promo?.group_type as DiscountItem['group']) ?? 'ESSENTIAL',
+            subCategory: c.promo?.sub_category ?? undefined,
+            stackBehavior: catalogItem?.stackBehavior,
+        };
+    });
 
     // Resolve vendor stacking + timing
     const stackResult = resolveVendorStacking(channel.code, discounts);
@@ -397,13 +402,15 @@ export async function calculateMatrix(
         if (!channelCampaigns.has(channelId)) {
             channelCampaigns.set(channelId, []);
         }
+        const catalogItem = getCatalogItem(c.promo_id);
         channelCampaigns.get(channelId)!.push({
             id: c.id,
             name: c.promo?.name ?? 'Unknown',
             percent: c.discount_pct,
-            group: (c.promo?.group_type as DiscountItem['group']) ?? 'ESSENTIAL',
+            // Self-healing: prefer static catalog groupType over DB group_type
+            group: (catalogItem?.groupType || c.promo?.group_type as DiscountItem['group']) ?? 'ESSENTIAL',
             subCategory: c.promo?.sub_category ?? undefined,
-            stackBehavior: getCatalogItem(c.promo_id)?.stackBehavior,
+            stackBehavior: catalogItem?.stackBehavior,
         });
     }
 
@@ -661,14 +668,18 @@ export async function calculateDynamicMatrix(
         seasonRates.map((sr) => [sr.room_type_id, Number(sr.net_rate)])
     );
 
-    const discounts: DiscountItem[] = campaigns.map(c => ({
-        id: c.id,
-        name: c.promo?.name ?? 'Unknown',
-        percent: c.discount_pct,
-        group: (c.promo?.group_type as DiscountItem['group']) ?? 'ESSENTIAL',
-        subCategory: c.promo?.sub_category ?? undefined,
-        stackBehavior: getCatalogItem(c.promo_id)?.stackBehavior,
-    }));
+    const discounts: DiscountItem[] = campaigns.map(c => {
+        const catalogItem = getCatalogItem(c.promo_id);
+        return {
+            id: c.id,
+            name: c.promo?.name ?? 'Unknown',
+            percent: c.discount_pct,
+            // Self-healing: prefer static catalog groupType over DB group_type
+            group: (catalogItem?.groupType || c.promo?.group_type as DiscountItem['group']) ?? 'ESSENTIAL',
+            subCategory: c.promo?.sub_category ?? undefined,
+            stackBehavior: catalogItem?.stackBehavior,
+        };
+    });
 
     // ── Step 6+7: Calculate matrix for ALL tiers ── BA fix #2: guardrailConfig reuse
     const matrix: Record<string, DynamicCell> = {};

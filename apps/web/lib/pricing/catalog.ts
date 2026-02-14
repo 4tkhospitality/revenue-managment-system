@@ -564,20 +564,157 @@ export const EXPEDIA_PROMOTIONS: PromotionCatalogItem[] = [
 ];
 
 // =============================================================================
+// TRIP.COM / CTRIP PROMOTIONS
+// Stacking: Additive within allowed groups, Campaign = EXCLUSIVE
+// Engine mode: ADDITIVE (18% commission)
+// =============================================================================
+export const CTRIP_PROMOTIONS: PromotionCatalogItem[] = [
+    // ─── ESSENTIAL (Regular box) ───
+    {
+        id: 'tripcom-basic-deal',
+        vendor: 'ctrip',
+        name: 'Basic Deal',
+        groupType: 'ESSENTIAL',
+        subCategory: 'REGULAR',
+        defaultPct: 10,
+        allowStack: true,
+        maxOneInGroup: false,
+        maxOnePerSubcategory: true,
+    },
+    {
+        id: 'tripcom-early-bird',
+        vendor: 'ctrip',
+        name: 'Early Bird',
+        groupType: 'ESSENTIAL',
+        subCategory: 'REGULAR',
+        defaultPct: 12,
+        allowStack: true,
+        maxOneInGroup: false,
+        maxOnePerSubcategory: true,
+    },
+    {
+        id: 'tripcom-last-minute',
+        vendor: 'ctrip',
+        name: 'Last Minute',
+        groupType: 'ESSENTIAL',
+        subCategory: 'REGULAR',
+        defaultPct: 15,
+        allowStack: true,
+        maxOneInGroup: false,
+        maxOnePerSubcategory: true,
+    },
+    {
+        id: 'tripcom-minimum-stay',
+        vendor: 'ctrip',
+        name: 'Minimum Stay',
+        groupType: 'ESSENTIAL',
+        subCategory: 'REGULAR',
+        defaultPct: 10,
+        allowStack: true,
+        maxOneInGroup: false,
+        maxOnePerSubcategory: true,
+    },
+    {
+        id: 'tripcom-offer-tonight',
+        vendor: 'ctrip',
+        name: 'Offer For Tonight',
+        groupType: 'ESSENTIAL',
+        subCategory: 'REGULAR',
+        defaultPct: 20,
+        allowStack: true,
+        maxOneInGroup: false,
+        maxOnePerSubcategory: true,
+    },
+
+    // ─── TARGETED (Targeting box) ───
+    {
+        id: 'tripcom-mobile-rate',
+        vendor: 'ctrip',
+        name: 'Mobile Rate',
+        groupType: 'TARGETED',
+        subCategory: 'TARGETING',
+        defaultPct: 10,
+        allowStack: true,
+        maxOneInGroup: false,
+        maxOnePerSubcategory: true,
+    },
+    {
+        id: 'tripcom-xpos',
+        vendor: 'ctrip',
+        name: 'XPOS Rate',
+        groupType: 'TARGETED',
+        subCategory: 'TARGETING',
+        defaultPct: 8,
+        allowStack: true,
+        maxOneInGroup: false,
+        maxOnePerSubcategory: true,
+    },
+    {
+        id: 'tripcom-tripplus',
+        vendor: 'ctrip',
+        name: 'TripPlus',
+        groupType: 'TARGETED',
+        subCategory: 'TARGETING',
+        defaultPct: 10,
+        allowStack: true,
+        maxOneInGroup: false,
+        maxOnePerSubcategory: true,
+    },
+    {
+        id: 'tripcom-geo-rate',
+        vendor: 'ctrip',
+        name: 'Country Rate',
+        groupType: 'TARGETED',
+        subCategory: 'GEOGRAPHY',
+        defaultPct: 10,
+        allowStack: true,
+        maxOneInGroup: false,
+        maxOnePerSubcategory: true,
+    },
+
+    // ─── ESSENTIAL (Package box) ───
+    {
+        id: 'tripcom-package',
+        vendor: 'ctrip',
+        name: 'Package Deal',
+        groupType: 'ESSENTIAL',
+        subCategory: 'PACKAGE',
+        defaultPct: 15,
+        allowStack: true,
+        maxOneInGroup: false,
+        maxOnePerSubcategory: true,
+    },
+
+    // ─── CAMPAIGN (Exclusive — blocks all other promos) ───
+    {
+        id: 'tripcom-campaign-2026',
+        vendor: 'ctrip',
+        name: 'Trip.com 2026 Campaign',
+        groupType: 'CAMPAIGN',
+        defaultPct: 20,
+        allowStack: false,
+        maxOneInGroup: true,
+        maxOnePerSubcategory: true,
+        stackBehavior: 'EXCLUSIVE',
+    },
+];
+
+// =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
 
 // Get all promotions for a vendor
-export function getPromotionsByVendor(vendor: 'agoda' | 'booking' | 'expedia'): PromotionCatalogItem[] {
+export function getPromotionsByVendor(vendor: 'agoda' | 'booking' | 'expedia' | 'ctrip'): PromotionCatalogItem[] {
     if (vendor === 'agoda') return AGODA_PROMOTIONS;
     if (vendor === 'booking') return BOOKING_COM_PROMOTIONS;
     if (vendor === 'expedia') return EXPEDIA_PROMOTIONS;
+    if (vendor === 'ctrip') return CTRIP_PROMOTIONS;
     return [];
 }
 
 // Look up stackBehavior from static catalog by promo ID
 const _catalogMap = new Map<string, PromotionCatalogItem>();
-[...AGODA_PROMOTIONS, ...BOOKING_COM_PROMOTIONS, ...EXPEDIA_PROMOTIONS].forEach(p => _catalogMap.set(p.id, p));
+[...AGODA_PROMOTIONS, ...BOOKING_COM_PROMOTIONS, ...EXPEDIA_PROMOTIONS, ...CTRIP_PROMOTIONS].forEach(p => _catalogMap.set(p.id, p));
 
 export function getCatalogItem(promoId: string): PromotionCatalogItem | undefined {
     return _catalogMap.get(promoId);
@@ -641,6 +778,14 @@ export const VENDOR_GROUP_LABELS: Record<string, Record<PromotionGroup, string>>
         CAMPAIGN: 'Chiến dịch',
     },
     expedia: {
+        SEASONAL: 'Theo mùa',
+        ESSENTIAL: 'Cơ bản',
+        TARGETED: 'Mục tiêu',
+        GENIUS: 'Genius',
+        PORTFOLIO: 'Gói ưu đãi',
+        CAMPAIGN: 'Chiến dịch',
+    },
+    ctrip: {
         SEASONAL: 'Theo mùa',
         ESSENTIAL: 'Cơ bản',
         TARGETED: 'Mục tiêu',

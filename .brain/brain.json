@@ -2,7 +2,7 @@
   "meta": {
     "schema_version": "2.0.0",
     "awf_version": "4.1.2",
-    "last_updated": "2026-02-14T23:03:00+07:00"
+    "last_updated": "2026-02-15T00:18:00+07:00"
   },
   "project": {
     "name": "revenue-management-system",
@@ -647,7 +647,14 @@
     "V02.0: Invite Management UI — Team page lists active invites with short codes, usage counts, expiry, revoke button",
     "V02.0: Sidebar Fix — /settings exact match only, /settings/team uses startsWith. No more double-highlight",
     "V02.0: Seat Counting Fix — checkSeatAvailability counts HotelUsers (not OrgMembers) for consistency with team page list",
-    "V02.0: Team Page Seat Display — Shows 'X/Y thành viên (+N invite)' instead of inflated total"
+    "V02.0: Team Page Seat Display — Shows 'X/Y thành viên (+N invite)' instead of inflated total",
+    "V02.1: Booking.com Catalog IDs Fix — Aligned catalog.ts IDs with seed-pricing.ts to fix Campaign+Genius stacking bug",
+    "V02.1: Trip.com Campaign Exclusive Stacking — Campaign deals block all other promos (engine resolveVendorStacking). If no Campaign, group-level dedup (max within Portfolio, max within Targeted)",
+    "V02.1: Trip.com Campaign Badge — Shows 'Exclusive' (red) badge instead of 'Stackable' for CAMPAIGN group_type on Trip.com channels",
+    "V02.1: Trip.com Campaign Warning Banner — Amber warning when Campaign blocks other active promos. Shown below Agoda stacking warning",
+    "V02.1: PricingExplanation Server Trace — Uses previewData.trace[] from server (single source of truth) instead of local re-computation. Shows only resolved promos after stacking rules. Dropped promos shown in amber box with reasons",
+    "V02.1: Step-by-Step VND Numbers — Each step (NET → Commission → Per-promo → BAR → Display → Net) shows actual formatted amounts for sales clarity",
+    "V02.1: Round Favicon SVG — Replaced square PNG with circular SVG favicon"
   ],
   "cancellation_bridge_v011": {
     "status": "Implemented",
@@ -770,7 +777,11 @@
     "V02.0: Org-based subscriptions: subscription.hotel_id must be used (not org_id) for current legacy compatibility",
     "V02.0: Seat counting changed from OrgMembers to HotelUsers — team page displayed 2 but count showed 3 due to OrgMember including org-level user not assigned to hotel",
     "V02.0: Auto-sync room_band uses $executeRaw instead of Prisma updateMany — bypasses stale Prisma client types during dev (DLL lock prevents regeneration)",
-    "V02.0: Sidebar isActive: exact match for /settings, /dashboard; startsWith for all other routes"
+    "V02.0: Sidebar isActive: exact match for /settings, /dashboard; startsWith for all other routes",
+    "V02.1: Trip.com Campaign = EXCLUSIVE in engine — BA confirmed: Campaign blocks Regular, Targeted, Package, Trip.plus. Only highest Campaign applied. If no Campaign → Portfolio max + Targeted max + additive others",
+    "V02.1: PricingExplanation must NOT compute local math — was iterating all is_active campaigns (ignoring server dedup). Fixed: use previewData.trace[] which only includes server-resolved promos",
+    "V02.1: Booking.com catalog.ts IDs must match seed-pricing.ts — Mismatch caused getCatalogItem() to return undefined → stackBehavior lost → wrong branch in resolveVendorStacking",
+    "V02.1: Trip.com Campaign badge override — isTripCampaign check added to both card view (PromotionGroup) and table view badge logic in PromotionsTab.tsx"
   ],
   "ui_design": {
     "theme": "SaaS Pro Light",

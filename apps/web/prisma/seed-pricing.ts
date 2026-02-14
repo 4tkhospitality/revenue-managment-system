@@ -669,18 +669,18 @@ const TRIPCOM_PROMOTIONS = [
     },
 
     // =========================================================================
-    // CAMPAIGN BOX - Seasonal campaigns (standalone)
+    // CAMPAIGN BOX - Exclusive campaign deals (blocks all other promos)
     // =========================================================================
     {
         id: 'tripcom-campaign-2026',
         vendor: 'ctrip',
         name: 'Trip.com 2026 Campaign',
-        description: 'Seasonal promotional campaign',
-        group_type: 'SEASONAL' as const,
+        description: 'Exclusive seasonal promotional campaign — blocks all other promos when active',
+        group_type: 'CAMPAIGN' as const,
         sub_category: 'CAMPAIGN',
         default_pct: 20,
-        allow_stack: true,
-        max_one_in_group: false,
+        allow_stack: false, // EXCLUSIVE — blocks all other promos
+        max_one_in_group: true,
         max_one_per_subcategory: true,
     },
 
