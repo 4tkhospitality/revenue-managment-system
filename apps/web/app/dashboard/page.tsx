@@ -8,7 +8,7 @@ import { DateUtils } from '@/lib/date';
 import { PricingLogic } from '@/lib/pricing';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { ExportPdfButton } from '@/components/shared/ExportPdfButton';
-import { DashboardToolbarCard } from '@/components/dashboard/DashboardToolbarCard';
+
 import { DashboardPdfWrapper } from '@/components/dashboard/DashboardPdfWrapper';
 import { DashboardTabs } from '@/components/dashboard/DashboardTabs';
 import { InsightsPanel } from '@/components/dashboard/InsightsPanel';
@@ -408,23 +408,29 @@ export default async function DashboardPage({
                 <DashboardTabs
                     pricingActionCount={pricingActionCount}
                     hasDataWarning={featuresData.length === 0 && otbData.length > 0}
-                    contextBar={
-                        <DashboardToolbarCard
-                            latestReservationDate={
-                                latestReservation
-                                    ? DateUtils.format(latestReservation.booking_date, 'dd/MM/yyyy')
-                                    : null
-                            }
-                            latestCancellationDate={
-                                latestCancellation
-                                    ? DateUtils.format(latestCancellation.date, 'dd/MM/yyyy')
-                                    : null
-                            }
-                            otbAsOfDate={dataAsOf}
-                            currentAsOfDate={
-                                dataAsOf ? otbData[0]?.as_of_date?.toISOString().split('T')[0] : undefined
-                            }
-                        />
+                    dataStatus={[
+                        {
+                            label: 'Booking',
+                            date: latestReservation
+                                ? DateUtils.format(latestReservation.booking_date, 'dd/MM/yyyy')
+                                : null,
+                            href: '/data?tab=reservations',
+                        },
+                        {
+                            label: 'Cancel',
+                            date: latestCancellation
+                                ? DateUtils.format(latestCancellation.date, 'dd/MM/yyyy')
+                                : null,
+                            href: '/data?tab=cancellations',
+                        },
+                        {
+                            label: 'OTB',
+                            date: dataAsOf,
+                            href: '/data?tab=otb',
+                        },
+                    ]}
+                    currentAsOfDate={
+                        dataAsOf ? otbData[0]?.as_of_date?.toISOString().split('T')[0] : undefined
                     }
                     overviewContent={
                         <>
