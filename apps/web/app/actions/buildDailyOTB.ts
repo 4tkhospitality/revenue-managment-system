@@ -317,6 +317,37 @@ export async function rebuildAllOTB() {
         }
     }
 
+    // V03: Add weekly snapshots for the most recent 60 days of data
+    // This ensures pickup T-7 (window ±3d) and T-3 (window ±1d) always have
+    // an OTB reference point, solving the gap between monthly EOM snapshots.
+    const sixtyDaysAgo = new Date(latestBookingDate);
+    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+    const weeklyStart = sixtyDaysAgo > minBookingDate ? sixtyDaysAgo : minBookingDate;
+
+    const weeks = await prisma.$queryRaw<{ wk: Date }[]>`
+        SELECT d::date as wk
+        FROM generate_series(${weeklyStart}::date, ${latestBookingDate}::date, '7 days'::interval) d
+        WHERE d::date NOT IN (
+            SELECT DISTINCT as_of_date FROM daily_otb WHERE hotel_id = ${hotelId}::uuid
+        )
+        ORDER BY d ASC
+    `;
+
+    for (const { wk } of weeks) {
+        try {
+            const result = await buildDailyOTB({
+                hotelId,
+                asOfTs: wk,
+                stayDateFrom,
+                stayDateTo,
+            });
+            if (result.success) built++;
+            else skipped++;
+        } catch {
+            skipped++;
+        }
+    }
+
     // Build "latest" snapshot using actual data horizon (latestBookingDate)
     // NOT new Date() — wall-clock time has no meaning when data only goes to e.g. Feb 13
     const latestTs = new Date(latestBookingDate);
@@ -333,7 +364,7 @@ export async function rebuildAllOTB() {
         success: built > 0,
         daysBuilt: todayResult.daysBuilt,
         totalRoomsOtb: todayResult.totalRoomsOtb,
-        message: `Built ${built} monthly snapshots (${skipped} skipped). Latest: ${todayResult.daysBuilt || 0} stay dates.`,
+        message: `Built ${built} snapshots (${months.length} monthly + ${weeks.length} weekly, ${skipped} skipped). Latest: ${todayResult.daysBuilt || 0} stay dates.`,
         snapshotGeneratedAt: latestTs,
     };
 }
