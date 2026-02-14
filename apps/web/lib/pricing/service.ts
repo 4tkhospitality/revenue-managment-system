@@ -88,6 +88,13 @@ export interface PreviewResult {
     };
     trace: { step: string; description: string; priceAfter: number }[];
     validation: { isValid: boolean; errors: string[]; warnings: string[] };
+    /** Expedia only: what public (non-member) guests see */
+    publicScenario?: {
+        display: number;
+        net: number;
+        totalDiscountEffective: number;
+        appliedDeals: string[];
+    };
 }
 
 // ── Core Pricing Pipeline ──────────────────────────────────────────
@@ -294,6 +301,26 @@ export async function calculatePreview(input: PreviewInput): Promise<PreviewResu
         ignored: stackResult.ignored,
     };
 
+    // ── Expedia Public Scenario: what non-member guests see ──
+    // When member deals exist, compute alternate pricing WITHOUT member discounts
+    let publicScenario: PreviewResult['publicScenario'];
+    const vendorCode = (channel.code || '').toLowerCase();
+    const hasMember = finalDiscounts.some(d => d.subCategory === 'MEMBER');
+    if ((vendorCode === 'expedia' || vendorCode === 'expedia.com') && hasMember) {
+        const publicDiscounts = discounts.filter(d => d.subCategory !== 'MEMBER');
+        const pubStack = resolveVendorStacking(channel.code, publicDiscounts);
+        const { resolved: pubFinal } = resolveTimingConflicts(pubStack.resolved);
+        const pubEff = calcEffectiveDiscount(pubFinal, calcType);
+        const pubDisplay = computeDisplay(bar, pubEff);
+        const pubNet = Math.round(pubDisplay * (1 - commission / 100));
+        publicScenario = {
+            display: pubDisplay,
+            net: pubNet,
+            totalDiscountEffective: pubEff,
+            appliedDeals: pubFinal.map(d => d.name),
+        };
+    }
+
     return {
         net, bar, display,
         totalDiscountEffective: effectiveDiscount,
@@ -302,6 +329,7 @@ export async function calculatePreview(input: PreviewInput): Promise<PreviewResu
         resolvedPromotions,
         trace,
         validation,
+        ...(publicScenario ? { publicScenario } : {}),
     };
 }
 

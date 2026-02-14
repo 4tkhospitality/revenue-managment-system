@@ -28,6 +28,13 @@ export interface PricingPreviewResult {
     resolvedPromotions: ResolvedPromotions;
     trace: { step: string; description: string; priceAfter: number }[];
     validation: { isValid: boolean; errors: string[]; warnings: string[] };
+    /** Expedia only: what public (non-member) guests see */
+    publicScenario?: {
+        display: number;
+        net: number;
+        totalDiscountEffective: number;
+        appliedDeals: string[];
+    };
 }
 
 export interface UsePricingPreviewInput {

@@ -1480,6 +1480,62 @@ export default function PromotionsTab() {
                         calcType={calcType}
                     />
 
+                    {/* ── Expedia Public vs Member Comparison ── */}
+                    {previewData?.publicScenario && (
+                        <div className="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-4">
+                            <h4 className="text-xs font-semibold text-indigo-700 mb-3 flex items-center gap-1.5">
+                                <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" />
+                                </svg>
+                                Public vs Member — Expedia
+                            </h4>
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+                                {/* Public column */}
+                                <div className="bg-white/80 rounded-lg p-3 border border-slate-200">
+                                    <div className="text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1">
+                                        🌐 Public
+                                    </div>
+                                    <div className="font-bold text-slate-800 text-lg tabular-nums">
+                                        {new Intl.NumberFormat('vi-VN').format(previewData.publicScenario.display)}đ
+                                    </div>
+                                    <div className="text-[10px] text-slate-400 mt-0.5">
+                                        −{previewData.publicScenario.totalDiscountEffective.toFixed(1)}%
+                                        {previewData.publicScenario.appliedDeals.length > 0
+                                            ? ` (${previewData.publicScenario.appliedDeals.join(', ')})`
+                                            : ' (không KM)'}
+                                    </div>
+                                    <div className="text-xs text-emerald-600 mt-1 font-medium">
+                                        Net: {new Intl.NumberFormat('vi-VN').format(previewData.publicScenario.net)}đ
+                                    </div>
+                                </div>
+                                {/* Member column */}
+                                <div className="bg-white/80 rounded-lg p-3 border border-indigo-300 ring-1 ring-indigo-200">
+                                    <div className="text-[10px] font-medium text-indigo-600 uppercase tracking-wider mb-1">
+                                        👤 Member
+                                    </div>
+                                    <div className="font-bold text-indigo-700 text-lg tabular-nums">
+                                        {new Intl.NumberFormat('vi-VN').format(previewData.display)}đ
+                                    </div>
+                                    <div className="text-[10px] text-indigo-400 mt-0.5">
+                                        −{previewData.totalDiscountEffective.toFixed(1)}% (Member + deal)
+                                    </div>
+                                    <div className="text-xs text-emerald-600 mt-1 font-medium">
+                                        Net: {new Intl.NumberFormat('vi-VN').format(previewData.net)}đ
+                                    </div>
+                                </div>
+                            </div>
+                            {/* Savings badge */}
+                            {previewData.publicScenario.display > previewData.display && (
+                                <div className="mt-2 text-center">
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-700 text-xs font-semibold">
+                                        💰 Member tiết kiệm {new Intl.NumberFormat('vi-VN').format(previewData.publicScenario.display - previewData.display)}đ
+                                        ({((1 - previewData.display / previewData.publicScenario.display) * 100).toFixed(1)}% rẻ hơn)
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     {/* Pricing Explanation */}
                     <PricingExplanation
                         campaigns={campaigns}

@@ -1,8 +1,8 @@
 {
   "meta": {
-    "schema_version": "1.7.0",
+    "schema_version": "1.8.0",
     "awf_version": "4.1.2",
-    "last_updated": "2026-02-13T00:05:00+07:00"
+    "last_updated": "2026-02-14T00:30:00+07:00"
   },
   "project": {
     "name": "revenue-management-system",
@@ -572,8 +572,13 @@
     "V01.9: StackingResult type in engine.ts — ignored[] with human-readable reasons per dropped promo",
     "V01.9: PreviewResult enriched in service.ts — breakdown[], resolvedPromotions, calc_version v3.0.0",
     "V01.9: Promotions Tab loading states — Loader2 spinner replaces icons during refresh, opacity-60 transition",
-    "V01.9: Golden tests expanded to 10 cases — Genius L1+L2 dedup, rounding tolerance ±1000, ignored[] verification",
-    "V01.9: force-dynamic in calc-preview route.ts — prevents Next.js caching of pricing API responses"
+    "V01.9: Golden tests expanded to 13 cases — Genius L1+L2 dedup, rounding tolerance ±1000, ignored[] verification",
+    "V01.9: force-dynamic in calc-preview route.ts — prevents Next.js caching of pricing API responses",
+    "V01.9: Booking.com 3-branch stacking — EXCLUSIVE (Deep Deal blocks ALL incl Genius), ONLY_WITH_GENIUS (Getaway + Genius), no-campaign (normal)",
+    "V01.9: stackBehavior field propagated from catalog.ts through service.ts to engine.ts DiscountItem",
+    "V01.9: Analytics tab redesign — charts-first layout, compact KPI strip with DOD inline, horizontal DatesToWatch chips",
+    "V01.9: AnalyticsKpiRow compact strip — 7 metrics + DOD merged inline (~48px vs ~120px)",
+    "V01.9: DatesToWatchPanel horizontal chip strip — scrollable pills (~48px vs ~200px vertical list)"
   ],
   "cancellation_bridge_v011": {
     "status": "Implemented",
@@ -664,6 +669,9 @@
     "V01.6: Campaign EXCLUSIVE blocks everything except Genius deals (Genius always passes through)",
     "V01.6: Business Bookers is EXCLUSIVE and blocks ALL including Genius (different from Campaign EXCLUSIVE)",
     "V01.6: Free Nights uses inverse formula: Stay X / Pay Y → discount_pct = round((1 - Y/X) × 100)",
+    "V01.9: Booking.com 3-branch: EXCLUSIVE (Deep Deal/Black Friday) blocks ALL; ONLY_WITH_GENIUS (Getaway/Early2026) stacks with Genius only; no-campaign = normal stacking",
+    "V01.9: stackBehavior from catalog propagated to DiscountItem — engine reads it for branch selection",
+    "V01.9: Analytics charts-first layout — GM sees STLY+Supply immediately after KPI, Room Mix+LeadTime in row 4",
     "Auto-detect hotel_id from reservations_raw (groupBy most reservations) instead of env var DEFAULT_HOTEL_ID",
     "Super Admin bypasses Demo Hotel restrictions (Settings page, Guide page, OTA Growth tab)",
     "OTA Growth Playbook integrated into Pricing page (not Guide page) for logical grouping with OTA Pricing tabs",
@@ -765,7 +773,9 @@
       "V01.8: UUPM skill installed to .agent/skills/ (project-level) not global — __pycache__ should be gitignored",
       "V01.9: PromotionsTab.tsx client-side pricing math causes drift from server engine — MUST use usePricingPreview hook instead",
       "V01.9: AbortController abort() fires before new fetch starts — check signal.aborted in response handler to avoid stale state",
-      "V01.9: calc-preview route without force-dynamic gets cached by Next.js — add export const dynamic = 'force-dynamic'"
+      "V01.9: calc-preview route without force-dynamic gets cached by Next.js — add export const dynamic = 'force-dynamic'",
+      "V01.9: Booking.com stackBehavior must be propagated in 3 places in service.ts (genius, targeted, portfolio) — missing any one silently defaults to EXCLUSIVE",
+      "V01.9: Analytics DodChips import must be removed from AnalyticsTabContent when DOD is merged into KPI strip — unused import causes build warning"
     ],
     "formulas": {
       "rooms_otb": "SUM(num_rooms) from reservations for that stay_date",
