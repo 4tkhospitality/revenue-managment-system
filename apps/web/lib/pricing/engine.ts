@@ -891,10 +891,47 @@ export function resolveVendorStacking(
         return { resolved: best ? [best] : [], ignored, removedCount: active.length - 1, rule: 'expedia: single_discount (highest wins)' };
     }
 
-    // ── Trip.com: Additive + same-box dedup ──
+    // ── Trip.com: Campaign EXCLUSIVE, else Additive + group dedup ──
+    // BA rules:
+    //   1. Regular Promotions (PORTFOLIO): pick MAX only
+    //   2. Targeting Deals (TARGETED): pick MAX only
+    //   3. Campaign/Deep Deal (CAMPAIGN): EXCLUSIVE — blocks everything
+    //   4. Without Campaign: Regular(max) + Targeting(max) + others additive
     if (vendorNorm === 'trip') {
-        const { kept, dropped } = dedupeBySubcategory(active);
-        return { resolved: kept, ignored: dropped, removedCount: active.length - kept.length, rule: 'trip.com: additive + box dedup' };
+        const campaigns = active.filter(d => d.group === 'CAMPAIGN');
+        const nonCampaigns = active.filter(d => d.group !== 'CAMPAIGN');
+
+        if (campaigns.length > 0) {
+            // Campaign is EXCLUSIVE — pick highest Campaign, block everything else
+            const { best: bestCampaign, ignored: campaignIgnored } = pickBest(campaigns, 'Campaign: chỉ giữ cao nhất');
+            const blockedIgnored = nonCampaigns.map(d => ({
+                id: d.id, name: d.name,
+                reason: `Bị chặn bởi Campaign "${bestCampaign!.name}" (Campaign không cộng dồn với KM khác)`
+            }));
+            const resolved = bestCampaign ? [bestCampaign] : [];
+            return {
+                resolved,
+                ignored: [...campaignIgnored, ...blockedIgnored],
+                removedCount: active.length - resolved.length,
+                rule: 'trip.com: campaign exclusive'
+            };
+        }
+
+        // No Campaign — group-level dedup then additive
+        const portfolio = nonCampaigns.filter(d => d.group === 'PORTFOLIO');
+        const targeted = nonCampaigns.filter(d => d.group === 'TARGETED');
+        const other = nonCampaigns.filter(d => d.group !== 'PORTFOLIO' && d.group !== 'TARGETED');
+
+        const { best: bp, ignored: pi } = pickBest(portfolio, 'Portfolio: chỉ giữ cao nhất');
+        const { best: bt, ignored: ti } = pickBest(targeted, 'Targeted: chỉ giữ cao nhất');
+
+        const resolved = [bp, bt, ...other].filter(Boolean) as DiscountItem[];
+        return {
+            resolved,
+            ignored: [...pi, ...ti],
+            removedCount: active.length - resolved.length,
+            rule: 'trip.com: additive + group dedup'
+        };
     }
 
     // ── Agoda: Progressive + subcategory dedup ──
