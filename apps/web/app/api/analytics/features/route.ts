@@ -98,33 +98,18 @@ export async function GET(request: NextRequest) {
         orderBy: { stay_date: 'asc' },
     });
 
-    // If explicit date requested but no features built
+    // If explicit date requested but no features built → flag it, but DON'T return empty.
+    // We'll fall through to OTB data so users see rooms/revenue/occupancy.
+    let noFeaturesWarning: string | null = null;
+    let latestFeaturesDate: string | null = null;
     if (features.length === 0 && asOfParam) {
         const latestFeat = await prisma.featuresDaily.findFirst({
             where: { hotel_id: hotelId },
             orderBy: { as_of_date: 'desc' },
             select: { as_of_date: true },
         });
-        const asOfDates = await prisma.dailyOTB.findMany({
-            where: { hotel_id: hotelId },
-            select: { as_of_date: true },
-            distinct: ['as_of_date'],
-            orderBy: { as_of_date: 'desc' },
-            take: 90,
-        });
-        return NextResponse.json({
-            hotelName: hotel.name,
-            capacity: hotel.capacity,
-            asOfDate: asOfParam,
-            asOfDates: asOfDates.map(d => d.as_of_date.toISOString().split('T')[0]),
-            rows: [],
-            warning: 'NO_FEATURES_FOR_DATE',
-            hint: `Chưa build features cho ngày ${asOfParam}. Vào /data → Build Features.`,
-            latestAvailable: latestFeat?.as_of_date?.toISOString().split('T')[0] || null,
-            kpi: { occ7: 0, occ14: 0, occ30: 0, pace7: null, pace30: null, totalPickup7d: 0, totalPickup1d: 0, netPickupDOD: null, topChangeDay: null },
-            quality: { totalRows: 0, withT7: 0, withSTLY: 0, approxSTLY: 0, completeness: 0, stlyCoverage: 0, columnAvailability: { hasT30: false, hasT15: false, hasT7: false, hasT5: false, hasT3: false } },
-            datesToWatch: [],
-        });
+        latestFeaturesDate = latestFeat?.as_of_date?.toISOString().split('T')[0] || null;
+        noFeaturesWarning = `Chưa build features cho ngày ${asOfParam}. Pickup/STLY sẽ không hiện.`;
     }
 
     // Fetch OTB for current as_of
@@ -167,33 +152,72 @@ export async function GET(request: NextRequest) {
         });
     }
 
-    // Merge features + OTB
-    const rows = features.map(f => {
-        const key = f.stay_date.toISOString().split('T')[0];
-        const otbData = otbMap.get(key);
-        const ydData = yesterdayMap.get(key);
-        return {
-            stay_date: key,
-            dow: f.dow,
-            is_weekend: f.is_weekend,
-            month: f.month,
-            rooms_otb: otbData?.rooms_otb ?? 0,
-            revenue_otb: otbData?.revenue_otb ?? 0,
-            stly_rooms_otb: f.pace_vs_ly !== null ? (otbData?.rooms_otb ?? 0) - (f.pace_vs_ly ?? 0) : null,
-            stly_revenue_otb: f.stly_revenue_otb ? Number(f.stly_revenue_otb) : null,
-            pickup_t30: f.pickup_t30,
-            pickup_t15: f.pickup_t15,
-            pickup_t7: f.pickup_t7,
-            pickup_t5: f.pickup_t5,
-            pickup_t3: f.pickup_t3,
-            pace_vs_ly: f.pace_vs_ly,
-            remaining_supply: f.remaining_supply,
-            stly_is_approx: f.stly_is_approx,
-            // DOD delta per stay_date
-            dod_delta: ydData ? (otbData?.rooms_otb ?? 0) - ydData.rooms_otb : null,
-            dod_delta_rev: ydData ? (otbData?.revenue_otb ?? 0) - ydData.revenue_otb : null,
-        };
-    });
+    // Merge features + OTB (or OTB-only fallback if no features)
+    let rows: Array<{
+        stay_date: string; dow: number | null; is_weekend: boolean | null;
+        rooms_otb: number; revenue_otb: number;
+        stly_rooms_otb: number | null; stly_revenue_otb: number | null;
+        pickup_t30: number | null; pickup_t15: number | null; pickup_t7: number | null;
+        pickup_t5: number | null; pickup_t3: number | null;
+        pace_vs_ly: number | null; remaining_supply: number | null;
+        stly_is_approx: boolean | null;
+        dod_delta: number | null; dod_delta_rev: number | null;
+    }>;
+
+    if (features.length > 0) {
+        // Normal path: features + OTB merge
+        rows = features.map(f => {
+            const key = f.stay_date.toISOString().split('T')[0];
+            const otbData = otbMap.get(key);
+            const ydData = yesterdayMap.get(key);
+            return {
+                stay_date: key,
+                dow: f.dow,
+                is_weekend: f.is_weekend,
+                rooms_otb: otbData?.rooms_otb ?? 0,
+                revenue_otb: otbData?.revenue_otb ?? 0,
+                stly_rooms_otb: f.pace_vs_ly !== null ? (otbData?.rooms_otb ?? 0) - (f.pace_vs_ly ?? 0) : null,
+                stly_revenue_otb: f.stly_revenue_otb ? Number(f.stly_revenue_otb) : null,
+                pickup_t30: f.pickup_t30,
+                pickup_t15: f.pickup_t15,
+                pickup_t7: f.pickup_t7,
+                pickup_t5: f.pickup_t5,
+                pickup_t3: f.pickup_t3,
+                pace_vs_ly: f.pace_vs_ly,
+                remaining_supply: f.remaining_supply,
+                stly_is_approx: f.stly_is_approx,
+                dod_delta: ydData ? (otbData?.rooms_otb ?? 0) - ydData.rooms_otb : null,
+                dod_delta_rev: ydData ? (otbData?.revenue_otb ?? 0) - ydData.revenue_otb : null,
+            };
+        });
+    } else {
+        // Fallback: OTB-only rows (no pickup/STLY, but rooms+revenue+occ+supply work)
+        rows = otb.map(o => {
+            const key = o.stay_date.toISOString().split('T')[0];
+            const d = new Date(o.stay_date);
+            const dow = d.getUTCDay(); // 0=Sun..6=Sat
+            const ydData = yesterdayMap.get(key);
+            return {
+                stay_date: key,
+                dow,
+                is_weekend: dow === 0 || dow === 6,
+                rooms_otb: o.rooms_otb,
+                revenue_otb: Number(o.revenue_otb),
+                stly_rooms_otb: null,
+                stly_revenue_otb: null,
+                pickup_t30: null,
+                pickup_t15: null,
+                pickup_t7: null,
+                pickup_t5: null,
+                pickup_t3: null,
+                pace_vs_ly: null,
+                remaining_supply: hotel.capacity - o.rooms_otb,
+                stly_is_approx: null,
+                dod_delta: ydData ? o.rooms_otb - ydData.rooms_otb : null,
+                dod_delta_rev: ydData ? Number(o.revenue_otb) - ydData.revenue_otb : null,
+            };
+        });
+    }
 
     // Available as_of_dates for selector
     const asOfDates = await prisma.dailyOTB.findMany({
@@ -386,10 +410,16 @@ export async function GET(request: NextRequest) {
         },
         // Area 3: Dates to Watch
         datesToWatch,
+        // Warning for OTB-only fallback
+        ...(noFeaturesWarning ? {
+            warning: 'NO_FEATURES_FOR_DATE',
+            hint: noFeaturesWarning,
+            latestAvailable: latestFeaturesDate,
+        } : {}),
     };
 
-    // Cache the result (only for default from/to)
-    if (!fromParam && !toParam) {
+    // Cache the result (only for default from/to AND when features exist)
+    if (!fromParam && !toParam && !noFeaturesWarning) {
         setCache(cacheKey, responseData);
     }
 
