@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { usePricingPreview } from '@/hooks/usePricingPreview';
 import { Plus, Trash2, Loader2, AlertTriangle, CheckCircle, ChevronDown, ChevronRight, Tag, X, Search, Calculator, DollarSign, TrendingUp } from 'lucide-react';
-import { AGODA_BOOSTERS, BOOKING_BOOSTERS, EXPEDIA_BOOSTERS } from '@/lib/pricing/catalog';
+import { AGODA_BOOSTERS, BOOKING_BOOSTERS, EXPEDIA_BOOSTERS, getCatalogItem } from '@/lib/pricing/catalog';
 import type { CommissionBooster } from '@/lib/pricing/types';
 
 // 4TK Brand-aligned color config
@@ -172,9 +172,10 @@ function PromotionGroup({
                                 // Check if this is a Free Nights deal
                                 const isFreeNights = c.promo.name.toLowerCase().includes('free night');
                                 // Derive stackBehavior from promo properties
-                                // Trip.com Campaign is always EXCLUSIVE (BA confirmed)
-                                const isTripCampaign = vendor === 'ctrip' && c.promo.group_type === 'CAMPAIGN';
-                                const stackBehavior = isTripCampaign ? 'EXCLUSIVE' : (!c.promo.allow_stack ? 'EXCLUSIVE' : (c.promo.group_type === 'PORTFOLIO' ? 'HIGHEST_WINS' : 'STACKABLE'));
+                                // Self-healing: prefer static catalog groupType over DB group_type
+                                const catalogGroupType = getCatalogItem(c.promo.id)?.groupType || c.promo.group_type;
+                                const isTripCampaign = vendor === 'ctrip' && catalogGroupType === 'CAMPAIGN';
+                                const stackBehavior = isTripCampaign ? 'EXCLUSIVE' : (!c.promo.allow_stack ? 'EXCLUSIVE' : (catalogGroupType === 'PORTFOLIO' ? 'HIGHEST_WINS' : 'STACKABLE'));
                                 const badgeConfig = {
                                     STACKABLE: { bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'Stackable' },
                                     HIGHEST_WINS: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Highest Wins' },
@@ -1361,17 +1362,18 @@ export default function PromotionsTab() {
                                 <tbody>
                                     {campaigns.map((c) => {
                                         const isFreeNights = c.promo.name.toLowerCase().includes('free night');
-                                        // Trip.com Campaign is always EXCLUSIVE (BA confirmed)
-                                        const isTripCampaign = (selectedChannelData?.code === 'ctrip') && c.promo.group_type === 'CAMPAIGN';
-                                        const stackBehavior = isTripCampaign ? 'EXCLUSIVE' : (!c.promo.allow_stack ? 'EXCLUSIVE' : (c.promo.group_type === 'PORTFOLIO' ? 'HIGHEST_WINS' : 'STACKABLE'));
+                                        // Self-healing: prefer static catalog groupType over DB group_type
+                                        const catalogGroupType = getCatalogItem(c.promo.id)?.groupType || c.promo.group_type;
+                                        const isTripCampaign = (selectedChannelData?.code === 'ctrip') && catalogGroupType === 'CAMPAIGN';
+                                        const stackBehavior = isTripCampaign ? 'EXCLUSIVE' : (!c.promo.allow_stack ? 'EXCLUSIVE' : (catalogGroupType === 'PORTFOLIO' ? 'HIGHEST_WINS' : 'STACKABLE'));
                                         const badgeCfg = {
                                             STACKABLE: { bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'Stackable' },
                                             HIGHEST_WINS: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Highest Wins' },
                                             EXCLUSIVE: { bg: 'bg-red-100', text: 'text-red-700', label: 'Exclusive' },
                                         }[stackBehavior]!;
-                                        const pill = groupPillConfig[c.promo.group_type] || groupPillConfig.ESSENTIAL;
+                                        const pill = groupPillConfig[catalogGroupType] || groupPillConfig.ESSENTIAL;
                                         const vendorCode = selectedChannelData?.code || 'agoda';
-                                        const groupLabel = UNIFIED_GROUP_LABELS[c.promo.group_type as keyof typeof GROUP_CONFIG] || pill.short;
+                                        const groupLabel = UNIFIED_GROUP_LABELS[catalogGroupType as keyof typeof GROUP_CONFIG] || pill.short;
 
                                         return (
                                             <tr key={c.id} className="border-t border-[#F2F4F8] hover:bg-[#FAFBFD] transition-colors">
