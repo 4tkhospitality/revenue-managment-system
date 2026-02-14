@@ -201,18 +201,24 @@ export function DashboardTabs({
 
             {/* ── PDF: render ALL tabs (hidden in browser, visible in PDF) ── */}
             <div className="hidden pdf-show space-y-6">
-                <div key="pdf-overview" className="pdf-section-header text-lg font-semibold text-slate-800 border-b border-slate-200 pb-2 mb-4">
-                    Tổng quan
+                <div key="pdf-overview">
+                    <div className="pdf-section-header text-lg font-semibold text-slate-800 border-b border-slate-200 pb-2 mb-4">
+                        Tổng quan
+                    </div>
+                    {overviewContent}
                 </div>
-                {overviewContent}
-                <div key="pdf-analytics" className="pdf-section-header text-lg font-semibold text-slate-800 border-b border-slate-200 pb-2 mb-4 mt-8">
-                    Chi tiết
+                <div key="pdf-analytics">
+                    <div className="pdf-section-header text-lg font-semibold text-slate-800 border-b border-slate-200 pb-2 mb-4 mt-8">
+                        Chi tiết
+                    </div>
+                    {analyticsContent}
                 </div>
-                {analyticsContent}
-                <div key="pdf-pricing" className="pdf-section-header text-lg font-semibold text-slate-800 border-b border-slate-200 pb-2 mb-4 mt-8">
-                    Giá đề xuất
+                <div key="pdf-pricing">
+                    <div className="pdf-section-header text-lg font-semibold text-slate-800 border-b border-slate-200 pb-2 mb-4 mt-8">
+                        Giá đề xuất
+                    </div>
+                    {pricingContent}
                 </div>
-                {pricingContent}
             </div>
         </>
     );
