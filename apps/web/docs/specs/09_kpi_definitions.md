@@ -27,11 +27,25 @@
 
 ### 5. Pickup
 - **Definition**: Net change in OTB between two snapshots.
-- **Formula**: `OTB(Today) - OTB(Yesterday)`.
-- **Components**: New Bookings + Amends - Cancellations.
+- **Formula**: `OTB(Today) - OTB(Today-N)` for same stay_date.
+- **Windows**: T-30 (±5d), T-15 (±4d), T-7 (±3d), T-5 (±2d), T-3 (±1d)
+- **Nearest-neighbor**: If exact snapshot missing, use nearest within window and scale: `pickup_scaled = (curr - ref) / deltaDays × target`
+- **NULL policy**: Never coalesce to 0. NULL = OTB reference snapshot not available.
 
 ### 6. Pace
 - **Definition**: Comparison of OTB revenue/rooms for the *same stay date* vs a reference point.
 - **Reference**:
-    - **Same Time Last Year (STLY)**: OTB for Stay Date X calculated As-Of (X - 365).
+    - **Same Time Last Year (STLY)**: OTB for Stay Date X calculated As-Of (X - 364) ±7d with DOW alignment.
     - **Budget**: Pre-defined budget target (Not implemented in V01).
+- **STLY DOW Alignment**: D-364 ±7d, prefer same day-of-week for seasonal accuracy.
+- **stly_is_approx**: Boolean flag when STLY source is not exact D-364 match.
+
+### 7. DOD (Day-over-Day)
+- **Definition**: Change from yesterday's OTB to today's.
+- **Formula**: `OTB[today].rooms - OTB[yesterday].rooms` per stay_date.
+- **Revenue variant**: `dod_delta_rev`
+
+### 8. Remaining Supply
+- **Definition**: Rooms still available for sale.
+- **Formula**: `capacity - rooms_otb`
+
