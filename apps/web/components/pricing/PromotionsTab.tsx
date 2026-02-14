@@ -172,7 +172,9 @@ function PromotionGroup({
                                 // Check if this is a Free Nights deal
                                 const isFreeNights = c.promo.name.toLowerCase().includes('free night');
                                 // Derive stackBehavior from promo properties
-                                const stackBehavior = !c.promo.allow_stack ? 'EXCLUSIVE' : (c.promo.group_type === 'PORTFOLIO' ? 'HIGHEST_WINS' : 'STACKABLE');
+                                // Trip.com Campaign is always EXCLUSIVE (BA confirmed)
+                                const isTripCampaign = vendor === 'ctrip' && c.promo.group_type === 'CAMPAIGN';
+                                const stackBehavior = isTripCampaign ? 'EXCLUSIVE' : (!c.promo.allow_stack ? 'EXCLUSIVE' : (c.promo.group_type === 'PORTFOLIO' ? 'HIGHEST_WINS' : 'STACKABLE'));
                                 const badgeConfig = {
                                     STACKABLE: { bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'Stackable' },
                                     HIGHEST_WINS: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Highest Wins' },
@@ -1269,7 +1271,9 @@ export default function PromotionsTab() {
                                 <tbody>
                                     {campaigns.map((c) => {
                                         const isFreeNights = c.promo.name.toLowerCase().includes('free night');
-                                        const stackBehavior = !c.promo.allow_stack ? 'EXCLUSIVE' : (c.promo.group_type === 'PORTFOLIO' ? 'HIGHEST_WINS' : 'STACKABLE');
+                                        // Trip.com Campaign is always EXCLUSIVE (BA confirmed)
+                                        const isTripCampaign = (selectedChannelData?.code === 'ctrip') && c.promo.group_type === 'CAMPAIGN';
+                                        const stackBehavior = isTripCampaign ? 'EXCLUSIVE' : (!c.promo.allow_stack ? 'EXCLUSIVE' : (c.promo.group_type === 'PORTFOLIO' ? 'HIGHEST_WINS' : 'STACKABLE'));
                                         const badgeCfg = {
                                             STACKABLE: { bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'Stackable' },
                                             HIGHEST_WINS: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Highest Wins' },
@@ -1400,6 +1404,20 @@ export default function PromotionsTab() {
                                     Khi tạo khuyến mãi Cơ bản trên Agoda, nút &ldquo;Kết hợp với khuyến mãi khác&rdquo; mặc định <strong>BẬT</strong>.
                                     Điều này khiến tất cả khuyến mãi Cơ bản <strong>cộng dồn giảm giá</strong> lên nhau.
                                     Nếu không muốn, hãy tắt nút này trong trang quản lý Agoda cho từng khuyến mãi.
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ── Trip.com Campaign Exclusive Warning ── */}
+                    {selectedChannelData?.code === 'ctrip' && campaignCampaigns.filter(c => c.is_active).length > 0 && campaigns.filter(c => c.is_active && c.promo.group_type !== 'CAMPAIGN').length > 0 && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex gap-3">
+                            <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                            <div className="text-sm text-amber-800 space-y-1">
+                                <p className="font-semibold">⚠️ Campaign không cộng dồn với KM khác</p>
+                                <p className="text-xs text-amber-700 leading-relaxed">
+                                    Khi Campaign đang bật, hệ thống sẽ <strong>tự động loại bỏ</strong> các khuyến mãi còn lại (Regular, Targeted, Package...).
+                                    Chỉ Campaign có % cao nhất được áp dụng.
                                 </p>
                             </div>
                         </div>
