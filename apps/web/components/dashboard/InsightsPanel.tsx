@@ -138,19 +138,29 @@ function CardItem({ card }: { card: InsightCard }) {
 
             {/* Expanded */}
             {open && (
-                <div className="px-3 pb-3 space-y-1.5 border-t border-slate-100/80 mx-2 pt-2">
-                    {/* What */}
-                    <p className="text-[11px] text-slate-500 leading-snug">{card.what}</p>
-                    {/* So What */}
-                    <p className="text-[11px] text-slate-600 leading-snug font-medium">{card.soWhat}</p>
-                    {/* Do This — highlighted */}
-                    <div className="bg-slate-50 rounded px-2 py-1.5">
+                <div className="px-3 pb-3 space-y-2 border-t border-slate-100/80 mx-2 pt-2">
+                    {/* What — Tình hình */}
+                    <div>
+                        <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 mb-0.5">Tình hình</p>
+                        <p className="text-[11px] text-slate-600 leading-snug">{card.what}</p>
+                    </div>
+                    {/* So What — Ý nghĩa */}
+                    <div>
+                        <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 mb-0.5">Ý nghĩa</p>
+                        <p className="text-[11px] text-slate-700 leading-snug font-medium">{card.soWhat}</p>
+                    </div>
+                    {/* Do This — Nên làm */}
+                    <div className="bg-slate-50 rounded px-2.5 py-2">
+                        <p className="text-[9px] font-semibold uppercase tracking-wider text-blue-500 mb-0.5">Nên làm</p>
                         <p className="text-[11px] text-slate-700 font-medium leading-snug">{card.doThis}</p>
                     </div>
-                    {/* Impact */}
-                    <div className="flex items-center gap-1.5">
-                        <TrendingUp className="w-3 h-3 text-slate-400 shrink-0" />
-                        <p className="text-[10px] text-slate-400 leading-snug">{card.impact}</p>
+                    {/* Impact — Tác động */}
+                    <div className="flex items-start gap-1.5">
+                        <TrendingUp className="w-3 h-3 text-slate-400 shrink-0 mt-0.5" />
+                        <div>
+                            <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 mb-0.5">Tác động ước tính</p>
+                            <p className="text-[10px] text-slate-500 leading-snug">{card.impact}</p>
+                        </div>
                     </div>
                     {/* Pricing hint */}
                     {card.pricingHint && (
@@ -220,8 +230,8 @@ export function InsightsPanel({ top3, compression, otherInsights }: InsightsPane
                         type="button"
                         onClick={() => setActiveTab('actions')}
                         className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors duration-200 ${activeTab === 'actions'
-                                ? 'bg-slate-800 text-white'
-                                : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                            ? 'bg-slate-800 text-white'
+                            : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                             }`}
                     >
                         Top actions
@@ -234,8 +244,8 @@ export function InsightsPanel({ top3, compression, otherInsights }: InsightsPane
                         type="button"
                         onClick={() => setActiveTab('dates')}
                         className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors duration-200 ${activeTab === 'dates'
-                                ? 'bg-slate-800 text-white'
-                                : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                            ? 'bg-slate-800 text-white'
+                            : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                             }`}
                     >
                         Ngày chú ý khác
