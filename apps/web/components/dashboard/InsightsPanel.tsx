@@ -172,6 +172,7 @@ export interface InsightsPanelV2Props {
 }
 
 export function InsightsPanel({ top3, compression, otherInsights }: InsightsPanelV2Props) {
+    const [activeTab, setActiveTab] = useState<'actions' | 'dates'>('actions');
     const [showMore, setShowMore] = useState(false);
 
     // Compression dates NOT already in top3
@@ -179,7 +180,9 @@ export function InsightsPanel({ top3, compression, otherInsights }: InsightsPane
         (c) => !top3.some((t) => t.stayDates?.[0] === c.stayDates?.[0] && t.title === c.title),
     );
 
-    const total = top3.length + otherInsights.length + compressionExtra.length;
+    const actionsCount = top3.length + otherInsights.length;
+    const datesCount = compressionExtra.length;
+    const total = actionsCount + datesCount;
 
     if (total === 0) {
         return (
@@ -195,15 +198,14 @@ export function InsightsPanel({ top3, compression, otherInsights }: InsightsPane
         );
     }
 
-    // Always show first 2 otherInsights, rest behind toggle
+    // Other insights: show first 2, rest behind toggle
     const visibleOther = showMore ? otherInsights : otherInsights.slice(0, 2);
     const hiddenOtherCount = Math.max(0, otherInsights.length - 2);
-    const totalHidden = hiddenOtherCount + compressionExtra.length;
 
     return (
         <div className={`${surface} p-4 h-full flex flex-col`}>
             {/* Header */}
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                     <Target className="w-4 h-4 text-slate-500" />
                     <h3 className="text-sm font-semibold text-slate-700">Phân tích & Gợi ý</h3>
@@ -211,51 +213,96 @@ export function InsightsPanel({ top3, compression, otherInsights }: InsightsPane
                 <span className="text-[10px] text-slate-400">{total}</span>
             </div>
 
-            {/* Scrollable */}
+            {/* Tab pills — only show if there are compression extras */}
+            {datesCount > 0 && (
+                <div className="flex gap-1 mb-3">
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('actions')}
+                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors duration-200 ${activeTab === 'actions'
+                                ? 'bg-slate-800 text-white'
+                                : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                            }`}
+                    >
+                        Top actions
+                        <span className={`text-[9px] px-1 py-0.5 rounded-full min-w-[16px] text-center leading-none ${activeTab === 'actions' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-500'
+                            }`}>
+                            {actionsCount}
+                        </span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('dates')}
+                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors duration-200 ${activeTab === 'dates'
+                                ? 'bg-slate-800 text-white'
+                                : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                            }`}
+                    >
+                        Ngày chú ý khác
+                        <span className={`text-[9px] px-1 py-0.5 rounded-full min-w-[16px] text-center leading-none ${activeTab === 'dates' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-500'
+                            }`}>
+                            {datesCount}
+                        </span>
+                    </button>
+                </div>
+            )}
+
+            {/* Scrollable content */}
             <div className="flex-1 overflow-y-auto space-y-1.5 pr-0.5 -mr-0.5">
-                {/* Top 3 */}
-                {top3.length > 0 && (
+
+                {/* ── TAB 1: Top Actions ── */}
+                {activeTab === 'actions' && (
                     <>
-                        <p className="text-[10px] font-medium uppercase tracking-widest text-slate-400 mb-1">
-                            Top actions — 7 ngày tới
-                        </p>
-                        {top3.map((card, i) => (
-                            <CardItem key={`t-${i}`} card={card} />
+                        {/* Top 3 */}
+                        {top3.length > 0 && (
+                            <>
+                                <p className="text-[10px] font-medium uppercase tracking-widest text-slate-400 mb-1">
+                                    Top actions — 7 ngày tới
+                                </p>
+                                {top3.map((card, i) => (
+                                    <CardItem key={`t-${i}`} card={card} />
+                                ))}
+                                {otherInsights.length > 0 && (
+                                    <div className="border-t border-dashed border-slate-100 my-2" />
+                                )}
+                            </>
+                        )}
+
+                        {/* Other insights */}
+                        {visibleOther.map((card, i) => (
+                            <CardItem key={`o-${i}`} card={card} />
                         ))}
-                        {(otherInsights.length > 0 || compressionExtra.length > 0) && (
-                            <div className="border-t border-dashed border-slate-100 my-2" />
+
+                        {/* Show more toggle for other insights */}
+                        {hiddenOtherCount > 0 && (
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowMore(!showMore);
+                                }}
+                                className="w-full text-center text-[11px] text-blue-500 hover:text-blue-700 py-1 rounded hover:bg-blue-50/50 transition-colors duration-200"
+                            >
+                                {showMore ? 'Thu gọn' : `+${hiddenOtherCount} phân tích khác`}
+                            </button>
                         )}
                     </>
                 )}
 
-                {/* Other insights — first 2 always visible */}
-                {visibleOther.map((card, i) => (
-                    <CardItem key={`o-${i}`} card={card} />
-                ))}
-
-                {/* Show more toggle */}
-                {totalHidden > 0 && (
-                    <button
-                        type="button"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            setShowMore(!showMore);
-                        }}
-                        className="w-full text-center text-[11px] text-blue-500 hover:text-blue-700 py-1 rounded hover:bg-blue-50/50 transition-colors duration-200"
-                    >
-                        {showMore ? 'Thu gọn' : `+${totalHidden} insights khác`}
-                    </button>
-                )}
-
-                {/* Compression extras — only when expanded */}
-                {showMore && compressionExtra.length > 0 && (
+                {/* ── TAB 2: Ngày cần chú ý khác ── */}
+                {activeTab === 'dates' && (
                     <>
-                        <p className="text-[10px] font-medium uppercase tracking-widest text-slate-400 mt-2 mb-1">
-                            Các ngày cần chú ý khác
+                        <p className="text-[10px] font-medium uppercase tracking-widest text-slate-400 mb-1">
+                            Các ngày cần chú ý (ngoài top 3)
                         </p>
                         {compressionExtra.map((card, i) => (
                             <CardItem key={`c-${i}`} card={card} />
                         ))}
+                        {compressionExtra.length === 0 && (
+                            <p className="text-xs text-slate-400 text-center py-4">
+                                Không có ngày nào đặc biệt ngoài Top 3
+                            </p>
+                        )}
                     </>
                 )}
             </div>
