@@ -278,17 +278,70 @@ export async function rebuildAllOTB() {
         return buildDailyOTB({ hotelId });
     }
 
-    // V02: Generate monthly end-of-month dates from first to last booking_date
-    // V02.1: Cap each eom at latestBookingDate so we never build a snapshot
-    //        beyond the actual data horizon (fixes OTB date > last import date)
-    const months = await prisma.$queryRaw<{ eom: Date }[]>`
+    // ─── V04: 3-Tier OTB Snapshot Policy (BA-approved) ──────────
+    // Tier A: Daily for last 35 days — ensures T-3/T-5/T-7 exact match
+    // Tier B: Weekly for last 450 days (~15 months) — covers T-15/T-30 + STLY (D-364 ±7d)
+    // Tier C: Monthly EOM for older history
+    // All tiers skip dates already in daily_otb for idempotency.
+
+    // Existing snapshot dates for dedup
+    const existingDates = await prisma.dailyOTB.findMany({
+        where: { hotel_id: hotelId },
+        select: { as_of_date: true },
+        distinct: ['as_of_date'],
+    });
+    const existingSet = new Set(existingDates.map(d => d.as_of_date.toISOString().split('T')[0]));
+
+    // Tier C: Monthly EOM (for dates older than 450d from latestBookingDate)
+    const tier_b_start = new Date(latestBookingDate);
+    tier_b_start.setDate(tier_b_start.getDate() - 450);
+    const monthlyEnd = tier_b_start > minBookingDate ? tier_b_start : minBookingDate;
+
+    const monthlyDates = await prisma.$queryRaw<{ d: Date }[]>`
         SELECT LEAST(
-            (date_trunc('month', d) + interval '1 month' - interval '1 day')::date,
+            (date_trunc('month', g) + interval '1 month' - interval '1 day')::date,
             ${latestBookingDate}::date
-        ) as eom
-        FROM generate_series(${minBookingDate}::date, ${latestBookingDate}::date, '1 month'::interval) d
-        ORDER BY d ASC
+        ) as d
+        FROM generate_series(${minBookingDate}::date, ${monthlyEnd}::date, '1 month'::interval) g
+        ORDER BY g ASC
     `;
+
+    // Tier B: Weekly for last 450 days
+    const tier_a_start = new Date(latestBookingDate);
+    tier_a_start.setDate(tier_a_start.getDate() - 35);
+    const weeklyStart = tier_b_start > minBookingDate ? tier_b_start : minBookingDate;
+    const weeklyEnd = tier_a_start > weeklyStart ? tier_a_start : latestBookingDate;
+
+    const weeklyDates = await prisma.$queryRaw<{ d: Date }[]>`
+        SELECT g::date as d
+        FROM generate_series(${weeklyStart}::date, ${weeklyEnd}::date, '7 days'::interval) g
+        ORDER BY g ASC
+    `;
+
+    // Tier A: Daily for last 35 days
+    const dailyStart = tier_a_start > minBookingDate ? tier_a_start : minBookingDate;
+    const dailyDates = await prisma.$queryRaw<{ d: Date }[]>`
+        SELECT g::date as d
+        FROM generate_series(${dailyStart}::date, ${latestBookingDate}::date, '1 day'::interval) g
+        ORDER BY g ASC
+    `;
+
+    // Merge all dates, dedup, sort ASC
+    const allDatesRaw = [
+        ...monthlyDates.map(r => r.d),
+        ...weeklyDates.map(r => r.d),
+        ...dailyDates.map(r => r.d),
+    ];
+    const seen = new Set<string>();
+    const allDates: Date[] = [];
+    for (const d of allDatesRaw) {
+        const key = d.toISOString().split('T')[0];
+        if (!seen.has(key) && !existingSet.has(key)) {
+            seen.add(key);
+            allDates.push(d);
+        }
+    }
+    allDates.sort((a, b) => a.getTime() - b.getTime());
 
     // Stay date range (with buffer)
     const stayDateFrom = earliestArrival
@@ -301,43 +354,12 @@ export async function rebuildAllOTB() {
     let built = 0;
     let skipped = 0;
 
-    // Build historical monthly snapshots
-    for (const { eom } of months) {
+    // Build all snapshot dates
+    for (const asOfDate of allDates) {
         try {
             const result = await buildDailyOTB({
                 hotelId,
-                asOfTs: eom,
-                stayDateFrom,
-                stayDateTo,
-            });
-            if (result.success) built++;
-            else skipped++;
-        } catch {
-            skipped++;
-        }
-    }
-
-    // V03: Add weekly snapshots for the most recent 60 days of data
-    // This ensures pickup T-7 (window ±3d) and T-3 (window ±1d) always have
-    // an OTB reference point, solving the gap between monthly EOM snapshots.
-    const sixtyDaysAgo = new Date(latestBookingDate);
-    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
-    const weeklyStart = sixtyDaysAgo > minBookingDate ? sixtyDaysAgo : minBookingDate;
-
-    const weeks = await prisma.$queryRaw<{ wk: Date }[]>`
-        SELECT d::date as wk
-        FROM generate_series(${weeklyStart}::date, ${latestBookingDate}::date, '7 days'::interval) d
-        WHERE d::date NOT IN (
-            SELECT DISTINCT as_of_date FROM daily_otb WHERE hotel_id = ${hotelId}::uuid
-        )
-        ORDER BY d ASC
-    `;
-
-    for (const { wk } of weeks) {
-        try {
-            const result = await buildDailyOTB({
-                hotelId,
-                asOfTs: wk,
+                asOfTs: asOfDate,
                 stayDateFrom,
                 stayDateTo,
             });
@@ -364,10 +386,11 @@ export async function rebuildAllOTB() {
         success: built > 0,
         daysBuilt: todayResult.daysBuilt,
         totalRoomsOtb: todayResult.totalRoomsOtb,
-        message: `Built ${built} snapshots (${months.length} monthly + ${weeks.length} weekly, ${skipped} skipped). Latest: ${todayResult.daysBuilt || 0} stay dates.`,
+        message: `Built ${built} snapshots (${dailyDates.length} daily + ${weeklyDates.length} weekly + ${monthlyDates.length} monthly, ${skipped} skipped, ${existingSet.size} existed). Latest: ${todayResult.daysBuilt || 0} stay dates.`,
         snapshotGeneratedAt: latestTs,
     };
 }
+
 
 /**
  * V01.1: Backfill OTB for historical dates

@@ -74,6 +74,10 @@ export interface AnalyticsData {
     kpi: AnalyticsKpi;
     quality: AnalyticsQuality;
     datesToWatch: DateToWatch[];
+    // OTB-only fallback warning
+    warning?: 'NO_FEATURES_FOR_DATE';
+    hint?: string;
+    latestAvailable?: string | null;
 }
 
 export type ViewMode = 'rooms' | 'revenue';

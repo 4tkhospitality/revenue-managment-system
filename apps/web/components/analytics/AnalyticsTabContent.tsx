@@ -12,6 +12,7 @@ import {
     enrichRows,
 } from '@/components/analytics';
 import type { AnalyticsData, ViewMode, AnalyticsRow } from '@/components/analytics';
+import { BuildFeaturesInline } from '@/components/analytics/BuildFeaturesInline';
 import { TierPaywall } from '@/components/paywall/TierPaywall';
 import { useTierAccess } from '@/hooks/useTierAccess';
 import { TrendingUp, BarChart3, CalendarDays, Database } from 'lucide-react';
@@ -147,6 +148,17 @@ export function AnalyticsTabContent({ hotelId, asOfDate: initialAsOf }: Analytic
                 quality={data.quality}
                 loading={loading}
             />
+
+            {/* ── Build Features Banner (when warning) ── */}
+            {data.warning === 'NO_FEATURES_FOR_DATE' && (
+                <BuildFeaturesInline
+                    asOfDate={selectedAsOf}
+                    hint={data.hint}
+                    latestAvailable={data.latestAvailable}
+                    hotelId={hotelId}
+                    onBuildComplete={() => fetchData(selectedAsOf)}
+                />
+            )}
 
             {/* ── KPI Strip (compact, DOD merged inline) ── */}
             <AnalyticsKpiRow
