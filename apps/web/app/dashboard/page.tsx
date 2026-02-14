@@ -88,12 +88,15 @@ async function fetchDashboardData(hotelId: string, today: Date) {
     referenceDate.setHours(0, 0, 0, 0);
     const thirtyDaysFromRef = new Date(referenceDate);
     thirtyDaysFromRef.setDate(thirtyDaysFromRef.getDate() + 30);
+    const thirtyDaysAgoFromRef = new Date(referenceDate);
+    thirtyDaysAgoFromRef.setDate(thirtyDaysAgoFromRef.getDate() - 30);
 
     const [
         otbData,
         forecastData,
         featuresData,
-        cancelledReservations
+        xmlCancellations,
+        csvCancellations
     ] = await Promise.all([
         prisma.dailyOTB.findMany({
             where: {
@@ -122,12 +125,20 @@ async function fetchDashboardData(hotelId: string, today: Date) {
             orderBy: { stay_date: 'asc' },
             take: 60,
         }),
-        // Cancellations (was batch 3, now parallel)
+        // Cancellations from cancellationRaw (XML uploads) — last 30 days by cancel_time
+        // Also check reservations_raw for hotels using CSV cancel workflow
+        prisma.cancellationRaw.findMany({
+            where: {
+                hotel_id: hotelId,
+                cancel_time: { gte: thirtyDaysAgoFromRef, lte: referenceDate },
+            },
+            select: { nights: true, total_revenue: true }
+        }),
+        // CSV-based cancellations (reservations_raw with cancel_time)
         prisma.reservationsRaw.findMany({
             where: {
                 hotel_id: hotelId,
-                cancel_time: { not: null },
-                arrival_date: { gte: referenceDate, lte: thirtyDaysFromRef }
+                cancel_time: { not: null, gte: thirtyDaysAgoFromRef, lte: referenceDate },
             },
             select: { rooms: true, revenue: true, arrival_date: true, departure_date: true }
         }),
@@ -142,7 +153,8 @@ async function fetchDashboardData(hotelId: string, today: Date) {
         otbData,
         forecastData,
         featuresData,
-        cancelledReservations,
+        xmlCancellations,
+        csvCancellations,
         referenceDate
     };
 }
@@ -193,7 +205,8 @@ export default async function DashboardPage({
         otbData,
         forecastData,
         featuresData,
-        cancelledReservations,
+        xmlCancellations,
+        csvCancellations,
     } = await fetchDashboardData(hotelId, today);
 
     // Check if hotel exists and has capacity set
@@ -224,10 +237,16 @@ export default async function DashboardPage({
                 : 'computed')
         : 'none';
 
-    // Calculate cancelled room-nights and lost revenue
+    // Calculate cancelled room-nights and lost revenue from BOTH sources
     let cancelledRooms = 0;
     let lostRevenue = 0;
-    for (const res of cancelledReservations) {
+    // Source 1: cancellationRaw (XML uploads) — already has nights and total_revenue
+    for (const c of xmlCancellations) {
+        cancelledRooms += c.nights || 1;
+        lostRevenue += Number(c.total_revenue || 0);
+    }
+    // Source 2: reservations_raw (CSV uploads with cancel_time)
+    for (const res of csvCancellations) {
         const nights = Math.max(1, Math.ceil(
             (new Date(res.departure_date).getTime() - new Date(res.arrival_date).getTime()) / (1000 * 60 * 60 * 24)
         ));

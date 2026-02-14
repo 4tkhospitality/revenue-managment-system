@@ -195,7 +195,7 @@ export function AnalyticsTabContent({ hotelId, asOfDate: initialAsOf }: Analytic
                 rows={enrichedRows}
                 expanded={tableExpanded}
                 onToggle={() => setTableExpanded(!tableExpanded)}
-                columnAvailability={data.quality.columnAvailability}
+                columnAvailability={data.quality?.columnAvailability}
                 viewMode={viewMode}
                 capacity={data.capacity}
                 kpi={data.kpi}

@@ -205,10 +205,13 @@ export async function GET(request: NextRequest) {
     });
 
     // ─── KPI calculations ───────────────────────────────────
-    const now = new Date();
+    // Use asOfDate as reference point (not wall-clock) so historical
+    // snapshots show correct KPIs relative to that snapshot date.
+    const refDate = new Date(asOfDate);
+    refDate.setHours(0, 0, 0, 0);
     const filterByHorizon = (days: number) => rows.filter(r => {
         const d = new Date(r.stay_date);
-        return d >= now && d <= new Date(now.getTime() + days * 86400000);
+        return d >= refDate && d <= new Date(refDate.getTime() + days * 86400000);
     });
 
     const next7 = filterByHorizon(7);
@@ -288,7 +291,7 @@ export async function GET(request: NextRequest) {
 
     // ─── Dates to Watch (Area 3) ─────────────────────────────
     const DOW_LABELS = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-    const futureRows = rows.filter(r => new Date(r.stay_date) >= now);
+    const futureRows = rows.filter(r => new Date(r.stay_date) >= refDate);
 
     const datesToWatch = futureRows
         .map(r => {

@@ -30,8 +30,11 @@ export async function ingestCSV(formData: FormData) {
     const hotelId = formData.get('hotelId') as string;
 
     if (!file || !hotelId) {
+        console.error(`[UPLOAD CSV] ❌ Missing params — file: ${!!file}, hotelId: "${hotelId}"`);
         throw new Error("Missing file or hotelId");
     }
+
+    console.log(`[UPLOAD CSV] 📋 Start — hotelId: "${hotelId}", file: "${file.name}", size: ${file.size} bytes`);
 
     // ═══ TIER GATING: Check import limit ═══
     const startOfMonth = new Date();
@@ -89,12 +92,14 @@ export async function ingestCSV(formData: FormData) {
         select: { hotel_id: true },
     });
     if (!hotelExists) {
+        console.error(`[UPLOAD CSV] ❌ Hotel NOT FOUND — hotelId: "${hotelId}" (full ID)`);
         return {
             success: false,
             message: `Hotel không tồn tại (ID: ${hotelId.slice(0, 8)}...). Vui lòng tải lại trang và thử lại.`,
             error: 'HOTEL_NOT_FOUND',
         };
     }
+    console.log(`[UPLOAD CSV] ✅ Hotel validated — hotelId: "${hotelId.slice(0, 8)}..."`);
     // ═══ END VALIDATE ═══
 
     // 3. Create Job (only if no existing job to reuse)

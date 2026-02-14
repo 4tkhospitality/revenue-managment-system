@@ -145,6 +145,11 @@ export default function UploadPage() {
         }
 
         const hotelId = activeHotelId || process.env.NEXT_PUBLIC_DEFAULT_HOTEL_ID || '';
+        console.log(`[UPLOAD] 🔍 hotelId resolution:`, {
+            activeHotelId,
+            envFallback: process.env.NEXT_PUBLIC_DEFAULT_HOTEL_ID,
+            resolved: hotelId,
+        });
         if (!hotelId) {
             setFileResults([{ fileName: 'ERROR', status: 'error', message: 'Không tìm thấy Hotel ID' }]);
             return;
