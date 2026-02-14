@@ -798,21 +798,49 @@ function MarketingPrograms({
 
 }
 
-// Step-by-step Explanation Panel
+// Step-by-step Explanation Panel — with actual calculated numbers
 function PricingExplanation({
     campaigns,
     totalDiscount,
     commissionPct,
     validation,
     calcType,
+    netPrice,
 }: {
     campaigns: Campaign[];
     totalDiscount: number;
     commissionPct: number;
     validation: ValidationResult;
     calcType: 'PROGRESSIVE' | 'ADDITIVE' | 'SINGLE_DISCOUNT';
+    netPrice: number;
 }) {
     const activeCampaigns = campaigns.filter((c) => c.is_active);
+    const fmt = (n: number) => new Intl.NumberFormat('vi-VN').format(Math.round(n));
+
+    // Step-by-step calculation with real numbers
+    const commissionMultiplier = commissionPct > 0 ? (1 - commissionPct / 100) : 1;
+    const priceBeforePromos = commissionMultiplier > 0 ? netPrice / commissionMultiplier : netPrice;
+
+    // Build progressive step breakdown
+    const promoSteps: { name: string; pct: number; priceBefore: number; priceAfter: number }[] = [];
+    if (calcType === 'PROGRESSIVE' && activeCampaigns.length > 0) {
+        let running = priceBeforePromos;
+        for (const c of activeCampaigns) {
+            const factor = 1 - c.discount_pct / 100;
+            const after = factor > 0 ? running / factor : running;
+            promoSteps.push({ name: c.promo.name, pct: c.discount_pct, priceBefore: running, priceAfter: after });
+            running = after;
+        }
+    }
+
+    // Final BAR
+    const discountMultiplier = activeCampaigns.length > 0
+        ? (calcType === 'PROGRESSIVE'
+            ? activeCampaigns.reduce((m, c) => m * (1 - c.discount_pct / 100), 1)
+            : (1 - totalDiscount / 100))
+        : 1;
+    const barPrice = discountMultiplier > 0 ? priceBeforePromos / discountMultiplier : priceBeforePromos;
+    const guestPrice = barPrice * (activeCampaigns.length > 0 ? discountMultiplier : 1);
 
     return (
         <div className="bg-[#F2F4F8] border border-[#DBE1EB] rounded-xl p-4 space-y-4">
@@ -844,7 +872,7 @@ function PricingExplanation({
                 </div>
             </div>
 
-            {/* Step-by-step breakdown */}
+            {/* Step-by-step breakdown with actual numbers */}
             <div className="border-t border-[#DBE1EB] pt-4">
                 <h3 className="text-sm font-semibold text-[#204183] mb-3 flex items-center gap-2">
                     <DollarSign className="w-4 h-4" />
@@ -852,37 +880,85 @@ function PricingExplanation({
                 </h3>
 
                 <div className="space-y-3 text-sm">
+                    {/* Step 1: Net Price */}
                     <div className="bg-white rounded-lg p-3 border border-[#DBE1EB]">
-                        <p className="font-medium text-slate-700 mb-1">📌 Bước 1: Giá gốc</p>
-                        <p className="text-slate-500">Giá phòng mà khách sạn muốn thu về (Net price)</p>
+                        <p className="font-medium text-slate-700 mb-1">📌 Bước 1: Giá gốc (Net price)</p>
+                        <p className="text-slate-500">Giá phòng mà khách sạn muốn thu về</p>
+                        {netPrice > 0 && (
+                            <p className="mt-1.5 font-bold text-[#204183] text-base tabular-nums">{fmt(netPrice)}đ</p>
+                        )}
                     </div>
 
+                    {/* Step 2: Commission markup */}
                     <div className="bg-white rounded-lg p-3 border border-[#DBE1EB]">
                         <p className="font-medium text-slate-700 mb-1">📌 Bước 2: Cộng hoa hồng OTA ({commissionPct}%)</p>
-                        <p className="text-slate-500">Giá gốc ÷ (1 - {commissionPct}%) = Giá trước khuyến mãi</p>
+                        <p className="text-slate-500">{fmt(netPrice)}đ ÷ (1 − {commissionPct}%) = Giá trước khuyến mãi</p>
+                        {netPrice > 0 && (
+                            <p className="mt-1.5 font-bold text-[#204183] text-base tabular-nums">{fmt(priceBeforePromos)}đ</p>
+                        )}
                     </div>
 
+                    {/* Step 3: Promotions breakdown */}
                     {totalDiscount > 0 && (
                         <div className="bg-white rounded-lg p-3 border border-[#DBE1EB]">
-                            <p className="font-medium text-slate-700 mb-1">📌 Bước 3: {calcType === 'PROGRESSIVE' ? 'Nhân lũy tiến' : 'Cộng dồn'} khuyến mãi ({totalDiscount.toFixed(1)}%)</p>
-                            <p className="text-slate-500">{calcType === 'PROGRESSIVE'
-                                ? 'Giá trước KM × Π(1 - dᵢ) = Giá hiển thị (mỗi KM nhân trên giá đã giảm)'
-                                : `Giá trước KM ÷ (1 - ${totalDiscount}%) = Giá hiển thị`
-                            }</p>
-                            {activeCampaigns.length > 0 && (
-                                <div className="mt-2 text-xs text-slate-400">
-                                    Gồm: {activeCampaigns.map((c) => `${c.promo.name} (${c.discount_pct}%)`).join(' + ')}
+                            <p className="font-medium text-slate-700 mb-1">
+                                📌 Bước 3: {calcType === 'PROGRESSIVE' ? 'Nhân lũy tiến' : calcType === 'SINGLE_DISCOUNT' ? 'Deal cao nhất' : 'Cộng dồn'} khuyến mãi ({totalDiscount.toFixed(1)}%)
+                            </p>
+
+                            {/* Progressive: show each step */}
+                            {calcType === 'PROGRESSIVE' && promoSteps.length > 0 ? (
+                                <div className="mt-2 space-y-1.5">
+                                    {promoSteps.map((step, i) => (
+                                        <div key={i} className="flex items-center gap-2 text-xs">
+                                            <span className="text-orange-500 font-bold w-4 text-center">{i + 1}</span>
+                                            <span className="text-slate-600 flex-1">
+                                                {step.name} (−{step.pct}%)
+                                            </span>
+                                            <span className="text-slate-400 tabular-nums">{fmt(step.priceBefore)}đ</span>
+                                            <span className="text-slate-300">→</span>
+                                            <span className="font-semibold text-[#204183] tabular-nums">{fmt(step.priceAfter)}đ</span>
+                                        </div>
+                                    ))}
                                 </div>
+                            ) : (
+                                <p className="text-slate-500">
+                                    {fmt(priceBeforePromos)}đ ÷ (1 − {totalDiscount.toFixed(1)}%) = {fmt(barPrice)}đ
+                                </p>
+                            )}
+
+                            {netPrice > 0 && (
+                                <p className="mt-2 font-bold text-[#204183] text-base tabular-nums">
+                                    BAR = {fmt(barPrice)}đ
+                                </p>
                             )}
                         </div>
                     )}
 
+                    {/* Result */}
                     <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-200">
                         <p className="font-medium text-emerald-700 mb-1">✅ Kết quả</p>
-                        <p className="text-emerald-600">
-                            Khách trả <strong>Giá hiển thị</strong> → OTA giữ {commissionPct}% →
-                            Khách sạn nhận <strong>Tiền thu về</strong>
-                        </p>
+                        {netPrice > 0 ? (
+                            <div className="space-y-1">
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-slate-500">Giá Channel Manager (BAR)</span>
+                                    <span className="font-bold text-[#204183] tabular-nums">{fmt(barPrice)}đ</span>
+                                </div>
+                                {totalDiscount > 0 && (
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-slate-500">Khách thấy trên OTA</span>
+                                        <span className="font-bold text-orange-600 tabular-nums">{fmt(guestPrice)}đ</span>
+                                    </div>
+                                )}
+                                <div className="flex justify-between text-sm border-t border-emerald-200 pt-1 mt-1">
+                                    <span className="text-emerald-700 font-medium">Khách sạn thu về (Net)</span>
+                                    <span className="font-bold text-emerald-700 tabular-nums">{fmt(netPrice)}đ</span>
+                                </div>
+                            </div>
+                        ) : (
+                            <p className="text-emerald-600">
+                                Chọn hạng phòng để xem số liệu cụ thể
+                            </p>
+                        )}
                     </div>
                 </div>
             </div>
@@ -1561,6 +1637,7 @@ export default function PromotionsTab() {
                         commissionPct={effectiveCommissionPct}
                         validation={validation}
                         calcType={calcType}
+                        netPrice={selectedRoom?.net_price || 0}
                     />
                 </div>
             </div>
