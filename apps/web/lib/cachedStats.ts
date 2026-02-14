@@ -92,44 +92,54 @@ export async function getReservationStats30(hotelId?: string): Promise<Reservati
     return result;
 }
 
-// ─── Cancellation stats: SQL aggregate + hotel filter + 30-day window ─
+// ─── Cancellation stats: Source-agnostic (CSV/XML/any) from reservations_raw ─
 export async function getCancellationStats30Days(hotelId?: string): Promise<CancellationStats> {
     const cacheKey = hotelId || '__all__';
     const cached = getCached(cancellationCache, cacheKey);
     if (cached) return cached;
 
-    // Filter to last 30 days by cancel_time
+    // Filter to last 30 days by cancel_time (when the cancellation happened)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
     const whereClause = {
+        status: 'cancelled' as const,
         cancel_time: { gte: thirtyDaysAgo },
         ...(hotelId ? { hotel_id: hotelId } : {}),
     };
 
-    // Parallel: aggregate + groupBy instead of findMany + JS reduce
-    const [agg, topChannelsRaw] = await Promise.all([
-        prisma.cancellationRaw.aggregate({
+    // Parallel: aggregate + groupBy
+    // Note: reservations_raw has no "nights" column — we calculate from departure - arrival
+    const [agg, nightsResult, topChannelsRaw] = await Promise.all([
+        prisma.reservationsRaw.aggregate({
             where: whereClause,
             _count: true,
-            _sum: { nights: true, total_revenue: true },
+            _sum: { revenue: true, rooms: true },
         }),
-        prisma.cancellationRaw.groupBy({
-            by: ['channel'],
+        // Calculate total nights via raw SQL (departure_date - arrival_date)
+        prisma.$queryRaw<{ total_nights: bigint }[]>`
+            SELECT COALESCE(SUM(departure_date - arrival_date), 0)::bigint AS total_nights
+            FROM reservations_raw
+            WHERE status = 'cancelled'
+              AND cancel_time >= ${thirtyDaysAgo}
+              ${hotelId ? prisma.$queryRaw`AND hotel_id = ${hotelId}::uuid` : prisma.$queryRaw``}
+        `.catch(() => [{ total_nights: BigInt(0) }]),
+        prisma.reservationsRaw.groupBy({
+            by: ['company_name'],
             where: whereClause,
-            _sum: { total_revenue: true },
-            orderBy: { _sum: { total_revenue: 'desc' } },
+            _sum: { revenue: true },
+            orderBy: { _sum: { revenue: 'desc' } },
             take: 3,
         }),
     ]);
 
     const result: CancellationStats = {
         count: agg._count,
-        nights: agg._sum.nights || 0,
-        revenue: Number(agg._sum.total_revenue || 0),
+        nights: Number(nightsResult[0]?.total_nights || 0),
+        revenue: Number(agg._sum.revenue || 0),
         topChannels: topChannelsRaw.map(c => ({
-            channel: c.channel || 'Khác',
-            revenue: Number(c._sum.total_revenue || 0),
+            channel: c.company_name || 'Khác',
+            revenue: Number(c._sum.revenue || 0),
         })),
     };
 
