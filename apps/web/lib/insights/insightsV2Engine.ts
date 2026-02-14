@@ -221,14 +221,14 @@ function generateCompressionInsights(
                 type: 'compression_danger',
                 severity: 'danger',
                 title: `DANGER — ${dateStr}`,
-                what: `OCC ${occPct}% | ${paceGap != null ? `▼${Math.abs(Math.round(paceGap))}pt vs STLY | ` : ''}Thiếu ~${Math.max(0, rnGap)} RN`,
-                soWhat: 'Ngày này đang thấp hơn mức an toàn — cần kích cầu',
+                what: `Mới đặt ${occPct}% phòng${paceGap != null ? ` — thua cùng kỳ năm trước ${Math.abs(Math.round(paceGap))} điểm` : ''}. Còn thiếu khoảng ${Math.max(0, rnGap)} đêm phòng mới đạt mức an toàn`,
+                soWhat: 'Ngày này đang bán chậm hơn mức cần thiết — nếu không kích cầu sớm, phòng sẽ bỏ trống',
                 doThis: conf === 'LOW'
-                    ? 'Theo dõi thêm — upload data để mở khoá khuyến nghị'
-                    : `Điều chỉnh −8% đến −15% (tuỳ segment)`,
+                    ? 'Cần thêm dữ liệu để đưa ra khuyến nghị cụ thể — hãy upload thêm booking'
+                    : `Giảm giá 8–15% trên các kênh bán chính để thu hút thêm booking`,
                 impact: conf === 'LOW'
-                    ? 'Chưa đủ data ước tính'
-                    : `+~${formatVND(impactEst)} nếu fill 50% gap`,
+                    ? 'Chưa đủ dữ liệu để ước tính'
+                    : `Nếu lấp được 50% phòng đang thiếu → thu thêm khoảng ${formatVND(impactEst)}`,
                 confidence: conf,
                 stayDates: [day.stayDate.toISOString()],
                 reasons,
@@ -254,14 +254,14 @@ function generateCompressionInsights(
                 type: 'compression_hot',
                 severity: 'hot',
                 title: `HOT — ${dateStr}`,
-                what: `OCC ${occPct}% | Còn ${remaining} RN${day.pickupNetT7 != null ? ` | Pickup +${Math.round(day.pickupNetT7)}/ngày` : ''}`,
-                soWhat: 'Cầu > cung — cơ hội tăng giá',
+                what: `Đã đặt ${occPct}% phòng, chỉ còn ${remaining} phòng trống${day.pickupNetT7 != null ? `. Đang nhận thêm khoảng ${Math.round(day.pickupNetT7)} booking mỗi ngày` : ''}`,
+                soWhat: 'Nhu cầu cao hơn số phòng còn lại — đây là cơ hội tốt để tăng giá bán',
                 doThis: conf === 'LOW'
-                    ? 'Theo dõi thêm — upload data để mở khoá khuyến nghị'
-                    : `Tăng +10% đến +20%, ưu tiên kênh phí thấp`,
+                    ? 'Cần thêm dữ liệu để đưa ra khuyến nghị cụ thể — hãy upload thêm booking'
+                    : `Tăng giá 10–20%, ưu tiên bán qua kênh ít phí hoa hồng (website, đặt trực tiếp)`,
                 impact: conf === 'LOW'
-                    ? 'Chưa đủ data ước tính'
-                    : `+~${formatVND(impactEst)} nếu ADR tăng ${Math.round(uplift * 100)}%`,
+                    ? 'Chưa đủ dữ liệu để ước tính'
+                    : `Nếu tăng giá ${Math.round(uplift * 100)}% cho phòng còn lại → thu thêm khoảng ${formatVND(impactEst)}`,
                 confidence: conf,
                 stayDates: [day.stayDate.toISOString()],
                 reasons,
@@ -314,20 +314,30 @@ function generateRevenueOpportunity(
     // Count days without forecast
     const noForecastDays = days30.filter(d => d.forecastDemand == null).length;
 
+    // GM-friendly impact string
+    let gmImpact: string;
+    if (hasRecs && conf !== 'LOW') {
+        gmImpact = `Nếu áp dụng giá khuyến nghị, doanh thu tăng thêm khoảng ${formatVND(upliftTotal)} (+${nf1.format(upliftTotal > 0 && revenueEstimate > 0 ? (upliftTotal / (revenueEstimate - upliftTotal) * 100) : 0)}%)`;
+    } else {
+        gmImpact = conf === 'LOW'
+            ? `Ước tính sơ bộ khoảng ${formatVND(revenueEstimate)} — cần thêm dữ liệu để chính xác hơn`
+            : `Nếu bán hết phòng trống với giá trung bình hiện tại → thu thêm khoảng ${formatVND(revenueEstimate)}`;
+    }
+
     return {
         type: 'revenue_opportunity',
         severity: 'info',
         title: 'Doanh thu tiềm năng — 30 ngày tới',
-        what: `${nfVND.format(totalRemaining)} RN trống`,
+        what: `Trong 30 ngày tới, khách sạn còn ${nfVND.format(totalRemaining)} đêm phòng chưa có ai đặt`,
         soWhat: noForecastDays > 0
-            ? `${noForecastDays} ngày chưa có forecast — thiếu visibility`
-            : 'Đã có đủ forecast cho toàn bộ khung ngày',
+            ? `Có ${noForecastDays} ngày hệ thống chưa tính được dự báo nhu cầu — cần thêm dữ liệu`
+            : 'Hệ thống đã tính được dự báo nhu cầu cho toàn bộ 30 ngày — đủ thông tin để ra quyết định giá',
         doThis: conf === 'LOW'
-            ? 'Upload thêm data để mở khoá khuyến nghị chi tiết'
+            ? 'Hãy upload thêm dữ liệu booking để hệ thống đưa ra khuyến nghị chi tiết hơn'
             : noForecastDays > 0
-                ? `Focus ${nfVND.format(noForecastDays)} ngày chưa có forecast → đẩy Direct/loyalty`
-                : `Áp dụng PriceRec cho các ngày có uplift > 5%`,
-        impact: impactStr,
+                ? `Tập trung vào ${nfVND.format(noForecastDays)} ngày chưa có dự báo — đẩy mạnh bán qua website và khách hàng thân thiết`
+                : `Vào tab Giá đề xuất, chọn những ngày có giá khuyến nghị tăng hơn 5% so với hiện tại → duyệt và áp dụng`,
+        impact: gmImpact,
         confidence: conf,
     };
 }
@@ -371,19 +381,19 @@ function generatePaceInsight(
     return {
         type: 'pace_stly',
         severity: isAhead ? 'success' : 'warning',
-        title: `30 ngày: ${isAhead ? 'AHEAD' : 'BEHIND'} ${isAhead ? '+' : ''}${nfVND.format(rnDelta)} RN vs STLY`,
-        what: `Rooms: ${nfVND.format(totalRN)} vs ${nfVND.format(stlyRN)} (${rnPctChange >= 0 ? '+' : ''}${rnPctChange}%) | ADR: ${formatVND(adrCurrent)} vs ${formatVND(adrStly)} (${adrPctChange >= 0 ? '+' : ''}${adrPctChange}%)`,
-        soWhat: `Revenue ${isAhead ? 'tăng' : 'giảm'} chủ yếu do ${driver === 'rate' ? 'RATE (giá)' : 'VOLUME (lượng booking)'}`,
+        title: `So với cùng kỳ năm trước: ${isAhead ? 'tốt hơn' : 'kém hơn'} ${Math.abs(rnDelta)} đêm phòng`,
+        what: `Đã đặt ${nfVND.format(totalRN)} đêm phòng (năm trước: ${nfVND.format(stlyRN)}, ${rnPctChange >= 0 ? '+' : ''}${rnPctChange}%). Giá trung bình: ${formatVND(adrCurrent)} (năm trước: ${formatVND(adrStly)}, ${adrPctChange >= 0 ? '+' : ''}${adrPctChange}%)`,
+        soWhat: `Doanh thu ${isAhead ? 'tăng' : 'giảm'} chủ yếu vì ${driver === 'rate' ? 'giá bán thay đổi' : 'lượng booking thay đổi'}`,
         doThis: conf === 'LOW'
-            ? 'Upload thêm data — chưa đủ để khuyến nghị chi tiết'
+            ? 'Cần thêm dữ liệu để đưa ra khuyến nghị chi tiết — hãy upload thêm booking'
             : isAhead
                 ? driver === 'rate'
-                    ? 'Giữ chiến lược giá, focus upsell room type cao hơn'
-                    : 'Giá còn room tăng — cân nhắc yield lên'
+                    ? 'Giữ nguyên chiến lược giá, đề xuất khách nâng hạng phòng để tăng doanh thu'
+                    : 'Lượng đặt tốt, giá có thể tăng thêm — xem xét điều chỉnh giá bán'
                 : driver === 'volume'
-                    ? `Cần bù ${Math.abs(rnDelta)} RN → tăng marketing hoặc giảm giá kênh yếu`
-                    : `ADR giảm → review chiến lược giá, hạn chế discount sâu`,
-        impact: `RevPAR ${revParPct >= 0 ? '+' : ''}${revParPct}%`,
+                    ? `Cần thêm ${Math.abs(rnDelta)} đêm phòng để bằng năm trước — tăng quảng cáo hoặc giảm giá các kênh yếu`
+                    : `Giá bán đang thấp hơn năm trước — hạn chế giảm giá sâu, xem lại chiến lược giá`,
+        impact: `Doanh thu trên mỗi phòng: ${revParPct >= 0 ? 'tăng' : 'giảm'} ${Math.abs(revParPct)}% so với cùng kỳ`,
         confidence: conf,
     };
 }
@@ -429,21 +439,23 @@ function generatePickupAcceleration(
     return {
         type: 'pickup_acceleration',
         severity: isAccelerating ? 'hot' : 'warning',
-        title: `Pickup ${isAccelerating ? 'TĂNG TỐC' : 'GIẢM TỐC'}`,
-        what: `T3 ${avgT3 >= 0 ? '+' : ''}${nf1.format(avgT3)}/ngày vs T7 ${avgT7 >= 0 ? '+' : ''}${nf1.format(avgT7)}/ngày (${accelPct >= 0 ? '+' : ''}${accelPct}%)`,
+        title: isAccelerating ? 'Booking đang TĂNG TỐC' : 'Booking đang GIẢM TỐC',
+        what: `3 ngày gần nhất: ${avgT3 >= 0 ? '+' : ''}${nf1.format(avgT3)} phòng/ngày. Trung bình 7 ngày: ${avgT7 >= 0 ? '+' : ''}${nf1.format(avgT7)} phòng/ngày (chênh lệch ${accelPct >= 0 ? '+' : ''}${accelPct}%)`,
         soWhat: isAccelerating
-            ? 'Có thể: event / mùa cao / last-minute demand'
-            : 'Nhu cầu đang giảm — cần theo dõi sát',
+            ? 'Khách đặt phòng nhiều hơn bình thường — có thể do sự kiện, mùa cao điểm, hoặc nhu cầu cuối giờ'
+            : 'Lượng đặt phòng đang giảm so với tuần trước — cần theo dõi sát và chuẩn bị phương án',
         doThis: conf === 'LOW'
-            ? 'Upload data thêm để mở khoá khuyến nghị'
+            ? 'Hãy upload thêm dữ liệu booking để hệ thống đưa ra khuyến nghị cụ thể hơn'
             : isAccelerating
-                ? 'KHÔNG chạy promo cho 7 ngày tới'
-                : 'Cân nhắc kích cầu — review giá các ngày yếu',
+                ? 'Không cần chạy khuyến mãi trong 7 ngày tới — nhu cầu tự nhiên đang tốt'
+                : 'Cân nhắc kích cầu — xem lại giá các ngày có ít booking',
         impact: conf === 'LOW'
-            ? 'Chưa đủ data ước tính'
-            : `${isAccelerating ? 'Tránh mất' : 'Bù'} ~${formatVND(impactVND)}`,
+            ? 'Chưa đủ dữ liệu để ước tính'
+            : isAccelerating
+                ? `Nếu giữ giá tốt, tránh mất khoảng ${formatVND(impactVND)} doanh thu`
+                : `Cần bù khoảng ${formatVND(impactVND)} doanh thu so với tuần trước`,
         confidence: conf,
-        pricingHint: pricingHintTag ? 'Có thay đổi giá gần đây' : undefined,
+        pricingHint: pricingHintTag ? 'Lưu ý: có thay đổi giá gần đây, có thể ảnh hưởng đến lượng booking' : undefined,
     };
 }
 
@@ -464,17 +476,17 @@ function generateCancelInsight(
     cards.push({
         type: 'cancel_tier1',
         severity: cancelData.cancelRate30d > 0.15 ? 'warning' : 'info',
-        title: `Cancel rate 30d: ${cancelPct}%`,
-        what: `Net pickup 7d: +${cancelData.pickupGross7d} gross − ${cancelData.cancel7d} cancel = +${netPickup} net${cancelData.topCancelSegment ? ` | Kênh hủy nhiều: ${cancelData.topCancelSegment}` : ''}`,
+        title: `Tỷ lệ hủy phòng 30 ngày: ${cancelPct}%`,
+        what: `Tuần qua: nhận ${cancelData.pickupGross7d} booking mới, bị hủy ${cancelData.cancel7d} → thực tế tăng ${netPickup} đêm phòng${cancelData.topCancelSegment ? `. Kênh hủy nhiều nhất: ${cancelData.topCancelSegment}` : ''}`,
         soWhat: cancelData.cancelRate30d > 0.15
-            ? 'Cancel đang cao — ảnh hưởng đáng kể đến net pickup'
-            : 'Cancel ở mức bình thường — theo dõi',
+            ? 'Tỷ lệ hủy đang cao — đang mất đáng kể doanh thu mỗi tuần'
+            : 'Tỷ lệ hủy ở mức bình thường — tiếp tục theo dõi',
         doThis: confTier1 === 'LOW'
-            ? 'Map segment data thêm để phân tích chi tiết'
+            ? 'Cần bổ sung dữ liệu kênh bán để phân tích nguyên nhân hủy chi tiết hơn'
             : cancelData.cancelRate30d > 0.15
-                ? 'Review chính sách hủy phòng — cân nhắc deposit/cancellation fee'
-                : 'Theo dõi — chưa cần hành động',
-        impact: `${cancelData.cancel7d} RN mất/tuần`,
+                ? 'Xem lại chính sách hủy phòng — cân nhắc yêu cầu đặt cọc hoặc phí hủy phòng'
+                : 'Chưa cần hành động — tiếp tục theo dõi hàng tuần',
+        impact: `Mỗi tuần mất ${cancelData.cancel7d} đêm phòng vì bị hủy`,
         confidence: confTier1,
     });
 
@@ -487,11 +499,11 @@ function generateCancelInsight(
         cards.push({
             type: 'cancel_tier2',
             severity: 'info',
-            title: 'Oversell ceiling đề xuất',
-            what: `Cancel rate ${cancelPct}% — có room oversell 5–8% cho ngày OCC > 80%`,
-            soWhat: 'Tận dụng cancel pattern để tối ưu revenue mà không tăng walk risk',
-            doThis: `Oversell ceiling: 5–8% cho ngày OCC > 80%`,
-            impact: `Recover ~${nfVND.format(recoverRN)} RN/tháng = +${formatVND(recoverVND)} · Walk risk: ${formatVND(config.walkCostPerGuest)}/guest`,
+            title: 'Cơ hội: Bán vượt công suất',
+            what: `Vì tỷ lệ hủy ${cancelPct}%, có thể nhận thêm 5–8% booking cho những ngày đã đặt trên 80% phòng`,
+            soWhat: 'Tận dụng xu hướng hủy phòng để tối ưu doanh thu — rủi ro khách bị chuyển phòng rất thấp',
+            doThis: `Cho phép nhận thêm 5–8% booking vượt công suất vào những ngày đã đặt trên 80% phòng`,
+            impact: `Thu hồi được khoảng ${nfVND.format(recoverRN)} đêm phòng/tháng = +${formatVND(recoverVND)}. Chi phí rủi ro nếu phải chuyển khách: ${formatVND(config.walkCostPerGuest)}/khách`,
             confidence: 'MEDIUM',
         });
     }
@@ -535,15 +547,15 @@ function generateSegmentMix(
     return {
         type: 'segment_mix',
         severity: 'info',
-        title: `OTA chiếm ${Math.round(otaPct * 100)}% booking (30d tới)`,
-        what: segmentBreakdown,
-        soWhat: 'Commission leakage — cơ hội shift sang Direct',
+        title: `${Math.round(otaPct * 100)}% booking đến từ kênh OTA (Booking.com, Agoda...)`,
+        what: `Phân bổ kênh bán: ${segmentBreakdown}`,
+        soWhat: 'Đang trả nhiều phí hoa hồng cho OTA — có cơ hội chuyển khách sang đặt trực tiếp để giảm chi phí',
         doThis: conf === 'LOW'
-            ? 'Map segment data đầy đủ hơn để phân tích chính xác'
-            : 'Tăng best-rate-guarantee website + loyalty offer',
+            ? 'Cần bổ sung dữ liệu kênh bán để phân tích chính xác hơn'
+            : 'Đảm bảo giá website luôn tốt nhất + chạy ưu đãi cho khách đặt trực tiếp và khách hàng thân thiết',
         impact: conf === 'LOW'
-            ? 'Chưa đủ segment data'
-            : `+${formatVND(annualSaved)}/năm per 10% shift (commission ${Math.round(avgCommission * 100)}%)`,
+            ? 'Chưa đủ dữ liệu kênh bán để ước tính'
+            : `Nếu chuyển được 10% booking từ OTA sang đặt trực tiếp → tiết kiệm khoảng ${formatVND(annualSaved)}/năm tiền hoa hồng`,
         confidence: conf,
     };
 }
