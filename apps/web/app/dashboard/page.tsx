@@ -12,6 +12,8 @@ import { ExportPdfButton } from '@/components/shared/ExportPdfButton';
 import { DashboardPdfWrapper } from '@/components/dashboard/DashboardPdfWrapper';
 import { DashboardTabs } from '@/components/dashboard/DashboardTabs';
 import { InsightsPanel } from '@/components/dashboard/InsightsPanel';
+import { fetchInsightsV2Data } from '@/lib/insights/fetchInsightsV2Data';
+import { generateInsightsV2 } from '@/lib/insights/insightsV2Engine';
 import { AnalyticsTabContent } from '@/components/analytics/AnalyticsTabContent';
 import { Suspense } from 'react';
 
@@ -109,7 +111,7 @@ async function fetchDashboardData(hotelId: string, today: Date) {
         }),
         prisma.demandForecast.findMany({
             where: { hotel_id: hotelId, as_of_date: actualForecastDate },
-            take: 60,
+            take: 90,
         }),
         // Features with STLY data
         prisma.featuresDaily.findMany({
@@ -207,6 +209,7 @@ export default async function DashboardPage({
         featuresData,
         xmlCancellations,
         csvCancellations,
+        referenceDate,
     } = await fetchDashboardData(hotelId, today);
 
     // Check if hotel exists and has capacity set
@@ -270,6 +273,17 @@ export default async function DashboardPage({
     for (const f of featuresData) {
         featuresMap.set(f.stay_date.toISOString(), f);
     }
+
+    // ── Insights V2 ──
+    const insightsInput = await fetchInsightsV2Data({
+        hotelId,
+        hotelCapacity,
+        otbData,
+        featuresData,
+        forecastData,
+        referenceDate: referenceDate as Date,
+    });
+    const insightsV2 = generateInsightsV2(insightsInput);
 
     // Fetch Chart Data (OTB This Year vs Last Year using real features data)
     // Pass all data - OtbChart handles filtering internally with tabs (14/30/60/90 days)
@@ -443,7 +457,11 @@ export default async function DashboardPage({
                                     <OtbChart data={chartData} />
                                 </div>
                                 <div className="lg:col-span-2">
-                                    <InsightsPanel data={kpiData} hotelCapacity={hotelCapacity} />
+                                    <InsightsPanel
+                                        top3={insightsV2.top3}
+                                        compression={insightsV2.compression}
+                                        otherInsights={insightsV2.otherInsights}
+                                    />
                                 </div>
                             </div>
 
