@@ -422,7 +422,7 @@ export const BOOKING_COM_PROMOTIONS: PromotionCatalogItem[] = [
 
     // ─── D) CAMPAIGN / EXCLUSIVE DEALS ──
     {
-        id: 'booking-getaway-deal',
+        id: 'booking-campaign-getaway',  // Must match seed-pricing.ts / DB
         vendor: 'booking',
         name: 'Getaway Deal',
         groupType: 'CAMPAIGN',
@@ -433,7 +433,7 @@ export const BOOKING_COM_PROMOTIONS: PromotionCatalogItem[] = [
         stackBehavior: 'ONLY_WITH_GENIUS', // "can be combined with Genius discounts, but no others"
     },
     {
-        id: 'booking-late-escape',
+        id: 'booking-campaign-late-escape',  // Must match seed-pricing.ts / DB
         vendor: 'booking',
         name: 'Late Escape Deal',
         groupType: 'CAMPAIGN',
@@ -441,7 +441,7 @@ export const BOOKING_COM_PROMOTIONS: PromotionCatalogItem[] = [
         allowStack: false,
         maxOneInGroup: true,
         maxOnePerSubcategory: false,
-        stackBehavior: 'EXCLUSIVE',
+        stackBehavior: 'ONLY_WITH_GENIUS', // BA confirmed: Campaign Deals stack with Genius
     },
     {
         id: 'booking-black-friday',
@@ -455,7 +455,7 @@ export const BOOKING_COM_PROMOTIONS: PromotionCatalogItem[] = [
         stackBehavior: 'EXCLUSIVE',
     },
     {
-        id: 'booking-early-2026',
+        id: 'booking-campaign-early-2026',  // Must match seed-pricing.ts / DB
         vendor: 'booking',
         name: 'Early 2026 Deal',
         groupType: 'CAMPAIGN',
@@ -463,18 +463,31 @@ export const BOOKING_COM_PROMOTIONS: PromotionCatalogItem[] = [
         allowStack: false,
         maxOneInGroup: true,
         maxOnePerSubcategory: false,
-        stackBehavior: 'ONLY_WITH_GENIUS', // Stacks with Genius only
+        stackBehavior: 'ONLY_WITH_GENIUS', // BA confirmed: stacks with Genius only
     },
     {
-        id: 'booking-deal-of-day',
+        id: 'booking-deep-deal-of-day',  // Must match seed-pricing.ts / DB
         vendor: 'booking',
         name: 'Deal of the Day',
         groupType: 'CAMPAIGN',
+        subCategory: 'DEEP',
         defaultPct: 25,
         allowStack: false,
         maxOneInGroup: true,
         maxOnePerSubcategory: false,
-        stackBehavior: 'EXCLUSIVE',
+        stackBehavior: 'EXCLUSIVE', // Deep Deal: blocks ALL including Genius
+    },
+    {
+        id: 'booking-deep-limited-time',  // Was missing from catalog!
+        vendor: 'booking',
+        name: 'Limited-time Deal',
+        groupType: 'CAMPAIGN',
+        subCategory: 'DEEP',
+        defaultPct: 30,
+        allowStack: false,
+        maxOneInGroup: true,
+        maxOnePerSubcategory: false,
+        stackBehavior: 'EXCLUSIVE', // Deep Deal: blocks ALL including Genius
     },
 ];
 
