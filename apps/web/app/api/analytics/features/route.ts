@@ -122,7 +122,7 @@ export async function GET(request: NextRequest) {
             hint: `Chưa build features cho ngày ${asOfParam}. Vào /data → Build Features.`,
             latestAvailable: latestFeat?.as_of_date?.toISOString().split('T')[0] || null,
             kpi: { occ7: 0, occ14: 0, occ30: 0, pace7: null, pace30: null, totalPickup7d: 0, totalPickup1d: 0, netPickupDOD: null, topChangeDay: null },
-            quality: { totalRows: 0, withT7: 0, withSTLY: 0, approxSTLY: 0, completeness: 0, stlyCoverage: 0 },
+            quality: { totalRows: 0, withT7: 0, withSTLY: 0, approxSTLY: 0, completeness: 0, stlyCoverage: 0, columnAvailability: { hasT30: false, hasT15: false, hasT7: false, hasT5: false, hasT3: false } },
             datesToWatch: [],
         });
     }

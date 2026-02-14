@@ -34,14 +34,13 @@ export function PaceTable({
     const [showExtraCols, setShowExtraCols] = useState(false);
 
     // ─── Pickup columns (auto-hide when 100% null) ──────────
-    const safeColAvail = columnAvailability ?? { hasT3: false, hasT5: false, hasT7: false, hasT15: false, hasT30: false };
     const pickupCols = useMemo(() => {
         type PickupKey = 'pickup_t3' | 'pickup_t5' | 'pickup_t7' | 'pickup_t15' | 'pickup_t30';
         const allCols: { key: PickupKey; label: string; available: boolean; default: boolean }[] = [
-            { key: 'pickup_t3', label: 'T-3', available: safeColAvail.hasT3, default: true },
-            { key: 'pickup_t7', label: 'T-7', available: safeColAvail.hasT7, default: true },
-            { key: 'pickup_t15', label: 'T-15', available: safeColAvail.hasT15, default: false },
-            { key: 'pickup_t30', label: 'T-30', available: safeColAvail.hasT30, default: false },
+            { key: 'pickup_t3', label: 'T-3', available: columnAvailability.hasT3, default: true },
+            { key: 'pickup_t7', label: 'T-7', available: columnAvailability.hasT7, default: true },
+            { key: 'pickup_t15', label: 'T-15', available: columnAvailability.hasT15, default: false },
+            { key: 'pickup_t30', label: 'T-30', available: columnAvailability.hasT30, default: false },
         ];
         const defaultCols = allCols.filter(c => c.default && c.available);
         const extraCols = allCols.filter(c => !c.default && c.available);
@@ -49,7 +48,7 @@ export function PaceTable({
             visible: [...defaultCols, ...(showExtraCols ? extraCols : [])],
             hasExtra: extraCols.length > 0,
         };
-    }, [safeColAvail, showExtraCols]);
+    }, [columnAvailability, showExtraCols]);
 
     // ─── Summary KPIs (header row) ──────────────────────────
     const summaryAvgAdr = useMemo(() => {
