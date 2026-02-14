@@ -317,7 +317,7 @@ function generateRevenueOpportunity(
     return {
         type: 'revenue_opportunity',
         severity: 'info',
-        title: '30 ngày tới — Revenue trên bàn',
+        title: 'Doanh thu tiềm năng — 30 ngày tới',
         what: `${nfVND.format(totalRemaining)} RN trống`,
         soWhat: noForecastDays > 0
             ? `${noForecastDays} ngày chưa có forecast — thiếu visibility`
