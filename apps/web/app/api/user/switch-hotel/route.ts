@@ -56,8 +56,12 @@ export async function POST(request: NextRequest) {
     }
 }
 
-export async function GET(request: NextRequest) {
-    const activeHotelId = request.cookies.get(ACTIVE_HOTEL_COOKIE)?.value
+export async function GET() {
+    // Use the robust fallback chain from getActiveHotelId():
+    // 1. Cookie → 2. Session hotels → 3. First real hotel (admin) → 4. Demo Hotel
+    // This ensures upload page always gets a valid hotel ID.
+    const { getActiveHotelId } = await import('@/lib/pricing/get-hotel');
+    const activeHotelId = await getActiveHotelId();
 
     if (!activeHotelId) {
         return NextResponse.json({

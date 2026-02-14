@@ -55,7 +55,6 @@ export default function UploadPage() {
                 setIsAdmin(isAdminRole || session?.user?.isAdmin || false);
             } catch (error) {
                 console.error('Error fetching active hotel:', error);
-                setActiveHotelId(process.env.NEXT_PUBLIC_DEFAULT_HOTEL_ID || '');
             }
         };
         fetchActiveHotel();
@@ -144,10 +143,9 @@ export default function UploadPage() {
             return;
         }
 
-        const hotelId = activeHotelId || process.env.NEXT_PUBLIC_DEFAULT_HOTEL_ID || '';
+        const hotelId = activeHotelId || '';
         console.log(`[UPLOAD] 🔍 hotelId resolution:`, {
             activeHotelId,
-            envFallback: process.env.NEXT_PUBLIC_DEFAULT_HOTEL_ID,
             resolved: hotelId,
         });
         if (!hotelId) {
