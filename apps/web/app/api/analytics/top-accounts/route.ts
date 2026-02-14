@@ -81,7 +81,17 @@ export async function GET(req: NextRequest) {
             }
         ]));
 
-        const hasCancelData = cancelData.some(c => Number(c.cancelled_bookings) > 0);
+        // Check if cancel data has EVER been imported for this hotel
+        // (not just in the 90-day window — "0 cancellations" ≠ "missing data")
+        const cancelCheck = await prisma.reservationsRaw.findFirst({
+            where: { hotel_id: hotelId, cancel_time: { not: null } },
+            select: { id: true },
+        });
+        const hasCancelImport = await prisma.importJob.findFirst({
+            where: { hotel_id: hotelId, import_type: 'CANCELLATION', status: 'completed' },
+            select: { job_id: true },
+        });
+        const hasCancelData = cancelCheck !== null || hasCancelImport !== null;
 
         const result = accounts.map(a => {
             const cancel = cancelMap.get(a.account);
