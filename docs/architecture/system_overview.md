@@ -1,7 +1,7 @@
-# System Architecture: RMS V01 (MVP)
+# System Architecture: RMS V02.0
 
 ## Overview
-RMS V01 is a **SaaS-ready Revenue Management System** designed for 14-day pilots. It focuses on core pricing workflows: Import → Forecast → Recommend → Decide.
+RMS V02.0 is a **SaaS Revenue Management System** with Room Band Pricing and Org-based multi-hotel tenancy. Core workflows: Import → Forecast → Recommend → Decide. Pricing scales by room band (R30/R80/R150/R300P).
 
 ## Tech Stack (Pivoted)
 - **Frontend**: Next.js 16+ (App Router), Tailwind CSS, Shadcn/UI.
@@ -42,8 +42,12 @@ RMS V01 is a **SaaS-ready Revenue Management System** designed for 14-day pilots
 
 5.  **SaaS Infrastructure**:
     *   Multi-tenant with RBAC (super_admin/hotel_admin/manager/viewer).
-    *   Subscription tiers (FREE/STARTER/GROWTH/PRO) with feature gating.
-    *   Team invites with token-based system.
+    *   Org-based multi-hotel: Organization → Hotels. Subscription per org.
+    *   Room Band Pricing: 4 bands (R30 ≤30 / R80 31-80 / R150 81-150 / R300P 151+).
+    *   Auto-sync room_band when capacity changes (`deriveBand()` in Settings + Admin API).
+    *   Subscription tiers (STANDARD/SUPERIOR/DELUXE/SUITE) with feature gating.
+    *   Team invites: create + list + revoke. Short codes, usage tracking, expiry.
+    *   Seat counting at HotelUser level (not OrgMember) for UI consistency.
     *   Onboarding wizard (4-step).
     *   Demo Hotel auto-assignment for new users.
 

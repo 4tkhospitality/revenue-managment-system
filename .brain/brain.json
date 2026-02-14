@@ -2,7 +2,7 @@
   "meta": {
     "schema_version": "2.0.0",
     "awf_version": "4.1.2",
-    "last_updated": "2026-02-14T22:26:00+07:00"
+    "last_updated": "2026-02-14T23:03:00+07:00"
   },
   "project": {
     "name": "revenue-management-system",
@@ -72,7 +72,7 @@
     }
   },
   "database_schema": {
-    "summary": "RMS Schema V02.0: Organization-based multi-tenancy (Cách 2) with Room Band Pricing. Subscription owned by Org, not Hotel. Seats counted at OrgMember level.",
+    "summary": "RMS Schema V02.0: Organization-based multi-tenancy (Cách 2) with Room Band Pricing. Subscription owned by Org, not Hotel. Seats counted at HotelUser level (fixed from OrgMember for consistency with team page).",
     "tables": [
       {
         "name": "hotels",
@@ -480,6 +480,26 @@
       "path": "POST /api/pricing/calc-preview",
       "explained": "V01.8: Quick preview of pricing for a single room×channel with full trace.",
       "v018_new": true
+    },
+    {
+      "path": "GET/DELETE /api/invite/list",
+      "explained": "V02.0: List active invites for current hotel (GET), revoke invite by ID (DELETE). Admin only.",
+      "v020_new": true
+    },
+    {
+      "path": "GET /api/organization",
+      "explained": "V02.0: Get organization info for current hotel. Returns org name, slug, subscription with roomBand.",
+      "v020_new": true
+    },
+    {
+      "path": "GET /api/subscription/compliance",
+      "explained": "V02.0: Check subscription compliance (room band vs actual capacity). Returns compliance status and warnings.",
+      "v020_new": true
+    },
+    {
+      "path": "GET/POST /api/settings",
+      "explained": "V02.0 updated: POST handler auto-syncs room_band in subscriptions when hotel capacity changes. Uses deriveBand() + $executeRaw.",
+      "v020_updated": true
     }
   ],
   "features": [
@@ -621,7 +641,13 @@
     "V01.9: Insight Text Plain Vietnamese — All RM jargon (RN, ADR, STLY, OCC, pickup, forecast, uplift, RevPAR, segment, commission, leakage, promo) replaced with natural language",
     "V01.9: InsightsPanel 2-Tab Layout — Tab 1: Top actions + other insights, Tab 2: Ngày chú ý khác (compression extras). Pill-style tabs with count badges",
     "V01.9: Insight Card Labeled Sections — Expanded cards show Tình hình / Ý nghĩa / Nên làm / Tác động ước tính labels for GM readability",
-    "V01.9: Forecast Data Fix — days30 limited to actual 30-day window, forecast query take:90 matching OTB coverage"
+    "V01.9: Forecast Data Fix — days30 limited to actual 30-day window, forecast query take:90 matching OTB coverage",
+    "V02.0: Room Band Pricing — 4 bands (R30/R80/R150/R300P), org-level subscriptions, capacity_snapshot, price_multiplier",
+    "V02.0: Auto-Sync Band on Capacity Change — deriveBand() runs after hotel capacity update in Settings + Admin API",
+    "V02.0: Invite Management UI — Team page lists active invites with short codes, usage counts, expiry, revoke button",
+    "V02.0: Sidebar Fix — /settings exact match only, /settings/team uses startsWith. No more double-highlight",
+    "V02.0: Seat Counting Fix — checkSeatAvailability counts HotelUsers (not OrgMembers) for consistency with team page list",
+    "V02.0: Team Page Seat Display — Shows 'X/Y thành viên (+N invite)' instead of inflated total"
   ],
   "cancellation_bridge_v011": {
     "status": "Implemented",
@@ -740,7 +766,11 @@
     "V01.9: AbortController cancels in-flight requests when user toggles promo rapidly — prevents race condition stale data",
     "V01.9: Insight text must use plain Vietnamese — no RM jargon. GM reads without asking anyone. Labels: Tình hình, Ý nghĩa, Nên làm, Tác động ước tính",
     "V01.9: InsightsPanel tabs auto-hide when no compression extras — single tab view if only top actions exist",
-    "V01.9: insightsV2Engine days30 must filter by actual calendar date range (today + 30d), not use all input days"
+    "V01.9: insightsV2Engine days30 must filter by actual calendar date range (today + 30d), not use all input days",
+    "V02.0: Org-based subscriptions: subscription.hotel_id must be used (not org_id) for current legacy compatibility",
+    "V02.0: Seat counting changed from OrgMembers to HotelUsers — team page displayed 2 but count showed 3 due to OrgMember including org-level user not assigned to hotel",
+    "V02.0: Auto-sync room_band uses $executeRaw instead of Prisma updateMany — bypasses stale Prisma client types during dev (DLL lock prevents regeneration)",
+    "V02.0: Sidebar isActive: exact match for /settings, /dashboard; startsWith for all other routes"
   ],
   "ui_design": {
     "theme": "SaaS Pro Light",
@@ -821,7 +851,10 @@
       "V01.9: AbortController abort() fires before new fetch starts — check signal.aborted in response handler to avoid stale state",
       "V01.9: calc-preview route without force-dynamic gets cached by Next.js — add export const dynamic = 'force-dynamic'",
       "V01.9: Booking.com stackBehavior must be propagated in 3 places in service.ts (genius, targeted, portfolio) — missing any one silently defaults to EXCLUSIVE",
-      "V01.9: Analytics DodChips import must be removed from AnalyticsTabContent when DOD is merged into KPI strip — unused import causes build warning"
+      "V01.9: Analytics DodChips import must be removed from AnalyticsTabContent when DOD is merged into KPI strip — unused import causes build warning",
+      "V02.0: Prisma $executeRaw needed to update room_band field because DLL lock prevents prisma generate → stale types → lint errors on new fields",
+      "V02.0: Sidebar /settings double-highlight: pathname.startsWith('/settings') matches both /settings and /settings/team → must use exact match for /settings",
+      "V02.0: OrgMember count > HotelUser count when org has users not assigned to specific hotel → seat count inflated"
     ],
     "formulas": {
       "rooms_otb": "SUM(num_rooms) from reservations for that stay_date",

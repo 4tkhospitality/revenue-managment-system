@@ -1,5 +1,25 @@
 # Changelog
 
+## [2026-02-14] — V02.0: Room Band Pricing + Team Fixes
+### Added
+- **Room Band Pricing V02.0**: 4 bands (R30/R80/R150/R300P), org-level subscriptions, capacity_snapshot, price_multiplier.
+- **Organization-based Multi-Hotel (Cách 2)**: `Organization`, `OrgMember` models. Subscription owned by org, not hotel.
+- **Auto-sync room_band on capacity change**: `deriveBand()` runs after hotel update in `/api/settings` and `/api/admin/hotels/[id]`.
+- **Invite Management UI**: Team page lists active invites with short codes, usage stats, expiry, revoke button.
+- **`GET/DELETE /api/invite/list`**: List active invites (GET), revoke invite by ID (DELETE).
+- **`GET /api/organization`**: Get org info + subscription for current hotel.
+- **`GET /api/subscription/compliance`**: Check room band vs actual capacity compliance.
+- **`SubscriptionBadge` component**: Shows plan tier + room band with compliance warnings.
+- **`ComplianceBanner` component**: Warns when room count exceeds band.
+- **`useComplianceCheck` hook**: Client-side compliance monitoring.
+- Team navigation item added to sidebar.
+- SQL migration scripts for existing data (`001_room_band_org_migration.sql`, `002_fix_room_bands.sql`).
+
+### Fixed
+- **Sidebar double-highlight**: `/settings` exact match only — no more highlighting both "Cài đặt" and "Team".
+- **Seat count mismatch**: Changed `checkSeatAvailability` from `OrgMembers` to `HotelUsers` for consistency with team page display.
+- **Seat display**: Shows `X/Y thành viên (+N invite)` instead of inflated `(X+N)/Y`.
+
 ## [2026-02-13]
 ### Added
 - Phase 03: Unified Pricing Logic — server as single source of truth.

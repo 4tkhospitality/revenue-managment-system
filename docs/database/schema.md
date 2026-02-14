@@ -1,12 +1,22 @@
 # Database Schema (Prisma)
 
-**Version**: V01.9 (Current)
-**Type**: Multi-tenant SaaS (UUID-based)
-**Last Updated**: 2026-02-13
+**Version**: V02.0 (Current)
+**Type**: Multi-tenant SaaS (UUID-based, Org-based multi-hotel)
+**Last Updated**: 2026-02-14
 **DB**: PostgreSQL 16 (Supabase, region: ap-northeast-2)
 **ORM**: Prisma 5.10.2
 
 ## Tables
+
+### 0. `Organization` (V02.0 — Multi-Hotel Root)
+- `org_id` (PK, UUID).
+- `name`, `slug` (unique).
+- Hotels belong to 1 org. Subscription is per-org.
+
+### 0b. `OrgMember` (V02.0 — User-Org Junction)
+- `id` (PK, UUID).
+- `org_id` (FK) + `user_id` (FK): Unique together.
+- `role`: OrgRole enum (OWNER / ADMIN / MEMBER).
 
 ### 1. `Hotel` (Tenant Root)
 - `hotel_id` (PK, UUID): Unique identifier.
@@ -18,6 +28,7 @@
 - `demo_owner_id` (UUID, nullable): Owner of demo hotel.
 - `expires_at` (DateTime, nullable): Demo expiration.
 - `company_email` (string, nullable).
+- `org_id` (FK → Organization, nullable): V02.0 org membership.
 
 ### 2. `User`
 - `user_id` (PK, UUID).
@@ -155,6 +166,9 @@
 - `id` (PK, UUID), `hotel_id` (FK, unique — one per hotel).
 - `plan`: PlanTier enum (STANDARD / SUPERIOR / DELUXE / SUITE).
 - `status`: SubscriptionStatus enum (ACTIVE / TRIAL / PAST_DUE / CANCELLED).
+- **V02.0**: `room_band`: RoomBand enum (R30 / R80 / R150 / R300P). Auto-synced on capacity change.
+- **V02.0**: `capacity_snapshot` (Int): Cached hotel capacity at last sync.
+- **V02.0**: `price_multiplier` (Float): Band-based price multiplier.
 - External payment: `external_provider`, `external_customer_id`, `external_subscription_id`.
 - Period: `current_period_start`, `current_period_end`.
 - Limits: `max_users`, `max_properties`, `max_imports_month`, `max_exports_day`, `max_export_rows`, `included_rate_shops_month`, `data_retention_months`.
@@ -203,6 +217,8 @@
 | `PromotionGroup` | SEASONAL, ESSENTIAL, TARGETED, GENIUS, PORTFOLIO, CAMPAIGN | OTA Pricing (V01.6) |
 | `PlanTier` | STANDARD, SUPERIOR, DELUXE, SUITE | Subscription |
 | `SubscriptionStatus` | ACTIVE, TRIAL, PAST_DUE, CANCELLED | Subscription |
+| `RoomBand` | R30, R80, R150, R300P | Room Band Pricing (V02.0) |
+| `OrgRole` | OWNER, ADMIN, MEMBER | Organization (V02.0) |
 | `RateShopCacheStatus` | FRESH, STALE, EXPIRED, REFRESHING, FAILED | Rate Shopper |
 | `RateShopAvailabilityStatus` | AVAILABLE, SOLD_OUT, NO_RATE | Rate Shopper |
 | `RateShopDataConfidence` | HIGH, MED, LOW | Rate Shopper |
