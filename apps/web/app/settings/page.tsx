@@ -7,6 +7,9 @@ import dynamic from 'next/dynamic';
 
 const BillingCard = dynamic(() => import('@/components/billing/BillingCard').then(mod => ({ default: mod.BillingCard })), { ssr: false });
 const PromoRedeemCard = dynamic(() => import('@/components/billing/PromoRedeemCard'), { ssr: false });
+const OrgContextBadge = dynamic(() => import('@/components/settings/OrgContextBadge').then(mod => ({ default: mod.OrgContextBadge })), { ssr: false });
+const SubscriptionBadge = dynamic(() => import('@/components/settings/SubscriptionBadge').then(mod => ({ default: mod.SubscriptionBadge })), { ssr: false });
+const QuotaUsagePanel = dynamic(() => import('@/components/settings/QuotaUsagePanel').then(mod => ({ default: mod.QuotaUsagePanel })), { ssr: false });
 
 // Ladder presets
 const LADDER_PRESETS = {
@@ -244,6 +247,13 @@ export default function SettingsPage() {
             </header>
 
             <div className="space-y-6">
+                {/* Organization & Subscription Context */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    <OrgContextBadge />
+                    <SubscriptionBadge />
+                    <QuotaUsagePanel />
+                </div>
+
                 {/* Message */}
                 {message && (
                     <div className={`p-4 rounded-xl flex items-center gap-3 ${message.type === 'success'

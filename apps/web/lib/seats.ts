@@ -1,5 +1,5 @@
 import prisma from '@/lib/prisma'
-import { TIER_CONFIGS } from '@/lib/tier/tierConfig'
+import { getDefaultLimits } from '@/lib/plg/plan-config'
 
 export interface SeatAvailability {
     currentSeats: number
@@ -13,40 +13,41 @@ export interface SeatAvailability {
 /**
  * Check seat availability for a hotel based on its subscription tier.
  * 
- * Source of truth: effectiveMaxUsers = subscription.max_users ?? tierConfig[plan].maxUsers
- * currentSeats = activeHotelUsers + activePendingInvites
+ * Source of truth: effectiveMaxUsers = subscription.max_users ?? plan-config defaults
+ * Seats are counted at HOTEL level (HotelUsers) to be consistent with team page
  */
 export async function checkSeatAvailability(hotelId: string): Promise<SeatAvailability> {
-    const [subscription, activeMembers, pendingInvites] = await Promise.all([
-        prisma.subscription.findUnique({
-            where: { hotel_id: hotelId },
-            select: { plan: true, max_users: true, status: true }
-        }),
-        // Count active hotel users
-        prisma.hotelUser.count({
-            where: {
-                hotel_id: hotelId,
-                user: { is_active: true }
-            }
-        }),
-        // Count active pending invites (not expired, not fully used)
-        prisma.hotelInvite.count({
-            where: {
-                hotel_id: hotelId,
-                status: 'active',
-                expires_at: { gt: new Date() },
-            }
-        }),
-    ])
+    // Load subscription by hotel_id
+    const subscription = await prisma.subscription.findFirst({
+        where: { hotel_id: hotelId },
+        select: { plan: true, max_users: true, status: true }
+    })
+
+    // Count active hotel members (consistent with team page member list)
+    const activeMembers = await prisma.hotelUser.count({
+        where: {
+            hotel_id: hotelId,
+            is_active: true,
+        }
+    })
+
+    // Count active pending invites
+    const pendingInvites = await prisma.hotelInvite.count({
+        where: {
+            hotel_id: hotelId,
+            status: 'active',
+            expires_at: { gt: new Date() },
+        }
+    })
 
     const plan = subscription?.plan ?? null
 
-    // effectiveMaxUsers = subscription.max_users ?? tierConfig[plan].maxUsers
+    // effectiveMaxUsers = subscription.max_users ?? plan-config defaults
     let maxSeats = 0
     if (subscription?.max_users) {
         maxSeats = subscription.max_users
-    } else if (plan && plan in TIER_CONFIGS) {
-        maxSeats = TIER_CONFIGS[plan as keyof typeof TIER_CONFIGS].maxUsers
+    } else if (plan) {
+        maxSeats = getDefaultLimits(plan).maxUsers
     }
 
     const currentSeats = activeMembers + pendingInvites
@@ -56,7 +57,7 @@ export async function checkSeatAvailability(hotelId: string): Promise<SeatAvaila
         activeMembers,
         pendingInvites,
         maxSeats,
-        available: maxSeats === 0 || currentSeats < maxSeats, // 0 means no limit enforcement
+        available: maxSeats === 0 || currentSeats < maxSeats, // 0 means unlimited
         plan,
     }
 }

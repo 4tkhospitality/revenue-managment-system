@@ -1,15 +1,18 @@
 /**
  * GET/POST /api/subscription
- * Get or update hotel subscription (Admin only for POST)
+ * Get or update hotel subscription
+ * Resolves subscription via Organization (hotel → org → subscription)
  */
 
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { getActiveHotelId } from '@/lib/pricing/get-hotel';
-import { getHotelSubscription } from '@/lib/tier/checkFeature';
 import prisma from '@/lib/prisma';
+import { getEntitlements, invalidateEntitlementsCache } from '@/lib/plg/entitlements';
+import { deriveBand, getBandMultiplier, getPrice } from '@/lib/plg/plan-config';
+import { PlanTier, RoomBand } from '@prisma/client';
 
-// GET: Get current hotel subscription info
+// GET: Get current hotel subscription info (resolves via org)
 export async function GET(request: Request) {
     try {
         const session = await auth();
@@ -26,14 +29,19 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: 'No hotel selected' }, { status: 400 });
         }
 
-        const subscription = await getHotelSubscription(hotelId);
+        // Use entitlements (already org-aware)
+        const entitlements = await getEntitlements(hotelId);
+
+        // Get hotel for capacity info
+        const hotel = await prisma.hotel.findUnique({
+            where: { hotel_id: hotelId },
+            select: { capacity: true, org_id: true },
+        });
 
         // Get usage counts
         const now = new Date();
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-        // Count imports this month
         const importsThisMonth = await prisma.importJob.count({
             where: {
                 hotel_id: hotelId,
@@ -41,14 +49,23 @@ export async function GET(request: Request) {
             },
         });
 
-        // Count exports today (approximated by recent activity)
-        const exportsToday = 0; // TODO: Implement export tracking
-
         return NextResponse.json({
-            ...subscription,
+            plan: entitlements.plan,
+            effectivePlan: entitlements.effectivePlan,
+            status: entitlements.status,
+            roomBand: entitlements.roomBand,
+            orgId: entitlements.orgId,
+            limits: entitlements.limits,
+            features: entitlements.features,
+            isTrialActive: entitlements.isTrialActive,
+            isTrialExpired: entitlements.isTrialExpired,
+            trialDaysRemaining: entitlements.trialDaysRemaining,
+            hotelCapacity: hotel?.capacity ?? 0,
+            derivedBand: hotel ? deriveBand(hotel.capacity) : 'R30',
+            price: getPrice(entitlements.plan, entitlements.roomBand),
             usage: {
                 importsThisMonth,
-                exportsToday,
+                exportsToday: 0,
             },
         });
     } catch (error) {
@@ -57,7 +74,7 @@ export async function GET(request: Request) {
     }
 }
 
-// POST: Update subscription (Admin only)
+// POST: Update subscription (Admin only) — resolves via org
 export async function POST(request: Request) {
     try {
         const session = await auth();
@@ -76,41 +93,109 @@ export async function POST(request: Request) {
         }
 
         const body = await request.json();
-        const { hotelId, plan, maxUsers, maxImportsMonth, maxExportsDay, maxExportRows, includedRateShopsMonth, dataRetentionMonths } = body;
+        const {
+            hotelId, plan, roomBand, capacitySnapshot,
+            maxUsers, maxImportsMonth, maxExportsDay, maxExportRows,
+            includedRateShopsMonth, dataRetentionMonths,
+        } = body;
 
         if (!hotelId) {
             return NextResponse.json({ error: 'hotelId required' }, { status: 400 });
         }
 
-        // Upsert subscription
-        const subscription = await prisma.subscription.upsert({
+        // Validate: STANDARD must be R30
+        if (plan === 'STANDARD' && roomBand && roomBand !== 'R30') {
+            return NextResponse.json(
+                { error: 'STANDARD plan only supports R30 band' },
+                { status: 400 },
+            );
+        }
+
+        // Resolve org_id via hotel
+        const hotel = await prisma.hotel.findUnique({
             where: { hotel_id: hotelId },
-            create: {
-                hotel_id: hotelId,
-                plan: plan || 'STANDARD',
-                max_users: maxUsers ?? 1,
-                max_imports_month: maxImportsMonth ?? 3,
-                max_exports_day: maxExportsDay ?? 1,
-                max_export_rows: maxExportRows ?? 30,
-                included_rate_shops_month: includedRateShopsMonth ?? 0,
-                data_retention_months: dataRetentionMonths ?? 6,
-            },
-            update: {
-                ...(plan && { plan }),
-                ...(maxUsers !== undefined && { max_users: maxUsers }),
-                ...(maxImportsMonth !== undefined && { max_imports_month: maxImportsMonth }),
-                ...(maxExportsDay !== undefined && { max_exports_day: maxExportsDay }),
-                ...(maxExportRows !== undefined && { max_export_rows: maxExportRows }),
-                ...(includedRateShopsMonth !== undefined && { included_rate_shops_month: includedRateShopsMonth }),
-                ...(dataRetentionMonths !== undefined && { data_retention_months: dataRetentionMonths }),
-            },
+            select: { org_id: true, capacity: true },
         });
+
+        const orgId = hotel?.org_id;
+        const effectiveBand: RoomBand = roomBand ?? 'R30';
+        const priceMultiplier = getBandMultiplier(effectiveBand);
+
+        // Upsert: try via org_id first, fallback to hotel_id
+        let subscription;
+        if (orgId) {
+            subscription = await prisma.subscription.upsert({
+                where: { org_id: orgId },
+                create: {
+                    org_id: orgId,
+                    hotel_id: hotelId,
+                    plan: plan || 'STANDARD',
+                    room_band: effectiveBand,
+                    capacity_snapshot: capacitySnapshot ?? hotel?.capacity ?? 0,
+                    price_multiplier: priceMultiplier,
+                    max_users: maxUsers ?? 1,
+                    max_imports_month: maxImportsMonth ?? 3,
+                    max_exports_day: maxExportsDay ?? 1,
+                    max_export_rows: maxExportRows ?? 30,
+                    included_rate_shops_month: includedRateShopsMonth ?? 0,
+                    data_retention_months: dataRetentionMonths ?? 6,
+                },
+                update: {
+                    ...(plan && { plan: plan as PlanTier }),
+                    ...(roomBand && { room_band: roomBand as RoomBand }),
+                    ...(capacitySnapshot !== undefined && { capacity_snapshot: capacitySnapshot }),
+                    ...(roomBand && { price_multiplier: priceMultiplier }),
+                    ...(maxUsers !== undefined && { max_users: maxUsers }),
+                    ...(maxImportsMonth !== undefined && { max_imports_month: maxImportsMonth }),
+                    ...(maxExportsDay !== undefined && { max_exports_day: maxExportsDay }),
+                    ...(maxExportRows !== undefined && { max_export_rows: maxExportRows }),
+                    ...(includedRateShopsMonth !== undefined && { included_rate_shops_month: includedRateShopsMonth }),
+                    ...(dataRetentionMonths !== undefined && { data_retention_months: dataRetentionMonths }),
+                },
+            });
+        } else {
+            // Fallback for pre-migration hotels
+            subscription = await prisma.subscription.upsert({
+                where: { hotel_id: hotelId },
+                create: {
+                    hotel_id: hotelId,
+                    plan: plan || 'STANDARD',
+                    room_band: effectiveBand,
+                    capacity_snapshot: capacitySnapshot ?? hotel?.capacity ?? 0,
+                    price_multiplier: priceMultiplier,
+                    max_users: maxUsers ?? 1,
+                    max_imports_month: maxImportsMonth ?? 3,
+                    max_exports_day: maxExportsDay ?? 1,
+                    max_export_rows: maxExportRows ?? 30,
+                    included_rate_shops_month: includedRateShopsMonth ?? 0,
+                    data_retention_months: dataRetentionMonths ?? 6,
+                },
+                update: {
+                    ...(plan && { plan: plan as PlanTier }),
+                    ...(roomBand && { room_band: roomBand as RoomBand }),
+                    ...(capacitySnapshot !== undefined && { capacity_snapshot: capacitySnapshot }),
+                    ...(roomBand && { price_multiplier: priceMultiplier }),
+                    ...(maxUsers !== undefined && { max_users: maxUsers }),
+                    ...(maxImportsMonth !== undefined && { max_imports_month: maxImportsMonth }),
+                    ...(maxExportsDay !== undefined && { max_exports_day: maxExportsDay }),
+                    ...(maxExportRows !== undefined && { max_export_rows: maxExportRows }),
+                    ...(includedRateShopsMonth !== undefined && { included_rate_shops_month: includedRateShopsMonth }),
+                    ...(dataRetentionMonths !== undefined && { data_retention_months: dataRetentionMonths }),
+                },
+            });
+        }
+
+        // Invalidate cache
+        invalidateEntitlementsCache(hotelId);
 
         return NextResponse.json({
             success: true,
             subscription: {
                 id: subscription.id,
                 plan: subscription.plan,
+                roomBand: subscription.room_band,
+                priceMultiplier: subscription.price_multiplier,
+                price: getPrice(subscription.plan, subscription.room_band),
                 maxUsers: subscription.max_users,
                 maxImportsMonth: subscription.max_imports_month,
                 maxExportsDay: subscription.max_exports_day,

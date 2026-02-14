@@ -1,8 +1,4 @@
-// ════════════════════════════════════════════════════════════════════
-// PLG — Type Definitions
-// ════════════════════════════════════════════════════════════════════
-
-import { PlanTier, SubscriptionStatus } from '@prisma/client';
+import { PlanTier, SubscriptionStatus, RoomBand } from '@prisma/client';
 
 export type FeatureKey =
     | 'bulkPricing'
@@ -47,6 +43,8 @@ export interface Entitlements {
     trialEndsAt: Date | null;
     trialBonusGranted: boolean;
     trialDaysRemaining: number;
+    roomBand: RoomBand;
+    orgId: string | null;
 }
 
 export interface QuotaInfo {

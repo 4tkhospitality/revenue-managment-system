@@ -63,6 +63,8 @@ export async function GET() {
                 max: seats.maxSeats,
                 available: seats.available,
                 plan: seats.plan,
+                activeMembers: seats.activeMembers,
+                pendingInvites: seats.pendingInvites,
             },
         })
     } catch (error) {

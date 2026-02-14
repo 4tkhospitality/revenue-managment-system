@@ -28,6 +28,10 @@ model Hotel {
   demo_owner_id         String?                @db.Uuid
   expires_at            DateTime?
 
+  // Organization tenant
+  org_id                String?                @db.Uuid
+  organization          Organization?          @relation(fields: [org_id], references: [id])
+
   cancellations_raw     CancellationRaw[]
   daily_otb             DailyOTB[]
   demand_forecast       DemandForecast[]
@@ -83,6 +87,7 @@ model User {
   phone             String?
   accounts          Account[]
   hotel_users       HotelUser[]
+  org_members       OrgMember[]
   pricing_decisions PricingDecision[]
   sessions          Session[]
   hotel             Hotel?            @relation(fields: [hotel_id], references: [hotel_id])
@@ -545,11 +550,27 @@ enum SubscriptionStatus {
   CANCELLED
 }
 
+enum RoomBand {
+  R30   // ≤ 30 rooms
+  R80   // 31–80 rooms
+  R150  // 81–150 rooms
+  R300P // 151–300+ rooms
+}
+
 model Subscription {
   id                        String             @id @default(uuid()) @db.Uuid
-  hotel_id                  String             @unique @db.Uuid
+  hotel_id                  String?            @unique @db.Uuid  // @deprecated — use org_id
   plan                      PlanTier           @default(STANDARD)
   status                    SubscriptionStatus @default(ACTIVE)
+
+  // Organization ownership (Cách 2)
+  org_id                    String?            @unique @db.Uuid
+  organization              Organization?      @relation(fields: [org_id], references: [id], onDelete: Cascade)
+
+  // Room Band Pricing
+  room_band                 RoomBand           @default(R30)
+  capacity_snapshot         Int                @default(0)
+  price_multiplier          Float              @default(1.0)
 
   // External payment (Sepay/Stripe) - optional for now
   external_provider         String?
@@ -574,9 +595,48 @@ model Subscription {
   trial_ends_at             DateTime?
   trial_bonus_granted       Boolean            @default(false)
 
-  hotel                     Hotel              @relation(fields: [hotel_id], references: [hotel_id], onDelete: Cascade)
+  hotel                     Hotel?             @relation(fields: [hotel_id], references: [hotel_id], onDelete: Cascade)
 
   @@map("subscriptions")
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Organization — Tenant Model
+// ════════════════════════════════════════════════════════════════════
+
+enum OrgRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+model Organization {
+  id           String        @id @default(uuid()) @db.Uuid
+  name         String
+  slug         String?
+  created_at   DateTime      @default(now())
+  updated_at   DateTime      @updatedAt
+
+  hotels       Hotel[]
+  members      OrgMember[]
+  subscription Subscription?
+
+  @@map("organizations")
+}
+
+model OrgMember {
+  id           String       @id @default(uuid()) @db.Uuid
+  org_id       String       @db.Uuid
+  user_id      String       @db.Uuid
+  role         OrgRole      @default(MEMBER)
+  created_at   DateTime     @default(now())
+
+  organization Organization @relation(fields: [org_id], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([org_id, user_id])
+  @@index([user_id])
+  @@map("org_members")
 }
 
 // ════════════════════════════════════════════════════════════════════

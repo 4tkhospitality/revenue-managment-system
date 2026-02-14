@@ -12,28 +12,21 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Check, X, HelpCircle, AlertCircle, Zap } from 'lucide-react';
 import { Sidebar } from '@/components/dashboard/Sidebar';
+import { getPrice, getBandLabel, BAND_MULTIPLIER, BASE_PRICE } from '@/lib/plg/plan-config';
+import { RoomBand } from '@prisma/client';
 
 // ═══════════════════════════════════════════════════════════════════
 // Data & Constants
 // ═══════════════════════════════════════════════════════════════════
 
-type RoomBand = 'small' | 'medium' | 'large' | 'xlarge';
 type BillingCycle = 'monthly' | '3-months';
 
-const ROOM_BANDS = [
-    { id: 'small', label: '≤ 30 phòng', max: 30 },
-    { id: 'medium', label: '31 - 80 phòng', max: 80 },
-    { id: 'large', label: '81 - 150 phòng', max: 150 },
-    { id: 'xlarge', label: '151 - 300+ phòng', max: 300 },
-] as const;
-
-// Base Monthly Prices (VND)
-const PRICING_MATRIX: Record<string, Record<RoomBand, number>> = {
-    STANDARD: { small: 0, medium: 0, large: 0, xlarge: 0 },
-    SUPERIOR: { small: 990000, medium: 1490000, large: 1990000, xlarge: 2490000 },
-    DELUXE: { small: 1990000, medium: 2990000, large: 3990000, xlarge: 4990000 },
-    SUITE: { small: 3490000, medium: 4990000, large: 6990000, xlarge: 8990000 },
-};
+const ROOM_BANDS: Array<{ id: RoomBand; label: string; max: number }> = [
+    { id: 'R30', label: '≤ 30 phòng', max: 30 },
+    { id: 'R80', label: '31 - 80 phòng', max: 80 },
+    { id: 'R150', label: '81 - 150 phòng', max: 150 },
+    { id: 'R300P', label: '151 - 300+ phòng', max: 300 },
+];
 
 const TIERS = [
     {
@@ -114,22 +107,26 @@ export default function PricingPlansPage() {
     const [currentTier, setCurrentTier] = useState<string | null>(null);
 
     // State for pricing calculator
-    const [roomBand, setRoomBand] = useState<RoomBand>('small');
+    const [roomBand, setRoomBand] = useState<RoomBand>('R30');
     const [cycle, setCycle] = useState<BillingCycle>('3-months');
+    const [currentBand, setCurrentBand] = useState<RoomBand | null>(null);
 
     useEffect(() => {
         if (status === 'authenticated') {
             fetch('/api/subscription')
                 .then((res) => res.json())
-                .then((data) => setCurrentTier(data.plan || 'STANDARD'))
+                .then((data) => {
+                    setCurrentTier(data.plan || 'STANDARD');
+                    if (data.roomBand) setCurrentBand(data.roomBand);
+                })
                 .catch(() => setCurrentTier('STANDARD'));
         }
     }, [status]);
 
     const isLoggedIn = status === 'authenticated';
 
-    const getPrice = (tierId: string) => {
-        const basePrice = PRICING_MATRIX[tierId][roomBand];
+    const calcPrice = (tierId: string) => {
+        const basePrice = getPrice(tierId as any, roomBand);
         if (cycle === '3-months') {
             return basePrice * 0.5; // 50% discount
         }
@@ -164,7 +161,7 @@ export default function PricingPlansPage() {
                             {ROOM_BANDS.map((band) => (
                                 <button
                                     key={band.id}
-                                    onClick={() => setRoomBand(band.id as RoomBand)}
+                                    onClick={() => setRoomBand(band.id)}
                                     className={`py-3 px-2 rounded-xl text-sm font-medium transition-all border-2 ${roomBand === band.id
                                         ? 'border-blue-600 bg-blue-50 text-blue-700 shadow-sm'
                                         : 'border-transparent bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -216,7 +213,7 @@ export default function PricingPlansPage() {
             {/* Pricing Cards */}
             <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-6 mb-16">
                 {TIERS.map((tier) => {
-                    const monthlyPrice = getPrice(tier.id);
+                    const monthlyPrice = calcPrice(tier.id);
                     const isCurrentTier = currentTier === tier.id;
 
                     return (
@@ -261,7 +258,7 @@ export default function PricingPlansPage() {
                                         </div>
                                         {cycle === '3-months' && (
                                             <div className="text-xs text-gray-400 line-through">
-                                                {formatVND(PRICING_MATRIX[tier.id][roomBand])}/tháng
+                                                {formatVND(getPrice(tier.id as any, roomBand))}/tháng
                                             </div>
                                         )}
                                     </>

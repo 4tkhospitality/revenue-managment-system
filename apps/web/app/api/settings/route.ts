@@ -2,6 +2,7 @@ import prisma from '@/lib/prisma';
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { getActiveHotelId } from '@/lib/pricing/get-hotel';
+import { deriveBand } from '@/lib/plg/plan-config';
 
 export async function GET(request: NextRequest) {
     // Auth: require logged-in user
@@ -73,6 +74,17 @@ export async function POST(request: NextRequest) {
                 ladder_steps: ladderSteps || null,
             },
         });
+
+        // Auto-sync subscription band when capacity changes
+        if (capacity !== undefined) {
+            const newBand = deriveBand(capacity);
+            await prisma.$executeRaw`
+                UPDATE subscriptions
+                SET room_band = ${newBand}::"RoomBand",
+                    capacity_snapshot = ${capacity}
+                WHERE hotel_id = ${hotelId}::uuid
+            `;
+        }
 
         return NextResponse.json({ success: true, hotel });
     } catch (error) {

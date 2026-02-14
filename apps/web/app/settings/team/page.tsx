@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
-import { Users, Ticket, AlertTriangle, Lock } from 'lucide-react'
+import { Users, Ticket, AlertTriangle, Trash2, Clock, XCircle } from 'lucide-react'
 
 interface InviteData {
     inviteId: string
@@ -24,6 +24,19 @@ interface TeamMember {
     created_at: string
 }
 
+interface ActiveInvite {
+    invite_id: string
+    short_code: string
+    role: string
+    max_uses: number
+    used_count: number
+    expires_at: string
+    created_at: string
+    status: string
+    isExpired: boolean
+    isUsedUp: boolean
+}
+
 export default function TeamSettingsPage() {
     const { data: session } = useSession()
     const [members, setMembers] = useState<TeamMember[]>([])
@@ -32,7 +45,10 @@ export default function TeamSettingsPage() {
     const [invite, setInvite] = useState<InviteData | null>(null)
     const [error, setError] = useState('')
     const [copied, setCopied] = useState(false)
-    const [seats, setSeats] = useState<{ current: number; max: number; available: boolean; plan: string | null } | null>(null)
+    const [seats, setSeats] = useState<{ current: number; max: number; available: boolean; plan: string | null; activeMembers: number; pendingInvites: number } | null>(null)
+    const [orgInfo, setOrgInfo] = useState<{ orgName: string; roomBand: string } | null>(null)
+    const [activeInvites, setActiveInvites] = useState<ActiveInvite[]>([])
+    const [revoking, setRevoking] = useState<string | null>(null)
 
     const isAdmin = session?.user?.accessibleHotels?.some(
         (h) => h.role === 'hotel_admin'
@@ -42,20 +58,77 @@ export default function TeamSettingsPage() {
 
     useEffect(() => {
         loadMembers()
+        loadInvites()
     }, [])
 
     const loadMembers = async () => {
         try {
-            const res = await fetch('/api/team/members')
-            if (res.ok) {
-                const data = await res.json()
+            const [membersRes, orgRes] = await Promise.all([
+                fetch('/api/team/members'),
+                fetch('/api/organization').catch(() => null),
+            ])
+            if (membersRes.ok) {
+                const data = await membersRes.json()
                 setMembers(data.members || [])
-                if (data.seats) setSeats(data.seats)
+                if (data.seats) setSeats({
+                    ...data.seats,
+                    activeMembers: data.seats.activeMembers ?? data.seats.current,
+                    pendingInvites: data.seats.pendingInvites ?? 0,
+                })
+            }
+            if (orgRes?.ok) {
+                const orgData = await orgRes.json()
+                if (orgData?.org) {
+                    setOrgInfo({
+                        orgName: orgData.org.name,
+                        roomBand: orgData.subscription?.roomBand ?? 'R30',
+                    })
+                }
             }
         } catch (err) {
             console.error('Failed to load members:', err)
         } finally {
             setLoading(false)
+        }
+    }
+
+    const loadInvites = async () => {
+        try {
+            const res = await fetch('/api/invite/list')
+            if (res.ok) {
+                const data = await res.json()
+                setActiveInvites(data.invites || [])
+            }
+        } catch (err) {
+            console.error('Failed to load invites:', err)
+        }
+    }
+
+    const revokeInvite = async (inviteId: string) => {
+        setRevoking(inviteId)
+        try {
+            const res = await fetch('/api/invite/list', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ inviteId }),
+            })
+            if (res.ok) {
+                setActiveInvites(prev => prev.filter(i => i.invite_id !== inviteId))
+                // Refresh seats after revoking
+                const membersRes = await fetch('/api/team/members')
+                if (membersRes.ok) {
+                    const data = await membersRes.json()
+                    if (data.seats) setSeats({
+                        ...data.seats,
+                        activeMembers: data.seats.activeMembers ?? data.seats.current,
+                        pendingInvites: data.seats.pendingInvites ?? 0,
+                    })
+                }
+            }
+        } catch (err) {
+            console.error('Failed to revoke invite:', err)
+        } finally {
+            setRevoking(null)
         }
     }
 
@@ -80,6 +153,8 @@ export default function TeamSettingsPage() {
                     expiresAt: data.expiresAt,
                     role: 'viewer',
                 })
+                // Refresh invites list
+                loadInvites()
             } else {
                 if (data.error === 'TIER_LIMIT_REACHED') {
                     setError(data.message || 'Đã đạt giới hạn thành viên cho gói hiện tại.')
@@ -114,6 +189,8 @@ export default function TeamSettingsPage() {
         return <span className={`px-2 py-1 text-xs rounded-full ${badge.bg} ${badge.text}`}>{role}</span>
     }
 
+    const formatDate = (d: string) => new Date(d).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+
     return (
         <div className="mx-auto max-w-[1400px] px-4 sm:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
             {/* Header - consistent with other pages */}
@@ -121,7 +198,11 @@ export default function TeamSettingsPage() {
                 className="rounded-2xl px-4 sm:px-6 py-4 text-white shadow-sm"
                 style={{ background: 'linear-gradient(to right, #1E3A8A, #102A4C)' }}
             >
-                <h1 className="text-lg font-semibold"><Users className="w-5 h-5 inline mr-1" /> Quản lý Team</h1>
+                <h1 className="text-lg font-semibold">
+                    <Users className="w-5 h-5 inline mr-1" />
+                    {orgInfo ? `Thành viên • ${orgInfo.orgName}` : 'Quản lý Team'}
+                    {seats?.plan && <span className="ml-2 text-white/60 text-sm">({seats.plan})</span>}
+                </h1>
                 <p className="text-white/70 text-sm mt-1">Mời thành viên và quản lý quyền truy cập</p>
             </header>
 
@@ -139,7 +220,10 @@ export default function TeamSettingsPage() {
                         {seats && seats.max > 0 && (
                             <span className={`text-sm font-medium px-3 py-1 rounded-full ${atLimit ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'
                                 }`}>
-                                {seats.current}/{seats.max >= 999 ? '∞' : seats.max} thành viên
+                                {seats.activeMembers ?? seats.current}/{seats.max >= 999 ? '∞' : seats.max} thành viên
+                                {(seats.pendingInvites ?? 0) > 0 && (
+                                    <span className="text-xs ml-1 opacity-70">(+{seats.pendingInvites} invite)</span>
+                                )}
                             </span>
                         )}
                     </div>
@@ -147,7 +231,8 @@ export default function TeamSettingsPage() {
                     {atLimit && (
                         <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
                             <AlertTriangle className="w-4 h-4 inline mr-1" /> Đã đạt giới hạn thành viên cho gói <strong>{seats?.plan}</strong>.
-                            <a href="/pricing-plans" className="ml-1 text-blue-600 hover:underline font-medium">Nâng cấp gói →</a>
+                            <p className="mt-1 text-xs text-amber-600">Quota Users giới hạn theo gói (tier), không theo số phòng (band).</p>
+                            <a href="/pricing-plans" className="mt-1 inline-block text-blue-600 hover:underline font-medium">Nâng cấp gói để thêm thành viên →</a>
                         </div>
                     )}
 
@@ -175,7 +260,7 @@ export default function TeamSettingsPage() {
                                 </div>
                             </div>
                             <p className="text-xs text-gray-400">
-                                Hết hạn: {new Date(invite.expiresAt).toLocaleDateString('vi-VN')}
+                                Hết hạn: {formatDate(invite.expiresAt)}
                             </p>
                         </div>
                     ) : (
@@ -188,6 +273,55 @@ export default function TeamSettingsPage() {
                             {inviteLoading ? 'Đang tạo...' : atLimit ? 'Đã đạt giới hạn' : '+ Tạo mã mời mới'}
                         </button>
                     )}
+                </div>
+            )}
+
+            {/* Active Invites Management */}
+            {isAdmin && activeInvites.length > 0 && (
+                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                    <div className="p-4 border-b border-gray-100">
+                        <h2 className="font-semibold text-gray-900">
+                            <Ticket className="w-4 h-4 inline mr-1" /> Mã mời đang hoạt động ({activeInvites.length})
+                        </h2>
+                    </div>
+                    <div className="divide-y divide-gray-100">
+                        {activeInvites.map((inv) => (
+                            <div key={inv.invite_id} className="p-4 flex items-center justify-between">
+                                <div className="flex items-center gap-4 min-w-0">
+                                    <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center shrink-0">
+                                        <Ticket className="w-4 h-4 text-indigo-500" />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="font-mono font-bold text-gray-900">{inv.short_code}</p>
+                                        <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
+                                            <span className="px-1.5 py-0.5 bg-gray-100 rounded">{inv.role}</span>
+                                            <span>Dùng: {inv.used_count}/{inv.max_uses}</span>
+                                            <span className="flex items-center gap-0.5">
+                                                <Clock className="w-3 h-3" />
+                                                {inv.isExpired ? (
+                                                    <span className="text-red-500">Hết hạn</span>
+                                                ) : (
+                                                    formatDate(inv.expires_at)
+                                                )}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => revokeInvite(inv.invite_id)}
+                                    disabled={revoking === inv.invite_id}
+                                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                                    title="Thu hồi mã mời"
+                                >
+                                    {revoking === inv.invite_id ? (
+                                        <XCircle className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                        <Trash2 className="w-4 h-4" />
+                                    )}
+                                </button>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             )}
 
@@ -223,3 +357,4 @@ export default function TeamSettingsPage() {
         </div>
     )
 }
+

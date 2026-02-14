@@ -1,11 +1,12 @@
 // ════════════════════════════════════════════════════════════════════
 // PLG — Entitlements Service
 // Central function: getEntitlements(hotelId) → plan, features, limits
+// Resolves subscription via Organization (Cách 2)
 // ════════════════════════════════════════════════════════════════════
 
-import { PlanTier, SubscriptionStatus } from '@prisma/client';
+import { PlanTier, SubscriptionStatus, RoomBand } from '@prisma/client';
 import prisma from '@/lib/prisma';
-import { getFeatureFlags, getDefaultLimits } from './plan-config';
+import { getFeatureFlags, getScaledLimits } from './plan-config';
 import type { Entitlements, PlanLimits } from './types';
 
 // ── In-Memory Cache (60s TTL per hotel) ────────────────────────────
@@ -31,13 +32,29 @@ export async function getEntitlements(hotelId: string): Promise<Entitlements> {
         return cached.data;
     }
 
-    const subscription = await prisma.subscription.findUnique({
+    // Step 1: Find hotel's org
+    const hotel = await prisma.hotel.findUnique({
         where: { hotel_id: hotelId },
+        select: { org_id: true },
     });
+
+    // Step 2: Load subscription via org_id (or fallback to hotel_id for migration)
+    let subscription;
+    if (hotel?.org_id) {
+        subscription = await prisma.subscription.findUnique({
+            where: { org_id: hotel.org_id },
+        });
+    }
+    if (!subscription) {
+        // Fallback for hotels not yet migrated to org
+        subscription = await prisma.subscription.findFirst({
+            where: { hotel_id: hotelId },
+        });
+    }
 
     // No subscription → default STANDARD
     if (!subscription) {
-        const defaults = buildEntitlements('STANDARD', 'ACTIVE', null);
+        const defaults = buildEntitlements('STANDARD', 'ACTIVE', null, 'R30', hotel?.org_id ?? null);
         cacheResult(hotelId, defaults);
         return defaults;
     }
@@ -50,9 +67,11 @@ export async function getEntitlements(hotelId: string): Promise<Entitlements> {
 
     // effectivePlan: DELUXE during active trial, else actual plan
     const effectivePlan: PlanTier = trialActive ? 'DELUXE' : subscription.plan;
+    const roomBand: RoomBand = subscription.room_band ?? 'R30';
 
     // Build limits: use subscription overrides if admin set custom values
-    const defaultLimits = getDefaultLimits(effectivePlan);
+    // Base from getScaledLimits() (band-aware) instead of getDefaultLimits()
+    const defaultLimits = getScaledLimits(effectivePlan, roomBand);
     const limits: PlanLimits = {
         maxUsers: subscription.max_users ?? defaultLimits.maxUsers,
         maxProperties: subscription.max_properties ?? defaultLimits.maxProperties,
@@ -79,10 +98,43 @@ export async function getEntitlements(hotelId: string): Promise<Entitlements> {
         trialEndsAt: trialEndsAt,
         trialBonusGranted: subscription.trial_bonus_granted,
         trialDaysRemaining,
+        roomBand,
+        orgId: hotel?.org_id ?? null,
     };
 
     cacheResult(hotelId, entitlements);
     return entitlements;
+}
+
+// ── Suite Hotel Access Guard ────────────────────────────────────────
+
+/** Check if a user can access a hotel via HotelUser OR OrgMember+Suite */
+export async function canAccessHotel(userId: string, hotelId: string): Promise<boolean> {
+    // Rule 1: Direct HotelUser record exists (existing behavior)
+    const hotelUser = await prisma.hotelUser.findUnique({
+        where: { user_id_hotel_id: { user_id: userId, hotel_id: hotelId } },
+    });
+    if (hotelUser?.is_active) return true;
+
+    // Rule 2: OrgMember of org that owns this hotel + org has Suite plan
+    const hotel = await prisma.hotel.findUnique({
+        where: { hotel_id: hotelId },
+        select: { org_id: true },
+    });
+    if (!hotel?.org_id) return false;
+
+    const orgMember = await prisma.orgMember.findUnique({
+        where: { org_id_user_id: { org_id: hotel.org_id, user_id: userId } },
+    });
+    if (!orgMember) return false;
+
+    // Check org subscription is Suite
+    const subscription = await prisma.subscription.findUnique({
+        where: { org_id: hotel.org_id },
+        select: { plan: true },
+    });
+
+    return subscription?.plan === 'SUITE';
 }
 
 // ── Helper: Build Default Entitlements ──────────────────────────────
@@ -91,8 +143,10 @@ function buildEntitlements(
     plan: PlanTier,
     status: SubscriptionStatus,
     trialEndsAt: Date | null,
+    roomBand: RoomBand = 'R30',
+    orgId: string | null = null,
 ): Entitlements {
-    const defaultLimits = getDefaultLimits(plan);
+    const defaultLimits = getScaledLimits(plan, roomBand);
     return {
         plan,
         effectivePlan: plan,
@@ -104,6 +158,8 @@ function buildEntitlements(
         trialEndsAt,
         trialBonusGranted: false,
         trialDaysRemaining: 0,
+        roomBand,
+        orgId,
     };
 }
 

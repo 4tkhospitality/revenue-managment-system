@@ -6,7 +6,8 @@
 
 import prisma from '@/lib/prisma';
 import { PlanTier } from '@prisma/client';
-import { TIER_CONFIGS, FeatureKey, tierHasFeature, getUpgradeTierName } from './tierConfig';
+import { FeatureKey, tierHasFeature, getUpgradeTierName } from './tierConfig';
+import { getDefaultLimits } from '@/lib/plg/plan-config';
 import { auth } from '@/lib/auth';
 
 // ═══════════════════════════════════════════════════════════════════
@@ -53,25 +54,39 @@ export class FeatureGateError extends Error {
  * Get hotel subscription, returns FREE defaults if no subscription exists
  */
 export async function getHotelSubscription(hotelId: string): Promise<SubscriptionInfo> {
-    const subscription = await prisma.subscription.findUnique({
+    // Resolve via org_id first (Cách 2), fallback to hotel_id
+    const hotel = await prisma.hotel.findUnique({
         where: { hotel_id: hotelId },
+        select: { org_id: true },
     });
+
+    let subscription;
+    if (hotel?.org_id) {
+        subscription = await prisma.subscription.findUnique({
+            where: { org_id: hotel.org_id },
+        });
+    }
+    if (!subscription) {
+        subscription = await prisma.subscription.findFirst({
+            where: { hotel_id: hotelId },
+        });
+    }
 
     if (!subscription) {
         // Return STANDARD tier defaults
-        const standardConfig = TIER_CONFIGS.STANDARD;
+        const defaults = getDefaultLimits('STANDARD');
         return {
             plan: 'STANDARD',
             status: 'ACTIVE',
             periodEnd: null,
             isExpired: false,
-            maxUsers: standardConfig.maxUsers,
-            maxProperties: standardConfig.maxProperties,
-            maxImportsMonth: standardConfig.maxImportsMonth,
-            maxExportsDay: standardConfig.maxExportsDay,
-            maxExportRows: standardConfig.maxExportRows,
-            includedRateShopsMonth: standardConfig.includedRateShopsMonth,
-            dataRetentionMonths: standardConfig.dataRetentionMonths,
+            maxUsers: defaults.maxUsers,
+            maxProperties: defaults.maxProperties,
+            maxImportsMonth: defaults.maxImportsMonth,
+            maxExportsDay: defaults.maxExportsDay,
+            maxExportRows: defaults.maxExportRows,
+            includedRateShopsMonth: defaults.includedRateShopsMonth,
+            dataRetentionMonths: defaults.dataRetentionMonths,
         };
     }
 
@@ -83,6 +98,7 @@ export async function getHotelSubscription(hotelId: string): Promise<Subscriptio
     // If expired, downgrade to STANDARD defaults
     const effectivePlan = isExpired ? 'STANDARD' : subscription.plan;
     const effectiveStatus = isExpired ? 'EXPIRED' : subscription.status;
+    const standardDefaults = getDefaultLimits('STANDARD');
 
     // Return subscription with possible admin overrides
     return {
@@ -92,11 +108,11 @@ export async function getHotelSubscription(hotelId: string): Promise<Subscriptio
         isExpired,
         maxUsers: subscription.max_users,
         maxProperties: subscription.max_properties,
-        maxImportsMonth: isExpired ? TIER_CONFIGS.STANDARD.maxImportsMonth : subscription.max_imports_month,
-        maxExportsDay: isExpired ? TIER_CONFIGS.STANDARD.maxExportsDay : subscription.max_exports_day,
-        maxExportRows: isExpired ? TIER_CONFIGS.STANDARD.maxExportRows : subscription.max_export_rows,
-        includedRateShopsMonth: isExpired ? TIER_CONFIGS.STANDARD.includedRateShopsMonth : subscription.included_rate_shops_month,
-        dataRetentionMonths: isExpired ? TIER_CONFIGS.STANDARD.dataRetentionMonths : subscription.data_retention_months,
+        maxImportsMonth: isExpired ? standardDefaults.maxImportsMonth : subscription.max_imports_month,
+        maxExportsDay: isExpired ? standardDefaults.maxExportsDay : subscription.max_exports_day,
+        maxExportRows: isExpired ? standardDefaults.maxExportRows : subscription.max_export_rows,
+        includedRateShopsMonth: isExpired ? standardDefaults.includedRateShopsMonth : subscription.included_rate_shops_month,
+        dataRetentionMonths: isExpired ? standardDefaults.dataRetentionMonths : subscription.data_retention_months,
     };
 }
 

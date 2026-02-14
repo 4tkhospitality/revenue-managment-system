@@ -2,7 +2,7 @@
 // PLG — Static Plan Configuration (no DB dependency)
 // ════════════════════════════════════════════════════════════════════
 
-import { PlanTier } from '@prisma/client';
+import { PlanTier, RoomBand } from '@prisma/client';
 import type { FeatureFlags, PlanLimits, FeatureKey, GateType } from './types';
 
 // ── Plan → Feature Mapping ──────────────────────────────────────────
@@ -187,3 +187,65 @@ export function isUnlimited(value: number): boolean {
 }
 
 export { FEATURE_MAP, LIMIT_MAP, LABEL_MAP, COLOR_MAP };
+
+// ── Room Band Pricing ───────────────────────────────────────────────
+
+const BAND_MULTIPLIER: Record<RoomBand, number> = {
+    R30: 1.0,
+    R80: 1.3,
+    R150: 1.6,
+    R300P: 2.0,
+};
+
+const BASE_PRICE: Record<PlanTier, number> = {
+    STANDARD: 0,
+    SUPERIOR: 990_000,
+    DELUXE: 1_990_000,
+    SUITE: 3_490_000,
+};
+
+const BAND_LABEL: Record<RoomBand, string> = {
+    R30: '≤ 30 phòng',
+    R80: '31–80 phòng',
+    R150: '81–150 phòng',
+    R300P: '151–300+ phòng',
+};
+
+/** Scale quota limits by room band multiplier. Non-scalable limits (maxUsers, maxProperties, maxScenarios) stay unchanged. */
+export function getScaledLimits(plan: PlanTier, band: RoomBand): PlanLimits {
+    const base = LIMIT_MAP[plan];
+    const mult = BAND_MULTIPLIER[band];
+    return {
+        ...base,
+        maxImportsMonth: base.maxImportsMonth === 0 ? 0 : Math.ceil(base.maxImportsMonth * mult),
+        maxExportsDay: base.maxExportsDay === 0 ? 0 : Math.ceil(base.maxExportsDay * mult),
+        maxExportRows: base.maxExportRows === 0 ? 0 : Math.ceil(base.maxExportRows * mult),
+        includedRateShopsMonth: base.includedRateShopsMonth === 0 ? 0 : Math.ceil(base.includedRateShopsMonth * mult),
+        dataRetentionMonths: base.dataRetentionMonths === 0 ? 0 : Math.ceil(base.dataRetentionMonths * mult),
+        // NOT scaled: maxUsers, maxProperties, maxScenarios
+    };
+}
+
+/** Derive the room band from hotel capacity */
+export function deriveBand(capacity: number): RoomBand {
+    if (capacity <= 30) return 'R30';
+    if (capacity <= 80) return 'R80';
+    if (capacity <= 150) return 'R150';
+    return 'R300P';
+}
+
+/** Calculate price for a plan+band combination (rounded to 10k VND) */
+export function getPrice(plan: PlanTier, band: RoomBand): number {
+    const raw = BASE_PRICE[plan] * BAND_MULTIPLIER[band];
+    return Math.round(raw / 10_000) * 10_000;
+}
+
+export function getBandMultiplier(band: RoomBand): number {
+    return BAND_MULTIPLIER[band];
+}
+
+export function getBandLabel(band: RoomBand): string {
+    return BAND_LABEL[band];
+}
+
+export { BAND_MULTIPLIER, BASE_PRICE, BAND_LABEL };

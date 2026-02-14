@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import prisma from '@/lib/prisma'
+import { deriveBand } from '@/lib/plg/plan-config'
 
 interface RouteParams {
     params: Promise<{ id: string }>
@@ -95,6 +96,17 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
             where: { hotel_id: id },
             data: updateData
         })
+
+        // Auto-sync subscription band when capacity changes
+        if (body.capacity !== undefined) {
+            const newBand = deriveBand(body.capacity);
+            await prisma.$executeRaw`
+                UPDATE subscriptions
+                SET room_band = ${newBand}::"RoomBand",
+                    capacity_snapshot = ${body.capacity}
+                WHERE hotel_id = ${id}::uuid
+            `;
+        }
 
         // Subscription upsert (if subscription fields provided)
         if (body.subscription) {

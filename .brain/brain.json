@@ -1,14 +1,14 @@
 {
   "meta": {
-    "schema_version": "1.8.0",
+    "schema_version": "2.0.0",
     "awf_version": "4.1.2",
-    "last_updated": "2026-02-14T00:30:00+07:00"
+    "last_updated": "2026-02-14T22:26:00+07:00"
   },
   "project": {
     "name": "revenue-management-system",
     "type": "SaaS Web App",
     "status": "Production - Deployed to Vercel (icn1 region)",
-    "description": "RMS Version 01.9 - Revenue Management System with OTB Time-Travel + OTA Pricing + Dynamic Pricing by OCC + Unified Pricing Logic (Phase 03: server-only engine, usePricingPreview hook) + OTA Growth Playbook + User Management + Performance Optimized + Comprehensive Guide. Full-stack TypeScript.",
+    "description": "RMS Version 02.0 - Revenue Management System with Room Band Pricing + Organization-based Multi-Hotel (Cách 2) + OTB Time-Travel + OTA Pricing + Dynamic Pricing by OCC + Unified Pricing Logic + InsightsPanel V2 (plain Vietnamese). Full-stack TypeScript.",
     "github": "https://github.com/4tkhospitality/revenue-managment-system",
     "landing_page": {
       "path": "apps/landing",
@@ -72,7 +72,7 @@
     }
   },
   "database_schema": {
-    "summary": "RMS Schema designed for Multi-tenancy with RBAC User Management (V01) + Cancellation Bridge (V01.1).",
+    "summary": "RMS Schema V02.0: Organization-based multi-tenancy (Cách 2) with Room Band Pricing. Subscription owned by Org, not Hotel. Seats counted at OrgMember level.",
     "tables": [
       {
         "name": "hotels",
@@ -165,8 +165,18 @@
       },
       {
         "name": "subscriptions",
-        "description": "V01.3: Hotel subscription plans (FREE/STARTER/GROWTH/PRO) with feature limits.",
-        "v013_new": true
+        "description": "V02.0: Org-level subscription with plan (STANDARD/SUPERIOR/DELUXE/SUITE), room_band (R30/R80/R150/R300P), capacity_snapshot, price_multiplier. Owned by org_id (not hotel_id).",
+        "v020_updated": true
+      },
+      {
+        "name": "organizations",
+        "description": "V02.0: Tenant root for multi-hotel. Every hotel belongs to 1 org. Subscription is per-org. Has name, slug.",
+        "v020_new": true
+      },
+      {
+        "name": "org_members",
+        "description": "V02.0: User-Org membership with OrgRole (OWNER/ADMIN/MEMBER). Seats counted here. Unique(org_id, user_id).",
+        "v020_new": true
       },
       {
         "name": "occ_tiers",
@@ -234,6 +244,34 @@
           "SINGLE_DISCOUNT (Expedia 17% - no stacking)"
         ],
         "description": "OTA-specific calculation modes for promotion stacking. Source of truth: lib/pricing/seed-defaults.ts"
+      },
+      {
+        "name": "RoomBand",
+        "values": [
+          "R30",
+          "R80",
+          "R150",
+          "R300P"
+        ],
+        "description": "V02.0: Room count bands for pricing. R30=≤30, R80=31-80, R150=81-150, R300P=151-300+."
+      },
+      {
+        "name": "OrgRole",
+        "values": [
+          "OWNER",
+          "ADMIN",
+          "MEMBER"
+        ],
+        "description": "V02.0: Organization-level role. OWNER=billing admin, ADMIN=manage members, MEMBER=access."
+      },
+      {
+        "name": "SubscriptionStatus",
+        "values": [
+          "ACTIVE",
+          "CANCELLED",
+          "PAST_DUE"
+        ],
+        "description": "V02.0: Subscription lifecycle status."
       }
     ],
     "v011_indexes": [
@@ -578,7 +616,12 @@
     "V01.9: stackBehavior field propagated from catalog.ts through service.ts to engine.ts DiscountItem",
     "V01.9: Analytics tab redesign — charts-first layout, compact KPI strip with DOD inline, horizontal DatesToWatch chips",
     "V01.9: AnalyticsKpiRow compact strip — 7 metrics + DOD merged inline (~48px vs ~120px)",
-    "V01.9: DatesToWatchPanel horizontal chip strip — scrollable pills (~48px vs ~200px vertical list)"
+    "V01.9: DatesToWatchPanel horizontal chip strip — scrollable pills (~48px vs ~200px vertical list)",
+    "V01.9: InsightsPanel V2 Engine — 6 generators (compression, revenue_opportunity, pace_stly, pickup_acceleration, cancel_tiers, segment_mix) with top3 scoring",
+    "V01.9: Insight Text Plain Vietnamese — All RM jargon (RN, ADR, STLY, OCC, pickup, forecast, uplift, RevPAR, segment, commission, leakage, promo) replaced with natural language",
+    "V01.9: InsightsPanel 2-Tab Layout — Tab 1: Top actions + other insights, Tab 2: Ngày chú ý khác (compression extras). Pill-style tabs with count badges",
+    "V01.9: Insight Card Labeled Sections — Expanded cards show Tình hình / Ý nghĩa / Nên làm / Tác động ước tính labels for GM readability",
+    "V01.9: Forecast Data Fix — days30 limited to actual 30-day window, forecast query take:90 matching OTB coverage"
   ],
   "cancellation_bridge_v011": {
     "status": "Implemented",
@@ -694,7 +737,10 @@
     "V01.9: Phase 03 — PromotionsTab.tsx must NOT contain any pricing math. Removed validate(), dedupeBySubcategory(), pickBestGenius(), all stacking logic",
     "V01.9: resolveTimingConflicts() moved server-side only — client reads validation.warnings from API response",
     "V01.9: usePricingPreview hook replaces all direct fetch() calls in PromotionsTab — single source of truth for preview data",
-    "V01.9: AbortController cancels in-flight requests when user toggles promo rapidly — prevents race condition stale data"
+    "V01.9: AbortController cancels in-flight requests when user toggles promo rapidly — prevents race condition stale data",
+    "V01.9: Insight text must use plain Vietnamese — no RM jargon. GM reads without asking anyone. Labels: Tình hình, Ý nghĩa, Nên làm, Tác động ước tính",
+    "V01.9: InsightsPanel tabs auto-hide when no compression extras — single tab view if only top actions exist",
+    "V01.9: insightsV2Engine days30 must filter by actual calendar date range (today + 30d), not use all input days"
   ],
   "ui_design": {
     "theme": "SaaS Pro Light",

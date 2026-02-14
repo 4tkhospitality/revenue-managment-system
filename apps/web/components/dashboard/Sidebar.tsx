@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { useState, useEffect } from 'react';
 import { SubscriptionBanner } from './SubscriptionBanner';
-import { LayoutDashboard, Upload, Database, Settings, BookOpen, Shield, Menu, X, LogOut, DollarSign, BarChart3, TrendingUp, CalendarCheck, Crown, Lock } from 'lucide-react';
+import { LayoutDashboard, Upload, Database, Settings, BookOpen, Shield, Menu, X, LogOut, DollarSign, BarChart3, TrendingUp, CalendarCheck, Crown, Lock, Users } from 'lucide-react';
 import { HotelSwitcher } from '@/components/HotelSwitcher';
 
 // Role levels for permission checks
@@ -63,6 +63,7 @@ const navGroups = [
         label: 'Hệ thống',
         items: [
             { href: '/settings', label: 'Cài đặt', icon: Settings, minRole: 'hotel_admin', hideForDemo: true },
+            { href: '/settings/team', label: 'Team', icon: Users, minRole: 'hotel_admin', hideForDemo: true },
             { href: '/guide', label: 'Hướng dẫn', icon: BookOpen, minRole: 'viewer' },
             { href: '/pricing-plans', label: 'Nâng cấp', icon: Crown, minRole: 'viewer' },
         ],
@@ -239,7 +240,7 @@ export function Sidebar() {
                                 {/* Group items */}
                                 {visibleItems.map((item) => {
                                     const isActive = pathname === item.href ||
-                                        (item.href !== '/dashboard' && pathname.startsWith(item.href));
+                                        (item.href !== '/dashboard' && item.href !== '/settings' && pathname.startsWith(item.href));
                                     const Icon = item.icon;
                                     const canAccess = hasPermission(item.minRole);
                                     const needsTier = 'requiredTier' in item && item.requiredTier;

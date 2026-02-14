@@ -15,6 +15,7 @@ import { InsightsPanel } from '@/components/dashboard/InsightsPanel';
 import { fetchInsightsV2Data } from '@/lib/insights/fetchInsightsV2Data';
 import { generateInsightsV2 } from '@/lib/insights/insightsV2Engine';
 import { AnalyticsTabContent } from '@/components/analytics/AnalyticsTabContent';
+import { ComplianceBanner } from '@/components/compliance/ComplianceBanner';
 import { Suspense } from 'react';
 
 export const dynamic = 'force-dynamic';
@@ -398,6 +399,9 @@ export default async function DashboardPage({
                     />
                 }
             />
+
+            {/* Compliance Banner — shows when band mismatch or STANDARD guard */}
+            <ComplianceBanner />
 
             {/* Empty State */}
             {otbData.length === 0 && (
