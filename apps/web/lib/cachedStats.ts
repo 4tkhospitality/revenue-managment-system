@@ -46,15 +46,21 @@ interface CancellationStats {
     topChannels: Array<{ channel: string; revenue: number }>;
 }
 
-// ─── Reservation stats: SQL aggregate + hotel filter ─
+// ─── Reservation stats: SQL aggregate + hotel filter + 30-day window ─
 export async function getReservationStats30(hotelId?: string): Promise<ReservationStats> {
     const cacheKey = hotelId || '__all__';
     const cached = getCached(reservationCache, cacheKey);
     if (cached) return cached;
 
-    const whereClause = hotelId
-        ? { hotel_id: hotelId, status: 'booked' as const }
-        : { status: 'booked' as const };
+    // Filter to last 30 days by booking_date
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const whereClause = {
+        status: 'booked' as const,
+        booking_date: { gte: thirtyDaysAgo },
+        ...(hotelId ? { hotel_id: hotelId } : {}),
+    };
 
     // Parallel: aggregate + groupBy instead of findMany + JS reduce
     const [agg, topAgentsRaw] = await Promise.all([
@@ -86,13 +92,20 @@ export async function getReservationStats30(hotelId?: string): Promise<Reservati
     return result;
 }
 
-// ─── Cancellation stats: SQL aggregate + hotel filter ─
+// ─── Cancellation stats: SQL aggregate + hotel filter + 30-day window ─
 export async function getCancellationStats30Days(hotelId?: string): Promise<CancellationStats> {
     const cacheKey = hotelId || '__all__';
     const cached = getCached(cancellationCache, cacheKey);
     if (cached) return cached;
 
-    const whereClause = hotelId ? { hotel_id: hotelId } : {};
+    // Filter to last 30 days by cancel_time
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const whereClause = {
+        cancel_time: { gte: thirtyDaysAgo },
+        ...(hotelId ? { hotel_id: hotelId } : {}),
+    };
 
     // Parallel: aggregate + groupBy instead of findMany + JS reduce
     const [agg, topChannelsRaw] = await Promise.all([
