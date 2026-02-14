@@ -280,7 +280,7 @@ export default async function DashboardPage({
             ? d.rooms_otb - feature.pace_vs_ly
             : null;
         return {
-            date: DateUtils.format(d.stay_date, 'MMM dd'),
+            date: DateUtils.format(d.stay_date, 'dd/MM'),
             otbCurrent: d.rooms_otb,
             otbLastYear: stlyRooms, // Real STLY data (null if not available)
         };

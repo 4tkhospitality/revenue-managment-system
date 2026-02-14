@@ -109,13 +109,13 @@ export function OtbChart({ data }: OtbChartProps) {
                         <XAxis
                             dataKey="date"
                             stroke="#64748b"
-                            fontSize={12}
+                            fontSize={11}
                             tickLine={false}
                             axisLine={{ stroke: '#e2e8f0' }}
-                            interval={dayFilter <= 30 ? 0 : dayFilter <= 60 ? 2 : 4}
-                            angle={dayFilter > 30 ? -45 : 0}
-                            textAnchor={dayFilter > 30 ? "end" : "middle"}
-                            height={dayFilter > 30 ? 60 : 30}
+                            interval={Math.max(0, Math.ceil(filteredData.length / 8) - 1)}
+                            angle={-35}
+                            textAnchor="end"
+                            height={50}
                         />
                         <YAxis
                             stroke="#64748b"
