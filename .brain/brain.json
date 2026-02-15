@@ -2,7 +2,7 @@
   "meta": {
     "schema_version": "2.0.0",
     "awf_version": "4.1.2",
-    "last_updated": "2026-02-15T00:18:00+07:00"
+    "last_updated": "2026-02-15T00:46:00+07:00"
   },
   "project": {
     "name": "revenue-management-system",
@@ -654,7 +654,10 @@
     "V02.1: Trip.com Campaign Warning Banner — Amber warning when Campaign blocks other active promos. Shown below Agoda stacking warning",
     "V02.1: PricingExplanation Server Trace — Uses previewData.trace[] from server (single source of truth) instead of local re-computation. Shows only resolved promos after stacking rules. Dropped promos shown in amber box with reasons",
     "V02.1: Step-by-Step VND Numbers — Each step (NET → Commission → Per-promo → BAR → Display → Net) shows actual formatted amounts for sales clarity",
-    "V02.1: Round Favicon SVG — Replaced square PNG with circular SVG favicon"
+    "V02.1: Round Favicon SVG — Replaced square PNG with circular SVG favicon",
+    "V02.1: Self-Healing Catalog Pattern — service.ts + PromotionsTab.tsx prefer static catalog groupType over stale DB group_type. No DB migration needed. Applied to all 3 DiscountItem builders in service.ts and both card+table views in UI",
+    "V02.1: Trip.com Promotions in catalog.ts — Added 11 CTRIP_PROMOTIONS (5 ESSENTIAL, 4 TARGETED, 1 Package, 1 CAMPAIGN) with stackBehavior EXCLUSIVE for Campaign. Included in _catalogMap + VENDOR_GROUP_LABELS + getPromotionsByVendor",
+    "V02.1: Trip.com seed-pricing.ts Fix — Campaign group_type corrected from SEASONAL to CAMPAIGN, allow_stack from true to false"
   ],
   "cancellation_bridge_v011": {
     "status": "Implemented",
@@ -781,7 +784,10 @@
     "V02.1: Trip.com Campaign = EXCLUSIVE in engine — BA confirmed: Campaign blocks Regular, Targeted, Package, Trip.plus. Only highest Campaign applied. If no Campaign → Portfolio max + Targeted max + additive others",
     "V02.1: PricingExplanation must NOT compute local math — was iterating all is_active campaigns (ignoring server dedup). Fixed: use previewData.trace[] which only includes server-resolved promos",
     "V02.1: Booking.com catalog.ts IDs must match seed-pricing.ts — Mismatch caused getCatalogItem() to return undefined → stackBehavior lost → wrong branch in resolveVendorStacking",
-    "V02.1: Trip.com Campaign badge override — isTripCampaign check added to both card view (PromotionGroup) and table view badge logic in PromotionsTab.tsx"
+    "V02.1: Trip.com Campaign badge override — isTripCampaign check added to both card view (PromotionGroup) and table view badge logic in PromotionsTab.tsx",
+    "V02.1: Self-healing catalog pattern — getCatalogItem(promoId).groupType takes priority over DB group_type in service.ts (3 builders) and PromotionsTab.tsx (2 views). No DB migration required. If catalog has correct groupType, engine and UI auto-correct even if DB is stale",
+    "V02.1: Trip.com seed-pricing had group_type SEASONAL (should be CAMPAIGN) + allow_stack true (should be false) — root cause of 95% stacking bug. Engine checked d.group==='CAMPAIGN' but DB returned 'SEASONAL' so exclusive logic never fired",
+    "V02.1: Trip.com missing from static catalog.ts — getCatalogItem() returned undefined → stackBehavior undefined → engine couldn't determine stacking rules. Fixed by adding CTRIP_PROMOTIONS array"
   ],
   "ui_design": {
     "theme": "SaaS Pro Light",
@@ -865,7 +871,11 @@
       "V01.9: Analytics DodChips import must be removed from AnalyticsTabContent when DOD is merged into KPI strip — unused import causes build warning",
       "V02.0: Prisma $executeRaw needed to update room_band field because DLL lock prevents prisma generate → stale types → lint errors on new fields",
       "V02.0: Sidebar /settings double-highlight: pathname.startsWith('/settings') matches both /settings and /settings/team → must use exact match for /settings",
-      "V02.0: OrgMember count > HotelUser count when org has users not assigned to specific hotel → seat count inflated"
+      "V02.0: OrgMember count > HotelUser count when org has users not assigned to specific hotel → seat count inflated",
+      "V02.1: seed-pricing.ts group_type must match engine expectations — tripcom-campaign-2026 had SEASONAL but engine checks d.group==='CAMPAIGN'. Root cause: data bug not logic bug",
+      "V02.1: catalog.ts MUST include ALL vendors — Trip.com was missing → getCatalogItem() returned undefined → stackBehavior lost → wrong branch in resolveVendorStacking",
+      "V02.1: Self-healing pattern needed in BOTH server (service.ts) AND client (PromotionsTab.tsx) — fixing only server fixes calculation but UI badges/labels still read stale DB values",
+      "V02.1: Campaign type field used in 3 separate places in PromotionsTab.tsx (card view line 176, table view badge line 1365, table group pill line 1372) — must fix ALL or UI still shows wrong labels"
     ],
     "formulas": {
       "rooms_otb": "SUM(num_rooms) from reservations for that stay_date",

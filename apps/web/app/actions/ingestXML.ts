@@ -120,7 +120,7 @@ export async function ingestXML(formData: FormData) {
 
         // Segment inference based on account name (ClientName)
         function inferSegment(accountName: string | null | undefined): string {
-            if (!accountName) return 'UNKNOWN';
+            if (!accountName || accountName.trim() === '') return 'DIRECT'; // C4: no company_name = direct booking
             const norm = accountName.toUpperCase().trim();
             if (norm.includes('AGODA')) return 'OTA';
             if (norm.includes('BOOKING')) return 'OTA';
@@ -129,7 +129,7 @@ export async function ingestXML(formData: FormData) {
             if (norm.includes('TRAVELOKA')) return 'OTA';
             if (norm.includes('HOTELS.COM')) return 'OTA';
             if (norm.includes('HOSTELWORLD')) return 'OTA';
-            if (norm === '' || norm === 'UNKNOWN') return 'UNKNOWN';
+            if (norm === 'UNKNOWN') return 'UNKNOWN';
             return 'AGENT';
         }
 

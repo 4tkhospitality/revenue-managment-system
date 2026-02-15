@@ -3,120 +3,131 @@
 import prisma from '../../lib/prisma';
 import { getActiveHotelId } from '../../lib/pricing/get-hotel';
 import { Prisma } from '@prisma/client';
+import {
+  getExpectedCancelRooms,
+  seasonCodeToLabel,
+  type CancelRateBucket,
+  type SeasonDateRange,
+} from '../../lib/engine/cancelForecast';
+import { buildCancelStats } from './buildCancelStats';
 
 // ─── Types ──────────────────────────────────────────────────
 interface BuildFeaturesParams {
-    hotelId?: string;
-    asOfDate?: Date;      // specific as_of_date to build
-    backfillAll?: boolean; // rebuild for ALL as_of_dates
+  hotelId?: string;
+  asOfDate?: Date;      // specific as_of_date to build
+  backfillAll?: boolean; // rebuild for ALL as_of_dates
 }
 
 interface BuildFeaturesResult {
-    success: boolean;
-    count?: number;
-    asOfDatesProcessed?: number;
-    error?: string;
+  success: boolean;
+  count?: number;
+  asOfDatesProcessed?: number;
+  error?: string;
 }
 
 // ─── Main: buildFeatures ────────────────────────────────────
 export async function buildFeatures(
-    hotelIdOrFirst?: string,
-    asOfDateParam?: Date
+  hotelIdOrFirst?: string,
+  asOfDateParam?: Date
 ): Promise<BuildFeaturesResult> {
-    return buildFeaturesDaily({
-        hotelId: hotelIdOrFirst ?? undefined,
-        asOfDate: asOfDateParam ?? undefined,
-    });
+  return buildFeaturesDaily({
+    hotelId: hotelIdOrFirst ?? undefined,
+    asOfDate: asOfDateParam ?? undefined,
+  });
 }
 
 export async function buildFeaturesDaily(
-    params: BuildFeaturesParams = {}
+  params: BuildFeaturesParams = {}
 ): Promise<BuildFeaturesResult> {
-    try {
-        const hotelId = params.hotelId || await getActiveHotelId();
-        if (!hotelId) {
-            return { success: false, error: 'No active hotel found' };
-        }
-
-        // Get hotel capacity
-        const hotel = await prisma.hotel.findUnique({
-            where: { hotel_id: hotelId },
-            select: { capacity: true },
-        });
-        if (!hotel) {
-            return { success: false, error: 'Hotel not found' };
-        }
-        const capacity = hotel.capacity;
-
-        // Determine which as_of_dates to process
-        let asOfDates: Date[];
-
-        if (params.backfillAll) {
-            // Get all distinct as_of_dates
-            const distinct = await prisma.dailyOTB.findMany({
-                where: { hotel_id: hotelId },
-                select: { as_of_date: true },
-                distinct: ['as_of_date'],
-                orderBy: { as_of_date: 'asc' },
-            });
-            asOfDates = distinct.map(d => d.as_of_date);
-        } else if (params.asOfDate) {
-            asOfDates = [params.asOfDate];
-        } else {
-            // Use latest as_of_date
-            const latest = await prisma.dailyOTB.findFirst({
-                where: { hotel_id: hotelId },
-                orderBy: { as_of_date: 'desc' },
-                select: { as_of_date: true },
-            });
-            if (!latest) {
-                return { success: false, error: 'No OTB data found' };
-            }
-            asOfDates = [latest.as_of_date];
-        }
-
-        let totalCount = 0;
-
-        for (const asOfDate of asOfDates) {
-            const count = await buildForSingleAsOf(hotelId, asOfDate, capacity);
-            totalCount += count;
-        }
-
-        return {
-            success: true,
-            count: totalCount,
-            asOfDatesProcessed: asOfDates.length,
-        };
-    } catch (err: any) {
-        console.error('❌ buildFeaturesDaily error:', err?.message);
-        return { success: false, error: err?.message || 'Unknown error' };
+  try {
+    const hotelId = params.hotelId || await getActiveHotelId();
+    if (!hotelId) {
+      return { success: false, error: 'No active hotel found' };
     }
+
+    // Get hotel capacity
+    const hotel = await prisma.hotel.findUnique({
+      where: { hotel_id: hotelId },
+      select: { capacity: true },
+    });
+    if (!hotel) {
+      return { success: false, error: 'Hotel not found' };
+    }
+    const capacity = hotel.capacity;
+
+    // Determine which as_of_dates to process
+    let asOfDates: Date[];
+
+    if (params.backfillAll) {
+      // Get all distinct as_of_dates
+      const distinct = await prisma.dailyOTB.findMany({
+        where: { hotel_id: hotelId },
+        select: { as_of_date: true },
+        distinct: ['as_of_date'],
+        orderBy: { as_of_date: 'asc' },
+      });
+      asOfDates = distinct.map(d => d.as_of_date);
+    } else if (params.asOfDate) {
+      asOfDates = [params.asOfDate];
+    } else {
+      // Use latest as_of_date
+      const latest = await prisma.dailyOTB.findFirst({
+        where: { hotel_id: hotelId },
+        orderBy: { as_of_date: 'desc' },
+        select: { as_of_date: true },
+      });
+      if (!latest) {
+        return { success: false, error: 'No OTB data found' };
+      }
+      asOfDates = [latest.as_of_date];
+    }
+
+    let totalCount = 0;
+
+    for (const asOfDate of asOfDates) {
+      const count = await buildForSingleAsOf(hotelId, asOfDate, capacity);
+      totalCount += count;
+    }
+
+    return {
+      success: true,
+      count: totalCount,
+      asOfDatesProcessed: asOfDates.length,
+    };
+  } catch (err: any) {
+    console.error('❌ buildFeaturesDaily error:', err?.message);
+    return { success: false, error: err?.message || 'Unknown error' };
+  }
 }
 
 // ─── Build features for a single as_of_date ─────────────────
 async function buildForSingleAsOf(
-    hotelId: string,
-    asOfDate: Date,
-    capacity: number
+  hotelId: string,
+  asOfDate: Date,
+  capacity: number
 ): Promise<number> {
-    const asOfStr = asOfDate.toISOString().split('T')[0];
+  const asOfStr = asOfDate.toISOString().split('T')[0];
 
-    // ── 1. Pickup v2: LATERAL nearest-neighbor + deltaDays scale (NULL-safe) ──
-    // BA rules: exact-first ORDER BY, ::numeric cast, NULLIF(delta,0), no future leakage
-    const pickupRows = await prisma.$queryRaw<Array<{
-        stay_date: Date;
-        rooms_otb: number;
-        pickup_t30: number | null;
-        pickup_t15: number | null;
-        pickup_t7: number | null;
-        pickup_t5: number | null;
-        pickup_t3: number | null;
-        t30_src: string | null; t30_delta: number | null; t30_snap: string | null;
-        t15_src: string | null; t15_delta: number | null; t15_snap: string | null;
-        t7_src: string | null; t7_delta: number | null; t7_snap: string | null;
-        t5_src: string | null; t5_delta: number | null; t5_snap: string | null;
-        t3_src: string | null; t3_delta: number | null; t3_snap: string | null;
-    }>>`
+  // ── 0. Load cancel stats (auto-rebuild if stale >7 days) ──
+  const cancelStats = await loadCancelStats(hotelId);
+  const seasons = await loadSeasons(hotelId);
+
+  // ── 1. Pickup v2: LATERAL nearest-neighbor + deltaDays scale (NULL-safe) ──
+  // BA rules: exact-first ORDER BY, ::numeric cast, NULLIF(delta,0), no future leakage
+  const pickupRows = await prisma.$queryRaw<Array<{
+    stay_date: Date;
+    rooms_otb: number;
+    pickup_t30: number | null;
+    pickup_t15: number | null;
+    pickup_t7: number | null;
+    pickup_t5: number | null;
+    pickup_t3: number | null;
+    t30_src: string | null; t30_delta: number | null; t30_snap: string | null;
+    t15_src: string | null; t15_delta: number | null; t15_snap: string | null;
+    t7_src: string | null; t7_delta: number | null; t7_snap: string | null;
+    t5_src: string | null; t5_delta: number | null; t5_snap: string | null;
+    t3_src: string | null; t3_delta: number | null; t3_snap: string | null;
+  }>>`
     SELECT
       cur.stay_date,
       cur.rooms_otb,
@@ -217,14 +228,14 @@ async function buildForSingleAsOf(
     ORDER BY cur.stay_date;
   `;
 
-    // ── 2. STLY with nearest-snapshot fallback (batch via LATERAL) ──
-    const stlyRows = await prisma.$queryRaw<Array<{
-        stay_date: Date;
-        stly_rooms_otb: number | null;
-        stly_revenue_otb: number | null;
-        stly_actual_date: Date | null;
-        stly_is_approx: boolean;
-    }>>`
+  // ── 2. STLY with nearest-snapshot fallback (batch via LATERAL) ──
+  const stlyRows = await prisma.$queryRaw<Array<{
+    stay_date: Date;
+    stly_rooms_otb: number | null;
+    stly_revenue_otb: number | null;
+    stly_actual_date: Date | null;
+    stly_is_approx: boolean;
+  }>>`
     WITH stly_targets AS (
       SELECT
         stay_date,
@@ -257,76 +268,166 @@ async function buildForSingleAsOf(
     ) ly ON TRUE;
   `;
 
-    // ── 3. Build lookup maps ──
-    const stlyMap = new Map<string, {
-        stly_rooms_otb: number | null;
-        stly_is_approx: boolean;
-    }>();
+  // ── 3. Build lookup maps ──
+  const stlyMap = new Map<string, {
+    stly_rooms_otb: number | null;
+    stly_is_approx: boolean;
+  }>();
 
-    for (const s of stlyRows) {
-        const key = s.stay_date.toISOString().split('T')[0];
-        stlyMap.set(key, {
-            stly_rooms_otb: s.stly_rooms_otb != null ? Number(s.stly_rooms_otb) : null,
-            stly_is_approx: s.stly_is_approx,
-        });
+  for (const s of stlyRows) {
+    const key = s.stay_date.toISOString().split('T')[0];
+    stlyMap.set(key, {
+      stly_rooms_otb: s.stly_rooms_otb != null ? Number(s.stly_rooms_otb) : null,
+      stly_is_approx: s.stly_is_approx,
+    });
+  }
+
+  // ── 4. Assemble features ──
+  const features: Prisma.FeaturesDailyCreateManyInput[] = [];
+
+  for (const row of pickupRows) {
+    const stayStr = row.stay_date.toISOString().split('T')[0];
+    const stly = stlyMap.get(stayStr);
+    const stlyRooms = stly?.stly_rooms_otb ?? null;
+
+    // pace_vs_ly = current - STLY (NULL if no STLY data)
+    const pace_vs_ly = (stlyRooms != null && row.rooms_otb != null)
+      ? row.rooms_otb - stlyRooms
+      : null;
+
+    // remaining_supply V1 = capacity - rooms_otb
+    const remaining_supply = capacity - row.rooms_otb;
+
+    const dow = row.stay_date.getDay();
+    const month = row.stay_date.getMonth() + 1;
+    const is_weekend = dow === 5 || dow === 6; // Fri/Sat (D6 decision)
+
+    // pickup_source trace — rich metadata from LATERAL
+    const pickup_source: Record<string, any> = {};
+    if (row.t30_src) pickup_source.t30 = { src: row.t30_src, delta: Number(row.t30_delta), as_of: row.t30_snap };
+    if (row.t15_src) pickup_source.t15 = { src: row.t15_src, delta: Number(row.t15_delta), as_of: row.t15_snap };
+    if (row.t7_src) pickup_source.t7 = { src: row.t7_src, delta: Number(row.t7_delta), as_of: row.t7_snap };
+    if (row.t5_src) pickup_source.t5 = { src: row.t5_src, delta: Number(row.t5_delta), as_of: row.t5_snap };
+    if (row.t3_src) pickup_source.t3 = { src: row.t3_src, delta: Number(row.t3_delta), as_of: row.t3_snap };
+
+    features.push({
+      hotel_id: hotelId,
+      as_of_date: asOfDate,
+      stay_date: row.stay_date,
+      dow,
+      month,
+      is_weekend,
+      pickup_t30: row.pickup_t30 != null ? Number(row.pickup_t30) : null,
+      pickup_t15: row.pickup_t15 != null ? Number(row.pickup_t15) : null,
+      pickup_t7: row.pickup_t7 != null ? Number(row.pickup_t7) : null,
+      pickup_t5: row.pickup_t5 != null ? Number(row.pickup_t5) : null,
+      pickup_t3: row.pickup_t3 != null ? Number(row.pickup_t3) : null,
+      pace_vs_ly,
+      remaining_supply,
+      // Cancel forecast (Phase 02)
+      ...computeCancelFields(row.stay_date, asOfDate, row.rooms_otb, remaining_supply, capacity, cancelStats, seasons),
+      stly_is_approx: stly?.stly_is_approx ?? null,
+      pickup_source: Object.keys(pickup_source).length > 0 ? pickup_source : Prisma.JsonNull,
+    });
+  }
+
+  // ── 5. Atomic DELETE + INSERT ──
+  await prisma.$transaction([
+    prisma.featuresDaily.deleteMany({
+      where: { hotel_id: hotelId, as_of_date: asOfDate },
+    }),
+    prisma.featuresDaily.createMany({
+      data: features,
+    }),
+  ]);
+
+  return features.length;
+}
+
+// ─── Cancel Forecast Helpers ────────────────────────────────
+
+function computeCancelFields(
+  stayDate: Date,
+  asOfDate: Date,
+  roomsOtb: number,
+  remainingSupply: number,
+  capacity: number,
+  cancelStats: CancelRateBucket[],
+  seasons: SeasonDateRange[]
+): { expected_cxl: number | null; net_remaining: number | null; cxl_rate_used: number | null; cxl_confidence: string | null } {
+  if (cancelStats.length === 0) {
+    return { expected_cxl: null, net_remaining: null, cxl_rate_used: null, cxl_confidence: null };
+  }
+
+  // Determine dominant segment for this hotel (simplified: use 'ALL' for now)
+  const result = getExpectedCancelRooms(stayDate, asOfDate, roomsOtb, 'ALL', cancelStats, seasons);
+
+  // net_remaining bounded: [remaining_supply, capacity]
+  const netRemaining = Math.min(capacity, Math.max(remainingSupply, remainingSupply + result.expectedCxl));
+
+  return {
+    expected_cxl: result.expectedCxl,
+    net_remaining: netRemaining,
+    cxl_rate_used: result.rate,
+    cxl_confidence: result.confidence,
+  };
+}
+
+async function loadCancelStats(hotelId: string): Promise<CancelRateBucket[]> {
+  // Check if stats exist and are fresh (<7 days)
+  const latest = await prisma.cancelRateStats.findFirst({
+    where: { hotel_id: hotelId },
+    orderBy: { computed_at: 'desc' },
+    select: { computed_at: true },
+  });
+
+  if (latest) {
+    const ageMs = Date.now() - latest.computed_at.getTime();
+    const ageDays = ageMs / (1000 * 60 * 60 * 24);
+    if (ageDays > 7) {
+      console.log(`[BuildFeatures] Cancel stats stale (${ageDays.toFixed(1)}d). Auto-rebuilding...`);
+      await buildCancelStats(hotelId);
     }
+  } else {
+    // No stats at all — try to build
+    console.log(`[BuildFeatures] No cancel stats found. Building...`);
+    await buildCancelStats(hotelId);
+  }
 
-    // ── 4. Assemble features ──
-    const features: Prisma.FeaturesDailyCreateManyInput[] = [];
+  // Load from DB
+  const rows = await prisma.cancelRateStats.findMany({
+    where: { hotel_id: hotelId },
+  });
 
-    for (const row of pickupRows) {
-        const stayStr = row.stay_date.toISOString().split('T')[0];
-        const stly = stlyMap.get(stayStr);
-        const stlyRooms = stly?.stly_rooms_otb ?? null;
+  return rows.map(r => ({
+    hotel_id: r.hotel_id,
+    booking_lead_bucket: r.booking_lead_bucket,
+    dow: r.dow,
+    season_label: r.season_label,
+    segment: r.segment,
+    cancel_rate: r.cancel_rate,
+    raw_rate: r.raw_rate,
+    total_rooms: r.total_rooms,
+    cancelled_rooms: r.cancelled_rooms,
+    confidence: r.confidence as 'high' | 'medium' | 'low',
+    mapping_version: r.mapping_version,
+  }));
+}
 
-        // pace_vs_ly = current - STLY (NULL if no STLY data)
-        const pace_vs_ly = (stlyRooms != null && row.rooms_otb != null)
-            ? row.rooms_otb - stlyRooms
-            : null;
+async function loadSeasons(hotelId: string): Promise<SeasonDateRange[]> {
+  const configs = await prisma.seasonConfig.findMany({
+    where: { hotel_id: hotelId, is_active: true },
+    orderBy: { priority: 'desc' },
+  });
 
-        // remaining_supply V1 = capacity - rooms_otb
-        const remaining_supply = capacity - row.rooms_otb;
-
-        const dow = row.stay_date.getDay();
-        const month = row.stay_date.getMonth() + 1;
-        const is_weekend = dow === 5 || dow === 6; // Fri/Sat (D6 decision)
-
-        // pickup_source trace — rich metadata from LATERAL
-        const pickup_source: Record<string, any> = {};
-        if (row.t30_src) pickup_source.t30 = { src: row.t30_src, delta: Number(row.t30_delta), as_of: row.t30_snap };
-        if (row.t15_src) pickup_source.t15 = { src: row.t15_src, delta: Number(row.t15_delta), as_of: row.t15_snap };
-        if (row.t7_src) pickup_source.t7 = { src: row.t7_src, delta: Number(row.t7_delta), as_of: row.t7_snap };
-        if (row.t5_src) pickup_source.t5 = { src: row.t5_src, delta: Number(row.t5_delta), as_of: row.t5_snap };
-        if (row.t3_src) pickup_source.t3 = { src: row.t3_src, delta: Number(row.t3_delta), as_of: row.t3_snap };
-
-        features.push({
-            hotel_id: hotelId,
-            as_of_date: asOfDate,
-            stay_date: row.stay_date,
-            dow,
-            month,
-            is_weekend,
-            pickup_t30: row.pickup_t30 != null ? Number(row.pickup_t30) : null,
-            pickup_t15: row.pickup_t15 != null ? Number(row.pickup_t15) : null,
-            pickup_t7: row.pickup_t7 != null ? Number(row.pickup_t7) : null,
-            pickup_t5: row.pickup_t5 != null ? Number(row.pickup_t5) : null,
-            pickup_t3: row.pickup_t3 != null ? Number(row.pickup_t3) : null,
-            pace_vs_ly,
-            remaining_supply,
-            stly_is_approx: stly?.stly_is_approx ?? null,
-            pickup_source: Object.keys(pickup_source).length > 0 ? pickup_source : Prisma.JsonNull,
-        });
-    }
-
-    // ── 5. Atomic DELETE + INSERT ──
-    await prisma.$transaction([
-        prisma.featuresDaily.deleteMany({
-            where: { hotel_id: hotelId, as_of_date: asOfDate },
-        }),
-        prisma.featuresDaily.createMany({
-            data: features,
-        }),
-    ]);
-
-    return features.length;
+  return configs.flatMap(sc => {
+    const ranges = sc.date_ranges as Array<{ start: string; end: string }>;
+    return ranges.map(r => ({
+      code: sc.code,
+      label: seasonCodeToLabel(sc.code),
+      start: r.start.slice(5), // 'YYYY-MM-DD' → 'MM-DD'
+      end: r.end.slice(5),
+      priority: sc.priority,
+    }));
+  });
 }

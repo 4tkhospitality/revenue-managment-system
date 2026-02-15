@@ -1,99 +1,144 @@
 'use server'
 
 import prisma from '../../lib/prisma';
-import { PricingLogic } from '../../lib/pricing';
+import { optimizePrice, type PriceOptimizerInput } from '../../lib/engine/priceOptimizer';
+import type { ForecastConfidence } from '../../lib/engine/demandModelV03';
 
 export async function runPricingEngine(hotelId: string, asOfDate: Date) {
-    // 1. Fetch Forecasts and DailyOTB (for Supply)
-    // We need:
-    // - DemandForecast (Remaining Demand)
-    // - DailyOTB (Rooms Sold -> Remaining Supply)
-    // - Capacity (from Hotel or OTB?) -> Rooms Inventory.
-    //   For V01, let's assume Capacity is fixed (e.g. 50 rooms) or stored in Hotel settings.
-    //   Let's check schema/seed. Hotel has 'room_count' (implied, or add to query).
-
-    // Seed says Hotel "Hotel California". Let's assume Capacity = 50 for MVP if not in DB.
-    // Actually, `DailyOTB` stores `rooms_otb`.
-    // Missing: `capacity` per day.
-    // Phase 03 Feature Engine calculated `remaining_supply = capacity - rooms_otb`.
-    // BUT we didn't save `remaining_supply` to DB in Phase 03 Code (we only saved FeaturesDaily).
-    // So we can re-fetch FeaturesDaily! It has `remaining_supply`.
-
-    // Check FeaturesDaily schema...
-    // Schema in Phase 01: `model FeaturesDaily { ... }` 
-    // Plan 03 said Features are "rooms_otb, pickup_...". 
-    // DOES IT HAVE remaining_supply?
-    // Let's verify via prisma schema inspection or assume it's calculated.
-    // If not in table, calculate here: Capacity (constant) - OTB.
-
-    const capacity = 50; // Hardcode V01 for Safety. Or fetch from Hotel metadata if exists.
-    const basePrice = 100; // Default V01 Base Price.
-
-    // Fetch Joined Data (Forecast + OTB)
-    // In V01, we iterate Forecasts as primary driver.
-    const forecasts = await prisma.demandForecast.findMany({
-        where: { hotel_id: hotelId, as_of_date: asOfDate }
+    // 1. Load hotel config
+    const hotel = await prisma.hotel.findUnique({
+        where: { hotel_id: hotelId },
+        select: { capacity: true, currency: true },
     });
+    const capacity = hotel?.capacity ?? 100;
+
+    // 2. Load season configs for season multiplier
+    const seasonConfigs = await prisma.seasonConfig.findMany({
+        where: { hotel_id: hotelId, is_active: true },
+        orderBy: { priority: 'desc' },
+    });
+
+    // 3. Load guardrails from OCC tier config (or default)
+    const tierConfigs = await prisma.occTierConfig.findMany({
+        where: { hotel_id: hotelId },
+        orderBy: { tier_index: 'asc' },
+    });
+
+    // Compute base rate from season net rates or fallback
+    const seasonNetRate = await prisma.seasonNetRate.findFirst({
+        where: { hotel_id: hotelId },
+        orderBy: { net_rate: 'asc' },
+        select: { net_rate: true },
+    });
+    const baseRate = seasonNetRate ? Number(seasonNetRate.net_rate) : 1000000; // 1M VND default
+
+    // Compute guardrails from tier multipliers
+    const minRate = tierConfigs.length > 0
+        ? Math.round(baseRate * Math.min(...tierConfigs.map(t => t.adjustment_type === 'FIXED' ? (t.fixed_amount / Math.max(baseRate, 1)) : t.multiplier)))
+        : Math.round(baseRate * 0.7);
+    const maxRate = tierConfigs.length > 0
+        ? Math.round(baseRate * Math.max(...tierConfigs.map(t => t.multiplier)) * 1.3)
+        : Math.round(baseRate * 2.0);
+
+    // 4. Load features + forecasts for this as_of_date
+    const [features, forecasts] = await Promise.all([
+        prisma.featuresDaily.findMany({
+            where: { hotel_id: hotelId, as_of_date: asOfDate },
+            orderBy: { stay_date: 'asc' },
+        }),
+        prisma.demandForecast.findMany({
+            where: { hotel_id: hotelId, as_of_date: asOfDate },
+        }),
+    ]);
+
+    // Index forecasts by stay_date string
+    const forecastMap = new Map(
+        forecasts.map(f => [f.stay_date.toISOString().slice(0, 10), f])
+    );
 
     const recommendations = [];
 
-    for (const fc of forecasts) {
-        // Need Supply
-        // Fetch OTB for this stay_date
-        const otb = await prisma.dailyOTB.findUnique({
-            where: {
-                hotel_id_as_of_date_stay_date: {
-                    hotel_id: hotelId,
-                    as_of_date: asOfDate,
-                    stay_date: fc.stay_date
-                }
-            }
-        });
+    for (const feat of features) {
+        const stayDateStr = feat.stay_date.toISOString().slice(0, 10);
+        const fc = forecastMap.get(stayDateStr);
+        const roomsOtb = feat.rooms_otb ?? 0;
 
-        const roomsSold = otb?.rooms_otb || 0;
-        const remainingSupply = capacity - roomsSold;
+        // Season multiplier for this date
+        const seasonMult = getSeasonMultiplier(feat.stay_date, seasonConfigs);
 
-        // Current Price Source
-        // Ideally OTB has ADR. Or Forecast has.
-        // V01 Fallback: Use BasePrice (100).
-        const currentPrice = basePrice;
+        const input: PriceOptimizerInput = {
+            baseRate,
+            roomsOtb,
+            remainingDemand: fc?.remaining_demand ?? 0,
+            remainingSupply: feat.remaining_supply ?? Math.max(0, capacity - roomsOtb),
+            expectedCxl: feat.expected_cxl ?? 0,
+            capacity,
+            seasonMultiplier: seasonMult,
+            guardrails: {
+                minRate,
+                maxRate: Math.round(maxRate),
+                maxStepPct: 0.25,
+            },
+            confidence: (fc?.confidence as ForecastConfidence) ?? 'fallback',
+        };
 
-        // Run Logic
-        const result = PricingLogic.optimize(currentPrice, fc.remaining_demand || 0, remainingSupply);
+        const result = optimizePrice(input);
 
         recommendations.push({
             hotel_id: hotelId,
             as_of_date: asOfDate,
-            stay_date: fc.stay_date,
-            current_price: currentPrice,
-            recommended_price: result.recommendedPrice, // Can be null (Stop Sell)
-            expected_revenue: result.expectedRevenue,
+            stay_date: feat.stay_date,
+            current_price: baseRate * seasonMult,
+            recommended_price: result.recommendedPrice,
+            expected_revenue: result.expectedGrossRevenue,
             uplift_pct: result.upliftPct,
-            explanation: result.explanation
+            explanation: JSON.stringify({
+                zone: result.zone,
+                multiplier: result.multiplier,
+                confidence: input.confidence,
+                projectedOcc: result.projectedOcc,
+                expectedFinalRooms: result.expectedFinalRooms,
+                trace: result.trace,
+            }),
         });
     }
 
-    // Save
+    // 5. Atomic replace
     await prisma.priceRecommendations.deleteMany({
         where: { hotel_id: hotelId, as_of_date: asOfDate }
     });
 
-    // Prisma might complain if recommended_price is null and schema expects Float.
-    // Check schema: `recommended_price Float`. Nullable?
-    // If NOT nullable, we must handle STOP SELL differently.
-    // Plan (4): "Stop Sell -> price_recommendations.status = 'stop_sell' or recommended_price = null"
-    // Let's assume we filter out nulls or handle schema.
-    // SAFE MVP: If Stop Sell, save price = 9999 (High) or 0? 
-    // No, let's treat it as NULL. If schema constraint, we fix schema or skip record.
-    // For now, filter valid recs.
-
-    const validRecs = recommendations.filter(r => r.recommended_price !== null);
-
-    if (validRecs.length > 0) {
+    if (recommendations.length > 0) {
         await prisma.priceRecommendations.createMany({
-            data: validRecs as any // Casting to avoid strict null checks blocking build if schema mismatch
+            data: recommendations as any
         });
     }
 
-    return { success: true, count: validRecs.length };
+    return { success: true, count: recommendations.length };
+}
+
+// ─── Helpers ────────────────────────────────────────────────
+
+function getSeasonMultiplier(
+    stayDate: Date,
+    seasonConfigs: Array<{ code: string; date_ranges: any; priority: number }>
+): number {
+    const mmdd = stayDate.toISOString().slice(5, 10); // "MM-DD"
+
+    for (const sc of seasonConfigs) {
+        const ranges = sc.date_ranges as Array<{ start: string; end: string }>;
+        for (const range of ranges) {
+            const rStart = range.start.slice(5); // "MM-DD"
+            const rEnd = range.end.slice(5);
+            if (mmdd >= rStart && mmdd <= rEnd) {
+                // Map season code to multiplier
+                const code = sc.code.toUpperCase();
+                if (code === 'HOLIDAY') return 1.5;
+                if (code === 'HIGH') return 1.2;
+                if (code === 'NORMAL') return 1.0;
+                return 1.0;
+            }
+        }
+    }
+    return 1.0; // default — no season match
 }

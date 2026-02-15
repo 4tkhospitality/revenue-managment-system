@@ -60,6 +60,7 @@ model Hotel {
 
   // Commercialization
   subscription              Subscription?
+  payment_transactions      PaymentTransaction[]
 
   // PLG — Usage tracking
   usage_monthly             UsageMonthly[]
@@ -70,6 +71,9 @@ model Hotel {
   reseller_attributions     ResellerAttribution[]
   promo_redemptions         PromoRedemption[]
   invoices                  Invoice[]
+
+  // Analytics Layer P1 — Cancel Rate Stats
+  cancel_rate_stats         CancelRateStats[]
 
   @@map("hotels")
 }
@@ -238,6 +242,7 @@ model FeaturesDaily {
   hotel_id         String   @db.Uuid
   as_of_date       DateTime @db.Date
   stay_date        DateTime @db.Date
+  rooms_otb        Int?     // Rooms on the books (from DailyOTB snapshot)
   dow              Int?
   is_weekend       Boolean?
   month            Int?
@@ -250,6 +255,11 @@ model FeaturesDaily {
   pickup_t3        Int?
   pace_vs_ly       Float?
   remaining_supply Int?
+  // Cancel Forecast (Phase 02)
+  expected_cxl     Int?     // Expected cancellation rooms
+  net_remaining    Int?     // remaining_supply + expected_cxl (projected available)
+  cxl_rate_used    Float?   // Cancel rate applied
+  cxl_confidence   String?  // 'high' | 'medium' | 'low' | 'fallback'
   created_at       DateTime @default(now())
   pickup_t15       Int?
   pickup_t5        Int?
@@ -269,6 +279,8 @@ model DemandForecast {
   stay_date        DateTime @db.Date
   remaining_demand Int?
   model_version    String?
+  confidence       String?  // 'high' | 'medium' | 'low' | 'fallback'
+  forecast_trace   Json?    // Array of trace strings for debugging
   created_at       DateTime @default(now())
   hotel            Hotel    @relation(fields: [hotel_id], references: [hotel_id])
 
@@ -548,6 +560,7 @@ enum SubscriptionStatus {
   TRIAL
   PAST_DUE
   CANCELLED
+  REFUNDED
 }
 
 enum RoomBand {
@@ -556,6 +569,70 @@ enum RoomBand {
   R150  // 81–150 rooms
   R300P // 151–300+ rooms
 }
+
+// ── Payment Gateway Enums ───────────────────────────────────────────
+
+enum PaymentGateway {
+  SEPAY
+  PAYPAL
+  ZALO_MANUAL
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+// ── Payment Transaction Model ───────────────────────────────────────
+
+model PaymentTransaction {
+  id                      String          @id @default(uuid()) @db.Uuid
+
+  // Ownership (multi-tenancy)
+  hotel_id                String          @db.Uuid
+  user_id                 String          @db.Uuid
+
+  // Payment info
+  gateway                 PaymentGateway
+  order_id                String          @unique      // RMS-{hotelId.slice(0,8)}-{timestamp}
+  gateway_transaction_id  String?                      // SePay id / PayPal subscription_id
+  amount                  Decimal         @db.Decimal(12, 2)
+  currency                String          @default("VND")  // VND or USD
+  status                  PaymentStatus   @default(PENDING)
+
+  // What was purchased (snapshot at time of purchase)
+  purchased_tier          PlanTier?
+  purchased_room_band     RoomBand?
+
+  // Timestamps (P1 — operational debugging)
+  expires_at              DateTime?       // PENDING auto-expire (created_at + 30min)
+  completed_at            DateTime?       // When status changed to COMPLETED
+  failed_at               DateTime?       // When status changed to FAILED
+  failed_reason           String?         // Why it failed (amount_mismatch, timeout, etc.)
+
+  // Gateway event tracking (P1 — reconciliation)
+  gateway_event_id        String?         // PayPal event.id
+  provider_customer_ref   String?         // PayPal payer email/id
+
+  // Meta
+  description             String?
+  raw_payload             Json?           // Webhook payload gốc
+  created_at              DateTime        @default(now())
+
+  // Relations
+  hotel                   Hotel           @relation(fields: [hotel_id], references: [hotel_id], onDelete: Cascade)
+
+  // Indexes
+  @@unique([gateway, gateway_transaction_id])  // Chống webhook duplicate
+  @@index([hotel_id])
+  @@index([status])
+  @@index([status, expires_at])                // P1: fast query for PENDING auto-expire
+  @@map("payment_transactions")
+}
+
+// ── Subscription Model ──────────────────────────────────────────────
 
 model Subscription {
   id                        String             @id @default(uuid()) @db.Uuid
@@ -572,10 +649,10 @@ model Subscription {
   capacity_snapshot         Int                @default(0)
   price_multiplier          Float              @default(1.0)
 
-  // External payment (Sepay/Stripe) - optional for now
-  external_provider         String?
+  // External payment — single source of truth
+  external_provider         String?            // 'SEPAY' | 'PAYPAL' | 'ZALO_MANUAL'
   external_customer_id      String?
-  external_subscription_id  String?
+  external_subscription_id  String?            // PayPal subscription ID
   current_period_start      DateTime?
   current_period_end        DateTime?
 
@@ -1264,4 +1341,32 @@ model SeasonNetRate {
   @@unique([season_id, room_type_id])
   @@index([hotel_id])
   @@map("season_net_rates")
+}
+
+// ━━━━ Analytics Layer P1: Cancel Rate Statistics ━━━━
+model CancelRateStats {
+  id                  String   @id @default(uuid()) @db.Uuid
+  hotel_id            String   @db.Uuid
+  booking_lead_bucket String   // '0-3d', '4-7d', '8-14d', '15-30d', '31-60d', '61d+'
+  dow                 Int      // 0=Sun, 1=Mon, ... 6=Sat
+  season_label        String   // 'peak', 'shoulder', 'off_peak', 'default'
+  segment             String   // 'OTA', 'AGENT', 'DIRECT', 'UNKNOWN', 'ALL'
+  cancel_rate         Float    // 0.0 - 0.8 (smoothed + clamped)
+  raw_rate            Float    // before Bayesian smoothing
+  total_rooms         Int      // SUM(rooms) — stay_date-exploded grain
+  cancelled_rooms     Int      // SUM(cancelled rooms)
+  confidence          String   // 'high', 'medium', 'low'
+  mapping_version     String   @default("v1")
+  // Training window metadata
+  window_start        DateTime @db.Date
+  window_end          DateTime @db.Date
+  data_row_count      Int
+  unknown_pct         Float    @default(0)
+  computed_at         DateTime @default(now())
+
+  hotel Hotel @relation(fields: [hotel_id], references: [hotel_id], onDelete: Cascade)
+
+  @@unique([hotel_id, booking_lead_bucket, dow, season_label, segment])
+  @@index([hotel_id])
+  @@map("cancel_rate_stats")
 }

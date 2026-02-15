@@ -2,8 +2,8 @@
 
 import { Hotel } from 'lucide-react';
 import {
-    BarChart, Bar, XAxis, YAxis, CartesianGrid,
-    Tooltip, Legend, ResponsiveContainer, Cell,
+    ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid,
+    Tooltip, ResponsiveContainer, Cell,
 } from 'recharts';
 import type { AnalyticsRow } from './types';
 
@@ -37,9 +37,13 @@ export function SupplyChart({
             date: r.stay_date.slice(5),
             otb: r.rooms_otb,
             remaining: r.remaining_supply ?? Math.max(0, capacity - r.rooms_otb),
+            net_remaining: r.net_remaining ?? null,
+            expected_cxl: r.expected_cxl ?? null,
             occ,
         };
     });
+
+    const hasCancelData = chartData.some(d => d.net_remaining != null);
 
     return (
         <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
@@ -64,10 +68,15 @@ export function SupplyChart({
                 <span className="inline-flex items-center gap-1">
                     <span className="w-2.5 h-2.5 rounded-sm bg-slate-800" /> Sold out
                 </span>
+                {hasCancelData && (
+                    <span className="inline-flex items-center gap-1">
+                        <span className="w-4 h-0.5 bg-violet-500 rounded" style={{ borderTop: '2px dashed #8b5cf6' }} /> Trống thực tế
+                    </span>
+                )}
             </div>
 
             <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={chartData}>
+                <ComposedChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                     <XAxis
                         dataKey="date"
@@ -87,6 +96,12 @@ export function SupplyChart({
                             border: '1px solid #e2e8f0',
                             boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
                         }}
+                        formatter={((value: any, name: any, props: any) => {
+                            if (name === 'Trống thực tế' && props.payload?.expected_cxl) {
+                                return [`${value} (+${props.payload.expected_cxl} CXL dự báo)`, name];
+                            }
+                            return [value, name];
+                        }) as any}
                     />
                     <Bar dataKey="otb" stackId="a" name="Rooms OTB">
                         {chartData.map((entry, i) => (
@@ -98,7 +113,19 @@ export function SupplyChart({
                             <Cell key={i} fill={getRemainingColor(entry.occ)} />
                         ))}
                     </Bar>
-                </BarChart>
+                    {hasCancelData && (
+                        <Line
+                            type="monotone"
+                            dataKey="net_remaining"
+                            name="Trống thực tế"
+                            stroke="#8b5cf6"
+                            strokeWidth={2}
+                            strokeDasharray="5 5"
+                            dot={false}
+                            connectNulls
+                        />
+                    )}
+                </ComposedChart>
             </ResponsiveContainer>
         </div>
     );

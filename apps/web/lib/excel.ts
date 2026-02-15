@@ -14,11 +14,21 @@ export interface ExcelRow {
     revenue: string;
     status: string;
     cancel_date?: string;
+    // GM Reporting dimensions (optional)
+    room_type?: string;
+    company_name?: string;
+    guest_name?: string;
+    salesperson?: string;
+    rate_per_room_night?: string;
+    pax?: string;
+    room_nights?: string;
+    nights?: string;
+    create_clerk?: string;
 }
 
 // Map Vietnamese headers → English field names
 const HEADER_MAP: Record<string, string> = {
-    // Vietnamese
+    // ─── Core fields (Vietnamese with/without diacritics) ─────
     'mã đặt phòng': 'reservation_id',
     'ma dat phong': 'reservation_id',
     'ngày đặt': 'booking_date',
@@ -36,7 +46,28 @@ const HEADER_MAP: Record<string, string> = {
     'ngay huy': 'cancel_date',
     'ngày hủy': 'cancel_date',
     'ngay hủy': 'cancel_date',
-    // English (already correct)
+    // ─── GM Reporting dimensions (Vietnamese) ─────────────────
+    'loại phòng': 'room_type',
+    'loai phong': 'room_type',
+    'nguồn đặt': 'company_name',
+    'nguon dat': 'company_name',
+    'tên khách/nhóm': 'guest_name',
+    'ten khach/nhom': 'guest_name',
+    'tên khách': 'guest_name',
+    'ten khach': 'guest_name',
+    'nhân viên bán': 'salesperson',
+    'nhan vien ban': 'salesperson',
+    'giá net/đêm': 'rate_per_room_night',
+    'gia net/dem': 'rate_per_room_night',
+    'số khách': 'pax',
+    'so khach': 'pax',
+    'tổng đêm phòng': 'room_nights',
+    'tong dem phong': 'room_nights',
+    'số đêm': 'nights',
+    'so dem': 'nights',
+    'nhân viên tạo': 'create_clerk',
+    'nhan vien tao': 'create_clerk',
+    // ─── English field names ──────────────────────────────────
     'reservation_id': 'reservation_id',
     'booking_date': 'booking_date',
     'arrival_date': 'arrival_date',
@@ -45,6 +76,15 @@ const HEADER_MAP: Record<string, string> = {
     'revenue': 'revenue',
     'status': 'status',
     'cancel_date': 'cancel_date',
+    'room_type': 'room_type',
+    'company_name': 'company_name',
+    'guest_name': 'guest_name',
+    'salesperson': 'salesperson',
+    'rate_per_room_night': 'rate_per_room_night',
+    'pax': 'pax',
+    'room_nights': 'room_nights',
+    'nights': 'nights',
+    'create_clerk': 'create_clerk',
 };
 
 /**

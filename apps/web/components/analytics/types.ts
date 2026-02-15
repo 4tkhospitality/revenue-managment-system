@@ -17,6 +17,11 @@ export interface AnalyticsRow {
     stly_is_approx: boolean | null;
     dod_delta: number | null;
     dod_delta_rev: number | null;
+    // Cancel Forecast (Phase 03)
+    expected_cxl: number | null;
+    net_remaining: number | null;
+    cxl_rate_used: number | null;
+    cxl_confidence: string | null;
 }
 
 export interface EnrichedRow extends AnalyticsRow {

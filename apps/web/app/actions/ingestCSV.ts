@@ -129,6 +129,21 @@ export async function ingestCSV(formData: FormData) {
         const validRows = [];
         const seenResIds = new Set<string>(); // Duplicate detection within file
 
+        // Segment inference based on company_name/source (matching ingestXML.ts logic)
+        function inferSegment(accountName: string | null | undefined): string {
+            if (!accountName || accountName.trim() === '') return 'DIRECT';
+            const norm = accountName.toUpperCase().trim();
+            if (norm.includes('AGODA')) return 'OTA';
+            if (norm.includes('BOOKING')) return 'OTA';
+            if (norm.includes('CTRIP') || norm.includes('TRIP.COM')) return 'OTA';
+            if (norm.includes('EXPEDIA')) return 'OTA';
+            if (norm.includes('TRAVELOKA')) return 'OTA';
+            if (norm.includes('HOTELS.COM')) return 'OTA';
+            if (norm.includes('HOSTELWORLD')) return 'OTA';
+            if (norm === 'UNKNOWN') return 'UNKNOWN';
+            return 'AGENT';
+        }
+
         // 5. Validation Loop
         for (const [index, row] of rows.entries()) {
             const line = index + 2; // header is 1
@@ -181,6 +196,16 @@ export async function ingestCSV(formData: FormData) {
             const bookTime = toLocalMidnightUTC(bookingDate);
             const cancelTime = cancelDate ? toLocalMidnightUTC(cancelDate) : null;
 
+            // GM Reporting dimension fields
+            const companyName = row.company_name?.trim() || null;
+            const accountNorm = companyName
+                ? companyName.toUpperCase().trim().replace(/\s+/g, ' ')
+                : null;
+            const nightsVal = row.nights ? parseInt(row.nights) : null;
+            const roomNightsVal = row.room_nights ? parseInt(row.room_nights) : null;
+            const paxVal = row.pax ? parseInt(row.pax) : null;
+            const rateVal = row.rate_per_room_night ? Math.round(parseFloat(row.rate_per_room_night)) : null;
+
             validRows.push({
                 hotel_id: hotelId,
                 job_id: job.job_id,
@@ -192,8 +217,26 @@ export async function ingestCSV(formData: FormData) {
                 revenue: revenue,
                 status: status,
                 cancel_date: cancelDate,
-                book_time: bookTime,       // NEW: local midnight as UTC
-                cancel_time: cancelTime,   // NEW: local midnight as UTC
+                book_time: bookTime,       // local midnight as UTC
+                cancel_time: cancelTime,   // local midnight as UTC
+                // --- Source/Account (ClientName) ---
+                company_name: companyName,
+                account_name_norm: accountNorm,
+                segment: inferSegment(companyName),
+                // --- Room Type ---
+                room_code: row.room_type?.trim() || null,
+                // --- Guest / Group ---
+                guest_group_name: row.guest_name?.trim() || null,
+                // --- Sales Rep ---
+                salesperson_name: row.salesperson?.trim() || null,
+                // --- Revenue/Rate ---
+                net_rate_per_room_night: rateVal,
+                // --- Quantities ---
+                pax: paxVal,
+                room_nights: roomNightsVal,
+                nights: nightsVal,
+                // --- Clerk ---
+                create_clerk: row.create_clerk?.trim() || null,
             });
         }
 
