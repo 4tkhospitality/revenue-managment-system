@@ -301,7 +301,23 @@ function ConfigForm({
                 }}>
                     <X size={14} /> Hủy
                 </button>
-                <button onClick={() => onSave(form)} disabled={saving} style={{
+                <button onClick={() => {
+                    // Strip fields that don't belong to this config_type
+                    // to avoid validation errors from the API
+                    const shared = ['id', 'config_type', 'effective_from', 'effective_to', 'scope', 'hotel_id', 'priority', 'label'];
+                    const allowed: Record<string, string[]> = {
+                        BASE_PRICE: [...shared, 'tier', 'amount_vnd'],
+                        BAND_MULTIPLIER: [...shared, 'room_band', 'multiplier'],
+                        TERM_DISCOUNT: [...shared, 'term_months', 'percent'],
+                    };
+                    const keys = allowed[type] || shared;
+                    const clean: Record<string, unknown> = {};
+                    for (const k of keys) {
+                        if (form[k] !== undefined && form[k] !== '') clean[k] = form[k];
+                    }
+                    clean.config_type = type; // always include
+                    onSave(clean);
+                }} disabled={saving} style={{
                     display: 'inline-flex', alignItems: 'center', gap: 4,
                     padding: '7px 14px', fontSize: 13, fontWeight: 600,
                     borderRadius: 8, border: 'none', cursor: saving ? 'wait' : 'pointer',
