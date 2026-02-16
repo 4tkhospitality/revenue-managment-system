@@ -13,7 +13,7 @@ const publicRoutes = ["/auth/login", "/api/auth"]
 const apiBypassRoutes = ["/api/pricing", "/api/onboarding", "/api/invite"]
 
 // Routes that don't require hotel access
-const noHotelRoutes = ["/admin", "/api/admin", "/blocked", "/no-hotel-access", "/select-hotel", "/onboarding", "/api/onboarding", "/welcome", "/invite", "/api/invite"]
+const noHotelRoutes = ["/admin", "/api/admin", "/blocked", "/no-hotel-access", "/select-hotel", "/onboarding", "/api/onboarding", "/welcome", "/invite", "/api/invite", "/api/payments/pending-activation"]
 
 
 // Role hierarchy for permission checks
