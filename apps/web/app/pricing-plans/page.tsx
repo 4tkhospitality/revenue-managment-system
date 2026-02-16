@@ -120,12 +120,20 @@ export default function PricingPlansPage() {
 
     useEffect(() => {
         if (status === 'authenticated') {
+            // Fetch subscription info
             fetch('/api/subscription')
                 .then((res) => res.json())
                 .then((data) => {
-                    setCurrentTier(data.plan || 'STANDARD');
                     if (data.roomBand) setCurrentBand(data.roomBand);
                     if (data.hotelId) setHotelId(data.hotelId);
+                    // Check if the hotel is demo — don't show "current plan" for demo
+                    return fetch('/api/is-demo-hotel').then(r => r.json()).then(demoData => {
+                        if (demoData.isDemo) {
+                            setCurrentTier(null); // Demo hotel — no "current plan" highlight
+                        } else {
+                            setCurrentTier(data.plan || 'STANDARD');
+                        }
+                    });
                 })
                 .catch(() => setCurrentTier('STANDARD'));
         }
@@ -308,10 +316,10 @@ export default function PricingPlansPage() {
                                     onClick={() => handleUpgradeClick(tier.id)}
                                     disabled={isCurrentTier}
                                     className={`w-full py-3 px-4 rounded-xl font-medium text-center transition-colors ${isCurrentTier
-                                            ? 'bg-green-50 text-green-700 border-2 border-green-200 cursor-default'
-                                            : tier.highlight
-                                                ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200'
-                                                : 'bg-gray-50 text-gray-900 hover:bg-gray-100 border border-gray-200'
+                                        ? 'bg-green-50 text-green-700 border-2 border-green-200 cursor-default'
+                                        : tier.highlight
+                                            ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200'
+                                            : 'bg-gray-50 text-gray-900 hover:bg-gray-100 border border-gray-200'
                                         }`}
                                 >
                                     {isCurrentTier ? '✓ Gói hiện tại' : `Nâng cấp ${tier.name}`}
@@ -320,8 +328,8 @@ export default function PricingPlansPage() {
                                 <a
                                     href={tier.ctaLink}
                                     className={`w-full py-3 px-4 rounded-xl font-medium text-center transition-colors block ${tier.highlight
-                                            ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200'
-                                            : 'bg-gray-50 text-gray-900 hover:bg-gray-100 border border-gray-200'
+                                        ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200'
+                                        : 'bg-gray-50 text-gray-900 hover:bg-gray-100 border border-gray-200'
                                         }`}
                                 >
                                     {tier.cta}
@@ -381,6 +389,7 @@ export default function PricingPlansPage() {
                     tier={selectedTier}
                     roomBand={roomBand}
                     currentTier={(currentTier as PlanTier) || 'STANDARD'}
+                    billingCycle={cycle}
                 />
             </div>
         );

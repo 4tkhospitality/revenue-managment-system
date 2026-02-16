@@ -13,6 +13,8 @@ import { trackEventClient } from '@/lib/payments/trackEvent';
 import { getPlanLabel, getBandLabel } from '@/lib/plg/plan-config';
 import { getPrice } from '@/lib/plg/plan-config';
 
+type BillingCycle = 'monthly' | '3-months';
+
 interface PaymentMethodModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -20,6 +22,7 @@ interface PaymentMethodModalProps {
     tier: PlanTier;
     roomBand: RoomBand;
     currentTier: PlanTier;
+    billingCycle?: BillingCycle;
 }
 
 type PaymentMethod = 'sepay' | 'paypal' | 'zalo' | null;
@@ -32,6 +35,7 @@ export function PaymentMethodModal({
     tier,
     roomBand,
     currentTier,
+    billingCycle = 'monthly',
 }: PaymentMethodModalProps) {
     const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>(null);
     const [step, setStep] = useState<Step>('select');
@@ -44,7 +48,8 @@ export function PaymentMethodModal({
 
     if (!isOpen) return null;
 
-    const vndPrice = getPrice(tier, roomBand);
+    const basePrice = getPrice(tier, roomBand);
+    const vndPrice = billingCycle === '3-months' ? basePrice * 0.5 : basePrice;
     const planLabel = getPlanLabel(tier);
     const bandLabel = getBandLabel(roomBand);
 
@@ -122,7 +127,7 @@ export function PaymentMethodModal({
                                     </div>
                                     <div className="text-right">
                                         <div className="font-bold text-gray-900">{formatVND(vndPrice)}₫</div>
-                                        <div className="text-xs text-gray-500">/tháng</div>
+                                        <div className="text-xs text-gray-500">/{billingCycle === '3-months' ? 'tháng (x3)' : 'tháng'}</div>
                                     </div>
                                 </div>
                             </button>
