@@ -605,7 +605,7 @@ model PaymentTransaction {
   id                      String          @id @default(uuid()) @db.Uuid
 
   // Ownership (multi-tenancy)
-  hotel_id                String          @db.Uuid
+  hotel_id                String?         @db.Uuid   // Nullable: demo users pay before creating hotel
   user_id                 String          @db.Uuid
 
   // Payment info
@@ -630,17 +630,22 @@ model PaymentTransaction {
   gateway_event_id        String?         // PayPal event.id
   provider_customer_ref   String?         // PayPal payer email/id
 
+  // Billing term (snapshot at time of purchase)
+  billing_cycle           String?         // 'monthly' | '3-months'
+  term_months             Int?            // 1 or 3
+
   // Meta
   description             String?
   raw_payload             Json?           // Webhook payload gốc
   created_at              DateTime        @default(now())
 
   // Relations
-  hotel                   Hotel           @relation(fields: [hotel_id], references: [hotel_id], onDelete: Cascade)
+  hotel                   Hotel?          @relation(fields: [hotel_id], references: [hotel_id], onDelete: Cascade)
 
   // Indexes
   @@unique([gateway, gateway_transaction_id])  // Chống webhook duplicate
   @@index([hotel_id])
+  @@index([user_id])                           // Fast orphan payment lookup
   @@index([status])
   @@index([status, expires_at])                // P1: fast query for PENDING auto-expire
   @@map("payment_transactions")
@@ -914,6 +919,7 @@ enum AuditAction {
   PRICING_CONFIG_CREATED
   PRICING_CONFIG_UPDATED
   PRICING_CONFIG_DELETED
+  SETTING_CHANGED
 }
 
 model Invoice {
@@ -1441,4 +1447,16 @@ model PricingConfigAudit {
   @@index([config_id])
   @@index([changed_by])
   @@map("pricing_config_audit")
+}
+
+// ════════════════════════════════════════════════════════════════════
+// System Settings (global key-value store)
+// ════════════════════════════════════════════════════════════════════
+model SystemSetting {
+  key        String   @id          // e.g. "paypal_mode"
+  value      String                // e.g. "one-time" | "subscription"
+  updated_by String?
+  updated_at DateTime @updatedAt
+
+  @@map("system_settings")
 }

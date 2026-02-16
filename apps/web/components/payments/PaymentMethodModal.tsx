@@ -6,12 +6,13 @@
  * Integrates PLG event tracking
  */
 
-import { useState } from 'react';
-import { X, QrCode, CreditCard, MessageCircle, Loader2, CheckCircle2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, QrCode, CreditCard, MessageCircle, Loader2, CheckCircle2, ArrowLeft } from 'lucide-react';
 import { PlanTier, RoomBand } from '@prisma/client';
 import { trackEventClient } from '@/lib/payments/trackEvent';
 import { getPlanLabel, getBandLabel } from '@/lib/plg/plan-config';
 import { getPrice } from '@/lib/plg/plan-config';
+import { PayPalCheckout } from './PayPalCheckout';
 
 type BillingCycle = 'monthly' | '3-months';
 
@@ -26,7 +27,7 @@ interface PaymentMethodModalProps {
 }
 
 type PaymentMethod = 'sepay' | 'paypal' | 'zalo' | null;
-type Step = 'select' | 'processing' | 'success' | 'error';
+type Step = 'select' | 'processing' | 'success' | 'error' | 'paypal';
 
 export function PaymentMethodModal({
     isOpen,
@@ -40,11 +41,25 @@ export function PaymentMethodModal({
     const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>(null);
     const [step, setStep] = useState<Step>('select');
     const [error, setError] = useState<string | null>(null);
+    const [paypalMode, setPaypalMode] = useState<'subscription' | 'one-time'>('one-time');
     const [checkoutData, setCheckoutData] = useState<{
         checkoutUrl?: string;
         orderId?: string;
         amount?: number;
     } | null>(null);
+
+    // Fetch PayPal mode setting
+    useEffect(() => {
+        if (!isOpen) return;
+        fetch('/api/admin/settings?key=paypal_mode')
+            .then(r => r.json())
+            .then(data => {
+                if (data.value === 'subscription' || data.value === 'one-time') {
+                    setPaypalMode(data.value);
+                }
+            })
+            .catch(() => { }); // Fallback to default 'one-time'
+    }, [isOpen]);
 
     if (!isOpen) return null;
 
@@ -78,7 +93,7 @@ export function PaymentMethodModal({
             const res = await fetch('/api/payments/sepay/create-checkout', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ hotelId, tier, roomBand }),
+                body: JSON.stringify({ hotelId: hotelId || undefined, tier, roomBand, billingCycle }),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error);
@@ -89,6 +104,11 @@ export function PaymentMethodModal({
             setError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
             setStep('error');
         }
+    };
+
+    const handlePaypalSelect = () => {
+        handleMethodSelect('paypal');
+        setStep('paypal');
     };
 
     const formatVND = (n: number) => new Intl.NumberFormat('vi-VN').format(n);
@@ -134,7 +154,7 @@ export function PaymentMethodModal({
 
                             {/* PayPal (USD) */}
                             <button
-                                onClick={() => handleMethodSelect('paypal')}
+                                onClick={handlePaypalSelect}
                                 className={`w-full p-4 rounded-xl border-2 text-left transition-all hover:border-indigo-300 hover:bg-indigo-50/50 ${selectedMethod === 'paypal' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200'
                                     }`}
                             >
@@ -144,10 +164,14 @@ export function PaymentMethodModal({
                                     </div>
                                     <div className="flex-1">
                                         <div className="font-semibold text-gray-900">PayPal (USD)</div>
-                                        <div className="text-sm text-gray-500">Thanh toán định kỳ bằng USD</div>
+                                        <div className="text-sm text-gray-500">
+                                            {paypalMode === 'one-time' ? 'Thanh toán 1 lần bằng USD' : 'Thanh toán định kỳ bằng USD'}
+                                        </div>
                                     </div>
                                     <div className="text-right">
-                                        <div className="text-xs text-gray-400">Subscription hàng tháng</div>
+                                        <div className="text-xs text-gray-400">
+                                            {paypalMode === 'one-time' ? 'One-time payment' : 'Subscription hàng tháng'}
+                                        </div>
                                     </div>
                                 </div>
                             </button>
@@ -211,6 +235,33 @@ export function PaymentMethodModal({
                             <div className="bg-amber-50 p-3 rounded-lg text-sm text-amber-700">
                                 ⏱️ Đơn hàng sẽ hết hạn sau 30 phút. Sau khi chuyển khoản, hệ thống sẽ tự động kích hoạt gói.
                             </div>
+                        </div>
+                    )}
+
+                    {step === 'paypal' && (
+                        <div className="space-y-4">
+                            <button
+                                onClick={() => { setStep('select'); setSelectedMethod(null); }}
+                                className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                            >
+                                <ArrowLeft className="w-4 h-4" /> Quay lại
+                            </button>
+                            <PayPalCheckout
+                                hotelId={hotelId}
+                                tier={tier}
+                                roomBand={roomBand}
+                                mode={paypalMode}
+                                billingCycle={billingCycle}
+                                planId={process.env.NEXT_PUBLIC_PAYPAL_PLAN_ID || ''}
+                                onSuccess={(subId) => {
+                                    setCheckoutData({ orderId: subId });
+                                    setStep('success');
+                                }}
+                                onError={(msg) => {
+                                    setError(msg);
+                                    setStep('error');
+                                }}
+                            />
                         </div>
                     )}
 

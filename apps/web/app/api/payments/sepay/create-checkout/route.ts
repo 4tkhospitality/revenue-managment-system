@@ -28,14 +28,15 @@ export async function POST(req: Request) {
 
         // 2. Parse body
         const body = await req.json();
-        const { hotelId, tier, roomBand } = body as {
-            hotelId: string;
+        const { hotelId, tier, roomBand, billingCycle = 'monthly' } = body as {
+            hotelId?: string;
             tier: PlanTier;
             roomBand: RoomBand;
+            billingCycle?: 'monthly' | '3-months';
         };
 
-        if (!hotelId || !tier || !roomBand) {
-            return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+        if (!tier || !roomBand) {
+            return NextResponse.json({ error: 'Missing required fields (tier, roomBand)' }, { status: 400 });
         }
 
         // Validate tier is upgradable (not STANDARD)
@@ -44,58 +45,62 @@ export async function POST(req: Request) {
         }
 
         // 3. GLC-07: Check provider switching — block if active via different provider
-        const currentSub = await prisma.subscription.findUnique({
-            where: { hotel_id: hotelId },
-        });
-        if (
-            currentSub?.status === 'ACTIVE' &&
-            currentSub.external_provider &&
-            currentSub.external_provider !== 'SEPAY'
-        ) {
-            return NextResponse.json(
-                {
-                    error: `Bạn đang có subscription qua ${currentSub.external_provider}. Vui lòng hủy trước hoặc quản lý tại /settings/billing.`,
-                },
-                { status: 409 }
-            );
+        // (Only check if user has a real hotel, skip for demo/pay-first users)
+        if (hotelId) {
+            const currentSub = await prisma.subscription.findUnique({
+                where: { hotel_id: hotelId },
+            });
+            if (
+                currentSub?.status === 'ACTIVE' &&
+                currentSub.external_provider &&
+                currentSub.external_provider !== 'SEPAY'
+            ) {
+                return NextResponse.json(
+                    {
+                        error: `Bạn đang có subscription qua ${currentSub.external_provider}. Vui lòng hủy trước hoặc quản lý tại /settings/billing.`,
+                    },
+                    { status: 409 }
+                );
+            }
         }
 
         // 4. DB Transaction: concurrent lock + create PENDING (GLC-05: short tx)
-        const amount = getPrice(tier, roomBand);
-        const orderId = generateOrderId(hotelId);
+        const monthlyPrice = getPrice(tier, roomBand);
+        // For 3-month billing: 50% discount × 3 months = total
+        const amount = billingCycle === '3-months'
+            ? Math.round(monthlyPrice * 0.5) * 3   // 495,000 × 3 = 1,485,000
+            : monthlyPrice;                          // 990,000
+        const termMonths = billingCycle === '3-months' ? 3 : 1;
+        const orderId = generateOrderId(hotelId || userId);
         const expiresAt = new Date(Date.now() + PENDING_EXPIRY_MS);
 
         const pendingTx = await prisma.$transaction(async (tx) => {
-            // Check existing PENDING for this hotel (concurrent lock)
+            // Check existing PENDING for this hotel/user (concurrent lock)
+            const pendingWhere = hotelId
+                ? { hotel_id: hotelId, status: 'PENDING' as const, gateway: 'SEPAY' as const }
+                : { user_id: userId, hotel_id: null, status: 'PENDING' as const, gateway: 'SEPAY' as const };
             const existingPending = await tx.paymentTransaction.findFirst({
-                where: {
-                    hotel_id: hotelId,
-                    status: 'PENDING',
-                    gateway: 'SEPAY',
-                },
+                where: pendingWhere,
             });
 
             if (existingPending) {
-                // Auto-expire if past expires_at
-                if (existingPending.expires_at && existingPending.expires_at < new Date()) {
-                    await tx.paymentTransaction.update({
-                        where: { id: existingPending.id },
-                        data: {
-                            status: 'FAILED',
-                            failed_at: new Date(),
-                            failed_reason: 'auto_expired',
-                        },
-                    });
-                } else {
-                    // Active PENDING exists — reject
-                    throw new Error('PENDING_EXISTS');
-                }
+                // Auto-cancel the old PENDING (user changed their mind / chose different plan)
+                await tx.paymentTransaction.update({
+                    where: { id: existingPending.id },
+                    data: {
+                        status: 'FAILED',
+                        failed_at: new Date(),
+                        failed_reason: existingPending.expires_at && existingPending.expires_at < new Date()
+                            ? 'auto_expired'
+                            : 'superseded_by_new_order',
+                    },
+                });
             }
 
             // Create new PENDING transaction
             return tx.paymentTransaction.create({
                 data: {
-                    hotel_id: hotelId,
+                    hotel_id: hotelId || undefined,
                     user_id: userId,
                     gateway: 'SEPAY',
                     order_id: orderId,
@@ -104,8 +109,10 @@ export async function POST(req: Request) {
                     status: 'PENDING',
                     purchased_tier: tier,
                     purchased_room_band: roomBand,
+                    billing_cycle: billingCycle,
+                    term_months: termMonths,
                     expires_at: expiresAt,
-                    description: `Nâng cấp gói ${tier} - Band ${roomBand}`,
+                    description: `Nâng cấp gói ${tier} - Band ${roomBand} - ${termMonths} tháng`,
                 },
             });
         });
@@ -122,7 +129,7 @@ export async function POST(req: Request) {
             event: 'payment_method_selected',
             userId,
             hotelId,
-            properties: { method: 'SEPAY', tier, roomBand, amount, currency: 'VND' },
+            properties: { method: 'SEPAY', tier, roomBand, amount, currency: 'VND', billingCycle, termMonths },
         });
 
         return NextResponse.json({

@@ -10,8 +10,8 @@ export type { SubscriptionChangeParams } from './activation';
 // Gateway helpers
 export { verifySepaySignature, extractOrderId, buildSepayCheckoutUrl } from './sepay';
 export type { SepayWebhookPayload } from './sepay';
-export { getSubscriptionDetails, verifyWebhookSignature, cancelSubscription } from './paypal';
-export type { PayPalSubscriptionDetails } from './paypal';
+export { getSubscriptionDetails, verifyWebhookSignature, cancelSubscription, createPayPalOrder, capturePayPalOrder } from './paypal';
+export type { PayPalSubscriptionDetails, CreateOrderParams } from './paypal';
 
 // PLG tracking
 export { trackEvent, trackEventClient } from './trackEvent';

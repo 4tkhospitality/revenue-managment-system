@@ -453,10 +453,10 @@ export default async function DashboardPage({
                     overviewContent={
                         <>
                             {/* KPI Cards — 5-card row */}
-                            <KpiCards data={kpiData} hotelCapacity={hotelCapacity} />
+                            <KpiCards key="kpi" data={kpiData} hotelCapacity={hotelCapacity} />
 
                             {/* OTB Chart (60%) + Insights (40%) side-by-side */}
-                            <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+                            <div key="charts" className="grid grid-cols-1 lg:grid-cols-5 gap-4">
                                 <div className="lg:col-span-3">
                                     <OtbChart data={chartData} />
                                 </div>
@@ -471,6 +471,7 @@ export default async function DashboardPage({
 
                             {/* Analytics Table — 7 day preview */}
                             <AnalyticsPanel
+                                key="analytics-preview"
                                 hotelId={hotelId}
                                 asOfDate={asOfDateStr}
                                 maxDays={7}

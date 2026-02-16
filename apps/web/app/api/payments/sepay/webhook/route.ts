@@ -82,7 +82,7 @@ export async function POST(req: Request) {
             trackEvent({
                 event: 'payment_failed',
                 userId: pendingTx.user_id,
-                hotelId: pendingTx.hotel_id,
+                hotelId: pendingTx.hotel_id || undefined,
                 properties: { gateway: 'SEPAY', reason: 'amount_mismatch', orderId },
             });
 
@@ -119,30 +119,37 @@ export async function POST(req: Request) {
                     },
                 });
 
-                // Apply subscription change
-                await applySubscriptionChange(tx, pendingTx.hotel_id, pendingTx.user_id, {
-                    periodStart: now,
-                    periodEnd,
-                    provider: 'SEPAY',
-                    plan: pendingTx.purchased_tier!,
-                    roomBand: pendingTx.purchased_room_band!,
-                });
+                // Apply subscription change — only if hotel exists (pay-first flow: hotel_id is null)
+                if (pendingTx.hotel_id) {
+                    await applySubscriptionChange(tx, pendingTx.hotel_id, pendingTx.user_id, {
+                        periodStart: now,
+                        periodEnd,
+                        provider: 'SEPAY',
+                        plan: pendingTx.purchased_tier!,
+                        roomBand: pendingTx.purchased_room_band!,
+                    });
+                }
+                // If hotel_id is null → user will complete onboarding later and activate there
             });
 
             trackEvent({
                 event: 'payment_success',
                 userId: pendingTx.user_id,
-                hotelId: pendingTx.hotel_id,
+                hotelId: pendingTx.hotel_id || undefined,
                 properties: {
                     gateway: 'SEPAY',
                     tier: pendingTx.purchased_tier,
                     amount: Number(pendingTx.amount),
                     currency: 'VND',
                     orderId,
+                    pendingActivation: !pendingTx.hotel_id, // Flag: needs onboarding
                 },
             });
 
-            return NextResponse.json({ ok: true, status: 'activated' });
+            return NextResponse.json({
+                ok: true,
+                status: pendingTx.hotel_id ? 'activated' : 'pending_activation',
+            });
         } catch (err: unknown) {
             // GLC-04: Catch P2002 unique violation (duplicate webhook)
             if (

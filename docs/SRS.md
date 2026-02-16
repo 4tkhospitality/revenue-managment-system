@@ -1,8 +1,8 @@
 # Software Requirements Specification (SRS)
-## Revenue Management System (RMS) v01.8
+## Revenue Management System (RMS) v01.9
 
-**Document Version:** 1.8.0  
-**Last Updated:** 2026-02-13  
+**Document Version:** 1.9.0  
+**Last Updated:** 2026-02-16  
 **Status:** ✅ Production  
 **Author:** 4TK Hospitality
 
@@ -253,6 +253,19 @@ RMS là hệ thống độc lập, tích hợp với:
 | **Description** | Comprehensive guide page with 4 sections and detailed OTA pricing documentation for all 5 channels |
 | **Sections** | 1. Bắt đầu nhanh (QuickStart)<br>2. Quản lý Doanh thu (Revenue Management)<br>3. Tính giá OTA (OTA Pricing for 5 channels)<br>4. OTA Growth Playbook (Premium) |
 
+### 3.14 FR-014: Payment Gateway & Pay-First Flow
+
+| ID | FR-014 |
+|----|--------|
+| **Title** | Payment Gateway Integration & Pay-First Flow (V01.9) |
+| **Priority** | P0 - Critical |
+| **Description** | Tích hợp cổng thanh toán SePay (QR chuyển khoản VND) và PayPal (USD). Hỗ trợ Pay-First Flow cho demo users: thanh toán trước, tạo khách sạn sau. |
+| **Gateways** | 1. SePay: QR Bank Transfer (VND)<br>2. PayPal: One-time Payment (USD)<br>3. Zalo: Manual Contact |
+| **Pay-First Flow** | 1. Demo user chọn gói và thanh toán<br>2. PaymentTransaction tạo với hotel_id = NULL<br>3. Webhook xác nhận → status = COMPLETED, skip activation<br>4. Login tiếp → `/api/payments/pending-activation` phát hiện orphan<br>5. Redirect `/onboarding` → tạo hotel → link payment → activate subscription |
+| **Standard Flow** | 1. Hotel admin chọn gói upgrade<br>2. PaymentTransaction tạo với hotel_id<br>3. Webhook/capture → applySubscriptionChange → activate ngay |
+| **Transaction States** | PENDING → COMPLETED (webhook confirms)<br>PENDING → FAILED (amount mismatch/timeout) |
+| **Idempotency** | @@unique([gateway, gateway_transaction_id]) chống duplicate webhook |
+
 
 ---
 
@@ -393,6 +406,14 @@ Standalone Tables:
 - [ ] Rate limiting blocks excessive requests
 - [ ] Onboarding wizard completes 4 steps
 
+### 6.6 Payment Gateway (V01.9)
+- [ ] SePay QR checkout works with correct VND amount
+- [ ] PayPal checkout works with correct USD amount
+- [ ] Pay-first flow: demo user can pay without hotel
+- [ ] Orphan payment detected on login via pending-activation API
+- [ ] Onboarding completion links orphan payment and activates subscription
+- [ ] Duplicate webhooks rejected (idempotency via gateway_transaction_id)
+
 ---
 
 ## 7. Appendix
@@ -410,6 +431,7 @@ Standalone Tables:
 | 1.6.0 | 2026-02-11 | 2-Layer Promotion Architecture, Free Nights, 3-Tier Exclusion |
 | 1.7.0 | 2026-02-12 | 3 Calculator Modes, Timing Conflict Resolution, Guide Page |
 | 1.8.0 | 2026-02-13 | GM Reporting Dimensions, Forecast Timezone Fix, Import Job Stale Cleanup |
+| 1.9.0 | 2026-02-16 | Payment Gateways (SePay, PayPal), Pay-First Flow, Orphan Payment Recovery |
 
 ### 7.2 Sign-off
 

@@ -1,8 +1,8 @@
 # Technical Specification
-## Revenue Management System (RMS) v01.8
+## Revenue Management System (RMS) v01.9
 
-**Document Version:** 1.8.0  
-**Last Updated:** 2026-02-13  
+**Document Version:** 1.9.0  
+**Last Updated:** 2026-02-16  
 **Status:** ✅ Production  
 **Author:** 4TK Hospitality Engineering
 
@@ -338,6 +338,16 @@ ORDER BY r.reservation_id, COALESCE(j.snapshot_ts, j.created_at) DESC;
 │   ├── campaigns/          # CRUD promotion campaigns
 │   ├── calc-matrix/        # POST calculate price matrix
 │   └── catalog/            # GET promotion catalog
+├── payments/
+│   ├── pending-activation/  # GET orphan payment check
+│   ├── sepay/
+│   │   ├── create-checkout/ # POST create SePay QR session
+│   │   └── webhook/         # POST SePay payment webhook
+│   └── paypal/
+│       ├── create-order/    # POST create PayPal order
+│       └── capture-order/   # POST capture PayPal payment
+├── onboarding/
+│   └── complete/            # POST complete onboarding + link orphan payments
 └── user/
     └── switch-hotel/       # POST set active hotel
 ```
@@ -827,3 +837,4 @@ console.error(`[IngestCSV] Error: ${error.message}`, {
 | 1.6 | 2026-02-11 | Eng | 2-Layer Promotion Architecture, Free Nights, 3-Tier Exclusion |
 | 1.7 | 2026-02-12 | Eng | 3 Calculator Modes, Timing Conflict Resolution |
 | 1.8 | 2026-02-13 | Eng | GM Reporting Dimensions, Forecast Timezone Fix, Import Job Stale Cleanup |
+| 1.9 | 2026-02-16 | Eng | Payment Gateways (SePay, PayPal), Pay-First Flow, Orphan Payment Recovery, Payment API Routes |

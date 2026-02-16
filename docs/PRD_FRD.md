@@ -1,8 +1,8 @@
 # Product Requirements Document (PRD) & Functional Requirements Document (FRD)
-## Revenue Management System (RMS) v01.8
+## Revenue Management System (RMS) v01.9
 
-**Document Version:** 1.8.0  
-**Last Updated:** 2026-02-13  
+**Document Version:** 1.9.0  
+**Last Updated:** 2026-02-16  
 **Status:** ✅ Production  
 **Product Owner:** 4TK Hospitality
 
@@ -110,6 +110,11 @@ RMS cung cấp:
 | GM Reporting Dimensions | P1 | ✅ Done | V01.8 |
 | Forecast Timezone Fix | P0 | ✅ Done | V01.8 |
 | Import Job Stale Cleanup | P1 | ✅ Done | V01.8 |
+| Payment Gateway (SePay) | P0 | ✅ Done | V01.9 |
+| Payment Gateway (PayPal) | P0 | ✅ Done | V01.9 |
+| Pay-First Flow (Demo Users) | P1 | ✅ Done | V01.9 |
+| Orphan Payment Recovery | P1 | ✅ Done | V01.9 |
+| Dynamic Pricing Config | P1 | ✅ Done | V01.9 |
 | PDF Export | P2 | ✅ Done | V01.5 |
 | Rate Shopper | P2 | ⬜ Schema ready | Deferred |
 | ML Forecasting | P3 | ⬜ Future | - |
@@ -597,6 +602,7 @@ const ERROR_MESSAGES = {
 | 1.6 | 2026-02-11 | PM | 2-Layer Promotion Architecture, Free Nights, 3-Tier Exclusion |
 | 1.7 | 2026-02-12 | PM | 3 Calculator Modes, Timing Conflicts, Guide Page |
 | 1.8 | 2026-02-13 | PM | GM Reporting Dimensions, Forecast Timezone Fix, Import Job Stale Cleanup |
+| 1.9 | 2026-02-16 | PM | Payment Gateways (SePay, PayPal), Pay-First Flow, Orphan Payment Recovery |
 
 ### 10.3 Sign-off
 
