@@ -1,38 +1,16 @@
 'use client';
 
 // ════════════════════════════════════════════════════════════════════
-// Pricing Config Admin Tab — Base Price, Band Multiplier, Term Discount
+// Pricing Config Admin Tab — Professional SaaS Hospitality
+// UUPM Design: Navy + Gold, Lucide icons, inline edit, smooth hover
 // ════════════════════════════════════════════════════════════════════
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-    Plus, RefreshCw, Save, X, Trash2, Calendar, Calculator, Clock,
+    Plus, RefreshCw, Save, X, Trash2, Pencil, Calendar, Calculator,
+    DollarSign, Layers, Percent, ChevronDown, ChevronUp, Sprout,
+    Check, AlertCircle,
 } from 'lucide-react';
-
-// ── Styles (matching PLGAdminDashboard) ──────────────────────────
-
-const cardStyle: React.CSSProperties = {
-    background: 'white', borderRadius: 12, border: '1px solid #e5e7eb',
-    padding: 24, boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-};
-
-const btnPrimary: React.CSSProperties = {
-    background: '#2563eb', color: 'white', border: 'none', borderRadius: 8,
-    padding: '8px 16px', fontSize: 14, fontWeight: 500, cursor: 'pointer',
-    display: 'inline-flex', alignItems: 'center', gap: 6,
-};
-
-const btnGhost: React.CSSProperties = {
-    background: 'transparent', border: 'none', cursor: 'pointer',
-    padding: '6px 8px', borderRadius: 6, display: 'inline-flex',
-    alignItems: 'center', gap: 4, fontSize: 13, color: '#6b7280',
-    transition: 'all 0.15s',
-};
-
-const inputStyle: React.CSSProperties = {
-    width: '100%', padding: '8px 12px', border: '1px solid #d1d5db',
-    borderRadius: 8, fontSize: 14, outline: 'none',
-};
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -55,289 +33,543 @@ interface PricingConfig {
     updated_by: string | null;
 }
 
+type ConfigType = 'BASE_PRICE' | 'BAND_MULTIPLIER' | 'TERM_DISCOUNT';
+
 const TIERS = ['STANDARD', 'SUPERIOR', 'DELUXE', 'SUITE'];
+const TIER_LABELS: Record<string, string> = {
+    STANDARD: 'Standard', SUPERIOR: 'Superior', DELUXE: 'Deluxe', SUITE: 'Suite',
+};
 const BANDS = ['R30', 'R80', 'R150', 'R300P'];
 const BAND_LABELS: Record<string, string> = {
-    R30: '≤ 30 phòng', R80: '31–80 phòng', R150: '81–150 phòng', R300P: '151–300+ phòng',
+    R30: '1–30 phòng', R80: '31–80 phòng', R150: '81–150 phòng', R300P: '151–300+',
 };
 const TERMS = [1, 3, 6, 12];
 
-function formatVND(amount: number): string {
-    return amount.toLocaleString('vi-VN') + '₫';
-}
+// ── Design Tokens (UUPM: Navy + Gold SaaS) ──────────────────────
 
-function formatDate(dateStr: string): string {
-    return new Date(dateStr).toLocaleDateString('vi-VN', {
+const C = {
+    navy900: '#0f172a',
+    navy800: '#1e293b',
+    navy700: '#334155',
+    navy600: '#475569',
+    navy400: '#94a3b8',
+    navy300: '#cbd5e1',
+    navy200: '#e2e8f0',
+    navy100: '#f1f5f9',
+    navy50: '#f8fafc',
+    blue600: '#2563eb',
+    blue500: '#3b82f6',
+    blue100: '#dbeafe',
+    blue50: '#eff6ff',
+    green600: '#16a34a',
+    green100: '#dcfce7',
+    green50: '#f0fdf4',
+    gold600: '#ca8a04',
+    gold100: '#fef3c7',
+    red500: '#ef4444',
+    red100: '#fee2e2',
+    white: '#ffffff',
+};
+
+// ── Helpers ──────────────────────────────────────────────────────
+
+function fmt(n: number): string {
+    return n.toLocaleString('vi-VN');
+}
+function fmtVND(n: number): string {
+    return fmt(n) + '₫';
+}
+function fmtDate(s: string): string {
+    return new Date(s).toLocaleDateString('vi-VN', {
         day: '2-digit', month: '2-digit', year: 'numeric',
-        hour: '2-digit', minute: '2-digit',
     });
 }
-
-function isActive(config: PricingConfig): boolean {
+function isActive(c: PricingConfig): boolean {
     const now = new Date();
-    const from = new Date(config.effective_from);
-    if (from > now) return false;
-    if (config.effective_to && new Date(config.effective_to) <= now) return false;
-    return true;
+    return new Date(c.effective_from) <= now && (!c.effective_to || new Date(c.effective_to) > now);
+}
+function isFuture(c: PricingConfig): boolean {
+    return new Date(c.effective_from) > new Date();
+}
+function isPast(c: PricingConfig): boolean {
+    return !!c.effective_to && new Date(c.effective_to) <= new Date();
+}
+function toLocalISO(d: string | null): string {
+    if (!d) return '';
+    const dt = new Date(d);
+    const offset = dt.getTimezoneOffset() * 60000;
+    return new Date(dt.getTime() - offset).toISOString().slice(0, 16);
 }
 
-function isFuture(config: PricingConfig): boolean {
-    return new Date(config.effective_from) > new Date();
-}
+// ── Reusable Status Pill ────────────────────────────────────────
 
-function isPast(config: PricingConfig): boolean {
-    return config.effective_to != null && new Date(config.effective_to) <= new Date();
-}
-
-// ── Status Badge ────────────────────────────────────────────────
-
-function StatusBadge({ config }: { config: PricingConfig }) {
+function StatusPill({ config }: { config: PricingConfig }) {
     if (isActive(config)) {
         return (
             <span style={{
-                padding: '2px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600,
-                background: '#dcfce7', color: '#166534',
-            }}>● Active</span>
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
+                background: C.green100, color: C.green600, letterSpacing: 0.3,
+            }}>
+                <Check size={10} strokeWidth={3} /> Active
+            </span>
         );
     }
     if (isFuture(config)) {
         return (
             <span style={{
-                padding: '2px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600,
-                background: '#dbeafe', color: '#1d4ed8',
-            }}>⏳ Scheduled</span>
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
+                background: C.blue100, color: C.blue600, letterSpacing: 0.3,
+            }}>
+                <Calendar size={10} /> Scheduled
+            </span>
         );
     }
     return (
         <span style={{
-            padding: '2px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600,
-            background: '#f3f4f6', color: '#6b7280',
-        }}>✓ Expired</span>
+            display: 'inline-flex', alignItems: 'center', gap: 4,
+            padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
+            background: C.navy100, color: C.navy400, letterSpacing: 0.3,
+        }}>
+            Expired
+        </span>
     );
 }
 
-// ── Config Section (shared for each type) ───────────────────────
+// ── Section Icon Component ──────────────────────────────────────
 
-function ConfigSection({
-    title, configs, type, onSave, onDelete,
+function SectionIcon({ type }: { type: ConfigType }) {
+    const base: React.CSSProperties = {
+        width: 36, height: 36, borderRadius: 10,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        flexShrink: 0,
+    };
+    switch (type) {
+        case 'BASE_PRICE':
+            return <div style={{ ...base, background: C.blue50, color: C.blue600 }}><DollarSign size={18} /></div>;
+        case 'BAND_MULTIPLIER':
+            return <div style={{ ...base, background: C.gold100, color: C.gold600 }}><Layers size={18} /></div>;
+        case 'TERM_DISCOUNT':
+            return <div style={{ ...base, background: C.green50, color: C.green600 }}><Percent size={18} /></div>;
+    }
+}
+
+// ── Inline Edit/Add Form ────────────────────────────────────────
+
+function ConfigForm({
+    type,
+    initial,
+    onSave,
+    onCancel,
+    saving,
 }: {
-    title: string;
-    configs: PricingConfig[];
-    type: 'BASE_PRICE' | 'BAND_MULTIPLIER' | 'TERM_DISCOUNT';
+    type: ConfigType;
+    initial?: PricingConfig | null;
     onSave: (data: Record<string, unknown>) => Promise<void>;
-    onDelete: (id: string) => Promise<void>;
+    onCancel: () => void;
+    saving: boolean;
 }) {
-    const [showAdd, setShowAdd] = useState(false);
-    const [saving, setSaving] = useState(false);
-    const [form, setForm] = useState<Record<string, unknown>>({
-        config_type: type,
-        scope: 'GLOBAL',
-        priority: 0,
+    const [form, setForm] = useState<Record<string, unknown>>(() => {
+        if (initial) {
+            return {
+                id: initial.id,
+                config_type: initial.config_type,
+                tier: initial.tier || '',
+                room_band: initial.room_band || '',
+                term_months: initial.term_months ?? '',
+                amount_vnd: initial.amount_vnd ?? '',
+                percent: initial.percent ?? '',
+                multiplier: initial.multiplier != null ? Number(initial.multiplier) : '',
+                effective_from: toLocalISO(initial.effective_from),
+                effective_to: toLocalISO(initial.effective_to),
+                scope: initial.scope || 'GLOBAL',
+                hotel_id: initial.hotel_id || '',
+                priority: initial.priority || 0,
+                label: initial.label || '',
+            };
+        }
+        return { config_type: type, scope: 'GLOBAL', priority: 0 };
     });
 
-    const filtered = configs.filter(c => c.config_type === type);
-    // Sort: active first, then future, then past
-    const sorted = [...filtered].sort((a, b) => {
-        const aOrder = isActive(a) ? 0 : isFuture(a) ? 1 : 2;
-        const bOrder = isActive(b) ? 0 : isFuture(b) ? 1 : 2;
-        if (aOrder !== bOrder) return aOrder - bOrder;
-        return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
-    });
+    const set = (k: string, v: unknown) => setForm(p => ({ ...p, [k]: v }));
+    const isEdit = !!initial;
 
-    const handleSave = async () => {
-        setSaving(true);
-        await onSave(form);
-        setSaving(false);
-        setShowAdd(false);
-        setForm({ config_type: type, scope: 'GLOBAL', priority: 0 });
+    const inp: React.CSSProperties = {
+        width: '100%', padding: '7px 10px', border: `1px solid ${C.navy200}`,
+        borderRadius: 8, fontSize: 13, outline: 'none', background: C.white,
+        transition: 'border-color 0.15s',
+    };
+    const lbl: React.CSSProperties = {
+        display: 'block', fontSize: 11, fontWeight: 600, color: C.navy600,
+        marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5,
     };
 
     return (
-        <div style={{ ...cardStyle, marginBottom: 16 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <div style={{
+            padding: 16, marginBottom: 12, borderRadius: 10,
+            border: `1px solid ${isEdit ? C.gold100 : C.blue100}`,
+            background: isEdit ? '#fffbeb' : C.blue50,
+        }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: C.navy800, marginBottom: 12 }}>
+                {isEdit ? <><Pencil size={13} style={{ marginRight: 4 }} /> Chỉnh sửa</> : <><Plus size={13} style={{ marginRight: 4 }} /> Thêm mới</>}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: 10 }}>
+                {type === 'BASE_PRICE' && (
+                    <>
+                        <div>
+                            <label style={lbl}>Gói</label>
+                            <select style={inp} value={form.tier as string || ''}
+                                onChange={e => set('tier', e.target.value)}>
+                                <option value="">Chọn gói</option>
+                                {TIERS.map(t => <option key={t} value={t}>{TIER_LABELS[t]}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label style={lbl}>Giá (VNĐ/tháng)</label>
+                            <input style={inp} type="number" min={0} step={10000}
+                                value={form.amount_vnd as number ?? ''}
+                                onChange={e => set('amount_vnd', Number(e.target.value))}
+                                placeholder="990.000" />
+                        </div>
+                    </>
+                )}
+                {type === 'BAND_MULTIPLIER' && (
+                    <>
+                        <div>
+                            <label style={lbl}>Band phòng</label>
+                            <select style={inp} value={form.room_band as string || ''}
+                                onChange={e => set('room_band', e.target.value)}>
+                                <option value="">Chọn band</option>
+                                {BANDS.map(b => <option key={b} value={b}>{b} — {BAND_LABELS[b]}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label style={lbl}>Multiplier (×)</label>
+                            <input style={inp} type="number" min={0.1} step={0.01} max={10}
+                                value={form.multiplier as number ?? ''}
+                                onChange={e => set('multiplier', Number(e.target.value))}
+                                placeholder="1.30" />
+                        </div>
+                    </>
+                )}
+                {type === 'TERM_DISCOUNT' && (
+                    <>
+                        <div>
+                            <label style={lbl}>Kỳ hạn</label>
+                            <select style={inp} value={form.term_months as number ?? ''}
+                                onChange={e => set('term_months', Number(e.target.value))}>
+                                <option value="">Chọn kỳ hạn</option>
+                                {TERMS.map(t => <option key={t} value={t}>{t} tháng</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label style={lbl}>Giảm giá (%)</label>
+                            <input style={inp} type="number" min={0} max={99}
+                                value={form.percent as number ?? ''}
+                                onChange={e => set('percent', Number(e.target.value))}
+                                placeholder="50" />
+                        </div>
+                    </>
+                )}
                 <div>
-                    <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#1f2937' }}>{title}</h3>
-                    <span style={{ fontSize: 12, color: '#9ca3af' }}>
-                        {filtered.filter(c => isActive(c)).length} active · {filtered.length} total
-                    </span>
+                    <label style={lbl}>Hiệu lực từ</label>
+                    <input style={inp} type="datetime-local"
+                        value={form.effective_from as string || ''}
+                        onChange={e => set('effective_from', e.target.value)} />
                 </div>
-                <button onClick={() => setShowAdd(!showAdd)} style={btnPrimary}>
-                    <Plus size={14} /> Thêm giai đoạn giá
+                <div>
+                    <label style={lbl}>Đến (trống = vĩnh viễn)</label>
+                    <input style={inp} type="datetime-local"
+                        value={form.effective_to as string || ''}
+                        onChange={e => set('effective_to', e.target.value || undefined)} />
+                </div>
+                <div>
+                    <label style={lbl}>Nhãn / Ghi chú</label>
+                    <input style={inp}
+                        value={form.label as string || ''}
+                        onChange={e => set('label', e.target.value)}
+                        placeholder="VD: Khuyến mãi Q1" />
+                </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
+                <button onClick={onCancel} style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                    padding: '7px 14px', fontSize: 13, fontWeight: 500,
+                    borderRadius: 8, border: `1px solid ${C.navy200}`, background: C.white,
+                    color: C.navy600, cursor: 'pointer', transition: 'all 0.15s',
+                }}>
+                    <X size={14} /> Hủy
+                </button>
+                <button onClick={() => onSave(form)} disabled={saving} style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                    padding: '7px 14px', fontSize: 13, fontWeight: 600,
+                    borderRadius: 8, border: 'none', cursor: saving ? 'wait' : 'pointer',
+                    background: C.blue600, color: C.white,
+                    opacity: saving ? 0.7 : 1, transition: 'all 0.15s',
+                }}>
+                    <Save size={14} /> {saving ? 'Đang lưu…' : isEdit ? 'Cập nhật' : 'Tạo mới'}
                 </button>
             </div>
+        </div>
+    );
+}
 
-            {/* Add Form */}
-            {showAdd && (
-                <div style={{
-                    padding: 16, marginBottom: 16, border: '1px solid #dbeafe',
-                    borderRadius: 8, background: '#f8fafc',
-                }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
-                        {type === 'BASE_PRICE' && (
-                            <>
-                                <div>
-                                    <label style={{ fontSize: 12, fontWeight: 500, color: '#6b7280' }}>Gói</label>
-                                    <select style={inputStyle} value={form.tier as string || ''} onChange={e => setForm({ ...form, tier: e.target.value })}>
-                                        <option value="">Chọn gói</option>
-                                        {TIERS.map(t => <option key={t} value={t}>{t}</option>)}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label style={{ fontSize: 12, fontWeight: 500, color: '#6b7280' }}>Giá (VNĐ)</label>
-                                    <input style={inputStyle} type="number" min={0} step={10000}
-                                        value={form.amount_vnd as number || ''}
-                                        onChange={e => setForm({ ...form, amount_vnd: Number(e.target.value) })}
-                                        placeholder="990000" />
-                                </div>
-                            </>
-                        )}
-                        {type === 'BAND_MULTIPLIER' && (
-                            <>
-                                <div>
-                                    <label style={{ fontSize: 12, fontWeight: 500, color: '#6b7280' }}>Band</label>
-                                    <select style={inputStyle} value={form.room_band as string || ''} onChange={e => setForm({ ...form, room_band: e.target.value })}>
-                                        <option value="">Chọn band</option>
-                                        {BANDS.map(b => <option key={b} value={b}>{b} ({BAND_LABELS[b]})</option>)}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label style={{ fontSize: 12, fontWeight: 500, color: '#6b7280' }}>Multiplier</label>
-                                    <input style={inputStyle} type="number" min={0.1} step={0.1} max={10}
-                                        value={form.multiplier as number || ''}
-                                        onChange={e => setForm({ ...form, multiplier: Number(e.target.value) })}
-                                        placeholder="1.3" />
-                                </div>
-                            </>
-                        )}
-                        {type === 'TERM_DISCOUNT' && (
-                            <>
-                                <div>
-                                    <label style={{ fontSize: 12, fontWeight: 500, color: '#6b7280' }}>Kỳ hạn (tháng)</label>
-                                    <select style={inputStyle} value={form.term_months as number || ''} onChange={e => setForm({ ...form, term_months: Number(e.target.value) })}>
-                                        <option value="">Chọn kỳ hạn</option>
-                                        {TERMS.map(t => <option key={t} value={t}>{t} tháng</option>)}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label style={{ fontSize: 12, fontWeight: 500, color: '#6b7280' }}>Giảm (%)</label>
-                                    <input style={inputStyle} type="number" min={0} max={99}
-                                        value={form.percent as number ?? ''}
-                                        onChange={e => setForm({ ...form, percent: Number(e.target.value) })}
-                                        placeholder="50" />
-                                </div>
-                            </>
-                        )}
-                        <div>
-                            <label style={{ fontSize: 12, fontWeight: 500, color: '#6b7280' }}>Hiệu lực từ</label>
-                            <input style={inputStyle} type="datetime-local"
-                                value={form.effective_from as string || ''}
-                                onChange={e => setForm({ ...form, effective_from: e.target.value })} />
-                        </div>
-                        <div>
-                            <label style={{ fontSize: 12, fontWeight: 500, color: '#6b7280' }}>Đến (trống = vĩnh viễn)</label>
-                            <input style={inputStyle} type="datetime-local"
-                                value={form.effective_to as string || ''}
-                                onChange={e => setForm({ ...form, effective_to: e.target.value || undefined })} />
-                        </div>
-                        <div>
-                            <label style={{ fontSize: 12, fontWeight: 500, color: '#6b7280' }}>Nhãn</label>
-                            <input style={inputStyle}
-                                value={form.label as string || ''}
-                                onChange={e => setForm({ ...form, label: e.target.value })}
-                                placeholder="VD: Khuyến mãi Tết" />
-                        </div>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
-                        <button onClick={() => setShowAdd(false)} style={{ ...btnPrimary, background: '#f3f4f6', color: '#374151' }}>
-                            <X size={14} /> Hủy
+// ── Config Data Row ─────────────────────────────────────────────
+
+function ConfigRow({
+    config, type, onEdit, onDelete,
+}: {
+    config: PricingConfig;
+    type: ConfigType;
+    onEdit: (c: PricingConfig) => void;
+    onDelete: (id: string) => void;
+}) {
+    const past = isPast(config);
+    const rowStyle: React.CSSProperties = {
+        display: 'grid',
+        gridTemplateColumns: '1fr 130px 180px 80px auto',
+        alignItems: 'center',
+        padding: '12px 16px',
+        borderBottom: `1px solid ${C.navy100}`,
+        opacity: past ? 0.45 : 1,
+        transition: 'background 0.15s',
+        cursor: 'default',
+    };
+
+    // Label cell
+    let nameCell: React.ReactNode;
+    switch (type) {
+        case 'BASE_PRICE':
+            nameCell = (
+                <div>
+                    <span style={{ fontWeight: 600, fontSize: 14, color: C.navy800 }}>{TIER_LABELS[config.tier || ''] || config.tier}</span>
+                    {config.label && <div style={{ fontSize: 11, color: C.navy400, marginTop: 1 }}>{config.label}</div>}
+                </div>
+            );
+            break;
+        case 'BAND_MULTIPLIER':
+            nameCell = (
+                <div>
+                    <span style={{ fontWeight: 600, fontSize: 14, color: C.navy800 }}>{config.room_band}</span>
+                    <span style={{ fontWeight: 400, color: C.navy400, fontSize: 12, marginLeft: 6 }}>{BAND_LABELS[config.room_band || '']}</span>
+                    {config.label && <div style={{ fontSize: 11, color: C.navy400, marginTop: 1 }}>{config.label}</div>}
+                </div>
+            );
+            break;
+        case 'TERM_DISCOUNT':
+            nameCell = (
+                <div>
+                    <span style={{ fontWeight: 600, fontSize: 14, color: C.navy800 }}>{config.term_months} tháng</span>
+                    {config.label && <div style={{ fontSize: 11, color: C.navy400, marginTop: 1 }}>{config.label}</div>}
+                </div>
+            );
+            break;
+    }
+
+    // Value cell
+    let valueCell: React.ReactNode;
+    switch (type) {
+        case 'BASE_PRICE':
+            valueCell = <span style={{ fontWeight: 700, fontSize: 14, color: C.navy900, fontFeatureSettings: '"tnum"' }}>{fmtVND(config.amount_vnd || 0)}</span>;
+            break;
+        case 'BAND_MULTIPLIER':
+            valueCell = <span style={{ fontWeight: 700, fontSize: 14, color: C.gold600, fontFeatureSettings: '"tnum"' }}>×{Number(config.multiplier).toFixed(2)}</span>;
+            break;
+        case 'TERM_DISCOUNT':
+            valueCell = <span style={{ fontWeight: 700, fontSize: 14, color: C.green600, fontFeatureSettings: '"tnum"' }}>−{config.percent}%</span>;
+            break;
+    }
+
+    return (
+        <div style={rowStyle} className="pricing-row">
+            {nameCell}
+            <div style={{ textAlign: 'right' }}>{valueCell}</div>
+            <div style={{ textAlign: 'center', fontSize: 12, color: C.navy400, lineHeight: 1.4 }}>
+                <div>{fmtDate(config.effective_from)}</div>
+                <div style={{ color: config.effective_to ? C.navy400 : C.green600, fontSize: 11 }}>
+                    {config.effective_to ? `→ ${fmtDate(config.effective_to)}` : '∞ Vĩnh viễn'}
+                </div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+                <StatusPill config={config} />
+            </div>
+            <div style={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+                {!past && (
+                    <>
+                        <button onClick={() => onEdit(config)} title="Chỉnh sửa" style={{
+                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                            width: 30, height: 30, borderRadius: 6, border: 'none',
+                            background: 'transparent', color: C.navy400, cursor: 'pointer',
+                            transition: 'all 0.15s',
+                        }}
+                            onMouseEnter={e => { e.currentTarget.style.background = C.blue50; e.currentTarget.style.color = C.blue600; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = C.navy400; }}
+                        >
+                            <Pencil size={14} />
                         </button>
-                        <button onClick={handleSave} disabled={saving} style={btnPrimary}>
-                            <Save size={14} /> {saving ? 'Đang lưu...' : 'Lưu'}
+                        <button onClick={() => onDelete(config.id)} title="Hủy kích hoạt" style={{
+                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                            width: 30, height: 30, borderRadius: 6, border: 'none',
+                            background: 'transparent', color: C.navy400, cursor: 'pointer',
+                            transition: 'all 0.15s',
+                        }}
+                            onMouseEnter={e => { e.currentTarget.style.background = C.red100; e.currentTarget.style.color = C.red500; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = C.navy400; }}
+                        >
+                            <Trash2 size={14} />
                         </button>
+                    </>
+                )}
+            </div>
+        </div>
+    );
+}
+
+// ── Config Section Card ─────────────────────────────────────────
+
+function ConfigSection({
+    type, configs, label, subtitle, onSave, onDelete,
+}: {
+    type: ConfigType;
+    configs: PricingConfig[];
+    label: string;
+    subtitle: string;
+    onSave: (data: Record<string, unknown>) => Promise<void>;
+    onDelete: (id: string) => Promise<void>;
+}) {
+    const [collapsed, setCollapsed] = useState(false);
+    const [showForm, setShowForm] = useState<'add' | PricingConfig | null>(null);
+    const [saving, setSaving] = useState(false);
+
+    const filtered = useMemo(() => {
+        const list = configs.filter(c => c.config_type === type);
+        return [...list].sort((a, b) => {
+            const o = (x: PricingConfig) => isActive(x) ? 0 : isFuture(x) ? 1 : 2;
+            const d = o(a) - o(b);
+            return d !== 0 ? d : new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+        });
+    }, [configs, type]);
+
+    const activeCount = filtered.filter(c => isActive(c)).length;
+
+    const handleSaveForm = async (data: Record<string, unknown>) => {
+        setSaving(true);
+        await onSave(data);
+        setSaving(false);
+        setShowForm(null);
+    };
+
+    const handleEdit = (c: PricingConfig) => {
+        setShowForm(c);
+    };
+
+    // Header labels for grid
+    const colLabels = type === 'BASE_PRICE'
+        ? ['Gói', 'Giá/tháng', 'Hiệu lực', 'Status', '']
+        : type === 'BAND_MULTIPLIER'
+            ? ['Band', 'Hệ số', 'Hiệu lực', 'Status', '']
+            : ['Kỳ hạn', 'Giảm giá', 'Hiệu lực', 'Status', ''];
+
+    return (
+        <div style={{
+            background: C.white, borderRadius: 12,
+            border: `1px solid ${C.navy200}`, marginBottom: 16,
+            boxShadow: '0 1px 3px rgba(15,23,42,0.04)',
+            overflow: 'hidden',
+        }}>
+            {/* Section Header */}
+            <div
+                style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '14px 16px', cursor: 'pointer',
+                    borderBottom: collapsed ? 'none' : `1px solid ${C.navy100}`,
+                    transition: 'background 0.15s',
+                }}
+                onClick={() => setCollapsed(p => !p)}
+                onMouseEnter={e => e.currentTarget.style.background = C.navy50}
+                onMouseLeave={e => e.currentTarget.style.background = C.white}
+            >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <SectionIcon type={type} />
+                    <div>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: C.navy800 }}>{label}</div>
+                        <div style={{ fontSize: 12, color: C.navy400 }}>
+                            {subtitle} · <span style={{ color: C.green600, fontWeight: 600 }}>{activeCount} active</span> / {filtered.length} total
+                        </div>
                     </div>
                 </div>
-            )}
-
-            {/* Table */}
-            <div style={{ overflow: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                    <thead>
-                        <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-                            {type === 'BASE_PRICE' && <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 500 }}>Gói</th>}
-                            {type === 'BAND_MULTIPLIER' && <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 500 }}>Band</th>}
-                            {type === 'TERM_DISCOUNT' && <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 500 }}>Kỳ hạn</th>}
-                            <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 500 }}>Giá trị</th>
-                            <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 500 }}>Hiệu lực</th>
-                            <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 500 }}>Status</th>
-                            <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 500 }}>Nhãn</th>
-                            <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 500 }}></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {sorted.length === 0 ? (
-                            <tr><td colSpan={6} style={{ padding: 20, textAlign: 'center', color: '#9ca3af' }}>
-                                Chưa có config nào — bấm &quot;Thêm giai đoạn giá&quot; để tạo
-                            </td></tr>
-                        ) : sorted.map(c => (
-                            <tr key={c.id} style={{
-                                borderBottom: '1px solid #f3f4f6',
-                                opacity: isPast(c) ? 0.5 : 1,
-                            }}>
-                                {type === 'BASE_PRICE' && (
-                                    <td style={{ padding: '10px 12px', fontWeight: 600 }}>{c.tier}</td>
-                                )}
-                                {type === 'BAND_MULTIPLIER' && (
-                                    <td style={{ padding: '10px 12px', fontWeight: 600 }}>
-                                        {c.room_band} <span style={{ fontWeight: 400, color: '#9ca3af', fontSize: 11 }}>
-                                            {BAND_LABELS[c.room_band || '']}
-                                        </span>
-                                    </td>
-                                )}
-                                {type === 'TERM_DISCOUNT' && (
-                                    <td style={{ padding: '10px 12px', fontWeight: 600 }}>{c.term_months} tháng</td>
-                                )}
-                                <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, color: '#059669' }}>
-                                    {type === 'BASE_PRICE' && formatVND(c.amount_vnd || 0)}
-                                    {type === 'BAND_MULTIPLIER' && `×${Number(c.multiplier).toFixed(2)}`}
-                                    {type === 'TERM_DISCOUNT' && `−${c.percent}%`}
-                                </td>
-                                <td style={{ padding: '10px 12px', textAlign: 'center', fontSize: 12, color: '#6b7280' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center' }}>
-                                        <Calendar size={12} />
-                                        {formatDate(c.effective_from)}
-                                    </div>
-                                    {c.effective_to && (
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center', marginTop: 2 }}>
-                                            <Clock size={12} />
-                                            → {formatDate(c.effective_to)}
-                                        </div>
-                                    )}
-                                    {!c.effective_to && (
-                                        <div style={{ fontSize: 11, color: '#16a34a', marginTop: 2 }}>∞ Vĩnh viễn</div>
-                                    )}
-                                </td>
-                                <td style={{ padding: '10px 12px', textAlign: 'center' }}>
-                                    <StatusBadge config={c} />
-                                </td>
-                                <td style={{ padding: '10px 12px', color: '#6b7280', fontSize: 12 }}>
-                                    {c.label || '—'}
-                                </td>
-                                <td style={{ padding: '10px 12px', textAlign: 'center' }}>
-                                    {!isPast(c) && (
-                                        <button
-                                            onClick={() => onDelete(c.id)}
-                                            style={{ ...btnGhost, color: '#ef4444' }}
-                                            title="Hủy kích hoạt"
-                                        >
-                                            <Trash2 size={14} />
-                                        </button>
-                                    )}
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <button
+                        onClick={e => { e.stopPropagation(); setShowForm('add'); setCollapsed(false); }}
+                        style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 4,
+                            padding: '6px 12px', fontSize: 12, fontWeight: 600,
+                            borderRadius: 7, border: `1px solid ${C.blue600}`,
+                            background: C.blue600, color: C.white,
+                            cursor: 'pointer', transition: 'all 0.15s',
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.background = C.blue500; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = C.blue600; }}
+                    >
+                        <Plus size={13} /> Thêm mới
+                    </button>
+                    {collapsed ? <ChevronDown size={16} color={C.navy400} /> : <ChevronUp size={16} color={C.navy400} />}
+                </div>
             </div>
+
+            {/* Collapsible Body */}
+            {!collapsed && (
+                <div>
+                    {/* Form (Add or Edit) */}
+                    {showForm && (
+                        <div style={{ padding: '12px 16px 0' }}>
+                            <ConfigForm
+                                type={type}
+                                initial={showForm === 'add' ? null : showForm}
+                                onSave={handleSaveForm}
+                                onCancel={() => setShowForm(null)}
+                                saving={saving}
+                            />
+                        </div>
+                    )}
+
+                    {/* Column Headers */}
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: '1fr 130px 180px 80px auto',
+                        padding: '8px 16px',
+                        background: C.navy50,
+                        borderBottom: `1px solid ${C.navy100}`,
+                    }}>
+                        {colLabels.map((l, i) => (
+                            <div key={i} style={{
+                                fontSize: 11, fontWeight: 600, color: C.navy400,
+                                textTransform: 'uppercase', letterSpacing: 0.5,
+                                textAlign: i === 1 ? 'right' : i === 2 || i === 3 ? 'center' : 'left',
+                            }}>{l}</div>
+                        ))}
+                    </div>
+
+                    {/* Rows */}
+                    {filtered.length === 0 ? (
+                        <div style={{ padding: '32px 16px', textAlign: 'center', color: C.navy400 }}>
+                            <AlertCircle size={20} style={{ marginBottom: 6, opacity: 0.5 }} />
+                            <div style={{ fontSize: 13 }}>Chưa có config nào</div>
+                        </div>
+                    ) : (
+                        filtered.map(c => (
+                            <ConfigRow
+                                key={c.id}
+                                config={c}
+                                type={type}
+                                onEdit={handleEdit}
+                                onDelete={onDelete}
+                            />
+                        ))
+                    )}
+                </div>
+            )}
         </div>
     );
 }
@@ -360,9 +592,8 @@ function PreviewCalculator() {
             const data = await res.json();
             const tierData = data[tier];
             if (tierData) {
-                const price = term === 1 ? tierData.monthly : tierData.quarterly;
                 setResult({
-                    price,
+                    price: term === 1 ? tierData.monthly : (tierData.quarterly || tierData.monthly),
                     basePrice: tierData.monthly,
                     multiplier: 1,
                     discountPercent: tierData.discountPercent || 0,
@@ -374,64 +605,99 @@ function PreviewCalculator() {
 
     useEffect(() => { calculate(); }, [calculate]);
 
+    const inp: React.CSSProperties = {
+        width: '100%', padding: '7px 10px', border: `1px solid ${C.navy200}`,
+        borderRadius: 8, fontSize: 13, outline: 'none', background: C.white,
+    };
+    const lbl: React.CSSProperties = {
+        display: 'block', fontSize: 11, fontWeight: 600, color: C.navy600,
+        marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5,
+    };
+
     return (
-        <div style={{ ...cardStyle, background: 'linear-gradient(135deg, #eff6ff, #f5f3ff)', border: '1px solid #c7d2fe' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-                <Calculator size={20} color="#4f46e5" />
-                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#1e1b4b' }}>Preview Calculator</h3>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 16 }}>
-                <div>
-                    <label style={{ fontSize: 12, fontWeight: 500, color: '#6b7280' }}>Gói</label>
-                    <select style={inputStyle} value={tier} onChange={e => setTier(e.target.value)}>
-                        {TIERS.map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                </div>
-                <div>
-                    <label style={{ fontSize: 12, fontWeight: 500, color: '#6b7280' }}>Band</label>
-                    <select style={inputStyle} value={band} onChange={e => setBand(e.target.value)}>
-                        {BANDS.map(b => <option key={b} value={b}>{b} ({BAND_LABELS[b]})</option>)}
-                    </select>
-                </div>
-                <div>
-                    <label style={{ fontSize: 12, fontWeight: 500, color: '#6b7280' }}>Kỳ hạn</label>
-                    <select style={inputStyle} value={term} onChange={e => setTerm(Number(e.target.value))}>
-                        {TERMS.map(t => <option key={t} value={t}>{t} tháng</option>)}
-                    </select>
-                </div>
-            </div>
-
-            {loading ? (
-                <div style={{ textAlign: 'center', padding: 16, color: '#9ca3af' }}>Đang tính...</div>
-            ) : result && (
+        <div style={{
+            background: C.white, borderRadius: 12,
+            border: `1px solid ${C.navy200}`, overflow: 'hidden',
+            boxShadow: '0 1px 3px rgba(15,23,42,0.04)',
+        }}>
+            <div style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '14px 16px', borderBottom: `1px solid ${C.navy100}`,
+            }}>
                 <div style={{
-                    padding: 20, background: 'white', borderRadius: 12,
-                    border: '1px solid #e0e7ff', textAlign: 'center',
+                    width: 36, height: 36, borderRadius: 10,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: '#f5f3ff', color: '#7c3aed',
                 }}>
-                    <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 8 }}>Khách trả</div>
-                    <div style={{ fontSize: 32, fontWeight: 700, color: '#1e40af' }}>
-                        {formatVND(result.price)}
+                    <Calculator size={18} />
+                </div>
+                <div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: C.navy800 }}>Preview Calculator</div>
+                    <div style={{ fontSize: 12, color: C.navy400 }}>Tính giá thực tế theo cấu hình hiện tại</div>
+                </div>
+            </div>
+            <div style={{ padding: 16 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 16 }}>
+                    <div>
+                        <label style={lbl}>Gói</label>
+                        <select style={inp} value={tier} onChange={e => setTier(e.target.value)}>
+                            {TIERS.map(t => <option key={t} value={t}>{TIER_LABELS[t]}</option>)}
+                        </select>
                     </div>
-                    {result.discountPercent > 0 && (
-                        <div style={{
-                            display: 'inline-block', marginTop: 8,
-                            padding: '4px 12px', background: '#dcfce7', borderRadius: 12,
-                            fontSize: 12, fontWeight: 600, color: '#166534',
-                        }}>
-                            Giảm {result.discountPercent}% so với monthly
-                        </div>
-                    )}
-                    <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 8 }}>
-                        Giá gốc monthly: {formatVND(result.basePrice)}
+                    <div>
+                        <label style={lbl}>Band phòng</label>
+                        <select style={inp} value={band} onChange={e => setBand(e.target.value)}>
+                            {BANDS.map(b => <option key={b} value={b}>{b} — {BAND_LABELS[b]}</option>)}
+                        </select>
+                    </div>
+                    <div>
+                        <label style={lbl}>Kỳ hạn</label>
+                        <select style={inp} value={term} onChange={e => setTerm(Number(e.target.value))}>
+                            {TERMS.map(t => <option key={t} value={t}>{t} tháng</option>)}
+                        </select>
                     </div>
                 </div>
-            )}
+
+                {loading ? (
+                    <div style={{ textAlign: 'center', padding: 24, color: C.navy400, fontSize: 13 }}>
+                        Đang tính toán…
+                    </div>
+                ) : result && (
+                    <div style={{
+                        padding: 24, borderRadius: 10, textAlign: 'center',
+                        background: `linear-gradient(135deg, ${C.navy50}, #f5f3ff)`,
+                        border: `1px solid ${C.navy200}`,
+                    }}>
+                        <div style={{ fontSize: 12, fontWeight: 500, color: C.navy400, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                            Khách trả / tháng
+                        </div>
+                        <div style={{
+                            fontSize: 36, fontWeight: 800, color: C.navy900,
+                            fontFeatureSettings: '"tnum"', lineHeight: 1,
+                        }}>
+                            {fmtVND(result.price)}
+                        </div>
+                        {result.discountPercent > 0 && (
+                            <div style={{
+                                display: 'inline-flex', alignItems: 'center', gap: 4,
+                                marginTop: 10, padding: '4px 12px',
+                                background: C.green100, borderRadius: 20,
+                                fontSize: 12, fontWeight: 600, color: C.green600,
+                            }}>
+                                <Percent size={11} /> Giảm {result.discountPercent}% so với monthly
+                            </div>
+                        )}
+                        <div style={{ fontSize: 12, color: C.navy400, marginTop: 8 }}>
+                            Giá gốc monthly: {fmtVND(result.basePrice)}
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
     );
 }
 
-// ── Main Pricing Tab ────────────────────────────────────────────
+// ── Main PricingTab ─────────────────────────────────────────────
 
 export default function PricingTab() {
     const [configs, setConfigs] = useState<PricingConfig[]>([]);
@@ -464,7 +730,7 @@ export default function PricingTab() {
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm('Bạn muốn hủy kích hoạt config này? (set effective_to = now)')) return;
+        if (!confirm('Hủy kích hoạt config này? (effective_to = now)')) return;
         await fetch(`/api/admin/pricing-config?id=${id}`, { method: 'DELETE' });
         fetchConfigs();
     };
@@ -480,52 +746,89 @@ export default function PricingTab() {
         setSeeding(false);
     };
 
+    const activeCount = configs.filter(c => isActive(c)).length;
+
+    // Loading skeleton
     if (loading) {
-        return <div style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>Loading pricing configs...</div>;
+        return (
+            <div style={{ padding: 40, textAlign: 'center' }}>
+                <RefreshCw size={20} color={C.navy300} style={{ animation: 'spin 1s linear infinite' }} />
+                <div style={{ marginTop: 8, fontSize: 13, color: C.navy400 }}>Đang tải cấu hình giá…</div>
+                <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+            </div>
+        );
     }
 
     return (
         <div>
-            {/* Header + Seed */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                <div>
-                    <span style={{ fontSize: 13, color: '#6b7280' }}>
-                        {configs.length} configs total · {configs.filter(c => isActive(c)).length} active
-                    </span>
+            {/* Summary Bar */}
+            <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                marginBottom: 16, padding: '10px 14px', borderRadius: 10,
+                background: C.navy50, border: `1px solid ${C.navy200}`,
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                    <div style={{ fontSize: 13, color: C.navy600 }}>
+                        <span style={{ fontWeight: 700, fontSize: 18, color: C.navy900, marginRight: 4 }}>{configs.length}</span> configs
+                    </div>
+                    <div style={{ width: 1, height: 20, background: C.navy200 }} />
+                    <div style={{ fontSize: 13, color: C.green600, fontWeight: 600 }}>
+                        {activeCount} active
+                    </div>
+                    <div style={{ width: 1, height: 20, background: C.navy200 }} />
+                    <div style={{ fontSize: 13, color: C.navy400 }}>
+                        {configs.length - activeCount} inactive
+                    </div>
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
                     {configs.length === 0 && (
-                        <button onClick={handleSeed} disabled={seeding} style={{ ...btnPrimary, background: '#059669' }}>
-                            {seeding ? 'Đang seed...' : '🌱 Seed Defaults'}
+                        <button onClick={handleSeed} disabled={seeding} style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 5,
+                            padding: '7px 14px', fontSize: 12, fontWeight: 600,
+                            borderRadius: 7, border: 'none',
+                            background: C.green600, color: C.white,
+                            cursor: seeding ? 'wait' : 'pointer', transition: 'all 0.15s',
+                        }}>
+                            <Sprout size={14} /> {seeding ? 'Đang seed…' : 'Seed Defaults'}
                         </button>
                     )}
-                    <button onClick={fetchConfigs} style={{ ...btnPrimary, background: '#f3f4f6', color: '#374151' }}>
-                        <RefreshCw size={14} /> Refresh
+                    <button onClick={fetchConfigs} style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 5,
+                        padding: '7px 14px', fontSize: 12, fontWeight: 500,
+                        borderRadius: 7, border: `1px solid ${C.navy200}`,
+                        background: C.white, color: C.navy600,
+                        cursor: 'pointer', transition: 'all 0.15s',
+                    }}
+                        onMouseEnter={e => e.currentTarget.style.background = C.navy50}
+                        onMouseLeave={e => e.currentTarget.style.background = C.white}
+                    >
+                        <RefreshCw size={13} /> Refresh
                     </button>
                 </div>
             </div>
 
             {/* Config Sections */}
             <ConfigSection
-                title="💰 Base Price (Giá gốc theo gói)"
-                configs={configs}
                 type="BASE_PRICE"
+                label="Base Price"
+                subtitle="Giá gốc theo gói"
+                configs={configs}
                 onSave={handleSave}
                 onDelete={handleDelete}
             />
-
             <ConfigSection
-                title="📐 Band Multiplier (Hệ số theo quy mô phòng)"
-                configs={configs}
                 type="BAND_MULTIPLIER"
+                label="Band Multiplier"
+                subtitle="Hệ số nhân theo quy mô phòng"
+                configs={configs}
                 onSave={handleSave}
                 onDelete={handleDelete}
             />
-
             <ConfigSection
-                title="🎫 Term Discount (Giảm giá theo kỳ hạn)"
-                configs={configs}
                 type="TERM_DISCOUNT"
+                label="Term Discount"
+                subtitle="Chiết khấu theo kỳ hạn cam kết"
+                configs={configs}
                 onSave={handleSave}
                 onDelete={handleDelete}
             />
