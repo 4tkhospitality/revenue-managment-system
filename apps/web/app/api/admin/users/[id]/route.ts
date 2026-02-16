@@ -106,7 +106,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 }
 
-// DELETE /api/admin/users/[id] - Deactivate user (soft delete)
+// DELETE /api/admin/users/[id] - Permanently delete user and all related data
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
     try {
         const session = await auth()
@@ -116,30 +116,42 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
         const { id } = await params
 
-        // Try HARD DELETE first to support re-onboarding testing
-        try {
-            await prisma.user.delete({
-                where: { id }
-            })
-            return NextResponse.json({ success: true, message: 'User permanently deleted' })
-        } catch (error: any) {
-            // Foreign key constraint failed (e.g. user has PricingDecisions) -> Fallback to SOFT DELETE
-            if (error.code === 'P2003') {
-                serverLog.info(`[ADMIN] Hard delete failed for user ${id}, falling back to soft delete`)
-
-                await prisma.user.update({
-                    where: { id },
-                    data: { is_active: false }
-                })
-                return NextResponse.json({ success: true, message: 'User deactivated (soft delete due to existing data)' })
-            }
-
-            throw error
+        // Prevent self-deletion
+        if (id === session.user.id) {
+            return NextResponse.json({ error: 'Cannot delete yourself' }, { status: 400 })
         }
 
-        return NextResponse.json({ success: true, message: 'User deactivated' })
+        // Cascade delete: remove all related records in a transaction
+        await prisma.$transaction(async (tx) => {
+            // 1. Delete pricing decisions
+            await tx.pricingDecision.deleteMany({ where: { user_id: id } })
+
+            // 2. Delete product events
+            await tx.productEvent.deleteMany({ where: { user_id: id } })
+
+            // 3. Delete payment transactions
+            await tx.paymentTransaction.deleteMany({ where: { user_id: id } })
+
+            // 4. Delete org memberships
+            await tx.orgMember.deleteMany({ where: { user_id: id } })
+
+            // 5. Delete hotel user assignments (also cascades in schema, but explicit is safer)
+            await tx.hotelUser.deleteMany({ where: { user_id: id } })
+
+            // 6. Delete NextAuth accounts & sessions
+            await tx.account.deleteMany({ where: { userId: id } })
+            await tx.session.deleteMany({ where: { userId: id } })
+
+            // 7. Finally delete the user
+            await tx.user.delete({ where: { id } })
+        })
+
+        serverLog.info(`[ADMIN] User ${id} permanently deleted with all related data by ${session.user.email}`)
+
+        return NextResponse.json({ success: true, message: 'User and all related data permanently deleted' })
     } catch (error) {
-        serverLog.error('Error deactivating user:', error)
+        serverLog.error('Error deleting user:', error)
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
 }
+
