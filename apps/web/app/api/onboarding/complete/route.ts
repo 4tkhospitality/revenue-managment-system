@@ -39,28 +39,37 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'No access to this hotel' }, { status: 403 })
         }
 
-        // ── Pay-first flow: Check for orphan COMPLETED payment ──────────
-        const orphanPayment = await prisma.paymentTransaction.findFirst({
+        // ── Pay-first flow: Find COMPLETED payment to link to new hotel ──────
+        // This includes: orphan payments (hotel_id=null) AND payments linked to Demo Hotel
+        const demoHotel = await prisma.hotel.findFirst({
+            where: { name: 'Demo Hotel' },
+            select: { hotel_id: true },
+        })
+
+        const paymentToLink = await prisma.paymentTransaction.findFirst({
             where: {
                 user_id: session.user.id,
-                hotel_id: null,
                 status: 'COMPLETED',
+                OR: [
+                    { hotel_id: { equals: undefined } },
+                    ...(demoHotel ? [{ hotel_id: demoHotel.hotel_id }] : []),
+                ],
             },
             orderBy: { created_at: 'desc' },
         })
 
         let subscriptionActivated = false
 
-        if (orphanPayment && orphanPayment.purchased_tier && orphanPayment.purchased_room_band) {
+        if (paymentToLink && paymentToLink.purchased_tier && paymentToLink.purchased_room_band) {
             // Link payment to the new hotel + activate subscription
             const now = new Date()
-            const termMonths = orphanPayment.term_months || 1
+            const termMonths = (paymentToLink as any).term_months || 1
             const periodEnd = new Date(now.getTime() + termMonths * 30 * 24 * 60 * 60 * 1000)
 
             await prisma.$transaction(async (tx) => {
                 // 1. Link orphan payment to new hotel
                 await tx.paymentTransaction.update({
-                    where: { id: orphanPayment.id },
+                    where: { id: paymentToLink.id },
                     data: { hotel_id: hotelId },
                 })
 
@@ -68,9 +77,9 @@ export async function POST(request: NextRequest) {
                 await applySubscriptionChange(tx, hotelId, session.user!.id!, {
                     periodStart: now,
                     periodEnd,
-                    provider: (orphanPayment.gateway === 'SEPAY' ? 'SEPAY' : 'PAYPAL') as 'SEPAY' | 'PAYPAL' | 'ZALO_MANUAL',
-                    plan: orphanPayment.purchased_tier!,
-                    roomBand: orphanPayment.purchased_room_band!,
+                    provider: (paymentToLink.gateway === 'SEPAY' ? 'SEPAY' : 'PAYPAL') as 'SEPAY' | 'PAYPAL' | 'ZALO_MANUAL',
+                    plan: paymentToLink.purchased_tier!,
+                    roomBand: paymentToLink.purchased_room_band!,
                 })
             })
 
@@ -83,9 +92,9 @@ export async function POST(request: NextRequest) {
                     hotel_id: hotelId,
                     event_type: 'ORPHAN_PAYMENT_LINKED',
                     event_data: {
-                        paymentId: orphanPayment.id,
-                        tier: orphanPayment.purchased_tier,
-                        roomBand: orphanPayment.purchased_room_band,
+                        paymentId: paymentToLink.id,
+                        tier: paymentToLink.purchased_tier,
+                        roomBand: paymentToLink.purchased_room_band,
                         termMonths,
                     },
                 },
@@ -137,7 +146,7 @@ export async function POST(request: NextRequest) {
             trialExtended,
             subscriptionActivated,
             message: subscriptionActivated
-                ? `Đã kích hoạt gói ${orphanPayment?.purchased_tier}! Chào mừng bạn!`
+                ? `Đã kích hoạt gói ${paymentToLink?.purchased_tier}! Chào mừng bạn!`
                 : trialExtended
                     ? 'Onboarding hoàn tất! Trial được gia hạn thêm 7 ngày.'
                     : 'Onboarding hoàn tất!'

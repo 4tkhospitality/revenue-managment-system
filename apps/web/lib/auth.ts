@@ -85,19 +85,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                             isPrimary: hu.is_primary,
                         }))
 
-                        // Check for orphan COMPLETED payment (paid but no hotel created)
-                        // This handles users who have Demo Hotel but haven't created their own
-                        const orphanPayment = await prisma.paymentTransaction.findFirst({
+                        // Check if user paid but hasn't created their own hotel yet
+                        // This handles: payment linked to Demo Hotel, or orphan (hotel_id=null)
+                        const hasCompletedPayment = await prisma.paymentTransaction.findFirst({
                             where: {
                                 user_id: user.id,
-                                hotel_id: { equals: null },
                                 status: 'COMPLETED',
                             },
                             select: { id: true },
                         })
-                        token.hasPendingActivation = !!orphanPayment
-                        if (orphanPayment) {
-                            serverLog.info(`[AUTH] User ${user.email} has pending activation (orphan payment: ${orphanPayment.id})`)
+                        // User has a "real" hotel if they have any hotel that's NOT "Demo Hotel"
+                        const hasRealHotel = user.hotel_users.some(
+                            hu => hu.hotel?.name !== 'Demo Hotel'
+                        )
+                        token.hasPendingActivation = !!hasCompletedPayment && !hasRealHotel
+                        if (token.hasPendingActivation) {
+                            serverLog.info(`[AUTH] User ${user.email} has pending activation: paid=${!!hasCompletedPayment}, hasRealHotel=${hasRealHotel}`)
                         }
 
 
