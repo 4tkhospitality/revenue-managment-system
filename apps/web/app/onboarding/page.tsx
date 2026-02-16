@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
+import { COUNTRIES } from "@/lib/constants/countries"
 
 // Step indicator component
 function StepIndicator({ currentStep, totalSteps }: { currentStep: number, totalSteps: number }) {
@@ -53,6 +54,7 @@ export default function OnboardingPage() {
         capacity: "",
         currency: "VND",
         timezone: "Asia/Ho_Chi_Minh",
+        country: "VN",
         companyEmail: "",
         phone: "",
         basePrice: "",
@@ -96,8 +98,9 @@ export default function OnboardingPage() {
                     capacity: parseInt(formData.capacity),
                     currency: formData.currency,
                     timezone: formData.timezone,
+                    country: formData.country,
                     companyEmail: formData.companyEmail || null,
-                    phone: formData.phone || null,
+                    phone: formData.phone,
                     basePrice: formData.basePrice ? parseFloat(parseNumber(formData.basePrice)) : null,
                     priceFloor: formData.priceFloor ? parseFloat(parseNumber(formData.priceFloor)) : null,
                     priceCeiling: formData.priceCeiling ? parseFloat(parseNumber(formData.priceCeiling)) : null,
@@ -258,7 +261,7 @@ export default function OnboardingPage() {
 
                             <div className="space-y-4">
                                 <div>
-                                    <label className={labelStyles}>Tên khách sạn *</label>
+                                    <label className={labelStyles}>Tên khách sạn / Resort *</label>
                                     <input
                                         type="text"
                                         required
@@ -284,6 +287,23 @@ export default function OnboardingPage() {
                                     </div>
 
                                     <div>
+                                        <label className={labelStyles}>Quốc gia *</label>
+                                        <select
+                                            value={formData.country}
+                                            onChange={(e) => updateFormData('country', e.target.value)}
+                                            className={inputStyles}
+                                        >
+                                            {COUNTRIES.map(c => (
+                                                <option key={c.code} value={c.code} className="bg-slate-800">
+                                                    {c.flag} {c.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
                                         <label className={labelStyles}>Tiền tệ *</label>
                                         <select
                                             value={formData.currency}
@@ -295,24 +315,36 @@ export default function OnboardingPage() {
                                             <option value="EUR" className="bg-slate-800">EUR - Euro</option>
                                         </select>
                                     </div>
+
+                                    <div>
+                                        <label className={labelStyles}>Múi giờ *</label>
+                                        <select
+                                            value={formData.timezone}
+                                            onChange={(e) => updateFormData('timezone', e.target.value)}
+                                            className={inputStyles}
+                                        >
+                                            <option value="Asia/Ho_Chi_Minh" className="bg-slate-800">Việt Nam (GMT+7)</option>
+                                            <option value="Asia/Bangkok" className="bg-slate-800">Thái Lan (GMT+7)</option>
+                                            <option value="Asia/Singapore" className="bg-slate-800">Singapore (GMT+8)</option>
+                                            <option value="Asia/Tokyo" className="bg-slate-800">Nhật Bản (GMT+9)</option>
+                                        </select>
+                                    </div>
                                 </div>
 
                                 <div>
-                                    <label className={labelStyles}>Múi giờ *</label>
-                                    <select
-                                        value={formData.timezone}
-                                        onChange={(e) => updateFormData('timezone', e.target.value)}
+                                    <label className={labelStyles}>Số điện thoại di động *</label>
+                                    <input
+                                        type="tel"
+                                        required
+                                        value={formData.phone}
+                                        onChange={(e) => updateFormData('phone', e.target.value)}
                                         className={inputStyles}
-                                    >
-                                        <option value="Asia/Ho_Chi_Minh" className="bg-slate-800">Việt Nam (GMT+7)</option>
-                                        <option value="Asia/Bangkok" className="bg-slate-800">Thái Lan (GMT+7)</option>
-                                        <option value="Asia/Singapore" className="bg-slate-800">Singapore (GMT+8)</option>
-                                        <option value="Asia/Tokyo" className="bg-slate-800">Nhật Bản (GMT+9)</option>
-                                    </select>
+                                        placeholder="VD: 0901234567"
+                                    />
                                 </div>
 
                                 <div>
-                                    <label className={labelStyles}>Email (tùy chọn)</label>
+                                    <label className={labelStyles}>Email của Khách sạn / Resort (tùy chọn)</label>
                                     <input
                                         type="email"
                                         value={formData.companyEmail}
@@ -321,23 +353,12 @@ export default function OnboardingPage() {
                                         placeholder="contact@hotel.com"
                                     />
                                 </div>
-
-                                <div>
-                                    <label className={labelStyles}>Số điện thoại (tùy chọn)</label>
-                                    <input
-                                        type="tel"
-                                        value={formData.phone}
-                                        onChange={(e) => updateFormData('phone', e.target.value)}
-                                        className={inputStyles}
-                                        placeholder="VD: 0901234567"
-                                    />
-                                </div>
                             </div>
 
                             <button
                                 type="button"
                                 onClick={() => setCurrentStep(2)}
-                                disabled={!formData.name || !formData.capacity}
+                                disabled={!formData.name || !formData.capacity || !formData.phone || !formData.country}
                                 className="w-full mt-6 py-3 px-6 bg-white text-blue-600 font-medium rounded-xl 
                                     hover:bg-white/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                             >

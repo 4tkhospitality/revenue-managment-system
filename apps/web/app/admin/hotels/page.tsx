@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { TIER_CONFIGS } from '@/lib/tier/tierConfig';
+import { COUNTRIES, getCountryDisplay } from '@/lib/constants/countries';
 
 interface Hotel {
     id: string;
@@ -11,6 +12,7 @@ interface Hotel {
     timezone: string;
     capacity: number;
     currency: string;
+    country: string;
     userCount: number;
     pendingInvites: number;
     createdAt: string;
@@ -287,19 +289,20 @@ export default function AdminHotelsPage() {
                             <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">Phòng</th>
                             <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">Users</th>
                             <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">Tiền tệ</th>
+                            <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">Quốc gia</th>
                             <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody>
                         {loading ? (
                             <tr>
-                                <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
+                                <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
                                     Đang tải...
                                 </td>
                             </tr>
                         ) : filteredHotels.length === 0 ? (
                             <tr>
-                                <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
+                                <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
                                     {search || statusFilter !== 'ALL' || planFilter !== 'ALL' || specialFilter
                                         ? 'Không tìm thấy hotel phù hợp'
                                         : 'Chưa có hotel nào'}
@@ -400,6 +403,13 @@ export default function AdminHotelsPage() {
                                             {getCurrencyBadge(hotel.currency)}
                                         </td>
 
+                                        {/* Country */}
+                                        <td className="px-4 py-3 text-center">
+                                            <span className="text-sm" title={hotel.country}>
+                                                {getCountryDisplay(hotel.country)}
+                                            </span>
+                                        </td>
+
                                         {/* Actions */}
                                         <td className="px-4 py-3 text-right">
                                             <button
@@ -483,6 +493,7 @@ function HotelModal({ hotel, onClose, onSaved }: {
     const [timezone, setTimezone] = useState(hotel?.timezone || 'Asia/Ho_Chi_Minh');
     const [capacity, setCapacity] = useState(hotel?.capacity?.toString() || '100');
     const [currency, setCurrency] = useState(hotel?.currency || 'VND');
+    const [country, setCountry] = useState(hotel?.country || 'VN');
     const [saving, setSaving] = useState(false);
     const [loadingDetails, setLoadingDetails] = useState(false);
 
@@ -540,6 +551,7 @@ function HotelModal({ hotel, onClose, onSaved }: {
                 timezone,
                 capacity: parseInt(capacity),
                 currency,
+                country,
             };
 
             // Include base rate if provided
@@ -623,6 +635,14 @@ function HotelModal({ hotel, onClose, onSaved }: {
                                         <option value="THB">THB</option>
                                     </select>
                                 </div>
+                            </div>
+                            <div>
+                                <label className={labelClass}>Quốc gia</label>
+                                <select value={country} onChange={(e) => setCountry(e.target.value)} className={inputClass}>
+                                    {COUNTRIES.map(c => (
+                                        <option key={c.code} value={c.code}>{c.flag} {c.name}</option>
+                                    ))}
+                                </select>
                             </div>
                         </div>
 

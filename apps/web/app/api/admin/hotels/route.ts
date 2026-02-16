@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
                 timezone: h.timezone,
                 capacity: h.capacity,
                 currency: h.currency,
+                country: h.country,
                 userCount: h._count.hotel_users,
                 pendingInvites: pendingMap.get(h.hotel_id) ?? 0,
                 createdAt: h.created_at,
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json()
-        const { name, timezone = 'Asia/Ho_Chi_Minh', capacity = 100, currency = 'VND' } = body
+        const { name, timezone = 'Asia/Ho_Chi_Minh', capacity = 100, currency = 'VND', country = 'VN' } = body
 
         if (!name) {
             return NextResponse.json({ error: 'Hotel name is required' }, { status: 400 })
@@ -75,6 +76,7 @@ export async function POST(request: NextRequest) {
                 timezone,
                 capacity,
                 currency,
+                country,
             }
         })
 
@@ -85,6 +87,7 @@ export async function POST(request: NextRequest) {
                 timezone: hotel.timezone,
                 capacity: hotel.capacity,
                 currency: hotel.currency,
+                country: hotel.country,
             }
         }, { status: 201 })
     } catch (error) {

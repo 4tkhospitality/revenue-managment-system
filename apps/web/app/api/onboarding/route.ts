@@ -14,10 +14,10 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json()
-        const { name, capacity, currency, timezone, companyEmail, phone, basePrice, priceFloor, priceCeiling } = body
+        const { name, capacity, currency, timezone, country, companyEmail, phone, basePrice, priceFloor, priceCeiling } = body
 
         // Validation
-        if (!name || !capacity || !currency || !timezone) {
+        if (!name || !capacity || !currency || !timezone || !country || !phone) {
             return NextResponse.json(
                 { error: "Missing required fields" },
                 { status: 400 }
@@ -31,6 +31,8 @@ export async function POST(request: NextRequest) {
                 capacity,
                 currency,
                 timezone,
+                country,
+                phone,
                 company_email: companyEmail,
                 default_base_rate: basePrice,
                 min_rate: priceFloor,
@@ -44,6 +46,23 @@ export async function POST(request: NextRequest) {
             data: {
                 hotel_id: hotel.hotel_id,
                 ...(phone ? { phone } : {}),
+            },
+        })
+
+        // Create HotelUser link (owner role)
+        await prisma.hotelUser.upsert({
+            where: {
+                user_id_hotel_id: {
+                    user_id: (await prisma.user.findUnique({ where: { email: session.user.email }, select: { id: true } }))!.id,
+                    hotel_id: hotel.hotel_id,
+                },
+            },
+            update: { role: 'hotel_admin', is_primary: true },
+            create: {
+                user_id: (await prisma.user.findUnique({ where: { email: session.user.email }, select: { id: true } }))!.id,
+                hotel_id: hotel.hotel_id,
+                role: 'hotel_admin',
+                is_primary: true,
             },
         })
 
