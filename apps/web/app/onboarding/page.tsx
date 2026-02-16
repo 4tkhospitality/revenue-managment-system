@@ -169,7 +169,7 @@ export default function OnboardingPage() {
                 })
             }
 
-            // Mark onboarding complete
+            // Mark onboarding complete (API also sets rms_active_hotel cookie)
             await fetch('/api/onboarding/complete', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -179,13 +179,12 @@ export default function OnboardingPage() {
             // Force JWT session refresh so hasPendingActivation recalculates
             await updateSession()
 
-            router.push("/dashboard")
-            router.refresh()
+            // Hard redirect to force full page load with fresh cookies
+            // router.push won't work because middleware may still read stale JWT
+            window.location.href = '/dashboard'
         } catch (error) {
             // Even on error, try to navigate
-            await updateSession()
-            router.push("/dashboard")
-            router.refresh()
+            window.location.href = '/dashboard'
         } finally {
             setLoading(false)
         }

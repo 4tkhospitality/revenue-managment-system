@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
             },
         })
 
-        return NextResponse.json({
+        const response = NextResponse.json({
             success: true,
             trialExtended,
             subscriptionActivated,
@@ -151,6 +151,17 @@ export async function POST(request: NextRequest) {
                     ? 'Onboarding hoàn tất! Trial được gia hạn thêm 7 ngày.'
                     : 'Onboarding hoàn tất!'
         })
+
+        // Set active hotel cookie so middleware allows through even before JWT refreshes
+        response.cookies.set('rms_active_hotel', hotelId, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 60 * 60 * 24 * 30,
+            path: '/',
+        })
+
+        return response
     } catch (error) {
         console.error('[API] Onboarding complete error:', error)
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
