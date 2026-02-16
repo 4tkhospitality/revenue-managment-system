@@ -83,7 +83,8 @@ export async function middleware(request: NextRequest) {
 
     // DEBUG: Log every authenticated request with key session info
     const hotels = session.user.accessibleHotels || []
-    console.log(`[MW] 👤 ${session.user.email} | path=${pathname} | role=${session.user.role} | isAdmin=${session.user.isAdmin} | hotels=${hotels.length} | active=${session.user.isActive}`)
+    const pendingActivation = (session.user as any).hasPendingActivation || false
+    console.log(`[MW] 👤 ${session.user.email} | path=${pathname} | role=${session.user.role} | isAdmin=${session.user.isAdmin} | hotels=${hotels.length} | active=${session.user.isActive} | pendingActivation=${pendingActivation}`)
 
     // 5. Super admin bypass - MUST be before blocked check so admin can't be locked out
     if (session.user.isAdmin || session.user.role === 'super_admin') {
@@ -102,6 +103,17 @@ export async function middleware(request: NextRequest) {
             return NextResponse.next()
         }
         return NextResponse.redirect(new URL("/blocked", request.url))
+    }
+
+    // 6b. Pending activation: user paid but hasn't created their hotel yet
+    // Redirect to /onboarding regardless of current hotel access (e.g. Demo Hotel)
+    if (pendingActivation) {
+        const allowedPaths = ['/onboarding', '/api/onboarding', '/welcome', '/api/payments', '/api/auth']
+        const isAllowed = allowedPaths.some(p => pathname.startsWith(p))
+        if (!isAllowed) {
+            console.log(`[MW] 💳 Pending activation → redirect /onboarding | email=${session.user.email}`)
+            return NextResponse.redirect(new URL("/onboarding", request.url))
+        }
     }
 
     // 7. Admin routes = super_admin only

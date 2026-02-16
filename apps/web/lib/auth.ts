@@ -85,8 +85,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                             isPrimary: hu.is_primary,
                         }))
 
-                        // NOTE: Removed AUTO-ASSIGN Demo Hotel logic
-                        // Users with 0 hotels will now be redirected to /welcome by middleware
+                        // Check for orphan COMPLETED payment (paid but no hotel created)
+                        // This handles users who have Demo Hotel but haven't created their own
+                        const orphanPayment = await prisma.paymentTransaction.findFirst({
+                            where: {
+                                user_id: user.id,
+                                hotel_id: { equals: null },
+                                status: 'COMPLETED',
+                            },
+                            select: { id: true },
+                        })
+                        token.hasPendingActivation = !!orphanPayment
+                        if (orphanPayment) {
+                            serverLog.info(`[AUTH] User ${user.email} has pending activation (orphan payment: ${orphanPayment.id})`)
+                        }
 
 
                     } else {
@@ -133,6 +145,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 session.user.isActive = token.isActive as boolean
                 session.user.isAdmin = token.isAdmin as boolean
                 session.user.accessibleHotels = token.accessibleHotels as AccessibleHotel[]
+                session.user.hasPendingActivation = token.hasPendingActivation as boolean || false
             }
             return session
         },

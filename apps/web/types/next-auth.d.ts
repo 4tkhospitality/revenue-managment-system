@@ -19,6 +19,7 @@ declare module "next-auth" {
             isActive: boolean
             isAdmin: boolean
             accessibleHotels: AccessibleHotel[]
+            hasPendingActivation: boolean
         }
     }
     interface User {
@@ -26,6 +27,7 @@ declare module "next-auth" {
         isActive?: boolean
         isAdmin?: boolean
         accessibleHotels?: AccessibleHotel[]
+        hasPendingActivation?: boolean
     }
 }
 
@@ -36,5 +38,6 @@ declare module "@auth/core/jwt" {
         isActive?: boolean
         isAdmin?: boolean
         accessibleHotels?: AccessibleHotel[]
+        hasPendingActivation?: boolean
     }
 }
