@@ -13,18 +13,25 @@ export default function WelcomePage() {
     useEffect(() => {
         async function checkPendingActivation() {
             try {
+                console.log('[Welcome] 🔍 Checking pending activation...')
                 const res = await fetch('/api/payments/pending-activation')
+                console.log(`[Welcome] 📡 API response: status=${res.status}, ok=${res.ok}, url=${res.url}`)
                 if (res.ok) {
                     const data = await res.json()
+                    console.log('[Welcome] 📦 API data:', JSON.stringify(data))
                     if (data.hasPendingActivation) {
-                        // User already paid → redirect to onboarding to create hotel
+                        console.log('[Welcome] ✅ Has pending activation → redirecting to /onboarding')
                         window.location.href = '/onboarding'
                         return
+                    } else {
+                        console.log('[Welcome] ⚠️ No pending activation → showing welcome page')
                     }
+                } else {
+                    const text = await res.text()
+                    console.log(`[Welcome] ❌ API error: status=${res.status}, body=${text.substring(0, 200)}`)
                 }
             } catch (err) {
-                // Silently fail — just show normal welcome page
-                console.error('Failed to check pending activation:', err)
+                console.error('[Welcome] ❌ Failed to check pending activation:', err)
             }
             setCheckingPayment(false)
         }

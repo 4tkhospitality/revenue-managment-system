@@ -68,6 +68,7 @@ export async function middleware(request: NextRequest) {
 
     // 4. Not logged in -> redirect to login (or 401 JSON for API routes)
     if (!session?.user) {
+        console.log(`[MW] ❌ No session → redirect to login | path=${pathname}`)
         // API routes should return 401 JSON, not redirect
         if (pathname.startsWith('/api/')) {
             return NextResponse.json(
@@ -80,11 +81,17 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(loginUrl)
     }
 
+    // DEBUG: Log every authenticated request with key session info
+    const hotels = session.user.accessibleHotels || []
+    console.log(`[MW] 👤 ${session.user.email} | path=${pathname} | role=${session.user.role} | isAdmin=${session.user.isAdmin} | hotels=${hotels.length} | active=${session.user.isActive}`)
+
     // 5. Super admin bypass - MUST be before blocked check so admin can't be locked out
     if (session.user.isAdmin || session.user.role === 'super_admin') {
         if (pathname.startsWith("/onboarding")) {
+            console.log(`[MW] 🛡️ Admin blocked from /onboarding → redirect /dashboard`)
             return NextResponse.redirect(new URL("/dashboard", request.url))
         }
+        console.log(`[MW] 🛡️ Admin bypass → allow through`)
         return NextResponse.next()
     }
 
@@ -114,8 +121,10 @@ export async function middleware(request: NextRequest) {
         if (accessibleHotels.length === 0) {
             const activeHotelCookie = request.cookies.get(ACTIVE_HOTEL_COOKIE)?.value
             if (!activeHotelCookie) {
+                console.log(`[MW] 🚫 No hotels + no cookie → redirect /welcome | email=${session.user.email}`)
                 return NextResponse.redirect(new URL("/welcome", request.url))
             }
+            console.log(`[MW] 🍪 No hotels BUT cookie exists → allow through | cookie=${activeHotelCookie}`)
             // Cookie exists - user was just assigned, allow through
             // The page-level auth (getActiveHotelId) will handle hotel resolution
             return NextResponse.next()

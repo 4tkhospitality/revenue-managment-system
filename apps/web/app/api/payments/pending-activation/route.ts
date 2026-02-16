@@ -12,10 +12,13 @@ import prisma from '@/lib/prisma';
 export async function GET() {
     try {
         const session = await auth();
+        console.log(`[PendingActivation] Session: ${session?.user?.email || 'NO SESSION'}`);
         if (!session?.user) {
+            console.log(`[PendingActivation] ❌ No session → 401`);
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
         const userId = (session.user as { id: string }).id;
+        console.log(`[PendingActivation] 🔍 Checking orphan payments for userId=${userId}, email=${session.user.email}`);
 
         // Find COMPLETED payment with no hotel_id (orphan payment from pay-first flow)
         const orphanPayment = await prisma.paymentTransaction.findFirst({
@@ -39,8 +42,21 @@ export async function GET() {
         });
 
         if (!orphanPayment) {
+            console.log(`[PendingActivation] ⚠️ NO orphan payment found → hasPendingActivation=false`);
+            // Also check: does the user have ANY payment at all?
+            const anyPayment = await prisma.paymentTransaction.findFirst({
+                where: { user_id: userId },
+                select: { id: true, status: true, hotel_id: true },
+            });
+            if (anyPayment) {
+                console.log(`[PendingActivation] 📋 User HAS payment but: status=${anyPayment.status}, hotel_id=${anyPayment.hotel_id}`);
+            } else {
+                console.log(`[PendingActivation] 📋 User has NO payments at all`);
+            }
             return NextResponse.json({ hasPendingActivation: false });
         }
+
+        console.log(`[PendingActivation] ✅ FOUND orphan payment: id=${orphanPayment.id}, tier=${orphanPayment.purchased_tier}, amount=${orphanPayment.amount}`);
 
         return NextResponse.json({
             hasPendingActivation: true,
