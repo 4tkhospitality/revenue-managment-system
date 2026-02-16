@@ -8,6 +8,22 @@
  * 3. If SePay confirms payment → process it (same logic as webhook)
  *
  * This bypasses the need for SePay webhook configuration.
+ *
+ * SePay API response format (GET /userapi/transactions/list):
+ * {
+ *   "transactions": [
+ *     {
+ *       "id": "42672446",
+ *       "transaction_content": "MBVCB...RMS4dafcc39...CT tu...",
+ *       "amount_in": 10000,
+ *       "amount_out": 0,
+ *       "transaction_date": "2026-02-16 20:42:00",
+ *       "account_number": "113456788888",
+ *       "reference_number": "FT26049...",
+ *       ...
+ *     }
+ *   ]
+ * }
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -15,7 +31,7 @@ import { auth } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { compareAmount } from '@/lib/payments/constants';
 import { applySubscriptionChange } from '@/lib/payments/activation';
-import { extractOrderId } from '@/lib/payments/sepay';
+import { extractOrderId, matchesOrderId } from '@/lib/payments/sepay';
 
 export async function GET(req: NextRequest) {
     try {
@@ -58,48 +74,59 @@ export async function GET(req: NextRequest) {
             const sepayApiKey = process.env.SEPAY_API_KEY;
             const sepayAccount = process.env.SEPAY_BANK_ACCOUNT;
 
+            console.log('[Payment Status] Polling SePay API for order:', orderId, 'apiKey:', sepayApiKey ? 'SET' : 'MISSING', 'account:', sepayAccount);
+
             if (sepayApiKey && sepayAccount) {
                 try {
-                    const sepayRes = await fetch(
-                        `https://my.sepay.vn/userapi/transactions/list?` +
-                        `account_number=${sepayAccount}&limit=10`,
-                        {
-                            headers: {
-                                'Authorization': `Bearer ${sepayApiKey}`,
-                                'Content-Type': 'application/json',
-                            },
-                        }
-                    );
+                    const apiUrl = `https://my.sepay.vn/userapi/transactions/list?account_number=${sepayAccount}&limit=20`;
+                    console.log('[Payment Status] Fetching:', apiUrl);
+
+                    const sepayRes = await fetch(apiUrl, {
+                        headers: {
+                            'Authorization': `Bearer ${sepayApiKey}`,
+                        },
+                        cache: 'no-store',
+                    });
+
+                    console.log('[Payment Status] SePay API status:', sepayRes.status);
 
                     if (sepayRes.ok) {
                         const sepayData = await sepayRes.json();
-                        const transactions = sepayData.transactions || [];
+                        const transactions = sepayData.transactions || sepayData.data || [];
+
+                        console.log('[Payment Status] SePay returned', transactions.length, 'transactions');
 
                         // Find matching transaction by order_id in content
                         for (const sepayTx of transactions) {
-                            // Only incoming transfers
-                            if (sepayTx.transferType !== 'in' && sepayTx.transaction_type !== 'in') continue;
+                            // SePay API uses amount_in/amount_out (not transferType)
+                            const amountIn = Number(sepayTx.amount_in || 0);
+                            if (amountIn <= 0) continue; // Skip outgoing transfers
 
+                            // SePay API uses transaction_content (not content)
                             const content = sepayTx.transaction_content || sepayTx.content || '';
-                            const matchedOrderId = extractOrderId(content);
+                            console.log('[Payment Status] Checking tx:', sepayTx.id, 'content:', content.substring(0, 80));
 
-                            if (matchedOrderId === orderId) {
+                            const matchedOrderId = extractOrderId(content);
+                            console.log('[Payment Status] Extracted orderId:', matchedOrderId, 'looking for:', orderId);
+
+                            if (matchedOrderId && matchesOrderId(matchedOrderId, orderId)) {
                                 // Found matching SePay transaction!
-                                const transferAmount = sepayTx.amount_in || sepayTx.transferAmount || 0;
+                                console.log('[Payment Status] MATCH FOUND! SePay tx:', sepayTx.id, 'amount:', amountIn);
+
                                 const amountMatch = compareAmount(
                                     Number(tx.amount),
-                                    transferAmount,
+                                    amountIn,
                                     'VND'
                                 );
 
                                 if (!amountMatch) {
-                                    // Amount mismatch
+                                    console.warn('[Payment Status] Amount mismatch:', tx.amount, 'vs', amountIn);
                                     await prisma.paymentTransaction.update({
                                         where: { id: tx.id },
                                         data: {
                                             status: 'FAILED',
                                             failed_at: new Date(),
-                                            failed_reason: `amount_mismatch: expected ${tx.amount}, got ${transferAmount}`,
+                                            failed_reason: `amount_mismatch: expected ${tx.amount}, got ${amountIn}`,
                                         },
                                     });
                                     return NextResponse.json({
@@ -133,7 +160,7 @@ export async function GET(req: NextRequest) {
                                     }
                                 });
 
-                                console.log(`[Payment Status] SePay API confirmed payment for ${orderId} (sepay tx ${sepayTx.id})`);
+                                console.log(`[Payment Status] ✅ SePay API confirmed payment for ${orderId} (sepay tx ${sepayTx.id})`);
 
                                 return NextResponse.json({
                                     status: 'COMPLETED',
@@ -143,13 +170,17 @@ export async function GET(req: NextRequest) {
                                 });
                             }
                         }
+
+                        console.log('[Payment Status] No matching transaction found in SePay for:', orderId);
                     } else {
-                        console.warn('[Payment Status] SePay API error:', sepayRes.status);
+                        const errBody = await sepayRes.text();
+                        console.warn('[Payment Status] SePay API error:', sepayRes.status, errBody);
                     }
                 } catch (sepayErr) {
-                    console.warn('[Payment Status] SePay API poll failed:', sepayErr);
-                    // Don't fail the whole request, just return PENDING
+                    console.error('[Payment Status] SePay API poll failed:', sepayErr);
                 }
+            } else {
+                console.warn('[Payment Status] Missing SEPAY_API_KEY or SEPAY_BANK_ACCOUNT env vars');
             }
         }
 

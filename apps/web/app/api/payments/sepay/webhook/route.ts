@@ -12,7 +12,7 @@
 
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { extractOrderId } from '@/lib/payments/sepay';
+import { extractOrderId, matchesOrderId } from '@/lib/payments/sepay';
 import type { SepayWebhookPayload } from '@/lib/payments/sepay';
 import { compareAmount } from '@/lib/payments/constants';
 import { applySubscriptionChange } from '@/lib/payments/activation';
@@ -40,25 +40,32 @@ export async function POST(req: Request) {
         }
 
         // 3. Step 1 — MATCH: Extract order_id from content
-        const orderId = extractOrderId(payload.content);
-        if (!orderId) {
+        const extractedId = extractOrderId(payload.content);
+        if (!extractedId) {
             console.warn('[SePay Webhook] No order_id in content:', payload.content);
             return NextResponse.json({ ok: true }); // Not our transaction
         }
 
-        // Find the PENDING transaction
-        const pendingTx = await prisma.paymentTransaction.findFirst({
+        console.log('[SePay Webhook] Extracted order ID:', extractedId);
+
+        // Find the PENDING transaction — use fuzzy match because banks strip dashes
+        const pendingTransactions = await prisma.paymentTransaction.findMany({
             where: {
-                order_id: orderId,
                 gateway: 'SEPAY',
                 status: 'PENDING',
+                created_at: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }, // Last 24h
             },
         });
 
+        const pendingTx = pendingTransactions.find(t => matchesOrderId(extractedId, t.order_id));
+        const orderId = pendingTx?.order_id || extractedId;
+
         if (!pendingTx) {
-            console.warn('[SePay Webhook] No PENDING tx for order:', orderId);
+            console.warn('[SePay Webhook] No PENDING tx matching:', extractedId, 'checked', pendingTransactions.length, 'pending txs');
             return NextResponse.json({ ok: true }); // Already processed or not found
         }
+
+        console.log('[SePay Webhook] Matched to order:', pendingTx.order_id);
 
         // 4. Step 2 — VALIDATE: 3-way check (amount + tier + currency)
         const amountMatch = compareAmount(

@@ -61,23 +61,29 @@ export interface SepayWebhookPayload {
  * We embed order_id in the transfer description when creating checkout.
  * Format: "RMS-XXXXXXXX-TIMESTAMP"
  *
- * IMPORTANT: Banks (VCB, MB, etc.) strip dashes from transfer descriptions!
- * "RMS-00000000-1771247363196" → "RMS000000001771247363196"
- * So we match BOTH formats and reconstruct the canonical dash format.
+ * IMPORTANT: Banks (VCB, MB, etc.) strip dashes AND special chars from transfer descriptions!
+ * "RMS-4dafcc39-1771249328427" → "RMS4dafcc39b1771249328427" (if UUID contains 'b')
+ * The stripped version is ambiguous, so we extract the full blob and compare by stripping.
  */
 export function extractOrderId(content: string): string | null {
-    // Try with dashes first (ideal format)
+    // Try with dashes first (ideal format — when content is preserved)
     const withDashes = content.match(/RMS-[A-Za-z0-9]{8}-\d+/);
     if (withDashes) return withDashes[0];
 
-    // Banks strip dashes → "RMS" + 8 hex chars + timestamp digits (13+)
-    const noDashes = content.match(/RMS([A-Fa-f0-9]{8})(\d{13,})/);
-    if (noDashes) {
-        // Reconstruct canonical format: RMS-XXXXXXXX-TIMESTAMP
-        return `RMS-${noDashes[1]}-${noDashes[2]}`;
-    }
+    // Banks strip dashes — extract the full RMS blob (at least 20 chars to avoid false matches)
+    const blob = content.match(/RMS[A-Za-z0-9]{18,}/);
+    if (blob) return blob[0]; // Return raw blob, will be matched using matchesOrderId()
 
     return null;
+}
+
+/**
+ * Compare an extracted (possibly stripped) order ID with a canonical one from DB.
+ * Strips all non-alphanumeric chars from both before comparing.
+ */
+export function matchesOrderId(extracted: string, canonical: string): boolean {
+    const strip = (s: string) => s.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+    return strip(extracted) === strip(canonical);
 }
 
 // ── Build SePay QR Payment URL ──────────────────────────────────────
