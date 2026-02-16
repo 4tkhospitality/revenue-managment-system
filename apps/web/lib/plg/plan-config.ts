@@ -254,7 +254,6 @@ export { BAND_MULTIPLIER, BASE_PRICE, BAND_LABEL };
 // Dynamic Pricing — DB-backed with fallback
 // ════════════════════════════════════════════════════════════════════
 import prisma from '@/lib/prisma';
-import { unstable_cache } from 'next/cache';
 
 /**
  * Resolve the "winning" config for a given type + lookup key.
@@ -299,36 +298,24 @@ async function resolveActiveConfig(
 }
 
 /** Get dynamic base price for a plan tier (VND). Falls back to hardcoded. */
-const _getDynamicBasePrice = unstable_cache(
-    async (tier: PlanTier, hotelId?: string): Promise<number> => {
-        const config = await resolveActiveConfig('BASE_PRICE', { tier }, hotelId);
-        return config?.amount_vnd ?? BASE_PRICE[tier];
-    },
-    ['dynamic-base-price'],
-    { tags: ['pricing-config'], revalidate: 300 }
-);
+async function _getDynamicBasePrice(tier: PlanTier, hotelId?: string): Promise<number> {
+    const config = await resolveActiveConfig('BASE_PRICE', { tier }, hotelId);
+    return config?.amount_vnd ?? BASE_PRICE[tier];
+}
 
 /** Get dynamic band multiplier. Falls back to hardcoded. */
-const _getDynamicBandMultiplier = unstable_cache(
-    async (band: RoomBand, hotelId?: string): Promise<number> => {
-        const config = await resolveActiveConfig('BAND_MULTIPLIER', { room_band: band }, hotelId);
-        return config?.multiplier ? Number(config.multiplier) : BAND_MULTIPLIER[band];
-    },
-    ['dynamic-band-multiplier'],
-    { tags: ['pricing-config'], revalidate: 300 }
-);
+async function _getDynamicBandMultiplier(band: RoomBand, hotelId?: string): Promise<number> {
+    const config = await resolveActiveConfig('BAND_MULTIPLIER', { room_band: band }, hotelId);
+    return config?.multiplier ? Number(config.multiplier) : BAND_MULTIPLIER[band];
+}
 
 /** Get dynamic term discount %. Falls back to hardcoded default (50% for 3m, 0% otherwise). */
 const TERM_DISCOUNT_DEFAULTS: Record<number, number> = { 1: 0, 3: 50 };
 
-const _getDynamicTermDiscount = unstable_cache(
-    async (termMonths: number, hotelId?: string): Promise<number> => {
-        const config = await resolveActiveConfig('TERM_DISCOUNT', { term_months: termMonths }, hotelId);
-        return config?.percent ?? TERM_DISCOUNT_DEFAULTS[termMonths] ?? 0;
-    },
-    ['dynamic-term-discount'],
-    { tags: ['pricing-config'], revalidate: 300 }
-);
+async function _getDynamicTermDiscount(termMonths: number, hotelId?: string): Promise<number> {
+    const config = await resolveActiveConfig('TERM_DISCOUNT', { term_months: termMonths }, hotelId);
+    return config?.percent ?? TERM_DISCOUNT_DEFAULTS[termMonths] ?? 0;
+}
 
 /**
  * Calculate the dynamic price for a plan+band+term combination.
