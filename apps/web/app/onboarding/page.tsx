@@ -54,6 +54,7 @@ export default function OnboardingPage() {
         currency: "VND",
         timezone: "Asia/Ho_Chi_Minh",
         companyEmail: "",
+        phone: "",
         basePrice: "",
         priceFloor: "",
         priceCeiling: "",
@@ -96,6 +97,7 @@ export default function OnboardingPage() {
                     currency: formData.currency,
                     timezone: formData.timezone,
                     companyEmail: formData.companyEmail || null,
+                    phone: formData.phone || null,
                     basePrice: formData.basePrice ? parseFloat(parseNumber(formData.basePrice)) : null,
                     priceFloor: formData.priceFloor ? parseFloat(parseNumber(formData.priceFloor)) : null,
                     priceCeiling: formData.priceCeiling ? parseFloat(parseNumber(formData.priceCeiling)) : null,
@@ -317,6 +319,17 @@ export default function OnboardingPage() {
                                         onChange={(e) => updateFormData('companyEmail', e.target.value)}
                                         className={inputStyles}
                                         placeholder="contact@hotel.com"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className={labelStyles}>Số điện thoại (tùy chọn)</label>
+                                    <input
+                                        type="tel"
+                                        value={formData.phone}
+                                        onChange={(e) => updateFormData('phone', e.target.value)}
+                                        className={inputStyles}
+                                        placeholder="VD: 0901234567"
                                     />
                                 </div>
                             </div>

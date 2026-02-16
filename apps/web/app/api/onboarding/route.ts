@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json()
-        const { name, capacity, currency, timezone, companyEmail, basePrice, priceFloor, priceCeiling } = body
+        const { name, capacity, currency, timezone, companyEmail, phone, basePrice, priceFloor, priceCeiling } = body
 
         // Validation
         if (!name || !capacity || !currency || !timezone) {
@@ -38,10 +38,13 @@ export async function POST(request: NextRequest) {
             },
         })
 
-        // Link user to hotel
+        // Link user to hotel + save phone
         await prisma.user.update({
             where: { email: session.user.email },
-            data: { hotel_id: hotel.hotel_id },
+            data: {
+                hotel_id: hotel.hotel_id,
+                ...(phone ? { phone } : {}),
+            },
         })
 
         return NextResponse.json({ success: true, hotelId: hotel.hotel_id })
