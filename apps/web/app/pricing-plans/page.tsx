@@ -7,7 +7,7 @@
  * CTA → PaymentMethodModal (SePay / PayPal / Zalo)
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -114,9 +114,29 @@ export default function PricingPlansPage() {
     const [currentBand, setCurrentBand] = useState<RoomBand | null>(null);
     const [hotelId, setHotelId] = useState<string>('');
 
+    // Dynamic pricing from DB
+    const [dynamicPrices, setDynamicPrices] = useState<Record<string, { monthly: number; quarterly: number; discountPercent: number }> | null>(null);
+
     // PaymentMethodModal state
     const [paymentModalOpen, setPaymentModalOpen] = useState(false);
     const [selectedTier, setSelectedTier] = useState<PlanTier>('SUPERIOR');
+
+    // Fetch dynamic prices from DB whenever roomBand changes
+    const fetchDynamicPrices = useCallback(async (band: RoomBand) => {
+        try {
+            const res = await fetch(`/api/pricing/plans?band=${band}`);
+            if (res.ok) {
+                const data = await res.json();
+                setDynamicPrices(data);
+            }
+        } catch {
+            // Fallback: keep using hardcoded prices (dynamicPrices stays null)
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchDynamicPrices(roomBand);
+    }, [roomBand, fetchDynamicPrices]);
 
     useEffect(() => {
         if (status === 'authenticated') {
@@ -147,12 +167,24 @@ export default function PricingPlansPage() {
         setPaymentModalOpen(true);
     };
 
+    // Use dynamic prices from DB, fallback to hardcoded
     const calcPrice = (tierId: string) => {
-        const basePrice = getPrice(tierId as any, roomBand);
-        if (cycle === '3-months') {
-            return basePrice * 0.5; // 50% discount
+        if (dynamicPrices && dynamicPrices[tierId]) {
+            return cycle === '3-months'
+                ? dynamicPrices[tierId].quarterly / 3  // quarterly total ÷ 3 = per month display
+                : dynamicPrices[tierId].monthly;
         }
-        return basePrice;
+        // Fallback to hardcoded
+        const basePrice = getPrice(tierId as any, roomBand);
+        return cycle === '3-months' ? basePrice * 0.5 : basePrice;
+    };
+
+    // Original (undiscounted) monthly price for strikethrough display
+    const getOriginalPrice = (tierId: string) => {
+        if (dynamicPrices && dynamicPrices[tierId]) {
+            return dynamicPrices[tierId].monthly;
+        }
+        return getPrice(tierId as any, roomBand);
     };
 
     // ═══════════════════════════════════════════════════════════════════
@@ -280,7 +312,7 @@ export default function PricingPlansPage() {
                                         </div>
                                         {cycle === '3-months' && (
                                             <div className="text-xs text-gray-400 line-through">
-                                                {formatVND(getPrice(tier.id as any, roomBand))}/tháng
+                                                {formatVND(getOriginalPrice(tier.id))}/tháng
                                             </div>
                                         )}
                                     </>
