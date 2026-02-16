@@ -2,7 +2,7 @@
   "meta": {
     "schema_version": "2.0.0",
     "awf_version": "4.1.2",
-    "last_updated": "2026-02-16T15:37:00+07:00"
+    "last_updated": "2026-02-16T16:40:00+07:00"
   },
   "project": {
     "name": "revenue-management-system",
@@ -609,6 +609,16 @@
       "path": "GET/POST /api/settings",
       "explained": "V02.0 updated: POST handler auto-syncs room_band in subscriptions when hotel capacity changes. Uses deriveBand() + $executeRaw.",
       "v020_updated": true
+    },
+    {
+      "path": "GET /api/pricing/plans?band=R30",
+      "explained": "V02.1: Public API for dynamic plan prices. Returns monthly/quarterly/discountPercent per tier for given room band. Used by pricing page and PaymentMethodModal. Falls back to hardcoded if DB empty.",
+      "v021_new": true
+    },
+    {
+      "path": "GET/PUT/DELETE /api/admin/pricing-config",
+      "explained": "V02.1: Admin CRUD for pricing configs (BASE_PRICE, BAND_MULTIPLIER, TERM_DISCOUNT). PUT strips irrelevant fields by config_type. Timezone fix: appends +07:00 to datetime-local inputs.",
+      "v021_new": true
     }
   ],
   "features": [
@@ -771,7 +781,11 @@
     "V02.1: Orphan Payment API — /api/payments/pending-activation detects COMPLETED payments with null hotel_id",
     "V02.1: Onboarding Orphan Link — /api/onboarding/complete auto-links orphan payments to newly created hotel and activates subscription",
     "V02.1: PayPal One-Time Payment — create-order + capture-order API routes with dynamic USD pricing",
-    "V02.1: Docs Updated to v01.9 — FSD, PRD_FRD, SRS, TECHNICAL_SPEC updated with payment gateway, pay-first flow, orphan payment sections"
+    "V02.1: Docs Updated to v01.9 — FSD, PRD_FRD, SRS, TECHNICAL_SPEC updated with payment gateway, pay-first flow, orphan payment sections",
+    "V02.1: Dynamic Pricing Flow — Admin panel is single source of truth for all prices. Pricing page, PaymentMethodModal, SePay, PayPal all read from DB via getDynamicPrice()/getAllDynamicPrices()",
+    "V02.1: GET /api/pricing/plans — Public API endpoint returning dynamic prices per tier for given room band. Used by pricing-plans page and PaymentMethodModal",
+    "V02.1: Timezone Fix effective_from — datetime-local inputs parsed with +07:00 offset to prevent configs appearing as 'Scheduled' instead of 'Active'",
+    "V02.1: Removed unstable_cache from pricing functions — Direct DB reads on every call (~5ms). Eliminates stale-cache problem. unstable_cache + revalidateTag incompatible with Next.js 16"
   ],
   "cancellation_bridge_v011": {
     "status": "Implemented",
@@ -989,7 +1003,11 @@
       "V02.1: seed-pricing.ts group_type must match engine expectations — tripcom-campaign-2026 had SEASONAL but engine checks d.group==='CAMPAIGN'. Root cause: data bug not logic bug",
       "V02.1: catalog.ts MUST include ALL vendors — Trip.com was missing → getCatalogItem() returned undefined → stackBehavior lost → wrong branch in resolveVendorStacking",
       "V02.1: Self-healing pattern needed in BOTH server (service.ts) AND client (PromotionsTab.tsx) — fixing only server fixes calculation but UI badges/labels still read stale DB values",
-      "V02.1: Campaign type field used in 3 separate places in PromotionsTab.tsx (card view line 176, table view badge line 1365, table group pill line 1372) — must fix ALL or UI still shows wrong labels"
+      "V02.1: Campaign type field used in 3 separate places in PromotionsTab.tsx (card view line 176, table view badge line 1365, table group pill line 1372) — must fix ALL or UI still shows wrong labels",
+      "V02.1: datetime-local input sends value WITHOUT timezone (e.g. '2026-02-16T16:20'). new Date() parses as UTC → 7h ahead in Vietnam → config becomes 'Scheduled' instead of 'Active'. Fix: append '+07:00'",
+      "V02.1: unstable_cache + revalidateTag incompatible with Next.js 16 (revalidateTag requires 2 args). Removed both — pricing functions now read fresh from DB on every call",
+      "V02.1: PricingTab form 'Thêm mới' (Add New) creates NEW config but doesn't deactivate old one → two Active configs for same tier. User must Edit existing config or Delete old one first",
+      "V02.1: getAllDynamicPrices quarterly value is already per-month discounted price — do NOT divide by 3 again in UI (was causing 990000/2/3=165000 instead of 990000/2=495000)"
     ],
     "formulas": {
       "rooms_otb": "SUM(num_rooms) from reservations for that stay_date",

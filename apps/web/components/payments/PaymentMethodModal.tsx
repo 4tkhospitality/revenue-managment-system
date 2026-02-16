@@ -6,7 +6,7 @@
  * Integrates PLG event tracking
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { X, QrCode, CreditCard, MessageCircle, Loader2, CheckCircle2, ArrowLeft } from 'lucide-react';
 import { PlanTier, RoomBand } from '@prisma/client';
 import { trackEventClient } from '@/lib/payments/trackEvent';
@@ -26,7 +26,7 @@ interface PaymentMethodModalProps {
 }
 
 type PaymentMethod = 'sepay' | 'paypal' | 'zalo' | null;
-type Step = 'select' | 'processing' | 'success' | 'error' | 'paypal';
+type Step = 'select' | 'processing' | 'success' | 'paid' | 'error' | 'paypal';
 
 export function PaymentMethodModal({
     isOpen,
@@ -46,6 +46,10 @@ export function PaymentMethodModal({
         orderId?: string;
         amount?: number;
     } | null>(null);
+
+    // Payment confirmation polling
+    const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const [paymentConfirmed, setPaymentConfirmed] = useState(false);
 
     // Dynamic pricing from DB
     const [dynamicMonthly, setDynamicMonthly] = useState<number | null>(null);
@@ -77,6 +81,60 @@ export function PaymentMethodModal({
             })
             .catch(() => { }); // Fallback to hardcoded
     }, [isOpen, tier, roomBand]);
+
+    // Poll payment status when QR is displayed (every 5s)
+    useEffect(() => {
+        // Only poll when showing QR code (step === 'success') with an orderId
+        if (step !== 'success' || !checkoutData?.orderId) {
+            if (pollingRef.current) {
+                clearInterval(pollingRef.current);
+                pollingRef.current = null;
+            }
+            return;
+        }
+
+        const poll = async () => {
+            try {
+                const res = await fetch(`/api/payments/status?orderId=${checkoutData.orderId}`);
+                if (!res.ok) return;
+                const data = await res.json();
+
+                if (data.status === 'COMPLETED') {
+                    setPaymentConfirmed(true);
+                    setStep('paid');
+                    if (pollingRef.current) {
+                        clearInterval(pollingRef.current);
+                        pollingRef.current = null;
+                    }
+                    trackEventClient({
+                        event: 'payment_success',
+                        hotelId,
+                        properties: { gateway: 'SEPAY', tier, orderId: checkoutData.orderId, source: 'poll' },
+                    });
+                } else if (data.status === 'FAILED') {
+                    setError(data.failedReason || 'Thanh toán thất bại');
+                    setStep('error');
+                    if (pollingRef.current) {
+                        clearInterval(pollingRef.current);
+                        pollingRef.current = null;
+                    }
+                }
+            } catch {
+                // Silently ignore poll errors
+            }
+        };
+
+        // Initial check immediately
+        poll();
+        pollingRef.current = setInterval(poll, 5000);
+
+        return () => {
+            if (pollingRef.current) {
+                clearInterval(pollingRef.current);
+                pollingRef.current = null;
+            }
+        };
+    }, [step, checkoutData?.orderId, hotelId, tier]);
 
     if (!isOpen) return null;
 
@@ -255,6 +313,22 @@ export function PaymentMethodModal({
                             <div className="bg-amber-50 p-3 rounded-lg text-sm text-amber-700">
                                 ⏱️ Đơn hàng sẽ hết hạn sau 30 phút. Sau khi chuyển khoản, hệ thống sẽ tự động kích hoạt gói.
                             </div>
+                        </div>
+                    )}
+
+                    {step === 'paid' && (
+                        <div className="flex flex-col items-center py-10">
+                            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-4">
+                                <CheckCircle2 className="w-10 h-10 text-green-500" />
+                            </div>
+                            <h3 className="text-xl font-bold text-green-700 mb-2">Thanh toán thành công!</h3>
+                            <p className="text-sm text-gray-500 mb-6">Gói dịch vụ đã được kích hoạt</p>
+                            <button
+                                onClick={() => { onClose(); window.location.reload(); }}
+                                className="px-6 py-2.5 rounded-xl text-white font-medium bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 transition-all"
+                            >
+                                Hoàn tất
+                            </button>
                         </div>
                     )}
 

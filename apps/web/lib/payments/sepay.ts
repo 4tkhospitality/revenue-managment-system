@@ -60,10 +60,24 @@ export interface SepayWebhookPayload {
  * Extract order_id from SePay webhook content.
  * We embed order_id in the transfer description when creating checkout.
  * Format: "RMS-XXXXXXXX-TIMESTAMP"
+ *
+ * IMPORTANT: Banks (VCB, MB, etc.) strip dashes from transfer descriptions!
+ * "RMS-00000000-1771247363196" → "RMS000000001771247363196"
+ * So we match BOTH formats and reconstruct the canonical dash format.
  */
 export function extractOrderId(content: string): string | null {
-    const match = content.match(/RMS-[A-Za-z0-9]{8}-\d+/);
-    return match ? match[0] : null;
+    // Try with dashes first (ideal format)
+    const withDashes = content.match(/RMS-[A-Za-z0-9]{8}-\d+/);
+    if (withDashes) return withDashes[0];
+
+    // Banks strip dashes → "RMS" + 8 hex chars + timestamp digits (13+)
+    const noDashes = content.match(/RMS([A-Fa-f0-9]{8})(\d{13,})/);
+    if (noDashes) {
+        // Reconstruct canonical format: RMS-XXXXXXXX-TIMESTAMP
+        return `RMS-${noDashes[1]}-${noDashes[2]}`;
+    }
+
+    return null;
 }
 
 // ── Build SePay QR Payment URL ──────────────────────────────────────
