@@ -2,7 +2,7 @@
   "meta": {
     "schema_version": "2.0.0",
     "awf_version": "4.1.2",
-    "last_updated": "2026-02-15T21:54:00+07:00"
+    "last_updated": "2026-02-16T15:37:00+07:00"
   },
   "project": {
     "name": "revenue-management-system",
@@ -210,8 +210,9 @@
       },
       {
         "name": "payment_transactions",
-        "description": "V02.1: Payment transaction records. Tracks SePay/PayPal/Zalo payments with order_id (unique), gateway_transaction_id, amount, currency, status, P1 fields (expires_at, completed_at, failed_at, failed_reason, gateway_event_id, provider_customer_ref). Indexes: hotel_id, status, status+expires_at.",
-        "v021_new": true
+        "description": "V02.1: Payment transaction records. hotel_id NULLABLE for pay-first flow (demo users pay before creating hotel). Added billing_cycle ('monthly'|'3-months'), term_months (1|3). Indexes: hotel_id, user_id (orphan payment lookup), status, status+expires_at. P1 fields: expires_at, completed_at, failed_at, failed_reason, gateway_event_id, provider_customer_ref.",
+        "v021_new": true,
+        "v021_pay_first": "hotel_id nullable, user_id indexed for orphan payment detection"
       }
     ],
     "enums": [
@@ -575,6 +576,21 @@
       "v021_new": true
     },
     {
+      "path": "GET /api/payments/pending-activation",
+      "explained": "V02.1: Detect orphan payments (COMPLETED with null hotel_id). Called on login to redirect pay-first users to onboarding.",
+      "v021_new": true
+    },
+    {
+      "path": "POST /api/payments/paypal/create-order",
+      "explained": "V02.1: Creates PayPal one-time order with dynamic USD pricing. hotelId optional (pay-first flow). Provider switching block. Auto-cancel existing PENDING.",
+      "v021_new": true
+    },
+    {
+      "path": "POST /api/payments/paypal/capture-order",
+      "explained": "V02.1: Captures PayPal order after user approval. Finds PENDING tx by gateway_transaction_id, marks COMPLETED, activates subscription (skip if hotel_id null).",
+      "v021_new": true
+    },
+    {
       "path": "GET /api/analytics/cancel-forecast",
       "explained": "V02.1: Returns cancel forecast data (predicted vs actual cancellation rates).",
       "v021_new": true
@@ -750,7 +766,12 @@
     "V02.1: Round Favicon SVG — Replaced square PNG with circular SVG favicon",
     "V02.1: Self-Healing Catalog Pattern — service.ts + PromotionsTab.tsx prefer static catalog groupType over stale DB group_type. No DB migration needed. Applied to all 3 DiscountItem builders in service.ts and both card+table views in UI",
     "V02.1: Trip.com Promotions in catalog.ts — Added 11 CTRIP_PROMOTIONS (5 ESSENTIAL, 4 TARGETED, 1 Package, 1 CAMPAIGN) with stackBehavior EXCLUSIVE for Campaign. Included in _catalogMap + VENDOR_GROUP_LABELS + getPromotionsByVendor",
-    "V02.1: Trip.com seed-pricing.ts Fix — Campaign group_type corrected from SEASONAL to CAMPAIGN, allow_stack from true to false"
+    "V02.1: Trip.com seed-pricing.ts Fix — Campaign group_type corrected from SEASONAL to CAMPAIGN, allow_stack from true to false",
+    "V02.1: Pay-First Flow — Demo users can pay before creating hotel. hotel_id nullable in PaymentTransaction. Orphan payment detection + linking on onboarding completion",
+    "V02.1: Orphan Payment API — /api/payments/pending-activation detects COMPLETED payments with null hotel_id",
+    "V02.1: Onboarding Orphan Link — /api/onboarding/complete auto-links orphan payments to newly created hotel and activates subscription",
+    "V02.1: PayPal One-Time Payment — create-order + capture-order API routes with dynamic USD pricing",
+    "V02.1: Docs Updated to v01.9 — FSD, PRD_FRD, SRS, TECHNICAL_SPEC updated with payment gateway, pay-first flow, orphan payment sections"
   ],
   "cancellation_bridge_v011": {
     "status": "Implemented",

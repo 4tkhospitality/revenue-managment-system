@@ -11,12 +11,13 @@ import { PlanTier, RoomBand } from '@prisma/client';
 export { BASE_PRICE, BAND_MULTIPLIER, getPrice } from '@/lib/plg/plan-config';
 
 // ── USD Pricing (PayPal) ────────────────────────────────────────────
-// Monthly USD prices per tier (base band R30) — must match PayPal plans
+// Monthly USD prices per tier (base band R30) — derived from VND ÷ 25,500
+// VND source: SUPERIOR=990k, DELUXE=1,990k, SUITE=3,490k
 export const BASE_PRICE_USD: Record<PlanTier, number> = {
     STANDARD: 0,
-    SUPERIOR: 19,
-    DELUXE: 39,
-    SUITE: 69,
+    SUPERIOR: 39,   // 990,000 / 25,500 ≈ 38.82 → $39
+    DELUXE: 79,     // 1,990,000 / 25,500 ≈ 78.04 → $79
+    SUITE: 139,     // 3,490,000 / 25,500 ≈ 136.86 → $139
 };
 
 // Same band multipliers apply for USD
