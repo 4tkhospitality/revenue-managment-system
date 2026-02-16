@@ -32,6 +32,7 @@ import prisma from '@/lib/prisma';
 import { compareAmount } from '@/lib/payments/constants';
 import { applySubscriptionChange } from '@/lib/payments/activation';
 import { extractOrderId, matchesOrderId } from '@/lib/payments/sepay';
+import { notifyPaymentConfirmed } from '@/lib/telegram';
 
 export async function GET(req: NextRequest) {
     try {
@@ -162,6 +163,16 @@ export async function GET(req: NextRequest) {
 
                                 console.log(`[Payment Status] ✅ SePay API confirmed payment for ${orderId} (sepay tx ${sepayTx.id})`);
 
+                                // Fire-and-forget Telegram notification
+                                notifyPaymentConfirmed({
+                                    email: session.user?.email || undefined,
+                                    orderId,
+                                    amount: amountIn,
+                                    currency: 'VND',
+                                    tier: tx.purchased_tier || 'N/A',
+                                    gateway: 'SEPAY',
+                                    confirmedVia: 'SePay API Poll',
+                                });
                                 return NextResponse.json({
                                     status: 'COMPLETED',
                                     completedAt: now.toISOString(),

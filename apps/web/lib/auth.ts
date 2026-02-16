@@ -3,6 +3,7 @@ import Google from "next-auth/providers/google"
 import prisma from "./prisma"
 import { UserRole } from "@prisma/client"
 import { serverLog } from "./logger"
+import { notifyNewUser } from "./telegram"
 
 // Admin email - super_admin access
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "phan.le@vleisure.com"
@@ -156,6 +157,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                         }
                     })
                     serverLog.info(`Created new user: ${user.email}`)
+                    // Fire-and-forget Telegram notification
+                    notifyNewUser(user.email, user.name || null);
                 }
             } catch (error) {
                 serverLog.error('Error in signIn callback:', error)

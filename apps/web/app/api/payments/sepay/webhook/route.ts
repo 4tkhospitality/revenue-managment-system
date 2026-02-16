@@ -17,6 +17,7 @@ import type { SepayWebhookPayload } from '@/lib/payments/sepay';
 import { compareAmount } from '@/lib/payments/constants';
 import { applySubscriptionChange } from '@/lib/payments/activation';
 import { trackEvent } from '@/lib/payments/trackEvent';
+import { notifyPaymentConfirmed } from '@/lib/telegram';
 
 export async function POST(req: Request) {
     try {
@@ -149,8 +150,18 @@ export async function POST(req: Request) {
                     amount: Number(pendingTx.amount),
                     currency: 'VND',
                     orderId,
-                    pendingActivation: !pendingTx.hotel_id, // Flag: needs onboarding
+                    pendingActivation: !pendingTx.hotel_id,
                 },
+            });
+
+            // Fire-and-forget Telegram notification
+            notifyPaymentConfirmed({
+                orderId,
+                amount: Number(pendingTx.amount),
+                currency: 'VND',
+                tier: pendingTx.purchased_tier || 'N/A',
+                gateway: 'SEPAY',
+                confirmedVia: 'SePay Webhook',
             });
 
             return NextResponse.json({
