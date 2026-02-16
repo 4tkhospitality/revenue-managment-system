@@ -9,9 +9,15 @@ export async function CancellationSection({ hotelId }: { hotelId?: string }) {
     const [stats, recentCancellations, bridgeStats] = await Promise.all([
         // KPI stats (cached, 30-day window from reservations_raw)
         getCancellationStats30Days(hotelId),
-        // Recent cancellations from reservations_raw (status = cancelled)
+        // Recent cancellations from reservations_raw (cancel_time set OR status cancelled)
         prisma.reservationsRaw.findMany({
-            where: { ...whereHotel, status: 'cancelled' },
+            where: {
+                ...whereHotel,
+                OR: [
+                    { cancel_time: { not: null } },
+                    { status: 'cancelled' },
+                ],
+            },
             orderBy: { cancel_time: 'desc' },
             take: 10,
             select: {
@@ -56,7 +62,7 @@ export async function CancellationSection({ hotelId }: { hotelId?: string }) {
                 <span className="text-xs text-gray-500">10 bản ghi mới nhất</span>
             </div>
 
-            {/* KPI Cards (30 days) */}
+            {/* KPI Cards (7 days) */}
             <div className="p-4 grid grid-cols-3 gap-4 border-b border-gray-100">
                 <div className="text-center">
                     <div className="text-2xl font-bold text-rose-600">{stats.count}</div>
