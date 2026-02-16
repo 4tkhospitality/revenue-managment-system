@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 import Image from "next/image"
 import { COUNTRIES } from "@/lib/constants/countries"
 
@@ -43,6 +44,7 @@ function StepIndicator({ currentStep, totalSteps }: { currentStep: number, total
 
 export default function OnboardingPage() {
     const router = useRouter()
+    const { update: updateSession } = useSession()
     const [loading, setLoading] = useState(false)
     const [currentStep, setCurrentStep] = useState(1)
     const [hotelId, setHotelId] = useState<string | null>(null)
@@ -174,9 +176,14 @@ export default function OnboardingPage() {
                 body: JSON.stringify({ hotelId }),
             })
 
+            // Force JWT session refresh so hasPendingActivation recalculates
+            await updateSession()
+
             router.push("/dashboard")
             router.refresh()
         } catch (error) {
+            // Even on error, try to navigate
+            await updateSession()
             router.push("/dashboard")
             router.refresh()
         } finally {
@@ -476,10 +483,13 @@ export default function OnboardingPage() {
                                         <div className="mt-4 p-4 bg-white/5 rounded-xl border border-white/10">
                                             <p className="text-white/70 text-sm mb-2"><strong>Các trường bắt buộc:</strong></p>
                                             <ul className="text-white/50 text-xs space-y-1 mb-3">
+                                                <li>• <code className="bg-white/10 px-1 rounded">reservation_id</code> - Mã đặt phòng</li>
+                                                <li>• <code className="bg-white/10 px-1 rounded">booking_date</code> - Ngày đặt (YYYY-MM-DD)</li>
                                                 <li>• <code className="bg-white/10 px-1 rounded">arrival_date</code> - Ngày nhận phòng (YYYY-MM-DD)</li>
                                                 <li>• <code className="bg-white/10 px-1 rounded">departure_date</code> - Ngày trả phòng (YYYY-MM-DD)</li>
                                                 <li>• <code className="bg-white/10 px-1 rounded">rooms</code> - Số phòng đặt</li>
-                                                <li>• <code className="bg-white/10 px-1 rounded">revenue</code> - Doanh thu (VND)</li>
+                                                <li>• <code className="bg-white/10 px-1 rounded">revenue</code> - Doanh thu</li>
+                                                <li>• <code className="bg-white/10 px-1 rounded">status</code> - Trạng thái (booked / cancelled)</li>
                                             </ul>
                                             <a
                                                 href="/sample-reservations.csv"
