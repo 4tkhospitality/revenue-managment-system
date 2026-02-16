@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { X, ArrowRight, Check, Lock } from 'lucide-react';
 import { PlanTier } from '@prisma/client';
 import { PlanBadge } from './PlanBadge';
@@ -43,6 +44,7 @@ export function UpgradeModal({
     recommendedPlan,
     reasonCodes = [],
 }: UpgradeModalProps) {
+    const router = useRouter();
     if (!isOpen) return null;
 
     const reasonLabel = reasonCodes.map((c) => REASON_LABELS[c] || c).join('. ');
@@ -127,8 +129,10 @@ export function UpgradeModal({
                     >
                         Để sau
                     </button>
-                    <button className="flex-1 px-4 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors text-sm font-medium">
-                        Nâng cấp lên {getPlanLabel(recommendedPlan)}
+                    <button
+                        onClick={() => { onClose(); router.push('/pricing-plans'); }}
+                        className="flex-1 px-4 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors text-sm font-medium"
+                    >                        Nâng cấp lên {getPlanLabel(recommendedPlan)}
                     </button>
                 </div>
             </div>

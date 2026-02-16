@@ -4,6 +4,7 @@
  * /pricing-plans - Pricing Page
  * Shows with Sidebar when logged in, otherwise public layout
  * Implements 4-Tier x 4-Room-Band Matrix Strategy
+ * CTA → PaymentMethodModal (SePay / PayPal / Zalo)
  */
 
 import { useEffect, useState } from 'react';
@@ -13,7 +14,8 @@ import Image from 'next/image';
 import { Check, X, HelpCircle, AlertCircle, Zap } from 'lucide-react';
 import { Sidebar } from '@/components/dashboard/Sidebar';
 import { getPrice, getBandLabel, BAND_MULTIPLIER, BASE_PRICE } from '@/lib/plg/plan-config';
-import { RoomBand } from '@prisma/client';
+import { PlanTier, RoomBand } from '@prisma/client';
+import { PaymentMethodModal } from '@/components/payments/PaymentMethodModal';
 
 // ═══════════════════════════════════════════════════════════════════
 // Data & Constants
@@ -110,6 +112,11 @@ export default function PricingPlansPage() {
     const [roomBand, setRoomBand] = useState<RoomBand>('R30');
     const [cycle, setCycle] = useState<BillingCycle>('3-months');
     const [currentBand, setCurrentBand] = useState<RoomBand | null>(null);
+    const [hotelId, setHotelId] = useState<string>('');
+
+    // PaymentMethodModal state
+    const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+    const [selectedTier, setSelectedTier] = useState<PlanTier>('SUPERIOR');
 
     useEffect(() => {
         if (status === 'authenticated') {
@@ -118,12 +125,19 @@ export default function PricingPlansPage() {
                 .then((data) => {
                     setCurrentTier(data.plan || 'STANDARD');
                     if (data.roomBand) setCurrentBand(data.roomBand);
+                    if (data.hotelId) setHotelId(data.hotelId);
                 })
                 .catch(() => setCurrentTier('STANDARD'));
         }
     }, [status]);
 
     const isLoggedIn = status === 'authenticated';
+
+    const handleUpgradeClick = (tierId: string) => {
+        if (tierId === 'STANDARD') return; // Free tier, no payment needed
+        setSelectedTier(tierId as PlanTier);
+        setPaymentModalOpen(true);
+    };
 
     const calcPrice = (tierId: string) => {
         const basePrice = getPrice(tierId as any, roomBand);
@@ -289,15 +303,32 @@ export default function PricingPlansPage() {
                             </div>
 
                             {/* CTA */}
-                            <a
-                                href={tier.ctaLink}
-                                className={`w-full py-3 px-4 rounded-xl font-medium text-center transition-colors ${tier.highlight
-                                    ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200'
-                                    : 'bg-gray-50 text-gray-900 hover:bg-gray-100 border border-gray-200'
+                            {isLoggedIn && tier.id !== 'STANDARD' ? (
+                                <button
+                                    onClick={() => handleUpgradeClick(tier.id)}
+                                    disabled={isCurrentTier}
+                                    className={`w-full py-3 px-4 rounded-xl font-medium text-center transition-colors ${
+                                        isCurrentTier
+                                            ? 'bg-green-50 text-green-700 border-2 border-green-200 cursor-default'
+                                            : tier.highlight
+                                                ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200'
+                                                : 'bg-gray-50 text-gray-900 hover:bg-gray-100 border border-gray-200'
                                     }`}
-                            >
-                                {isCurrentTier ? 'Gói hiện tại' : tier.cta}
-                            </a>
+                                >
+                                    {isCurrentTier ? '✓ Gói hiện tại' : `Nâng cấp ${tier.name}`}
+                                </button>
+                            ) : (
+                                <a
+                                    href={tier.ctaLink}
+                                    className={`w-full py-3 px-4 rounded-xl font-medium text-center transition-colors block ${
+                                        tier.highlight
+                                            ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200'
+                                            : 'bg-gray-50 text-gray-900 hover:bg-gray-100 border border-gray-200'
+                                    }`}
+                                >
+                                    {tier.cta}
+                                </a>
+                            )}
                         </div>
                     );
                 })}
@@ -343,6 +374,16 @@ export default function PricingPlansPage() {
                         <PricingContent />
                     </div>
                 </main>
+
+                {/* Payment Method Modal */}
+                <PaymentMethodModal
+                    isOpen={paymentModalOpen}
+                    onClose={() => setPaymentModalOpen(false)}
+                    hotelId={hotelId}
+                    tier={selectedTier}
+                    roomBand={roomBand}
+                    currentTier={(currentTier as PlanTier) || 'STANDARD'}
+                />
             </div>
         );
     }

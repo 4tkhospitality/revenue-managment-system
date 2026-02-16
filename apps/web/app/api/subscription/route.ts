@@ -50,6 +50,7 @@ export async function GET(request: Request) {
         });
 
         return NextResponse.json({
+            hotelId,
             plan: entitlements.plan,
             effectivePlan: entitlements.effectivePlan,
             status: entitlements.status,

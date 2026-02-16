@@ -2,13 +2,13 @@
   "meta": {
     "schema_version": "2.0.0",
     "awf_version": "4.1.2",
-    "last_updated": "2026-02-15T00:46:00+07:00"
+    "last_updated": "2026-02-15T21:54:00+07:00"
   },
   "project": {
     "name": "revenue-management-system",
     "type": "SaaS Web App",
     "status": "Production - Deployed to Vercel (icn1 region)",
-    "description": "RMS Version 02.0 - Revenue Management System with Room Band Pricing + Organization-based Multi-Hotel (Cách 2) + OTB Time-Travel + OTA Pricing + Dynamic Pricing by OCC + Unified Pricing Logic + InsightsPanel V2 (plain Vietnamese). Full-stack TypeScript.",
+    "description": "RMS Version 02.1 - Revenue Management System with Room Band Pricing + Organization-based Multi-Hotel + OTB Time-Travel + OTA Pricing + Dynamic Pricing by OCC + Unified Pricing Logic + InsightsPanel V2 + Payment Gateway (SePay/PayPal/Zalo) + Analytics Layer (Cancel Forecast, Demand Model, Price Optimizer). Full-stack TypeScript.",
     "github": "https://github.com/4tkhospitality/revenue-managment-system",
     "landing_page": {
       "path": "apps/landing",
@@ -66,13 +66,28 @@
           "NEXT_PUBLIC_DEFAULT_HOTEL_ID",
           "GOOGLE_CLIENT_ID",
           "GOOGLE_CLIENT_SECRET",
-          "ADMIN_EMAIL"
+          "ADMIN_EMAIL",
+          "SEPAY_API_KEY",
+          "SEPAY_WEBHOOK_SECRET",
+          "SEPAY_BANK_ACCOUNT",
+          "SEPAY_BANK_NAME",
+          "PAYPAL_CLIENT_ID",
+          "PAYPAL_SECRET",
+          "PAYPAL_API_URL",
+          "PAYPAL_WEBHOOK_ID",
+          "PAYPAL_PLAN_SUPERIOR_R30",
+          "PAYPAL_PLAN_SUPERIOR_R80",
+          "PAYPAL_PLAN_DELUXE_R30",
+          "PAYPAL_PLAN_DELUXE_R80",
+          "PAYPAL_PLAN_SUITE_R30",
+          "PAYPAL_PLAN_SUITE_R80",
+          "CRON_SECRET"
         ]
       }
     }
   },
   "database_schema": {
-    "summary": "RMS Schema V02.0: Organization-based multi-tenancy (Cách 2) with Room Band Pricing. Subscription owned by Org, not Hotel. Seats counted at HotelUser level (fixed from OrgMember for consistency with team page).",
+    "summary": "RMS Schema V02.1: Organization-based multi-tenancy with Room Band Pricing + Payment Transactions (SePay/PayPal/Zalo). Subscription owned by Org, not Hotel. PaymentTransaction model with P1 operational fields (expires_at, completed_at, failed_reason, gateway_event_id).",
     "tables": [
       {
         "name": "hotels",
@@ -192,6 +207,11 @@
         "name": "season_rates",
         "description": "V01.8: Override BAR per room_type × season. Links to seasons and room_types. Unique constraint on (season_id, room_type_id).",
         "v018_new": true
+      },
+      {
+        "name": "payment_transactions",
+        "description": "V02.1: Payment transaction records. Tracks SePay/PayPal/Zalo payments with order_id (unique), gateway_transaction_id, amount, currency, status, P1 fields (expires_at, completed_at, failed_at, failed_reason, gateway_event_id, provider_customer_ref). Indexes: hotel_id, status, status+expires_at.",
+        "v021_new": true
       }
     ],
     "enums": [
@@ -268,10 +288,33 @@
         "name": "SubscriptionStatus",
         "values": [
           "ACTIVE",
+          "TRIAL",
           "CANCELLED",
-          "PAST_DUE"
+          "PAST_DUE",
+          "REFUNDED"
         ],
-        "description": "V02.0: Subscription lifecycle status."
+        "description": "V02.1: Subscription lifecycle status. Added TRIAL and REFUNDED."
+      },
+      {
+        "name": "PaymentGateway",
+        "values": [
+          "SEPAY",
+          "PAYPAL",
+          "ZALO_MANUAL"
+        ],
+        "description": "V02.1: Supported payment gateways.",
+        "v021_new": true
+      },
+      {
+        "name": "PaymentStatus",
+        "values": [
+          "PENDING",
+          "COMPLETED",
+          "FAILED",
+          "REFUNDED"
+        ],
+        "description": "V02.1: Payment transaction lifecycle status.",
+        "v021_new": true
       }
     ],
     "v011_indexes": [
@@ -495,6 +538,56 @@
       "path": "GET /api/subscription/compliance",
       "explained": "V02.0: Check subscription compliance (room band vs actual capacity). Returns compliance status and warnings.",
       "v020_new": true
+    },
+    {
+      "path": "POST /api/payments/sepay/create-checkout",
+      "explained": "V02.1: Creates PENDING payment transaction for SePay VND transfer. Generates QR checkout URL. Concurrent lock + auto-expire old PENDING. Provider switching blocked.",
+      "v021_new": true
+    },
+    {
+      "path": "POST /api/payments/sepay/webhook",
+      "explained": "V02.1: SePay webhook handler. 3-step Match→Validate→Dedup. HMAC-SHA256 signature. Amount comparison in VND integers. Atomic activation.",
+      "v021_new": true
+    },
+    {
+      "path": "POST /api/payments/paypal/activate",
+      "explained": "V02.1: Activates PayPal subscription after user approval. Re-fetches from PayPal API (P1). Creates COMPLETED transaction + applies subscription change atomically.",
+      "v021_new": true
+    },
+    {
+      "path": "POST /api/payments/paypal/webhook",
+      "explained": "V02.1: PayPal webhook handler. Handles 5 event types (ACTIVATED, SALE_COMPLETED, CANCELLED, EXPIRED, SUSPENDED). Signature verification via PayPal API.",
+      "v021_new": true
+    },
+    {
+      "path": "GET /api/cron/check-subscription",
+      "explained": "V02.1: Daily cron job. Checks expired subscriptions, syncs with PayPal API, 3-day grace period for SePay, auto-expires PENDING transactions.",
+      "v021_new": true
+    },
+    {
+      "path": "POST /api/admin/activate-subscription",
+      "explained": "V02.1: Admin-only manual subscription activation (Zalo flow). Creates ZALO_MANUAL PaymentTransaction.",
+      "v021_new": true
+    },
+    {
+      "path": "POST /api/track",
+      "explained": "V02.1: PLG event tracking endpoint. Fire-and-forget from client.",
+      "v021_new": true
+    },
+    {
+      "path": "GET /api/analytics/cancel-forecast",
+      "explained": "V02.1: Returns cancel forecast data (predicted vs actual cancellation rates).",
+      "v021_new": true
+    },
+    {
+      "path": "POST /api/analytics/forecast",
+      "explained": "V02.1: Triggers demand forecast model run.",
+      "v021_new": true
+    },
+    {
+      "path": "POST /api/analytics/pipeline",
+      "explained": "V02.1: Runs full analytics pipeline (cancel stats → features → demand → pricing).",
+      "v021_new": true
     },
     {
       "path": "GET/POST /api/settings",

@@ -1,10 +1,10 @@
 /**
  * SePay Webhook Handler — API Route
  *
- * POST /api/payments/sepay/webhook
+ * POST /api/payments/sepay/webhook?secret=xxx
  *
  * 3-step validation: Match → Validate → Dedup
- * GLC-02: Uses raw body for signature verification
+ * GLC-02: Verify via URL query param secret (SePay does not support HMAC signing)
  * GLC-03: Dedup by sepayPayload.id
  * GLC-04: Catches P2002 unique violation → return 200
  * GLC-06: Amount compare in minor units (VND integer)
@@ -12,7 +12,7 @@
 
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { verifySepaySignature, extractOrderId } from '@/lib/payments/sepay';
+import { extractOrderId } from '@/lib/payments/sepay';
 import type { SepayWebhookPayload } from '@/lib/payments/sepay';
 import { compareAmount } from '@/lib/payments/constants';
 import { applySubscriptionChange } from '@/lib/payments/activation';
@@ -20,16 +20,18 @@ import { trackEvent } from '@/lib/payments/trackEvent';
 
 export async function POST(req: Request) {
     try {
-        // 1. Read raw body BEFORE parsing (GLC-02)
-        const rawBody = await req.text();
-        const signature = req.headers.get('x-sepay-signature') || '';
+        // 1. Verify secret from URL query param (GLC-02)
+        const url = new URL(req.url);
+        const secret = url.searchParams.get('secret');
+        const expectedSecret = process.env.SEPAY_WEBHOOK_SECRET;
 
-        // 2. Verify HMAC signature
-        if (!verifySepaySignature(rawBody, signature)) {
-            console.warn('[SePay Webhook] Invalid signature');
-            return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+        if (!expectedSecret || secret !== expectedSecret) {
+            console.warn('[SePay Webhook] Invalid or missing secret');
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
+        // 2. Parse body
+        const rawBody = await req.text();
         const payload: SepayWebhookPayload = JSON.parse(rawBody);
 
         // Only process incoming transfers
