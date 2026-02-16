@@ -189,7 +189,7 @@ function ConfigForm({
                 label: initial.label || '',
             };
         }
-        return { config_type: type, scope: 'GLOBAL', priority: 0 };
+        return { config_type: type, scope: 'GLOBAL', priority: 0, effective_from: toLocalISO(new Date().toISOString()) };
     });
 
     const set = (k: string, v: unknown) => setForm(p => ({ ...p, [k]: v }));

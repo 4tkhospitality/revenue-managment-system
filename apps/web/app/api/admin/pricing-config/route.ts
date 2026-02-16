@@ -119,8 +119,19 @@ export async function PUT(req: NextRequest) {
                 amount_vnd: amount_vnd ?? null,
                 percent: percent ?? null,
                 multiplier: multiplier ?? null,
-                effective_from: effective_from ? new Date(effective_from) : new Date(),
-                effective_to: effective_to ? new Date(effective_to) : null,
+                // datetime-local sends "2026-02-16T16:20" without timezone
+                // new Date() would parse this as UTC, but user is in UTC+7 → 7h ahead = "Scheduled"
+                // Fix: append Vietnam timezone offset
+                effective_from: effective_from
+                    ? new Date(String(effective_from).includes('+') || String(effective_from).endsWith('Z')
+                        ? effective_from  // already has timezone info
+                        : effective_from + ':00+07:00')  // append Vietnam TZ
+                    : new Date(),
+                effective_to: effective_to
+                    ? new Date(String(effective_to).includes('+') || String(effective_to).endsWith('Z')
+                        ? effective_to
+                        : effective_to + ':00+07:00')
+                    : null,
                 scope: scope || 'GLOBAL',
                 hotel_id: hotel_id || null,
                 priority: priority ?? 0,
