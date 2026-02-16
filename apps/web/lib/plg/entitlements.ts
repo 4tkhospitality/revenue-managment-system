@@ -73,7 +73,8 @@ export async function getEntitlements(hotelId: string): Promise<Entitlements> {
     // Base from getScaledLimits() (band-aware) instead of getDefaultLimits()
     const defaultLimits = getScaledLimits(effectivePlan, roomBand);
     const limits: PlanLimits = {
-        maxUsers: subscription.max_users ?? defaultLimits.maxUsers,
+        // maxUsers always from plan-config (source of truth), DB override removed to prevent stale values
+        maxUsers: defaultLimits.maxUsers,
         maxProperties: subscription.max_properties ?? defaultLimits.maxProperties,
         maxImportsMonth: subscription.max_imports_month ?? defaultLimits.maxImportsMonth,
         maxExportsDay: subscription.max_exports_day ?? defaultLimits.maxExportsDay,
