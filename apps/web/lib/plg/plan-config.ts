@@ -249,3 +249,134 @@ export function getBandLabel(band: RoomBand): string {
 }
 
 export { BAND_MULTIPLIER, BASE_PRICE, BAND_LABEL };
+
+// ════════════════════════════════════════════════════════════════════
+// Dynamic Pricing — DB-backed with fallback
+// ════════════════════════════════════════════════════════════════════
+import prisma from '@/lib/prisma';
+import { unstable_cache } from 'next/cache';
+
+/**
+ * Resolve the "winning" config for a given type + lookup key.
+ * Conflict resolution:
+ *   1. scope=HOTEL (for matching hotel) > scope=GLOBAL
+ *   2. Higher priority wins
+ *   3. Most recent updated_at wins
+ */
+async function resolveActiveConfig(
+    configType: 'BASE_PRICE' | 'BAND_MULTIPLIER' | 'TERM_DISCOUNT',
+    where: Record<string, unknown>,
+    hotelId?: string,
+) {
+    const now = new Date();
+    const configs = await prisma.pricingConfig.findMany({
+        where: {
+            config_type: configType,
+            effective_from: { lte: now },
+            OR: [
+                { effective_to: null },
+                { effective_to: { gt: now } },
+            ],
+            ...where,
+        },
+        orderBy: [
+            { scope: 'desc' },      // HOTEL > GLOBAL
+            { priority: 'desc' },
+            { updated_at: 'desc' },
+        ],
+    });
+
+    if (!configs.length) return null;
+
+    // If hotelId, prefer HOTEL-scoped config for that hotel
+    if (hotelId) {
+        const hotelConfig = configs.find(c => c.scope === 'HOTEL' && c.hotel_id === hotelId);
+        if (hotelConfig) return hotelConfig;
+    }
+
+    // Otherwise, GLOBAL with highest priority + most recent
+    return configs[0];
+}
+
+/** Get dynamic base price for a plan tier (VND). Falls back to hardcoded. */
+const _getDynamicBasePrice = unstable_cache(
+    async (tier: PlanTier, hotelId?: string): Promise<number> => {
+        const config = await resolveActiveConfig('BASE_PRICE', { tier }, hotelId);
+        return config?.amount_vnd ?? BASE_PRICE[tier];
+    },
+    ['dynamic-base-price'],
+    { tags: ['pricing-config'], revalidate: 300 }
+);
+
+/** Get dynamic band multiplier. Falls back to hardcoded. */
+const _getDynamicBandMultiplier = unstable_cache(
+    async (band: RoomBand, hotelId?: string): Promise<number> => {
+        const config = await resolveActiveConfig('BAND_MULTIPLIER', { room_band: band }, hotelId);
+        return config?.multiplier ? Number(config.multiplier) : BAND_MULTIPLIER[band];
+    },
+    ['dynamic-band-multiplier'],
+    { tags: ['pricing-config'], revalidate: 300 }
+);
+
+/** Get dynamic term discount %. Falls back to hardcoded default (50% for 3m, 0% otherwise). */
+const TERM_DISCOUNT_DEFAULTS: Record<number, number> = { 1: 0, 3: 50 };
+
+const _getDynamicTermDiscount = unstable_cache(
+    async (termMonths: number, hotelId?: string): Promise<number> => {
+        const config = await resolveActiveConfig('TERM_DISCOUNT', { term_months: termMonths }, hotelId);
+        return config?.percent ?? TERM_DISCOUNT_DEFAULTS[termMonths] ?? 0;
+    },
+    ['dynamic-term-discount'],
+    { tags: ['pricing-config'], revalidate: 300 }
+);
+
+/**
+ * Calculate the dynamic price for a plan+band+term combination.
+ * Returns { price, basePrice, multiplier, discountPercent, configIds }
+ */
+export async function getDynamicPrice(
+    plan: PlanTier,
+    band: RoomBand,
+    termMonths: number = 1,
+    hotelId?: string,
+) {
+    const [basePrice, multiplier, discountPercent] = await Promise.all([
+        _getDynamicBasePrice(plan, hotelId),
+        _getDynamicBandMultiplier(band, hotelId),
+        _getDynamicTermDiscount(termMonths, hotelId),
+    ]);
+
+    const rawPrice = basePrice * multiplier;
+    const roundedPrice = Math.round(rawPrice / 10_000) * 10_000;
+    const finalPrice = Math.round(roundedPrice * (1 - discountPercent / 100));
+
+    return {
+        price: finalPrice,
+        basePrice,
+        multiplier,
+        discountPercent,
+        termMonths,
+    };
+}
+
+/** Convenience: get all tier prices for a given band (for pricing page display). */
+export async function getAllDynamicPrices(band: RoomBand, hotelId?: string) {
+    const tiers: PlanTier[] = ['STANDARD', 'SUPERIOR', 'DELUXE', 'SUITE'];
+    const results: Record<string, { monthly: number; quarterly: number; discountPercent: number }> = {};
+
+    await Promise.all(
+        tiers.map(async (tier) => {
+            const [monthly, quarterly] = await Promise.all([
+                getDynamicPrice(tier, band, 1, hotelId),
+                getDynamicPrice(tier, band, 3, hotelId),
+            ]);
+            results[tier] = {
+                monthly: monthly.price,
+                quarterly: quarterly.price,
+                discountPercent: quarterly.discountPercent,
+            };
+        })
+    );
+
+    return results;
+}

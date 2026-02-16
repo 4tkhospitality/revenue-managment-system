@@ -9,8 +9,9 @@ import { useState, useEffect, useCallback } from 'react';
 import {
     Users, Tag, DollarSign, Plus, RefreshCw, Eye,
     Building2, Check, X, Clock, ChevronDown,
-    Pencil, Trash2, BookOpen, ChevronRight, AlertTriangle, Save
+    Pencil, Trash2, BookOpen, ChevronRight, AlertTriangle, Save, CreditCard
 } from 'lucide-react';
+import PricingTab from './PricingTab';
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -33,7 +34,7 @@ interface CommissionEntry {
     description: string | null; created_at: string;
 }
 
-type TabKey = 'resellers' | 'promos' | 'commissions' | 'guide';
+type TabKey = 'resellers' | 'promos' | 'commissions' | 'pricing' | 'guide';
 
 // ── Shared Styles ───────────────────────────────────────────────
 
@@ -755,6 +756,7 @@ const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
     { key: 'resellers', label: 'Resellers', icon: Users },
     { key: 'promos', label: 'Promo Codes', icon: Tag },
     { key: 'commissions', label: 'Commissions', icon: DollarSign },
+    { key: 'pricing', label: 'Pricing', icon: CreditCard },
     { key: 'guide', label: 'Hướng dẫn', icon: BookOpen },
 ];
 
@@ -803,6 +805,7 @@ export default function PLGAdminDashboard() {
             {activeTab === 'resellers' && <ResellersTab />}
             {activeTab === 'promos' && <PromosTab />}
             {activeTab === 'commissions' && <CommissionsTab />}
+            {activeTab === 'pricing' && <PricingTab />}
             {activeTab === 'guide' && <GuideTab />}
         </div>
     );

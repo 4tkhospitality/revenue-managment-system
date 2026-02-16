@@ -75,6 +75,9 @@ model Hotel {
   // Analytics Layer P1 — Cancel Rate Stats
   cancel_rate_stats         CancelRateStats[]
 
+  // Dynamic Pricing Config
+  pricing_configs           PricingConfig[]
+
   @@map("hotels")
 }
 
@@ -578,6 +581,17 @@ enum PaymentGateway {
   ZALO_MANUAL
 }
 
+enum PricingConfigType {
+  BASE_PRICE
+  BAND_MULTIPLIER
+  TERM_DISCOUNT
+}
+
+enum PricingScope {
+  GLOBAL
+  HOTEL
+}
+
 enum PaymentStatus {
   PENDING
   COMPLETED
@@ -896,6 +910,10 @@ enum AuditAction {
   ATTRIBUTION_CREATED
   ATTRIBUTION_CLOSED
   ADMIN_OVERRIDE
+  // Pricing Config
+  PRICING_CONFIG_CREATED
+  PRICING_CONFIG_UPDATED
+  PRICING_CONFIG_DELETED
 }
 
 model Invoice {
@@ -1369,4 +1387,58 @@ model CancelRateStats {
   @@unique([hotel_id, booking_lead_bucket, dow, season_label, segment])
   @@index([hotel_id])
   @@map("cancel_rate_stats")
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Dynamic Pricing Config
+// ════════════════════════════════════════════════════════════════════
+
+model PricingConfig {
+  id             String            @id @default(cuid())
+  config_type    PricingConfigType
+  tier           PlanTier?         // only for BASE_PRICE
+  room_band      RoomBand?         // only for BAND_MULTIPLIER
+  term_months    Int?              // only for TERM_DISCOUNT (3, 6, 12)
+
+  // ── Values (no Float for money) ──
+  amount_vnd     Int?              // VND (dong), for BASE_PRICE
+  percent        Int?              // 0–99, for TERM_DISCOUNT
+  multiplier     Decimal?          @db.Decimal(6, 4) // for BAND_MULTIPLIER
+
+  // ── Time-based effectiveness ──
+  effective_from DateTime          @default(now())
+  effective_to   DateTime?         // null = indefinite
+
+  // ── Scope & Priority ──
+  scope          PricingScope      @default(GLOBAL)
+  hotel_id       String?           @db.Uuid
+  priority       Int               @default(0) // higher = wins
+
+  // ── Metadata ──
+  label          String?
+  created_at     DateTime          @default(now())
+  updated_at     DateTime          @updatedAt
+  updated_by     String?
+
+  hotel          Hotel?            @relation(fields: [hotel_id], references: [hotel_id])
+
+  @@index([config_type, effective_from, effective_to])
+  @@index([scope, hotel_id, config_type, tier, room_band, term_months, effective_from])
+  @@map("pricing_configs")
+}
+
+model PricingConfigAudit {
+  id             String      @id @default(cuid())
+  config_id      String
+  action         AuditAction
+  field_changed  String?     // e.g. "amount_vnd"
+  old_value      String?
+  new_value      String?
+  changed_by     String
+  changed_at     DateTime    @default(now())
+  note           String?
+
+  @@index([config_id])
+  @@index([changed_by])
+  @@map("pricing_config_audit")
 }
