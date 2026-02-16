@@ -11,6 +11,18 @@ interface HotelAssignment {
     isPrimary: boolean;
 }
 
+interface PaymentInfo {
+    status: string;
+    tier: string | null;
+    roomBand: string | null;
+    amount: number;
+    currency: string;
+    gateway: string;
+    completedAt: string | null;
+    createdAt: string;
+    hasHotel: boolean;
+}
+
 interface User {
     id: string;
     email: string;
@@ -21,6 +33,7 @@ interface User {
     isActive: boolean;
     createdAt: string;
     hotels: HotelAssignment[];
+    payment: PaymentInfo | null;
 }
 
 interface Hotel {
@@ -115,6 +128,35 @@ export default function AdminUsersPage() {
             <span className={`px-2 py-0.5 rounded text-xs font-medium ${badges[role] || badges.viewer}`}>
                 {labels[role] || role}
             </span>
+        );
+    };
+
+    const formatPayment = (payment: PaymentInfo | null) => {
+        if (!payment) return <span className="text-gray-400 text-xs italic">—</span>;
+        const amount = payment.currency === 'VND'
+            ? `${payment.amount.toLocaleString('vi-VN')}₫`
+            : `$${payment.amount.toFixed(2)}`;
+        const isCompleted = payment.status === 'COMPLETED';
+        const isPending = payment.status === 'PENDING';
+        return (
+            <div className="space-y-1">
+                <div className="flex items-center gap-1">
+                    <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${isCompleted ? 'bg-green-100 text-green-700' :
+                        isPending ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-gray-100 text-gray-600'
+                        }`}>
+                        {isCompleted ? '✅' : isPending ? '⏳' : '❌'} {amount}
+                    </span>
+                </div>
+                {payment.tier && (
+                    <div className="text-xs text-gray-500">
+                        Gói: <span className="font-medium text-gray-700">{payment.tier}</span>
+                    </div>
+                )}
+                {isCompleted && !payment.hasHotel && (
+                    <div className="text-xs text-amber-600 font-medium">⚠ Chờ onboarding</div>
+                )}
+            </div>
         );
     };
 
@@ -216,6 +258,12 @@ export default function AdminUsersPage() {
                                     <span className="text-gray-400">Chưa gán hotel</span>
                                 )}
                             </div>
+                            {user.payment && (
+                                <div className="flex items-center gap-2 mb-2 text-xs">
+                                    <span className="text-gray-500">💰</span>
+                                    {formatPayment(user.payment)}
+                                </div>
+                            )}
                             <div className="flex items-center gap-3 pt-2 border-t border-gray-100">
                                 <button
                                     onClick={() => { setSelectedUser(user); setShowEditModal(true); }}
@@ -254,6 +302,7 @@ export default function AdminUsersPage() {
                         <tr>
                             <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Người dùng</th>
                             <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Số điện thoại</th>
+                            <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">💰 Thanh toán</th>
                             <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Hotel Role</th>
                             <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Hotels</th>
                             <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Trạng thái</th>
@@ -263,13 +312,13 @@ export default function AdminUsersPage() {
                     <tbody>
                         {loading ? (
                             <tr>
-                                <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
+                                <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
                                     Đang tải...
                                 </td>
                             </tr>
                         ) : users.length === 0 ? (
                             <tr>
-                                <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
+                                <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
                                     Không tìm thấy người dùng
                                 </td>
                             </tr>
@@ -297,6 +346,9 @@ export default function AdminUsersPage() {
                                         ) : (
                                             <span className="text-gray-400 text-sm italic">Chưa có</span>
                                         )}
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        {formatPayment(user.payment)}
                                     </td>
                                     <td className="px-4 py-3">
                                         {user.hotels.length > 0 ? (

@@ -45,23 +45,67 @@ export async function GET(request: NextRequest) {
             prisma.user.count({ where })
         ])
 
+        // Fetch latest payment for each user (separate query since no back-relation on User model)
+        const userIds = users.map(u => u.id)
+        const payments = userIds.length > 0 ? await prisma.paymentTransaction.findMany({
+            where: {
+                user_id: { in: userIds },
+                status: { in: ['COMPLETED', 'PENDING'] },
+            },
+            orderBy: { created_at: 'desc' },
+            select: {
+                user_id: true,
+                status: true,
+                purchased_tier: true,
+                purchased_room_band: true,
+                amount: true,
+                currency: true,
+                gateway: true,
+                completed_at: true,
+                created_at: true,
+                hotel_id: true,
+            },
+        }) : []
+
+        // Group: latest payment per user
+        const paymentByUser = new Map<string, typeof payments[0]>()
+        for (const p of payments) {
+            if (!paymentByUser.has(p.user_id)) {
+                paymentByUser.set(p.user_id, p)
+            }
+        }
+
         return NextResponse.json({
-            users: users.map(u => ({
-                id: u.id,
-                email: u.email,
-                name: u.name,
-                phone: u.phone,
-                image: u.image,
-                role: u.role,
-                isActive: u.is_active,
-                createdAt: u.created_at,
-                hotels: u.hotel_users.map(hu => ({
-                    hotelId: hu.hotel_id,
-                    hotelName: hu.hotel.name,
-                    role: hu.role,
-                    isPrimary: hu.is_primary,
-                }))
-            })),
+            users: users.map(u => {
+                const payment = paymentByUser.get(u.id)
+                return {
+                    id: u.id,
+                    email: u.email,
+                    name: u.name,
+                    phone: u.phone,
+                    image: u.image,
+                    role: u.role,
+                    isActive: u.is_active,
+                    createdAt: u.created_at,
+                    hotels: u.hotel_users.map(hu => ({
+                        hotelId: hu.hotel_id,
+                        hotelName: hu.hotel.name,
+                        role: hu.role,
+                        isPrimary: hu.is_primary,
+                    })),
+                    payment: payment ? {
+                        status: payment.status,
+                        tier: payment.purchased_tier,
+                        roomBand: payment.purchased_room_band,
+                        amount: Number(payment.amount),
+                        currency: payment.currency,
+                        gateway: payment.gateway,
+                        completedAt: payment.completed_at,
+                        createdAt: payment.created_at,
+                        hasHotel: !!payment.hotel_id,
+                    } : null,
+                }
+            }),
             total,
             page,
             totalPages: Math.ceil(total / limit),
