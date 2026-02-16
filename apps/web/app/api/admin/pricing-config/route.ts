@@ -6,6 +6,7 @@
 // ════════════════════════════════════════════════════════════════════
 
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { auth } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { PricingConfigType } from '@prisma/client';
@@ -172,8 +173,8 @@ export async function PUT(req: NextRequest) {
             return config;
         });
 
-        // Revalidate cache immediately
-
+        // Revalidate cache immediately so pricing pages show updated prices
+        revalidateTag('pricing-config');
         return NextResponse.json(result);
     } catch (error) {
         console.error('[Pricing Config] PUT error:', error);
@@ -217,6 +218,9 @@ export async function DELETE(req: NextRequest) {
 
             return updated;
         });
+
+        // Revalidate cache immediately so pricing pages show updated prices
+        revalidateTag('pricing-config');
 
         return NextResponse.json(result);
     } catch (error) {
