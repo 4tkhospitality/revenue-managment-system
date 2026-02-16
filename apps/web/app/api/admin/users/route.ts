@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
                 include: {
                     hotel_users: {
                         include: {
-                            hotel: { select: { hotel_id: true, name: true } }
+                            hotel: { select: { hotel_id: true, name: true, country: true } }
                         }
                     }
                 },
@@ -90,6 +90,7 @@ export async function GET(request: NextRequest) {
                     hotels: u.hotel_users.map(hu => ({
                         hotelId: hu.hotel_id,
                         hotelName: hu.hotel.name,
+                        hotelCountry: hu.hotel.country,
                         role: hu.role,
                         isPrimary: hu.is_primary,
                     })),
@@ -165,7 +166,7 @@ export async function POST(request: NextRequest) {
             include: {
                 hotel_users: {
                     include: {
-                        hotel: { select: { hotel_id: true, name: true } }
+                        hotel: { select: { hotel_id: true, name: true, country: true } }
                     }
                 }
             }
@@ -182,6 +183,7 @@ export async function POST(request: NextRequest) {
                 hotels: user.hotel_users.map(hu => ({
                     hotelId: hu.hotel_id,
                     hotelName: hu.hotel.name,
+                    hotelCountry: hu.hotel.country,
                     role: hu.role,
                     isPrimary: hu.is_primary,
                 }))

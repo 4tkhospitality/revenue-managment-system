@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
+import { getCountryDisplay } from '@/lib/constants/countries';
 
 // ── SVG Icon Components ────────────────────────────────────────────
 const Icons = {
@@ -88,6 +89,7 @@ const Icons = {
 interface HotelAssignment {
     hotelId: string;
     hotelName: string;
+    hotelCountry: string;
     role: string;
     isPrimary: boolean;
 }
@@ -215,8 +217,8 @@ export default function AdminUsersPage() {
             <div className="space-y-0.5">
                 <div className="flex items-center gap-1.5">
                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium ${isCompleted ? 'bg-emerald-50 text-emerald-700' :
-                            isPending ? 'bg-amber-50 text-amber-700' :
-                                'bg-slate-100 text-slate-500'
+                        isPending ? 'bg-amber-50 text-amber-700' :
+                            'bg-slate-100 text-slate-500'
                         }`}>
                         {isCompleted ? Icons.check : isPending ? Icons.clock : Icons.warning}
                         {amount}
@@ -373,6 +375,7 @@ export default function AdminUsersPage() {
                                         {user.hotels.map((h, i) => (
                                             <span key={`h-${i}`} className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-md text-xs">
                                                 {h.hotelName}
+                                                {h.hotelCountry && <span className="ml-0.5 opacity-70" title={getCountryDisplay(h.hotelCountry)}>{h.hotelCountry === 'VN' ? '🇻🇳' : getCountryDisplay(h.hotelCountry).split(' ')[0]}</span>}
                                                 {h.isPrimary && Icons.star}
                                             </span>
                                         ))}
@@ -497,6 +500,7 @@ export default function AdminUsersPage() {
                                                 {user.hotels.slice(0, 2).map((h, i) => (
                                                     <span key={i} className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-md text-xs">
                                                         {h.hotelName}
+                                                        {h.hotelCountry && <span className="ml-0.5 opacity-70" title={getCountryDisplay(h.hotelCountry)}>{h.hotelCountry === 'VN' ? '🇻🇳' : getCountryDisplay(h.hotelCountry).split(' ')[0]}</span>}
                                                         {h.isPrimary && Icons.star}
                                                     </span>
                                                 ))}
@@ -509,8 +513,8 @@ export default function AdminUsersPage() {
                                     {/* Status */}
                                     <td className="px-5 py-3.5 text-center">
                                         <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${user.isActive
-                                                ? 'bg-emerald-50 text-emerald-700'
-                                                : 'bg-red-50 text-red-600'
+                                            ? 'bg-emerald-50 text-emerald-700'
+                                            : 'bg-red-50 text-red-600'
                                             }`}>
                                             <span className={`w-1.5 h-1.5 rounded-full ${user.isActive ? 'bg-emerald-500' : 'bg-red-400'}`} />
                                             {user.isActive ? 'Hoạt động' : 'Đã khóa'}
