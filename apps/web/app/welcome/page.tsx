@@ -49,6 +49,10 @@ export default function WelcomePage() {
                 // Hard redirect - invite API should set rms_active_hotel cookie
                 window.location.href = '/dashboard'
                 return
+            } else if (data.error?.includes('thành viên')) {
+                // Already a member — redirect to dashboard anyway
+                window.location.href = '/dashboard'
+                return
             } else {
                 setError(data.error || 'Mã mời không hợp lệ')
             }

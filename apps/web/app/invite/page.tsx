@@ -37,6 +37,10 @@ function InviteContent() {
             if (res.ok) {
                 router.push('/dashboard')
                 router.refresh()
+            } else if (data.error?.includes('thành viên')) {
+                // Already a member — go to dashboard
+                router.push('/dashboard')
+                router.refresh()
             } else {
                 setError(data.error || 'Mã mời không hợp lệ')
             }
