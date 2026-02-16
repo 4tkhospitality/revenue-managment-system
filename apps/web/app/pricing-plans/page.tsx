@@ -56,7 +56,7 @@ const TIERS = [
             { text: 'Full Tối ưu OTA (6 tools)', included: true, hint: 'Scorecard, Checklist, ROI, Review Simulator...' },
             { text: 'Khuyến mãi Stacking', included: true },
             { text: 'Export Price Matrix', included: true },
-            { text: '2 người dùng', included: true },
+            { text: '3 người dùng', included: true },
             { text: 'Dashboard & Analytics', included: false },
         ],
         cta: 'Liên hệ Ngay',
@@ -74,7 +74,7 @@ const TIERS = [
             { text: 'OTB Analytics', included: true },
             { text: 'Daily Actions', included: true },
             { text: 'Upload dữ liệu (CSV)', included: true },
-            { text: '3 người dùng', included: true },
+            { text: '10 người dùng', included: true },
         ],
         cta: 'Liên hệ Zalo',
         ctaLink: 'https://zalo.me/0778602953',
@@ -307,24 +307,22 @@ export default function PricingPlansPage() {
                                 <button
                                     onClick={() => handleUpgradeClick(tier.id)}
                                     disabled={isCurrentTier}
-                                    className={`w-full py-3 px-4 rounded-xl font-medium text-center transition-colors ${
-                                        isCurrentTier
+                                    className={`w-full py-3 px-4 rounded-xl font-medium text-center transition-colors ${isCurrentTier
                                             ? 'bg-green-50 text-green-700 border-2 border-green-200 cursor-default'
                                             : tier.highlight
                                                 ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200'
                                                 : 'bg-gray-50 text-gray-900 hover:bg-gray-100 border border-gray-200'
-                                    }`}
+                                        }`}
                                 >
                                     {isCurrentTier ? '✓ Gói hiện tại' : `Nâng cấp ${tier.name}`}
                                 </button>
                             ) : (
                                 <a
                                     href={tier.ctaLink}
-                                    className={`w-full py-3 px-4 rounded-xl font-medium text-center transition-colors block ${
-                                        tier.highlight
+                                    className={`w-full py-3 px-4 rounded-xl font-medium text-center transition-colors block ${tier.highlight
                                             ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200'
                                             : 'bg-gray-50 text-gray-900 hover:bg-gray-100 border border-gray-200'
-                                    }`}
+                                        }`}
                                 >
                                     {tier.cta}
                                 </a>
