@@ -28,13 +28,13 @@ export async function POST(req: Request) {
         // 2. Parse body
         const body = await req.json();
         const { hotelId, tier, roomBand, billingCycle = 'monthly' } = body as {
-            hotelId: string;
+            hotelId?: string;
             tier: PlanTier;
             roomBand: RoomBand;
             billingCycle?: 'monthly' | '3-months';
         };
 
-        if (!hotelId || !tier || !roomBand) {
+        if (!tier || !roomBand) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
@@ -42,19 +42,21 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Cannot purchase STANDARD tier' }, { status: 400 });
         }
 
-        // 3. Provider switching block
-        const currentSub = await prisma.subscription.findUnique({
-            where: { hotel_id: hotelId },
-        });
-        if (
-            currentSub?.status === 'ACTIVE' &&
-            currentSub.external_provider &&
-            currentSub.external_provider !== 'PAYPAL'
-        ) {
-            return NextResponse.json(
-                { error: `Bạn đang có subscription qua ${currentSub.external_provider}. Vui lòng hủy trước.` },
-                { status: 409 }
-            );
+        // 3. Provider switching block (skip if no hotel — pay-first flow)
+        if (hotelId) {
+            const currentSub = await prisma.subscription.findUnique({
+                where: { hotel_id: hotelId },
+            });
+            if (
+                currentSub?.status === 'ACTIVE' &&
+                currentSub.external_provider &&
+                currentSub.external_provider !== 'PAYPAL'
+            ) {
+                return NextResponse.json(
+                    { error: `Bạn đang có subscription qua ${currentSub.external_provider}. Vui lòng hủy trước.` },
+                    { status: 409 }
+                );
+            }
         }
 
         // 4. Calculate USD price with billing cycle
@@ -63,12 +65,16 @@ export async function POST(req: Request) {
             ? Math.round(monthlyPriceUSD * 0.5 * 3 * 100) / 100   // 50% discount × 3 months
             : monthlyPriceUSD;
         const termMonths = billingCycle === '3-months' ? 3 : 1;
-        const orderId = generateOrderId(hotelId);
+        const orderId = generateOrderId(hotelId || userId);
         const expiresAt = new Date(Date.now() + PENDING_EXPIRY_MS);
 
         // 5. Auto-cancel existing PENDING PayPal orders
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const pendingWhere: any = hotelId
+            ? { hotel_id: hotelId, status: 'PENDING', gateway: 'PAYPAL' }
+            : { user_id: userId, hotel_id: null, status: 'PENDING', gateway: 'PAYPAL' };
         const existingPending = await prisma.paymentTransaction.findFirst({
-            where: { hotel_id: hotelId, status: 'PENDING', gateway: 'PAYPAL' },
+            where: pendingWhere,
         });
         if (existingPending) {
             await prisma.paymentTransaction.update({
@@ -88,32 +94,32 @@ export async function POST(req: Request) {
             orderId,
             amount,
             description: `4TK Hospitality - ${tier} Plan (${termMonths} month${termMonths > 1 ? 's' : ''})`,
-            hotelId,
+            hotelId: hotelId || userId,
         });
 
         // 7. Save PENDING transaction
-        await prisma.paymentTransaction.create({
-            data: {
-                hotel_id: hotelId,
-                user_id: userId,
-                gateway: 'PAYPAL',
-                order_id: orderId,
-                gateway_transaction_id: paypalOrderId,
-                amount,
-                currency: 'USD',
-                status: 'PENDING',
-                purchased_tier: tier,
-                purchased_room_band: roomBand,
-                expires_at: expiresAt,
-                description: `PayPal one-time ${tier} - Band ${roomBand} - ${termMonths} tháng`,
-            },
-        });
+        const txData: Record<string, unknown> = {
+            user_id: userId,
+            gateway: 'PAYPAL',
+            order_id: orderId,
+            gateway_transaction_id: paypalOrderId,
+            amount,
+            currency: 'USD',
+            status: 'PENDING',
+            purchased_tier: tier,
+            purchased_room_band: roomBand,
+            expires_at: expiresAt,
+            description: `PayPal one-time ${tier} - Band ${roomBand} - ${termMonths} tháng`,
+        };
+        if (hotelId) txData.hotel_id = hotelId;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await prisma.paymentTransaction.create({ data: txData as any });
 
         // 8. Track event
         trackEvent({
             event: 'payment_method_selected',
             userId,
-            hotelId,
+            hotelId: hotelId || undefined,
             properties: { method: 'PAYPAL', mode: 'one-time', tier, roomBand, amount, currency: 'USD', billingCycle },
         });
 
