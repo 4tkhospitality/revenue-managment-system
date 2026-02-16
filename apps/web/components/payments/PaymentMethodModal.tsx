@@ -324,7 +324,7 @@ export function PaymentMethodModal({
                             <h3 className="text-xl font-bold text-green-700 mb-2">Thanh toán thành công!</h3>
                             <p className="text-sm text-gray-500 mb-6">Gói dịch vụ đã được kích hoạt</p>
                             <button
-                                onClick={() => { onClose(); window.location.reload(); }}
+                                onClick={() => { onClose(); window.location.href = '/onboarding'; }}
                                 className="px-6 py-2.5 rounded-xl text-white font-medium bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 transition-all"
                             >
                                 Hoàn tất
