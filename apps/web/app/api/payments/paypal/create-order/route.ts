@@ -15,6 +15,7 @@ import { PlanTier, RoomBand } from '@prisma/client';
 import { generateOrderId, getPriceUSD, PENDING_EXPIRY_MS } from '@/lib/payments/constants';
 import { createPayPalOrder } from '@/lib/payments/paypal';
 import { trackEvent } from '@/lib/payments/trackEvent';
+import { getDynamicPrice } from '@/lib/plg/plan-config';
 
 export async function POST(req: Request) {
     try {
@@ -59,12 +60,16 @@ export async function POST(req: Request) {
             }
         }
 
-        // 4. Calculate USD price with billing cycle
+        // 4. Calculate USD price with billing cycle (USD base stays hardcoded, discount from DB)
         const monthlyPriceUSD = getPriceUSD(tier, roomBand);
-        const amount = billingCycle === '3-months'
-            ? Math.round(monthlyPriceUSD * 0.5 * 3 * 100) / 100   // 50% discount × 3 months
-            : monthlyPriceUSD;
         const termMonths = billingCycle === '3-months' ? 3 : 1;
+        // Fetch discount from DB (same as VND uses)
+        const dynamicResult = await getDynamicPrice(tier, roomBand, termMonths);
+        const discountPercent = dynamicResult.discountPercent; // e.g. 50
+        const discountedMonthly = Math.round(monthlyPriceUSD * (1 - discountPercent / 100) * 100) / 100;
+        const amount = billingCycle === '3-months'
+            ? Math.round(discountedMonthly * 3 * 100) / 100
+            : monthlyPriceUSD;
         const orderId = generateOrderId(hotelId || userId);
         const expiresAt = new Date(Date.now() + PENDING_EXPIRY_MS);
 

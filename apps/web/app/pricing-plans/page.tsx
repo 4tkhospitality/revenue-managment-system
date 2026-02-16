@@ -171,7 +171,7 @@ export default function PricingPlansPage() {
     const calcPrice = (tierId: string) => {
         if (dynamicPrices && dynamicPrices[tierId]) {
             return cycle === '3-months'
-                ? dynamicPrices[tierId].quarterly / 3  // quarterly total ÷ 3 = per month display
+                ? dynamicPrices[tierId].quarterly  // already per-month discounted price
                 : dynamicPrices[tierId].monthly;
         }
         // Fallback to hardcoded

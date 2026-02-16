@@ -10,8 +10,7 @@ import { useState, useEffect } from 'react';
 import { X, QrCode, CreditCard, MessageCircle, Loader2, CheckCircle2, ArrowLeft } from 'lucide-react';
 import { PlanTier, RoomBand } from '@prisma/client';
 import { trackEventClient } from '@/lib/payments/trackEvent';
-import { getPlanLabel, getBandLabel } from '@/lib/plg/plan-config';
-import { getPrice } from '@/lib/plg/plan-config';
+import { getPlanLabel, getBandLabel, getPrice } from '@/lib/plg/plan-config';
 import { PayPalCheckout } from './PayPalCheckout';
 
 type BillingCycle = 'monthly' | '3-months';
@@ -48,6 +47,10 @@ export function PaymentMethodModal({
         amount?: number;
     } | null>(null);
 
+    // Dynamic pricing from DB
+    const [dynamicMonthly, setDynamicMonthly] = useState<number | null>(null);
+    const [dynamicQuarterly, setDynamicQuarterly] = useState<number | null>(null);
+
     // Fetch PayPal mode setting
     useEffect(() => {
         if (!isOpen) return;
@@ -61,10 +64,27 @@ export function PaymentMethodModal({
             .catch(() => { }); // Fallback to default 'one-time'
     }, [isOpen]);
 
+    // Fetch dynamic prices from DB
+    useEffect(() => {
+        if (!isOpen) return;
+        fetch(`/api/pricing/plans?band=${roomBand}`)
+            .then(r => r.json())
+            .then(data => {
+                if (data[tier]) {
+                    setDynamicMonthly(data[tier].monthly);
+                    setDynamicQuarterly(data[tier].quarterly);
+                }
+            })
+            .catch(() => { }); // Fallback to hardcoded
+    }, [isOpen, tier, roomBand]);
+
     if (!isOpen) return null;
 
-    const basePrice = getPrice(tier, roomBand);
-    const vndPrice = billingCycle === '3-months' ? basePrice * 0.5 : basePrice;
+    // Use dynamic price from DB, fallback to hardcoded
+    const monthlyPrice = dynamicMonthly ?? getPrice(tier, roomBand);
+    const vndPrice = billingCycle === '3-months'
+        ? (dynamicQuarterly ?? monthlyPrice * 0.5)  // quarterly from DB is already per-month discounted
+        : monthlyPrice;
     const planLabel = getPlanLabel(tier);
     const bandLabel = getBandLabel(roomBand);
 

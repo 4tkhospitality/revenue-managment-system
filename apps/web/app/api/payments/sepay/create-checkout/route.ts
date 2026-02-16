@@ -13,7 +13,7 @@ import { auth } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { PlanTier, RoomBand } from '@prisma/client';
 import { generateOrderId, PENDING_EXPIRY_MS } from '@/lib/payments/constants';
-import { getPrice } from '@/lib/plg/plan-config';
+import { getDynamicPrice } from '@/lib/plg/plan-config';
 import { buildSepayCheckoutUrl } from '@/lib/payments/sepay';
 import { trackEvent } from '@/lib/payments/trackEvent';
 
@@ -65,12 +65,10 @@ export async function POST(req: Request) {
         }
 
         // 4. DB Transaction: concurrent lock + create PENDING (GLC-05: short tx)
-        const monthlyPrice = getPrice(tier, roomBand);
-        // For 3-month billing: 50% discount × 3 months = total
-        const amount = billingCycle === '3-months'
-            ? Math.round(monthlyPrice * 0.5) * 3   // 495,000 × 3 = 1,485,000
-            : monthlyPrice;                          // 990,000
         const termMonths = billingCycle === '3-months' ? 3 : 1;
+        const dynamicResult = await getDynamicPrice(tier, roomBand, termMonths);
+        const amount = dynamicResult.price * (billingCycle === '3-months' ? 3 : 1);
+        // dynamicResult.price is already per-month after discount
         const orderId = generateOrderId(hotelId || userId);
         const expiresAt = new Date(Date.now() + PENDING_EXPIRY_MS);
 
