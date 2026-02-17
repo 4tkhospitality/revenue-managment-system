@@ -57,8 +57,8 @@ export async function runPricingEngine(hotelId: string, asOfDate: Date) {
         orderBy: { tier_index: 'asc' },
     });
 
-    // 4. Load features + forecasts + last accepted decisions
-    const [features, forecasts, lastDecisions] = await Promise.all([
+    // 4. Load features + forecasts + last accepted decisions + dailyOTB (authoritative OTB)
+    const [features, forecasts, lastDecisions, dailyOtbRows] = await Promise.all([
         prisma.featuresDaily.findMany({
             where: { hotel_id: hotelId, as_of_date: asOfDate },
             orderBy: { stay_date: 'asc' },
@@ -81,11 +81,22 @@ export async function runPricingEngine(hotelId: string, asOfDate: Date) {
                 decided_at: true,
             },
         }),
+        // P0-FIX: Load OTB from dailyOTB (same source as dashboard)
+        // features_daily.rooms_otb is nullable and often NULL → OTB=0 bug
+        prisma.dailyOTB.findMany({
+            where: { hotel_id: hotelId, as_of_date: asOfDate },
+            select: { stay_date: true, rooms_otb: true, revenue_otb: true },
+        }),
     ]);
 
     // Index forecasts by stay_date string
     const forecastMap = new Map(
         forecasts.map(f => [f.stay_date.toISOString().slice(0, 10), f])
+    );
+
+    // Index dailyOTB by stay_date (authoritative OTB source)
+    const otbMap = new Map(
+        dailyOtbRows.map(o => [o.stay_date.toISOString().slice(0, 10), o])
     );
 
     // Index last decisions by stay_date (first match = most recent due to ORDER BY decided_at DESC)
@@ -102,7 +113,9 @@ export async function runPricingEngine(hotelId: string, asOfDate: Date) {
     for (const feat of features) {
         const stayDateStr = feat.stay_date.toISOString().slice(0, 10);
         const fc = forecastMap.get(stayDateStr);
-        const roomsOtb = feat.rooms_otb ?? 0;
+        const otbRow = otbMap.get(stayDateStr);
+        // P0-FIX: Use dailyOTB.rooms_otb (authoritative) → fall back to features_daily
+        const roomsOtb = otbRow?.rooms_otb ?? feat.rooms_otb ?? 0;
 
         // Season multiplier for this date
         const seasonMult = getSeasonMultiplier(feat.stay_date, seasonConfigs);
