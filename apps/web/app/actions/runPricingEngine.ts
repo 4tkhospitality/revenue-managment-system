@@ -202,7 +202,9 @@ export async function runPricingEngine(hotelId: string, asOfDate: Date) {
                 zone: result.zone,
                 multiplier: result.multiplier,
                 confidence: input.confidence,
+                currentOcc: result.currentOcc,
                 projectedOcc: result.projectedOcc,
+                cxlClipped: result.cxlClipped,
                 expectedFinalRooms: result.expectedFinalRooms,
                 trace: result.trace,
                 // ── Provenance (Option E) ──
@@ -308,25 +310,27 @@ function mapToReasonCode(
 
 /**
  * Generate Vietnamese reason text for GM display.
+ * Shows OTB% (current) + Projected OCC% (after cxl + forecast) separately.
  */
 function generateViReason(
     code: ReasonCode,
     deltaPct: number,
     result: PriceOptimizerResult,
 ): string {
-    const occStr = `${(result.projectedOcc * 100).toFixed(0)}%`;
+    const otbStr = `${(result.currentOcc * 100).toFixed(0)}%`;
+    const projStr = `${(result.projectedOcc * 100).toFixed(0)}%`;
     const sign = deltaPct > 0 ? '+' : '';
     const deltaStr = `${sign}${deltaPct.toFixed(1)}%`;
 
     switch (code) {
         case 'HIGH_OCC':
-            return `OCC ${occStr} cao → tăng giá ${deltaStr}`;
+            return `OTB ${otbStr}, dự phóng ${projStr} cao → tăng giá ${deltaStr}`;
         case 'STRONG_DEMAND':
-            return `Nhu cầu mạnh (${result.zone}) → điều chỉnh ${deltaStr}`;
+            return `Nhu cầu mạnh (${result.zone}), OTB ${otbStr} → điều chỉnh ${deltaStr}`;
         case 'LOW_PICKUP':
-            return `Pickup thấp, OCC ${occStr} → giảm giá ${deltaStr}`;
+            return `Pickup thấp, OTB ${otbStr}, dự phóng ${projStr} → giảm giá ${deltaStr}`;
         case 'LOW_SUPPLY':
-            return `Còn ít phòng, OCC ${occStr} → điều chỉnh ${deltaStr}`;
+            return `Còn ít phòng, OTB ${otbStr} → điều chỉnh ${deltaStr}`;
         case 'STABLE':
             return 'Bán đúng nhịp, giữ giá';
         case 'STOP_SELL':

@@ -45,11 +45,13 @@ export interface PriceOptimizerResult {
     zone: PriceZone;
     expectedFinalRooms: number;
     projectedOcc: number;
+    currentOcc: number;          // P0: roomsOtb / capacity (for UI display)
     expectedGrossRevenue: number;
     expectedNetRevenue: number | null;
     upliftPct: number;
     trace: string[];
     confidenceAdjusted: boolean;
+    cxlClipped: boolean;         // P0-3: true if expectedCxl was capped
 }
 
 // ── Zone Interpolation Curve (recalibrated) ─────────────────
@@ -114,13 +116,30 @@ export function optimizePrice(input: PriceOptimizerInput): PriceOptimizerResult 
         currentRate, confidence, channelCommission, compPosition,
     } = input;
 
-    // Step 1: Net remaining (supply + expected CXL rooms)
-    const netRemaining = remainingSupply + expectedCxl;
-    trace.push(`net_remaining=${netRemaining} (supply=${remainingSupply} + cxl=${expectedCxl})`);
+    // ── P0-3: Cap expectedCxl — never allow unreasonable cancellation forecast ──
+    const MAX_CXL_RATIO = 0.7; // max 70% of OTB can cancel
+    const clippedCxl = Math.min(expectedCxl, Math.round(roomsOtb * MAX_CXL_RATIO));
+    const cxlClipped = clippedCxl < expectedCxl;
+    if (cxlClipped) {
+        trace.push(`cxl_clip: ${expectedCxl} → ${clippedCxl} (cap ${MAX_CXL_RATIO * 100}% of OTB=${roomsOtb})`);
+    }
 
-    // Step 2: Demand pressure
-    const demandPressure = netRemaining > 0 ? remainingDemand / netRemaining : (remainingDemand > 0 ? 3.0 : 0);
-    trace.push(`demand_pressure=${demandPressure.toFixed(3)} (demand=${remainingDemand} / net=${netRemaining})`);
+    // ── P0-1: Pressure based on Expected Final Occupancy (EFO) ──
+    // Step 1: Compute final occupancy components
+    const roomsStaying = Math.max(0, roomsOtb - clippedCxl);
+    const netRemaining = remainingSupply + clippedCxl;
+    const expectedNewBookings = Math.min(remainingDemand, Math.max(0, netRemaining));
+    const expectedFinalRooms = roomsStaying + expectedNewBookings;
+    const currentOcc = capacity > 0 ? roomsOtb / capacity : 0;
+    const finalOcc = capacity > 0 ? expectedFinalRooms / capacity : 0;
+    trace.push(`occ: current=${(currentOcc * 100).toFixed(1)}%, final=${(finalOcc * 100).toFixed(1)}% (staying=${roomsStaying} + new=${expectedNewBookings}, cxl=${clippedCxl})`);
+
+    // Step 2: Demand pressure from finalOcc, not remainingDemand/netRemaining
+    // occ_breakpoint = 0.40 (NORMAL zone starts here)
+    // pressure = clamp(finalOcc / breakpoint, 0, 2.5)
+    const OCC_BREAKPOINT = 0.40;
+    const demandPressure = Math.min(2.5, Math.max(0, finalOcc / OCC_BREAKPOINT));
+    trace.push(`demand_pressure=${demandPressure.toFixed(3)} (finalOcc=${(finalOcc * 100).toFixed(1)}% / breakpoint=${OCC_BREAKPOINT * 100}%)`);
 
     // Step 3: Zone + raw multiplier
     const zone = getZone(demandPressure);
@@ -137,15 +156,20 @@ export function optimizePrice(input: PriceOptimizerInput): PriceOptimizerResult 
     }
 
     // Step 5: Confidence dampening
-    const { dampened, adjusted } = dampenMultiplier(rawMult, confidence);
+    // P0-3: Also dampen if expectedCxl was clipped (unreliable forecast)
+    const effectiveConfidence = cxlClipped ? 'low' as ForecastConfidence : confidence;
+    const { dampened, adjusted } = dampenMultiplier(rawMult, effectiveConfidence);
     if (adjusted) {
-        trace.push(`confidence_dampen: ${confidence} → ${rawMult.toFixed(3)} → ${dampened.toFixed(3)}`);
+        trace.push(`confidence_dampen: ${effectiveConfidence}${cxlClipped ? ' (cxl clipped)' : ''} → ${rawMult.toFixed(3)} → ${dampened.toFixed(3)}`);
     }
 
-    // Step 6: Apply season + compute price
-    const multiplier = dampened * seasonMultiplier;
-    let recommendedPrice = Math.round(baseRate * multiplier);
-    trace.push(`price = ${baseRate} × ${dampened.toFixed(3)} × season(${seasonMultiplier}) = ${recommendedPrice}`);
+    // ── P0-2: Anchor-centric pricing ──
+    // Price = anchorRate × multiplier (not baseRate × mult × season)
+    // anchorRate = currentRate (last accepted/published) or rack rate (base × season)
+    // Season is already baked into anchor, so we don't multiply again
+    const anchorRate = currentRate || Math.round(baseRate * seasonMultiplier);
+    let recommendedPrice = Math.round(anchorRate * dampened);
+    trace.push(`price = anchor(${anchorRate}) × ${dampened.toFixed(3)} = ${recommendedPrice}`);
 
     // Step 7: Guardrails
     recommendedPrice = Math.max(guardrails.minRate, Math.min(guardrails.maxRate, recommendedPrice));
@@ -158,15 +182,12 @@ export function optimizePrice(input: PriceOptimizerInput): PriceOptimizerResult 
     }
     trace.push(`final_price=${recommendedPrice} (min=${guardrails.minRate}, max=${guardrails.maxRate})`);
 
-    // Step 8: Revenue projections (FIX #3 — no double-count)
-    const roomsStaying = Math.max(0, roomsOtb - expectedCxl);       // rooms that WILL stay
-    const newBookings = Math.min(remainingDemand, netRemaining);     // new bookings capped by supply
-    const expectedFinalRooms = roomsStaying + newBookings;
-    const projectedOcc = capacity > 0 ? expectedFinalRooms / capacity : 0;
+    // Step 8: Revenue projections
+    const projectedOcc = finalOcc; // already computed above
     const expectedGrossRevenue = recommendedPrice * expectedFinalRooms;
-    const currentRevenue = (currentRate || baseRate) * roomsOtb;
+    const currentRevenue = (currentRate || anchorRate) * roomsOtb;
     const upliftPct = currentRevenue > 0 ? (expectedGrossRevenue - currentRevenue) / currentRevenue : 0;
-    trace.push(`final_rooms=${expectedFinalRooms} (stay=${roomsStaying}+new=${newBookings}), occ=${(projectedOcc * 100).toFixed(1)}%`);
+    trace.push(`final_rooms=${expectedFinalRooms}, projected_occ=${(projectedOcc * 100).toFixed(1)}%, current_occ=${(currentOcc * 100).toFixed(1)}%`);
 
     // C5: Net revenue
     let expectedNetRevenue: number | null = null;
@@ -181,10 +202,12 @@ export function optimizePrice(input: PriceOptimizerInput): PriceOptimizerResult 
         zone,
         expectedFinalRooms,
         projectedOcc,
+        currentOcc,
         expectedGrossRevenue,
         expectedNetRevenue,
         upliftPct,
         trace,
         confidenceAdjusted: adjusted,
+        cxlClipped,
     };
 }
