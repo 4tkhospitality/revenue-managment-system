@@ -100,8 +100,8 @@ export async function GET(req: NextRequest) {
                 : null;
 
             return {
-                account: a.account || 'Unknown',
-                segment: a.segment || 'UNKNOWN',
+                account: a.account || 'Direct / Walk-in',
+                segment: a.segment || 'DIRECT',
                 bookings: Number(a.bookings),
                 roomNights: Number(a.room_nights) || 0,
                 revenue: Number(a.revenue) || 0,

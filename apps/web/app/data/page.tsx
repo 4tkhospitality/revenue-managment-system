@@ -69,13 +69,22 @@ async function fetchDataInspectorData() {
             orderBy: { booking_date: 'desc' },
             take: 10
         }),
-        // Cancellations - FILTERED
-        prisma.cancellationRaw.findMany({
-            where: { hotel_id: hotelId },
+        // Cancellations - UNIFIED from reservationsRaw (covers CSV/XLSX/XML)
+        prisma.reservationsRaw.findMany({
+            where: {
+                hotel_id: hotelId,
+                OR: [
+                    { cancel_time: { not: null } },
+                    { status: 'cancelled' },
+                ],
+            },
             select: {
                 cancel_time: true,
-                nights: true,
-                total_revenue: true,
+                booking_date: true,
+                arrival_date: true,
+                departure_date: true,
+                rooms: true,
+                revenue: true,
             },
             orderBy: { cancel_time: 'desc' },
             take: 100,
@@ -144,18 +153,26 @@ export default async function DataInspectorPage() {
     // Process cancellations (fast in-memory operation)
     const cancelDateMap = new Map<string, { date: Date; count: number; nights: number; revenue: number }>();
     for (const c of allCancellationsForGroup) {
-        const dateKey = DateUtils.format(c.cancel_time, 'yyyy-MM-dd');
+        // Use cancel_time if available, fall back to booking_date
+        const cancelDate = c.cancel_time || c.booking_date;
+        if (!cancelDate) continue;
+        const dateKey = DateUtils.format(cancelDate, 'yyyy-MM-dd');
+        // Compute nights from arrival/departure
+        const nights = c.arrival_date && c.departure_date
+            ? Math.max(1, Math.ceil((new Date(c.departure_date).getTime() - new Date(c.arrival_date).getTime()) / (1000 * 60 * 60 * 24)))
+            : (c.rooms || 1);
+        const revenue = Number(c.revenue || 0);
         const existing = cancelDateMap.get(dateKey);
         if (existing) {
             existing.count++;
-            existing.nights += c.nights || 0;
-            existing.revenue += Number(c.total_revenue || 0);
+            existing.nights += nights;
+            existing.revenue += revenue;
         } else {
             cancelDateMap.set(dateKey, {
-                date: c.cancel_time,
+                date: cancelDate,
                 count: 1,
-                nights: c.nights || 0,
-                revenue: Number(c.total_revenue || 0),
+                nights,
+                revenue,
             });
         }
     }

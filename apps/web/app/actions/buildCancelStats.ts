@@ -35,7 +35,7 @@ interface ExplodedRow {
 
 // ─── Constants ──────────────────────────────────────────────
 
-const LOOKBACK_DAYS = 365; // Training window: 1 year of historical data
+const LOOKBACK_DAYS = 730; // Training window: 2 years of historical data
 const MAPPING_VERSION = 'v1';
 
 // ─── Main ───────────────────────────────────────────────────
