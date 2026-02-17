@@ -73,6 +73,8 @@ interface KpiCardsProps {
 export function KpiCards({ data, hotelCapacity }: KpiCardsProps) {
     const days = 30;
     const hasCancellation = data.cancelledRooms !== undefined || data.lostRevenue !== undefined;
+    const totalCapacity = hotelCapacity * days;
+    const soldPct = totalCapacity > 0 ? (data.roomsOtb / totalCapacity) * 100 : 0;
 
     return (
         <div className={`grid gap-4 ${hasCancellation ? 'grid-cols-2 lg:grid-cols-5' : 'grid-cols-2 lg:grid-cols-4'}`}>
@@ -86,10 +88,10 @@ export function KpiCards({ data, hotelCapacity }: KpiCardsProps) {
             <KpiCard
                 title="Còn trống"
                 value={nf0.format(Math.max(0, data.remainingSupply))}
-                trend={data.remainingSupply <= 0 ? -1 : data.remainingSupply < 20 ? -1 : 0}
-                trendLabel={data.remainingSupply <= 0 ? 'Full / Vượt' : data.remainingSupply < 20 ? 'Thấp' : ''}
+                trend={data.remainingSupply <= 0 ? -1 : soldPct > 80 ? 1 : 0}
+                trendLabel={data.remainingSupply <= 0 ? 'Full / Vượt' : `${nf1.format(soldPct)}% đã bán`}
                 formula={data.remainingSupply < 0
-                    ? `⚠️ OTB vượt capacity (${hotelCapacity} × ${days} = ${nf0.format(hotelCapacity * days)})`
+                    ? `⚠️ OTB vượt capacity (${hotelCapacity} × ${days} = ${nf0.format(totalCapacity)})`
                     : `(${hotelCapacity} × ${days}) − ${nf0.format(data.roomsOtb)}`}
             />
             <KpiCard
