@@ -324,9 +324,10 @@ export async function generateDailyActions(
         const otb = otbMap.get(dateKey);
         const feature = featuresMap.get(dateKey);
 
-        // Calculate occupancy
+        // Calculate occupancy — prefer net_remaining (cancel-aware) over raw capacity
         const roomsSold = otb?.rooms_otb ?? 0;
-        const occ = capacity > 0 ? roomsSold / capacity : 0;
+        const netRemaining = feature?.net_remaining ?? feature?.remaining_supply ?? (capacity - roomsSold);
+        const occ = capacity > 0 ? (capacity - netRemaining) / capacity : 0;
 
         // Get pickup (using cached baseline)
         const pickup7d = feature && feature.pickup_t7 !== null ? Number(feature.pickup_t7) : null;

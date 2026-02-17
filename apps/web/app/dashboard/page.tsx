@@ -16,6 +16,9 @@ import { fetchInsightsV2Data } from '@/lib/insights/fetchInsightsV2Data';
 import { generateInsightsV2 } from '@/lib/insights/insightsV2Engine';
 import { AnalyticsTabContent } from '@/components/analytics/AnalyticsTabContent';
 import { ComplianceBanner } from '@/components/compliance/ComplianceBanner';
+import { TopAccountsTable } from '@/components/dashboard/TopAccountsTable';
+import { RoomLosMixPanel } from '@/components/dashboard/RoomLosMixPanel';
+import { LeadTimeBuckets } from '@/components/dashboard/LeadTimeBuckets';
 import { Suspense } from 'react';
 
 export const dynamic = 'force-dynamic';
@@ -476,6 +479,19 @@ export default async function DashboardPage({
                                 asOfDate={asOfDateStr}
                                 maxDays={7}
                             />
+
+                            {/* GM Dashboard V2 — Phase A Panels */}
+                            <Suspense fallback={<div className="h-64 animate-pulse bg-gray-800/30 rounded-xl" />}>
+                                <div key="v2-panels" className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+                                    <div className="lg:col-span-3">
+                                        <TopAccountsTable hotelId={hotelId} asOfDate={asOfDateStr || ''} />
+                                    </div>
+                                    <div className="lg:col-span-2 space-y-4">
+                                        <RoomLosMixPanel hotelId={hotelId} asOfDate={asOfDateStr || ''} />
+                                        <LeadTimeBuckets hotelId={hotelId} asOfDate={asOfDateStr || ''} />
+                                    </div>
+                                </div>
+                            </Suspense>
                         </>
                     }
                     analyticsContent={
