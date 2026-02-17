@@ -2,6 +2,7 @@
 
 import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { invalidateStatsCache } from '@/lib/cachedStats';
 
 /**
  * Clear all import job history for a hotel
@@ -30,6 +31,9 @@ export async function clearImportHistory(hotelId: string) {
         const deletedJobs = await prisma.importJob.deleteMany({
             where: { hotel_id: hotelId }
         });
+
+        // Clear in-memory stats cache (prevents stale KPI data after reset)
+        invalidateStatsCache();
 
         revalidatePath('/data');
         revalidatePath('/upload');
