@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { buildCancelStats } from '../../../actions/buildCancelStats';
 import { buildFeatures } from '../../../actions/buildFeatures';
+import { buildDailyOTB } from '../../../actions/buildDailyOTB';
 import { runForecast } from '../../../actions/runForecast';
 import { runPricingEngine } from '../../../actions/runPricingEngine';
 
@@ -20,6 +21,9 @@ export async function POST(req: NextRequest) {
         let result: any;
 
         switch (action) {
+            case 'buildOTB':
+                result = await buildDailyOTB({ hotelId, asOfTs: asOf });
+                break;
             case 'buildCancelStats':
                 result = await buildCancelStats(hotelId);
                 break;

@@ -6,6 +6,8 @@ import { Activity, Play, CheckCircle2, Loader2, AlertCircle } from 'lucide-react
 // ─── Pipeline Steps ─────────────────────────────────────────
 
 const PIPELINE_STEPS = [
+    { key: 'otbYesterday', label: 'OTB (hôm qua)', action: 'buildOTB', dateOffset: -1 },
+    { key: 'otbToday', label: 'OTB (hôm nay)', action: 'buildOTB', dateOffset: 0 },
     { key: 'cancelStats', label: 'Tính Cancel Stats', action: 'buildCancelStats' },
     { key: 'features', label: 'Build Features', action: 'buildFeatures' },
     { key: 'forecast', label: 'Run Forecast', action: 'runForecast' },
@@ -36,10 +38,17 @@ export function FullPipelineButton({ hotelId, asOfDate, onComplete }: PipelineBu
                 setCurrentStep(step.key);
                 setStepStatuses(prev => ({ ...prev, [step.key]: 'running' }));
 
+                // Compute step-specific asOfDate (for OTB yesterday/today)
+                const stepDate = new Date(asOfDate || new Date().toISOString().split('T')[0]);
+                if ('dateOffset' in step && step.dateOffset) {
+                    stepDate.setDate(stepDate.getDate() + step.dateOffset);
+                }
+                const stepAsOf = stepDate.toISOString().split('T')[0];
+
                 const res = await fetch('/api/analytics/pipeline', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ hotelId, asOfDate, action: step.action }),
+                    body: JSON.stringify({ hotelId, asOfDate: stepAsOf, action: step.action }),
                 });
 
                 if (!res.ok) {
@@ -106,8 +115,8 @@ export function FullPipelineButton({ hotelId, asOfDate, onComplete }: PipelineBu
                             <div key={step.key} className="flex items-center gap-1">
                                 {i > 0 && (
                                     <div className={`w-4 h-0.5 rounded ${status === 'done' ? 'bg-emerald-400' :
-                                            status === 'running' ? 'bg-indigo-400' :
-                                                'bg-slate-200'
+                                        status === 'running' ? 'bg-indigo-400' :
+                                            'bg-slate-200'
                                         }`} />
                                 )}
                                 <div className={`
