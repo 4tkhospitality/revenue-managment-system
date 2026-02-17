@@ -290,9 +290,9 @@ async function buildForSingleAsOf(
     const stly = stlyMap.get(stayStr);
     const stlyRooms = stly?.stly_rooms_otb ?? null;
 
-    // pace_vs_ly = current - STLY (NULL if no STLY data)
-    const pace_vs_ly = (stlyRooms != null && row.rooms_otb != null)
-      ? row.rooms_otb - stlyRooms
+    // pace_vs_ly = (current - STLY) / STLY as decimal ratio (NULL if no STLY data or STLY=0)
+    const pace_vs_ly = (stlyRooms != null && stlyRooms > 0 && row.rooms_otb != null)
+      ? (row.rooms_otb - stlyRooms) / stlyRooms
       : null;
 
     // remaining_supply V1 = capacity - rooms_otb
