@@ -2,13 +2,13 @@
   "meta": {
     "schema_version": "2.0.0",
     "awf_version": "4.1.2",
-    "last_updated": "2026-02-16T23:38:00+07:00"
+    "last_updated": "2026-02-17T12:34:00+07:00"
   },
   "project": {
     "name": "revenue-management-system",
     "type": "SaaS Web App",
     "status": "Production - Deployed to Vercel (icn1 region)",
-    "description": "RMS Version 02.1 - Revenue Management System with Room Band Pricing + Organization-based Multi-Hotel + OTB Time-Travel + OTA Pricing + Dynamic Pricing by OCC + Unified Pricing Logic + InsightsPanel V2 + Payment Gateway (SePay/PayPal/Zalo) + Analytics Layer (Cancel Forecast, Demand Model, Price Optimizer). Full-stack TypeScript.",
+    "description": "RMS Version 02.1 - Revenue Management System with Room Band Pricing + Organization-based Multi-Hotel + OTB Time-Travel + OTA Pricing + Dynamic Pricing by OCC + Unified Pricing Logic + InsightsPanel V2 + Payment Gateway (SePay/PayPal/Zalo) + Analytics Layer (Cancel Forecast, Demand Model, Price Optimizer) + GM Dashboard V2 (Top Accounts, Room/LOS Mix, Lead-time Buckets). Full-stack TypeScript.",
     "github": "https://github.com/4tkhospitality/revenue-managment-system",
     "landing_page": {
       "path": "apps/landing",
@@ -124,7 +124,7 @@
       },
       {
         "name": "features_daily",
-        "description": "Computed features (Pickup T30/15/7/5, Pace, Weekend, Month)."
+        "description": "Computed features (Pickup T30/15/7/5, Pace, Weekend, Month) + Cancel forecast fields (expected_cxl, net_remaining, cxl_rate_used, cxl_confidence)."
       },
       {
         "name": "demand_forecast",
@@ -785,7 +785,17 @@
     "V02.1: Dynamic Pricing Flow — Admin panel is single source of truth for all prices. Pricing page, PaymentMethodModal, SePay, PayPal all read from DB via getDynamicPrice()/getAllDynamicPrices()",
     "V02.1: GET /api/pricing/plans — Public API endpoint returning dynamic prices per tier for given room band. Used by pricing-plans page and PaymentMethodModal",
     "V02.1: Timezone Fix effective_from — datetime-local inputs parsed with +07:00 offset to prevent configs appearing as 'Scheduled' instead of 'Active'",
-    "V02.1: Removed unstable_cache from pricing functions — Direct DB reads on every call (~5ms). Eliminates stale-cache problem. unstable_cache + revalidateTag incompatible with Next.js 16"
+    "V02.1: Removed unstable_cache from pricing functions — Direct DB reads on every call (~5ms). Eliminates stale-cache problem. unstable_cache + revalidateTag incompatible with Next.js 16",
+    "V02.1: Analytics Pipeline — 4-step engine: Cancel Stats → Build Features (w/ cancel forecast) → Demand Model V03 → Price Optimizer. All triggered via POST /api/analytics/pipeline",
+    "V02.1: Cancel Forecast Engine — Bayesian smoothed cancel rates by lead-time bucket × segment × season. 6-level fallback chain. 41 unit tests.",
+    "V02.1: Demand Model V03 — Weighted ensemble (pace 30%, pickup 25%, LY 20%, DOW 15%, season 10%). Returns demand_rooms, confidence_score, model_version.",
+    "V02.1: Price Optimizer — OCC-based pricing with guardrails (min_rate, max_rate, max_daily_change). Respects PricingDecision overrides.",
+    "V02.1: GM Dashboard V2 Phase A — TopAccountsTable (top 10 accounts by revenue + cancel rate), RoomLosMixPanel (donut + bar), LeadTimeBuckets (booking lead-time distribution)",
+    "V02.1: Dashboard V2 panels integrated into Overview tab with Suspense wrapper in dashboard/page.tsx",
+    "V02.1: Cancel-Aware Occupancy — dailyAction.ts uses net_remaining from FeaturesDaily for occupancy instead of raw capacity - roomsSold",
+    "V02.1: Vercel Cron — /api/cron/check-subscription at 19:00 UTC (02:00 VN). Checks expired subs, syncs PayPal, 3-day grace for SePay, auto-expires PENDING txns",
+    "V02.1: CancelForecastChart component — Visualizes predicted vs actual cancel rates on Analytics tab",
+    "V02.1: FullPipelineButton — One-click trigger for complete analytics pipeline from Analytics tab"
   ],
   "cancellation_bridge_v011": {
     "status": "Implemented",
@@ -1020,9 +1030,11 @@
       "step1": "Upload CSV/Excel/XML → reservations_raw (auto-detect format)",
       "step1b": "Upload Cancellation XML → cancellations_raw → Bridge → reservations_raw",
       "step2": "Build OTB (time-travel, as_of_date = loaded_at) → daily_otb",
-      "step3": "Build Features (as_of_date = today) → features_daily",
-      "step4": "Run Forecast (as_of_date = max from features_daily) → demand_forecast",
-      "step5": "Pricing Engine → recommended_price (calculated on-the-fly)"
+      "step3": "Build Cancel Stats → cancel_rate_stats (by lead-time bucket × segment × season)",
+      "step4": "Build Features (as_of_date = today) → features_daily (incl. expected_cxl, net_remaining via cancel forecast engine)",
+      "step5": "Run Demand Forecast (demandModelV03) → demand_forecast",
+      "step6": "Run Price Optimizer → price_recommendations (OCC-based with guardrails)",
+      "full_pipeline": "POST /api/analytics/pipeline — runs steps 3→4→5→6 sequentially"
     }
   }
 }

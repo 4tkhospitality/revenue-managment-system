@@ -1,54 +1,59 @@
 {
-  "updated_at": "2026-02-16T23:38:00+07:00",
+  "updated_at": "2026-02-17T12:34:00+07:00",
   "working_on": {
-    "feature": "Onboarding Flow Fixes + Admin Improvements",
-    "task": "Fixed onboarding redirect loop, updated sample CSV, added country display to admin users, cascade delete users",
-    "status": "deployed",
+    "feature": "Dashboard V2 Panels + Analytics Pipeline Finalization",
+    "task": "Integrated 3 V2 panels into dashboard, updated dailyAction for cancel-aware occupancy, brainstormed Distribution & Conversion Clinic",
+    "status": "completed",
     "files": [
-      "apps/web/app/onboarding/page.tsx",
-      "apps/web/app/api/onboarding/complete/route.ts",
-      "apps/web/app/api/admin/users/route.ts",
-      "apps/web/app/api/admin/users/[id]/route.ts",
-      "apps/web/app/admin/components/AdminUsers.tsx",
-      "apps/web/public/sample-reservations.csv",
-      "apps/web/lib/constants/countries.ts"
+      "apps/web/app/dashboard/page.tsx",
+      "apps/web/lib/engine/dailyAction.ts"
     ],
     "blockers": [],
-    "notes": "All fixes pushed. Need to test onboarding flow after Vercel deploy to confirm redirect loop is resolved."
+    "notes": "Commit bdd5d0e pushed. All 41 cancel forecast tests pass. Brainstorm analysis complete for next feature."
   },
   "pending_tasks": [
     {
-      "task": "Test onboarding redirect fix end-to-end after Vercel deploy",
+      "task": "Switch PayPal from Sandbox to Live",
       "priority": "critical",
-      "notes": "Delete test user → onboard again → verify 'Vào Dashboard' goes to /dashboard not back to step 1"
+      "notes": "Change 4 env vars on Vercel: PAYPAL_API_URL=https://api-m.paypal.com, PAYPAL_CLIENT_ID (Live), PAYPAL_SECRET (Live), PAYPAL_WEBHOOK_ID (Live webhook for production URL). Then redeploy."
     },
     {
       "task": "Add payment env vars to Vercel Dashboard (production)",
       "priority": "critical",
-      "notes": "SEPAY_API_KEY, SEPAY_WEBHOOK_SECRET, SEPAY_BANK_ACCOUNT, SEPAY_BANK_NAME, PAYPAL_CLIENT_ID, PAYPAL_SECRET, PAYPAL_API_URL, PAYPAL_WEBHOOK_ID — then redeploy"
+      "notes": "SEPAY_API_KEY, SEPAY_WEBHOOK_SECRET, SEPAY_BANK_ACCOUNT, SEPAY_BANK_NAME — then redeploy"
     },
     {
-      "task": "Switch PayPal from Sandbox to Live when ready",
-      "priority": "high",
-      "notes": "Change PAYPAL_API_URL from sandbox to https://api-m.paypal.com and use Live credentials"
-    },
-    {
-      "task": "Set up Vercel cron for /api/cron/check-subscription",
-      "priority": "high",
-      "notes": "0 19 * * * (19:00 UTC = 02:00 VN)"
-    },
-    {
-      "task": "GM Dashboard V2 Phase A — Top Accounts, Room/LOS Mix, Lead-time Buckets",
+      "task": "Distribution & Conversion Clinic — Channel Revenue & Risk (P0)",
       "priority": "medium",
-      "notes": "Plan complete, waiting for coding phase"
+      "notes": "Brainstorm complete. Data exists in reservations_raw + OTAChannel.commission. Needs: 1 API route (channel-performance) + 1 UI component. See brainstorm at .gemini/antigravity/brain/09d320e7-*/brainstorm_distribution_clinic.md"
     },
     {
-      "task": "Analytics Layer P1/P2 — Cancel Forecast, Demand Model, Price Optimizer",
+      "task": "Distribution & Conversion Clinic — Rate Calendar Grid UI (P0)",
       "priority": "medium",
-      "notes": "Plans at .brain/plans/260215-1905-analytics-layer-p1p2/. Engine files created but need integration testing."
+      "notes": "Backend 85% done (PriceRecommendations + PricingDecision tables). Needs: Calendar heatmap UI + batch apply + publish workflow."
+    },
+    {
+      "task": "Distribution & Conversion Clinic — ota_funnel_daily table + CSV import (P1)",
+      "priority": "low",
+      "notes": "Completely new: Prisma schema + import API + validation. Enables funnel dashboard per OTA."
     }
   ],
   "recent_changes": [
+    {
+      "timestamp": "2026-02-17T12:30:00+07:00",
+      "type": "feature",
+      "description": "Integrated 3 GM Dashboard V2 panels (TopAccountsTable, RoomLosMixPanel, LeadTimeBuckets) into dashboard Overview tab with Suspense wrapper. Updated dailyAction.ts to use net_remaining for cancel-aware occupancy calculation. Commit bdd5d0e.",
+      "files": [
+        "apps/web/app/dashboard/page.tsx",
+        "apps/web/lib/engine/dailyAction.ts"
+      ]
+    },
+    {
+      "timestamp": "2026-02-17T12:24:00+07:00",
+      "type": "analysis",
+      "description": "Brainstormed Distribution & Conversion Clinic BA Spec v0.1 against codebase. Result: ~55% already built, ~20% needs UI only, ~25% needs new dev. Key gaps: ota_funnel_daily table, channel-performance API, calendar grid UI.",
+      "files": []
+    },
     {
       "timestamp": "2026-02-16T23:34:00+07:00",
       "type": "bugfix",
@@ -56,43 +61,6 @@
       "files": [
         "apps/web/app/api/onboarding/complete/route.ts",
         "apps/web/app/onboarding/page.tsx"
-      ]
-    },
-    {
-      "timestamp": "2026-02-16T23:25:00+07:00",
-      "type": "feature",
-      "description": "Cascade delete users with all related data (pricing_decisions, product_events, payment_transactions, org_members, hotel_users, accounts, sessions). Uses $transaction. Also prevents self-deletion. Commit 13b0c94.",
-      "files": [
-        "apps/web/app/api/admin/users/[id]/route.ts"
-      ]
-    },
-    {
-      "timestamp": "2026-02-16T23:14:00+07:00",
-      "type": "bugfix",
-      "description": "Fixed onboarding redirect (part 1): added await updateSession() before router.push('/dashboard'). Updated sample CSV dates 2025→2026. Fixed required fields list from 4→7 fields. Commit 5333437.",
-      "files": [
-        "apps/web/app/onboarding/page.tsx",
-        "apps/web/public/sample-reservations.csv"
-      ]
-    },
-    {
-      "timestamp": "2026-02-16T23:13:00+07:00",
-      "type": "feature",
-      "description": "Added country flag display to Admin Users page. API returns hotelCountry from hotel relation. Frontend shows flag emoji next to hotel name. Commit dafae9e.",
-      "files": [
-        "apps/web/app/api/admin/users/route.ts",
-        "apps/web/app/admin/components/AdminUsers.tsx"
-      ]
-    },
-    {
-      "timestamp": "2026-02-16T22:20:00+07:00",
-      "type": "feature",
-      "description": "Added country field to Hotel model with countries.ts constant (ISO 3166-1 alpha-2, 60+ countries). Onboarding and admin hotel settings now support country selection with flag emoji. Commits a7ca741, 0035dbe.",
-      "files": [
-        "apps/web/prisma/schema.prisma",
-        "apps/web/lib/constants/countries.ts",
-        "apps/web/app/onboarding/page.tsx",
-        "apps/web/app/settings/page.tsx"
       ]
     }
   ],
@@ -102,26 +70,20 @@
       "solution": "Root cause: JWT session has stale hasPendingActivation=true and accessibleHotels=[]. Fix: 1) Set rms_active_hotel cookie in /api/onboarding/complete response 2) Use window.location.href instead of router.push for hard page reload with fresh cookies.",
       "resolved": true,
       "file": "apps/web/app/onboarding/page.tsx"
-    },
-    {
-      "error": "User deletion fails when user has payment transactions (foreign key P2003)",
-      "solution": "Changed to cascade delete: transaction deletes all related records (pricing_decisions, product_events, payment_transactions, org_members, hotel_users, accounts, sessions) before deleting user.",
-      "resolved": true,
-      "file": "apps/web/app/api/admin/users/[id]/route.ts"
     }
   ],
   "decisions_made": [
     {
-      "decision": "Always hard delete users with cascade — no soft delete",
-      "reason": "User explicitly chose option 2 (cascade delete). All related data (payments, events, decisions) gets permanently removed. Self-deletion is prevented."
+      "decision": "Use net_remaining (cancel-aware) for occupancy calculation in dailyAction.ts",
+      "reason": "FeaturesDaily already computes net_remaining = rooms_otb - expected_cxl via cancel forecast engine. Using this gives more accurate occupancy than raw capacity - roomsSold."
     },
     {
-      "decision": "Use window.location.href instead of router.push for post-onboarding navigation",
-      "reason": "router.push (soft navigation) keeps stale JWT in memory. window.location.href forces full page reload, ensuring browser sends fresh cookies (including rms_active_hotel) to middleware."
+      "decision": "Wrap V2 dashboard panels in single Suspense boundary",
+      "reason": "All 3 panels share same data dependency pattern. Single Suspense with skeleton fallback keeps UI responsive."
     },
     {
-      "decision": "Set rms_active_hotel cookie server-side in onboarding complete API",
-      "reason": "Middleware checks for this cookie as fallback when accessibleHotels is empty in JWT. Setting it server-side guarantees it's available immediately."
+      "decision": "Distribution Clinic: prioritize Channel Revenue & Risk first (P0)",
+      "reason": "Data already exists in reservations_raw + OTAChannel. Lowest effort, highest ROI. ota_funnel_daily needs new table + user CSV exports from OTA extranets."
     }
   ]
 }
