@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Check, X, Calendar, ArrowUp, ArrowDown, Minus, Ban, Info } from 'lucide-react';
+import { Check, X, Calendar, ArrowUp, ArrowDown, Minus, Ban, Info, AlertTriangle } from 'lucide-react';
 
 interface Recommendation {
     id: string;
@@ -15,6 +15,7 @@ interface Recommendation {
     action: 'INCREASE' | 'KEEP' | 'DECREASE' | 'STOP_SELL' | null;
     deltaPct: number | null;
     reasonTextVi: string | null;
+    source?: 'PIPELINE' | 'FALLBACK';
 }
 
 interface RecommendationTableProps {
@@ -127,6 +128,17 @@ export function RecommendationTable({
 
     return (
         <div className={`${surface} overflow-hidden`}>
+            {/* ⚠️ Fallback warning banner */}
+            {filteredData.some(r => r.source === 'FALLBACK') && (
+                <div className="mx-5 mt-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                    <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                    <div>
+                        <span className="font-medium">Ước tính tạm: </span>
+                        {filteredData.filter(r => r.source === 'FALLBACK').length} ngày chưa có dữ liệu pipeline,
+                        đang dùng công thức ước tính. Chạy lại Pipeline để có giá chính xác.
+                    </div>
+                </div>
+            )}
             {/* Header with Filters */}
             <div className="px-5 py-4 border-b border-slate-100">
                 <div className="flex items-center justify-between flex-wrap gap-4">
@@ -243,7 +255,10 @@ export function RecommendationTable({
                                                 ? 'bg-amber-50/50'
                                                 : 'hover:bg-gray-50'
                                             }`}
-                                        style={{ borderTop: '1px solid #e2e8f0' }}
+                                        style={{
+                                            borderTop: '1px solid #e2e8f0',
+                                            ...(row.source === 'FALLBACK' ? { borderLeft: '3px dashed #f59e0b' } : {}),
+                                        }}
                                     >
                                         <td className="px-4 py-3 sticky left-0 bg-inherit">
                                             <div className="flex items-center gap-2">

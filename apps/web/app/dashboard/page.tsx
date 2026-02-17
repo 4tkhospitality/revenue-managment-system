@@ -357,17 +357,19 @@ export default async function DashboardPage({
         let action: 'INCREASE' | 'KEEP' | 'DECREASE' | 'STOP_SELL' | null = null;
         let deltaPct: number | null = null;
         let reasonTextVi: string | null = null;
+        let source: 'PIPELINE' | 'FALLBACK';
 
         if (pipelineRec) {
             // ✅ Use pipeline data (same as Quick Mode)
+            source = 'PIPELINE';
             recPrice = Number(pipelineRec.recommended_price || currentPrice);
             isStopSell = remaining <= 0 || pipelineRec.recommended_price === null;
-            const rawAction = (pipelineRec as any).action as string | null;
+            const rawAction = pipelineRec.action as string | null;
             action = (['INCREASE', 'KEEP', 'DECREASE', 'STOP_SELL'].includes(rawAction || '')
                 ? rawAction as 'INCREASE' | 'KEEP' | 'DECREASE' | 'STOP_SELL'
                 : 'KEEP');
-            deltaPct = (pipelineRec as any).delta_pct != null ? Number((pipelineRec as any).delta_pct) : null;
-            reasonTextVi = (pipelineRec as any).reason_text_vi || null;
+            deltaPct = pipelineRec.delta_pct != null ? Number(pipelineRec.delta_pct) : null;
+            reasonTextVi = pipelineRec.reason_text_vi || null;
 
             // Override action to STOP_SELL if no remaining supply
             if (isStopSell && action !== 'STOP_SELL') {
@@ -375,7 +377,8 @@ export default async function DashboardPage({
                 reasonTextVi = 'Hết phòng — ngừng bán';
             }
         } else {
-            // Fallback: compute from PricingLogic (only when pipeline hasn't run)
+            // ⚠️ Fallback: compute from PricingLogic (only when pipeline hasn't run)
+            source = 'FALLBACK';
             const pricingResult = PricingLogic.optimize(currentPrice, forecastDemand, remaining);
             isStopSell = remaining <= 0 || pricingResult.recommendedPrice === null;
             recPrice = pricingResult.recommendedPrice || currentPrice;
@@ -408,6 +411,7 @@ export default async function DashboardPage({
             action,
             deltaPct,
             reasonTextVi,
+            source,
         };
     });
 
