@@ -170,12 +170,11 @@ export async function exportToPdf(
     const hiddenElements = hideExportElements();
 
     try {
-        // 3. Capture with modern-screenshot (supports oklab/oklch!)
+        // 3. Capture with modern-screenshot (lower scale = lighter file)
         const dataUrl = await domToPng(element, {
-            scale: 2,
+            scale: 1.5,  // v3.1: reduced from 2 for lighter PDF
             backgroundColor: '#ffffff',
             style: {
-                // Ensure proper rendering
                 transform: 'none',
             },
         });
@@ -207,17 +206,34 @@ export async function exportToPdf(
         // 7. Calculate image dimensions
         const imgWidth = contentWidth;
         const imgHeight = (img.height * contentWidth) / img.width;
+        const pxPerMm = img.width / contentWidth;
 
-        // 8. Multi-page logic
-        const totalPages = Math.ceil(imgHeight / contentHeight);
-
-        // Create a canvas to slice the image
+        // 8. Draw full image to source canvas once
         const sourceCanvas = document.createElement('canvas');
         sourceCanvas.width = img.width;
         sourceCanvas.height = img.height;
         const sourceCtx = sourceCanvas.getContext('2d');
         if (!sourceCtx) throw new Error('Could not get canvas context');
         sourceCtx.drawImage(img, 0, 0);
+
+        // 9. Smart page-break: build page slices with intelligent cut points
+        const sliceHeightPx = contentHeight * pxPerMm;
+        const slices: Array<{ y: number; h: number }> = [];
+        let currentY = 0;
+
+        while (currentY < img.height) {
+            let sliceH = Math.min(sliceHeightPx, img.height - currentY);
+
+            // If there's more content after this slice, find a smart cut point
+            if (currentY + sliceH < img.height) {
+                sliceH = findSmartCutPoint(sourceCtx, img.width, currentY, sliceH);
+            }
+
+            slices.push({ y: currentY, h: sliceH });
+            currentY += sliceH;
+        }
+
+        const totalPages = slices.length;
 
         for (let page = 0; page < totalPages; page++) {
             if (page > 0) {
@@ -227,32 +243,28 @@ export async function exportToPdf(
             // Add header
             addHeader(pdf, options, pageWidth);
 
-            // Calculate slice dimensions
-            const sourceY = page * contentHeight * (img.width / contentWidth);
-            const sourceHeight = Math.min(
-                contentHeight * (img.width / contentWidth),
-                img.height - sourceY
-            );
+            const slice = slices[page];
 
             // Create canvas slice for this page
             const pageCanvas = document.createElement('canvas');
             pageCanvas.width = img.width;
-            pageCanvas.height = sourceHeight;
+            pageCanvas.height = slice.h;
 
             const ctx = pageCanvas.getContext('2d');
             if (ctx) {
                 ctx.drawImage(
                     sourceCanvas,
-                    0, sourceY, img.width, sourceHeight,
-                    0, 0, img.width, sourceHeight
+                    0, slice.y, img.width, slice.h,
+                    0, 0, img.width, slice.h
                 );
 
-                const pageImgData = pageCanvas.toDataURL('image/png');
-                const pageImgHeight = (sourceHeight * contentWidth) / img.width;
+                // v3.1: Use JPEG at 80% quality (much lighter than PNG)
+                const pageImgData = pageCanvas.toDataURL('image/jpeg', 0.80);
+                const pageImgHeight = (slice.h * contentWidth) / img.width;
 
                 pdf.addImage(
                     pageImgData,
-                    'PNG',
+                    'JPEG',
                     MARGIN_MM,
                     contentStartY,
                     imgWidth,
@@ -264,13 +276,60 @@ export async function exportToPdf(
             addFooter(pdf, page + 1, totalPages, pageWidth, pageHeight);
         }
 
-        // 9. Save PDF
+        // 10. Save PDF
         pdf.save(`${filename}.pdf`);
 
     } finally {
-        // 10. Restore hidden elements
+        // 11. Restore hidden elements
         restoreExportElements(hiddenElements);
     }
+}
+
+/**
+ * Find a smart cut point to avoid cutting through text rows.
+ * Scans the bottom 15% of the slice for the most "blank" horizontal line
+ * (highest average brightness = whitespace between rows).
+ */
+function findSmartCutPoint(
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    startY: number,
+    maxHeight: number
+): number {
+    // Search zone: bottom 15% of the slice
+    const searchStart = Math.floor(maxHeight * 0.85);
+    const searchEnd = Math.floor(maxHeight);
+    const sampleWidth = Math.min(width, 800); // Sample a strip for speed
+    const sampleX = Math.floor((width - sampleWidth) / 2);
+
+    let bestY = maxHeight; // fallback: cut at max height
+    let bestBrightness = 0;
+
+    for (let y = searchStart; y < searchEnd; y++) {
+        const absoluteY = startY + y;
+        const rowData = ctx.getImageData(sampleX, absoluteY, sampleWidth, 1).data;
+
+        // Calculate average brightness of this horizontal line
+        let totalBrightness = 0;
+        for (let i = 0; i < rowData.length; i += 4) {
+            totalBrightness += (rowData[i] + rowData[i + 1] + rowData[i + 2]) / 3;
+        }
+        const avgBrightness = totalBrightness / (sampleWidth);
+
+        // Higher brightness = more white = better cut point (between rows)
+        if (avgBrightness > bestBrightness) {
+            bestBrightness = avgBrightness;
+            bestY = y;
+        }
+    }
+
+    // Only use smart cut if we found a clearly bright line (whitespace)
+    // Threshold 240+ means it's nearly pure white
+    if (bestBrightness > 240) {
+        return bestY;
+    }
+
+    return maxHeight; // No good cut point found, use default
 }
 
 /**
