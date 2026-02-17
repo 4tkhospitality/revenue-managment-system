@@ -9,7 +9,8 @@ interface Recommendation {
     roomsOtb: number;
     remaining: number;
     forecast: number;
-    currentPrice: number;
+    currentPrice: number;   // anchor (Option E: last_accepted or rack_rate)
+    adr?: number;           // ADR = Revenue/Rooms (reference only)
     recommendedPrice: number;
     isStopSell: boolean;
     action: 'INCREASE' | 'KEEP' | 'DECREASE' | 'STOP_SELL' | null;
@@ -139,6 +140,25 @@ export function RecommendationTable({
                     </div>
                 </div>
             )}
+            {/* ⚠️ ADR sanity divergence banner */}
+            {(() => {
+                const divergentRows = filteredData.filter(r => {
+                    if (!r.adr || r.adr <= 0 || r.roomsOtb < 10) return false;
+                    const divergence = Math.abs(r.adr - r.currentPrice) / r.currentPrice;
+                    return divergence > 0.3;
+                });
+                if (divergentRows.length === 0) return null;
+                return (
+                    <div className="mx-5 mt-3 flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+                        <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                        <div>
+                            <span className="font-medium">ADR lệch lớn: </span>
+                            {divergentRows.length} ngày có ADR (tham khảo) lệch {'>'} 30% so với giá anchor.
+                            Kiểm tra giá đã duyệt hoặc cập nhật Base Rate trong Settings.
+                        </div>
+                    </div>
+                );
+            })()}
             {/* Header with Filters */}
             <div className="px-5 py-4 border-b border-slate-100">
                 <div className="flex items-center justify-between flex-wrap gap-4">
@@ -219,8 +239,8 @@ export function RecommendationTable({
                             <th className="px-3 py-3 font-semibold text-slate-500 text-xs uppercase tracking-wider text-right">
                                 D.Báo
                             </th>
-                            <th className="px-3 py-3 font-semibold text-slate-500 text-xs uppercase tracking-wider text-right">
-                                Hiện tại
+                            <th className="px-3 py-3 font-semibold text-slate-500 text-xs uppercase tracking-wider text-right" title="Anchor = giá đã duyệt hoặc rack rate (base × season)">
+                                Anchor
                             </th>
                             <th className="px-3 py-3 font-semibold text-slate-500 text-xs uppercase tracking-wider text-right">
                                 Đề xuất
@@ -278,8 +298,13 @@ export function RecommendationTable({
                                         <td className="px-3 py-3 text-gray-900 text-right tabular-nums">
                                             {row.forecast}
                                         </td>
-                                        <td className="px-3 py-3 text-gray-500 text-right font-[family-name:var(--font-mono)] tabular-nums">
-                                            {formatCurrency(row.currentPrice)}
+                                        <td className="px-3 py-3 text-right font-[family-name:var(--font-mono)] tabular-nums">
+                                            <div className="text-gray-700">{formatCurrency(row.currentPrice)}</div>
+                                            {row.adr != null && row.adr > 0 && row.adr !== row.currentPrice && (
+                                                <div className="text-[10px] text-gray-400" title="ADR = Revenue / Rooms (tham khảo)">
+                                                    ADR {formatCurrency(row.adr)}
+                                                </div>
+                                            )}
                                         </td>
                                         <td className="px-3 py-3 text-right font-[family-name:var(--font-mono)] tabular-nums">
                                             {row.isStopSell ? (

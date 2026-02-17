@@ -345,13 +345,14 @@ export default async function DashboardPage({
             (f) => f.stay_date.toISOString() === otb.stay_date.toISOString()
         );
         const remaining = hotelCapacity - otb.rooms_otb;
-        const adr = otb.rooms_otb > 0 ? Number(otb.revenue_otb) / otb.rooms_otb : 0;
+        const adr = otb.rooms_otb > 0 ? Math.round(Number(otb.revenue_otb) / otb.rooms_otb) : 0;
         const forecastDemand = fcst?.remaining_demand || 0;
-        const currentPrice = Math.round(adr);
 
         // Try pipeline data first (same source as Quick Mode)
         const pipelineRec = priceRecMap.get(otb.stay_date.toISOString());
 
+        // currentPrice = pipeline anchor (Option E), NOT ADR
+        let currentPrice: number;
         let recPrice: number;
         let isStopSell: boolean;
         let action: 'INCREASE' | 'KEEP' | 'DECREASE' | 'STOP_SELL' | null = null;
@@ -362,6 +363,7 @@ export default async function DashboardPage({
         if (pipelineRec) {
             // ✅ Use pipeline data (same as Quick Mode)
             source = 'PIPELINE';
+            currentPrice = Number(pipelineRec.current_price || 0); // anchor from engine
             recPrice = Number(pipelineRec.recommended_price || currentPrice);
             isStopSell = remaining <= 0 || pipelineRec.recommended_price === null;
             const rawAction = pipelineRec.action as string | null;
@@ -379,6 +381,7 @@ export default async function DashboardPage({
         } else {
             // ⚠️ Fallback: compute from PricingLogic (only when pipeline hasn't run)
             source = 'FALLBACK';
+            currentPrice = adr || 0; // fallback uses ADR since no pipeline anchor available
             const pricingResult = PricingLogic.optimize(currentPrice, forecastDemand, remaining);
             isStopSell = remaining <= 0 || pricingResult.recommendedPrice === null;
             recPrice = pricingResult.recommendedPrice || currentPrice;
@@ -405,7 +408,8 @@ export default async function DashboardPage({
             roomsOtb: otb.rooms_otb,
             remaining,
             forecast: forecastDemand,
-            currentPrice,
+            currentPrice,       // anchor (Option E: last_accepted or rack_rate)
+            adr,                // ADR for reference display
             recommendedPrice: recPrice,
             isStopSell,
             action,
