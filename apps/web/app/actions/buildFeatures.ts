@@ -112,6 +112,12 @@ async function buildForSingleAsOf(
   const cancelStats = await loadCancelStats(hotelId);
   const seasons = await loadSeasons(hotelId);
 
+  console.log(
+    `[BuildFeatures] Cancel pipeline for ${asOfStr}:\n` +
+    `  Cancel stats buckets: ${cancelStats.length} (${cancelStats.length === 0 ? '⚠️ EMPTY → expected_cxl will be NULL' : '✅ OK'})\n` +
+    `  Seasons: ${seasons.length}`
+  );
+
   // ── 1. Pickup v2: LATERAL nearest-neighbor + deltaDays scale (NULL-safe) ──
   // BA rules: exact-first ORDER BY, ::numeric cast, NULLIF(delta,0), no future leakage
   const pickupRows = await prisma.$queryRaw<Array<{

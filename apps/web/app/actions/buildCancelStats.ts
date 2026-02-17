@@ -114,12 +114,44 @@ export async function buildCancelStats(
               AND r.book_time <= ${windowEnd}
         `);
 
+        // ── Diagnostic logging ──
+        console.log(
+            `[CancelStats] 📊 Query results for hotel ${hotelId}:\n` +
+            `  Window: ${windowStart.toISOString().slice(0, 10)} → ${windowEnd.toISOString().slice(0, 10)} (${LOOKBACK_DAYS} days)\n` +
+            `  Exploded rows found: ${explodedRows.length}\n` +
+            `  Seasons configured: ${seasons.length}`
+        );
+
         if (explodedRows.length === 0) {
+            // Additional diagnostics: check if book_time is NULL in data
+            const bookTimeCheck = await prisma.$queryRaw<Array<{
+                total: bigint;
+                with_book_time: bigint;
+                min_book_time: Date | null;
+                max_book_time: Date | null;
+            }>>(Prisma.sql`
+                SELECT
+                    COUNT(*)::bigint AS total,
+                    COUNT(book_time)::bigint AS with_book_time,
+                    MIN(book_time) AS min_book_time,
+                    MAX(book_time) AS max_book_time
+                FROM reservations_raw
+                WHERE hotel_id = ${hotelId}::uuid
+            `);
+            const check = bookTimeCheck[0];
+            console.warn(
+                `[CancelStats] ⚠️ No exploded rows! Diagnostics:\n` +
+                `  Total reservations: ${check?.total}\n` +
+                `  With book_time: ${check?.with_book_time}\n` +
+                `  book_time range: ${check?.min_book_time?.toISOString().slice(0, 10) || 'NULL'} → ${check?.max_book_time?.toISOString().slice(0, 10) || 'NULL'}\n` +
+                `  Lookback window: ${windowStart.toISOString().slice(0, 10)} → ${windowEnd.toISOString().slice(0, 10)}\n` +
+                `  → Possible cause: book_time is NULL or outside the ${LOOKBACK_DAYS}-day window`
+            );
             return {
                 success: true,
                 bucketsCreated: 0,
                 dataRowCount: 0,
-                error: 'No reservation data with book_time found',
+                error: `No reservation data with book_time found. Total reservations: ${check?.total}, with book_time: ${check?.with_book_time}, range: ${check?.min_book_time?.toISOString().slice(0, 10) || 'NULL'} → ${check?.max_book_time?.toISOString().slice(0, 10) || 'NULL'}`,
             };
         }
 
@@ -167,6 +199,16 @@ export async function buildCancelStats(
         const unknownPct = explodedRows.length > 0
             ? (unknownCount / explodedRows.length) * 100
             : 0;
+
+        // Cancellation breakdown
+        const cancelledCount = explodedRows.filter(r => r.cancel_time != null).length;
+        console.log(
+            `[CancelStats] 📊 Bucket analysis:\n` +
+            `  Total exploded rows: ${explodedRows.length}\n` +
+            `  Cancelled rows: ${cancelledCount} (${(cancelledCount / explodedRows.length * 100).toFixed(1)}%)\n` +
+            `  UNKNOWN segment: ${unknownPct.toFixed(1)}%\n` +
+            `  Unique buckets: ${bucketMap.size}`
+        );
 
         if (unknownPct > 20) {
             console.warn(`[CancelStats] ⚠️ UNKNOWN segment = ${unknownPct.toFixed(1)}% (>${20}% threshold). Check inferSegment() mapping.`);
