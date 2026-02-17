@@ -307,7 +307,39 @@ export default async function DashboardPage({
         };
     });
 
-    // Build table data directly from OTB with Pricing Engine
+    // ── Fetch price_recommendations (single source of truth for BOTH modes) ──
+    const actualAsOf = otbData[0]?.as_of_date || today;
+    const [priceRecs, existingDecisions] = await Promise.all([
+        prisma.priceRecommendations.findMany({
+            where: { hotel_id: hotelId, as_of_date: actualAsOf },
+            orderBy: { stay_date: 'asc' },
+            select: {
+                stay_date: true,
+                current_price: true,
+                recommended_price: true,
+                action: true,
+                delta_pct: true,
+                reason_code: true,
+                reason_text_vi: true,
+                uplift_pct: true,
+                explanation: true,
+            },
+        }),
+        prisma.pricingDecision.findMany({
+            where: { hotel_id: hotelId, as_of_date: actualAsOf },
+            select: { stay_date: true, decision_id: true, action: true },
+        }),
+    ]);
+
+    // Build lookup maps
+    const priceRecMap = new Map(
+        priceRecs.map(r => [r.stay_date.toISOString(), r])
+    );
+    const decisionMap = new Map(
+        existingDecisions.map(d => [d.stay_date.toISOString(), d])
+    );
+
+    // ── Build table data: prefer pipeline data, fallback to PricingLogic ──
     const tableData = otbData.map((otb) => {
         const fcst = forecastData.find(
             (f) => f.stay_date.toISOString() === otb.stay_date.toISOString()
@@ -317,47 +349,50 @@ export default async function DashboardPage({
         const forecastDemand = fcst?.remaining_demand || 0;
         const currentPrice = Math.round(adr);
 
-        // Use Pricing Engine to calculate recommended price
-        const pricingResult = PricingLogic.optimize(
-            currentPrice,
-            forecastDemand,
-            remaining
-        );
+        // Try pipeline data first (same source as Quick Mode)
+        const pipelineRec = priceRecMap.get(otb.stay_date.toISOString());
 
-        const isStopSell = remaining <= 0 || pricingResult.recommendedPrice === null;
-        const recPrice = pricingResult.recommendedPrice || currentPrice;
-
-        // ── Compute action / delta / reason (same logic as runPricingEngine) ──
+        let recPrice: number;
+        let isStopSell: boolean;
         let action: 'INCREASE' | 'KEEP' | 'DECREASE' | 'STOP_SELL' | null = null;
         let deltaPct: number | null = null;
         let reasonTextVi: string | null = null;
 
-        if (isStopSell) {
-            action = 'STOP_SELL';
-            deltaPct = 0;
-            reasonTextVi = 'Hết phòng — ngừng bán';
-        } else if (!currentPrice || currentPrice <= 0) {
-            action = 'KEEP';
-            deltaPct = null;
-            reasonTextVi = 'Thiếu giá hiện tại — không đề xuất thay đổi';
-        } else {
-            const rawDelta = ((recPrice - currentPrice) / currentPrice) * 100;
-            deltaPct = Math.round(rawDelta * 100) / 100;
-            const occ = hotelCapacity > 0 ? (otb.rooms_otb / hotelCapacity) * 100 : 0;
+        if (pipelineRec) {
+            // ✅ Use pipeline data (same as Quick Mode)
+            recPrice = Number(pipelineRec.recommended_price || currentPrice);
+            isStopSell = remaining <= 0 || pipelineRec.recommended_price === null;
+            const rawAction = (pipelineRec as any).action as string | null;
+            action = (['INCREASE', 'KEEP', 'DECREASE', 'STOP_SELL'].includes(rawAction || '')
+                ? rawAction as 'INCREASE' | 'KEEP' | 'DECREASE' | 'STOP_SELL'
+                : 'KEEP');
+            deltaPct = (pipelineRec as any).delta_pct != null ? Number((pipelineRec as any).delta_pct) : null;
+            reasonTextVi = (pipelineRec as any).reason_text_vi || null;
 
-            if (Math.abs(rawDelta) < 1.0) {
+            // Override action to STOP_SELL if no remaining supply
+            if (isStopSell && action !== 'STOP_SELL') {
+                action = 'STOP_SELL';
+                reasonTextVi = 'Hết phòng — ngừng bán';
+            }
+        } else {
+            // Fallback: compute from PricingLogic (only when pipeline hasn't run)
+            const pricingResult = PricingLogic.optimize(currentPrice, forecastDemand, remaining);
+            isStopSell = remaining <= 0 || pricingResult.recommendedPrice === null;
+            recPrice = pricingResult.recommendedPrice || currentPrice;
+
+            if (isStopSell) {
+                action = 'STOP_SELL';
+                deltaPct = 0;
+                reasonTextVi = 'Hết phòng — ngừng bán';
+            } else if (!currentPrice || currentPrice <= 0) {
                 action = 'KEEP';
-                reasonTextVi = 'Bán đúng nhịp, giữ giá';
-            } else if (rawDelta > 0) {
-                action = 'INCREASE';
-                if (occ >= 80) reasonTextVi = `OCC ${Math.round(occ)}% cao — tăng giá tối ưu doanh thu`;
-                else if (forecastDemand > remaining) reasonTextVi = `Nhu cầu (${forecastDemand}) > Còn (${remaining}) — tăng giá`;
-                else reasonTextVi = `Tối ưu doanh thu — đề xuất tăng ${deltaPct.toFixed(1)}%`;
+                reasonTextVi = 'Thiếu giá hiện tại';
             } else {
-                action = 'DECREASE';
-                if (occ < 40) reasonTextVi = `OCC ${Math.round(occ)}% thấp — giảm giá kích cầu`;
-                else if (forecastDemand < remaining * 0.3) reasonTextVi = `Nhu cầu thấp (${forecastDemand}) — giảm giá`;
-                else reasonTextVi = `Điều chỉnh cạnh tranh — đề xuất giảm ${Math.abs(deltaPct).toFixed(1)}%`;
+                const rawDelta = ((recPrice - currentPrice) / currentPrice) * 100;
+                deltaPct = Math.round(rawDelta * 100) / 100;
+                if (Math.abs(rawDelta) < 1.0) { action = 'KEEP'; reasonTextVi = 'Giữ giá'; }
+                else if (rawDelta > 0) { action = 'INCREASE'; reasonTextVi = `Đề xuất tăng ${deltaPct.toFixed(1)}%`; }
+                else { action = 'DECREASE'; reasonTextVi = `Đề xuất giảm ${Math.abs(deltaPct).toFixed(1)}%`; }
             }
         }
 
@@ -376,36 +411,9 @@ export default async function DashboardPage({
         };
     });
 
-    // ── Quick Mode: fetch PriceRecommendations + existing decisions ──
+    // ── Quick Mode data: enriched from same price_recommendations ──
     let quickModeData: any[] = [];
     if (isQuickMode) {
-        const actualAsOf = otbData[0]?.as_of_date || today;
-        const [priceRecs, existingDecisions] = await Promise.all([
-            prisma.priceRecommendations.findMany({
-                where: { hotel_id: hotelId, as_of_date: actualAsOf },
-                orderBy: { stay_date: 'asc' },
-                select: {
-                    stay_date: true,
-                    current_price: true,
-                    recommended_price: true,
-                    action: true,
-                    delta_pct: true,
-                    reason_code: true,
-                    reason_text_vi: true,
-                    uplift_pct: true,
-                    explanation: true,
-                },
-            }),
-            prisma.pricingDecision.findMany({
-                where: { hotel_id: hotelId, as_of_date: actualAsOf },
-                select: { stay_date: true, decision_id: true, action: true },
-            }),
-        ]);
-
-        const decisionMap = new Map(
-            existingDecisions.map(d => [d.stay_date.toISOString(), d])
-        );
-
         quickModeData = priceRecs.map(rec => {
             const decision = decisionMap.get(rec.stay_date.toISOString());
             let explanation: any = {};

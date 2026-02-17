@@ -2,13 +2,13 @@
   "meta": {
     "schema_version": "2.0.0",
     "awf_version": "4.1.2",
-    "last_updated": "2026-02-17T20:04:00+07:00"
+    "last_updated": "2026-02-17T21:16:00+07:00"
   },
   "project": {
     "name": "revenue-management-system",
     "type": "SaaS Web App",
     "status": "Production - Deployed to Vercel (icn1 region)",
-    "description": "RMS Version 02.1 - Revenue Management System with Room Band Pricing + Organization-based Multi-Hotel + OTB Time-Travel + OTA Pricing + Dynamic Pricing by OCC + Unified Pricing Logic + InsightsPanel V2 + Payment Gateway (SePay/PayPal/Zalo) + Analytics Layer (Cancel Forecast, Demand Model, Price Optimizer) + GM Dashboard V2 (Top Accounts, Room/LOS Mix, Lead-time Buckets). Full-stack TypeScript.",
+    "description": "RMS Version 02.1 - Revenue Management System with Room Band Pricing + Organization-based Multi-Hotel + OTB Time-Travel + OTA Pricing + Dynamic Pricing by OCC + Unified Pricing Logic + InsightsPanel V2 + Payment Gateway (SePay/PayPal/Zalo) + Analytics Layer (Cancel Forecast, Demand Model, Price Optimizer) + GM Dashboard V2 (Top Accounts, Room/LOS Mix, Lead-time Buckets) + Pricing Unification (Quick Mode + Detailed Mode with reason column). Full-stack TypeScript.",
     "github": "https://github.com/4tkhospitality/revenue-managment-system",
     "landing_page": {
       "path": "apps/landing",
@@ -801,7 +801,12 @@
     "V02.1: Cancel Stats Lookback 730d — buildCancelStats expanded from 365→730 days training window for historical data coverage",
     "V02.1: Cancel Stats Diagnostic Logging — buildCancelStats + buildFeatures log query window, row counts, book_time coverage for debugging",
     "V02.1: Unknown Accounts → Direct/Walk-in — top-accounts API renames null account_name_norm to 'Direct / Walk-in' instead of 'Unknown'",
-    "V02.1: PDF Smart Page-Break — exportToPdf.ts uses findSmartCutPoint() to scan bottom 15% for whitespace rows instead of cutting through text. JPEG 80% + scale 1.5x for lighter files"
+    "V02.1: PDF Smart Page-Break — exportToPdf.ts uses findSmartCutPoint() to scan bottom 15% for whitespace rows instead of cutting through text. JPEG 80% + scale 1.5x for lighter files",
+    "V02.1: Pricing Unification — Merged 'Giá đề xuất' and 'Daily Actions' into single tab with Quick Mode + Detailed Mode toggle. PriceRecommendations as single source of truth",
+    "V02.1: QuickModePanel UUPM Redesign — White surface cards, slate text hierarchy, navy #1E3A8A CTA buttons, semantic badges (emerald Tăng, amber Giảm, rose Ngừng bán, slate Giữ), left-accent summary cards, sticky header, legend footer",
+    "V02.1: QuickModePricingWrapper Mode Guide — Collapsible 4-point explainer per mode (Dùng khi nào, Hiển thị gì, Quyết định, Source). Navy tab toggle. Source of Truth section explains both modes read from Pricing Engine",
+    "V02.1: RecommendationTable Reason Column — Added 'Hành động' badge column + 'Lý do' column to Detailed Mode. OCC-based Vietnamese explanations (e.g. 'OCC 85% cao — tăng giá tối ưu doanh thu')",
+    "V02.1: Detailed Mode Action/Reason Computation — dashboard/page.tsx computes action/deltaPct/reasonTextVi from PricingLogic output + supply/demand context. Same deadband (|delta| < 1% = KEEP) as pipeline"
   ],
   "cancellation_bridge_v011": {
     "status": "Implemented",
@@ -931,7 +936,9 @@
     "V02.1: Trip.com Campaign badge override — isTripCampaign check added to both card view (PromotionGroup) and table view badge logic in PromotionsTab.tsx",
     "V02.1: Self-healing catalog pattern — getCatalogItem(promoId).groupType takes priority over DB group_type in service.ts (3 builders) and PromotionsTab.tsx (2 views). No DB migration required. If catalog has correct groupType, engine and UI auto-correct even if DB is stale",
     "V02.1: Trip.com seed-pricing had group_type SEASONAL (should be CAMPAIGN) + allow_stack true (should be false) — root cause of 95% stacking bug. Engine checked d.group==='CAMPAIGN' but DB returned 'SEASONAL' so exclusive logic never fired",
-    "V02.1: Trip.com missing from static catalog.ts — getCatalogItem() returned undefined → stackBehavior undefined → engine couldn't determine stacking rules. Fixed by adding CTRIP_PROMOTIONS array"
+    "V02.1: Trip.com missing from static catalog.ts — getCatalogItem() returned undefined → stackBehavior undefined → engine couldn't determine stacking rules. Fixed by adding CTRIP_PROMOTIONS array",
+    "V02.1: Pricing Unification architecture — 1 Engine (PricingLogic / price_recommendations), 2 Display Modes (Quick: action+reason, Detailed: OTB+forecast+prices+reason). Both read same data, different depth",
+    "V02.1: UUPM SaaS Pro Light applied to all pricing components — QuickModePanel, QuickModePricingWrapper, RecommendationTable. Consistent navy CTA, slate text, semantic badges"
   ],
   "ui_design": {
     "theme": "SaaS Pro Light",

@@ -1,26 +1,19 @@
 {
-  "updated_at": "2026-02-17T20:04:00+07:00",
+  "updated_at": "2026-02-17T21:16:00+07:00",
   "working_on": {
-    "feature": "Debug Pricing & Cancellation Issues",
-    "task": "Fixed 3 cancellation/forecast bugs + PDF export optimization",
+    "feature": "Pricing Unification + UUPM Redesign",
+    "task": "Added reason column to Detailed Mode, committed and pushed",
     "status": "completed",
     "files": [
-      "apps/web/app/data/page.tsx",
-      "apps/web/app/api/analytics/features/route.ts",
-      "apps/web/app/api/analytics/top-accounts/route.ts",
-      "apps/web/app/actions/buildCancelStats.ts",
-      "apps/web/app/actions/buildFeatures.ts",
-      "apps/web/lib/pdf/exportToPdf.ts"
+      "apps/web/components/dashboard/QuickModePanel.tsx",
+      "apps/web/components/dashboard/QuickModePricingWrapper.tsx",
+      "apps/web/components/dashboard/RecommendationTable.tsx",
+      "apps/web/app/dashboard/page.tsx"
     ],
     "blockers": [],
-    "notes": "4 commits pushed: c3a1bdc, 7d8f0de, 93613cd, c128358. Cancel stats build confirmed working (489 buckets, 6979 rows). Pricing unification brief created but not yet coded."
+    "notes": "3 commits today: (1) f6d5e2b UUPM light theme redesign, (2) 0e5ca60 action badge + reason column in Detailed Mode. Both pushed to main."
   },
   "pending_tasks": [
-    {
-      "task": "Pricing Unification — Merge 'Giá đề xuất' and 'Daily Actions' views",
-      "priority": "high",
-      "notes": "Brief created at brief_pricing_unification.md. Uses PriceRecommendations as single source of truth. Architecture: 1 Engine – 2 Display Modes."
-    },
     {
       "task": "Account Mapping Admin Page",
       "priority": "medium",
@@ -40,42 +33,50 @@
       "task": "Add payment env vars to Vercel Dashboard (production)",
       "priority": "critical",
       "notes": "SEPAY_API_KEY, SEPAY_WEBHOOK_SECRET, SEPAY_BANK_ACCOUNT, SEPAY_BANK_NAME — then redeploy"
+    },
+    {
+      "task": "Manual Verification — Pricing Unification ACs",
+      "priority": "high",
+      "notes": "Run AC-1 to AC-9 on live app: STOP_SELL badge, delta rounding, deep-link preservation, mode toggle, Accept All logic."
     }
   ],
   "recent_changes": [
+    {
+      "timestamp": "2026-02-17T21:14:00+07:00",
+      "type": "feature",
+      "description": "Added 'Hành động' badge + 'Lý do' column to RecommendationTable (Detailed Mode). Computes action/deltaPct/reasonTextVi from PricingLogic + OCC context in dashboard/page.tsx. Commit 0e5ca60.",
+      "files": [
+        "apps/web/components/dashboard/RecommendationTable.tsx",
+        "apps/web/app/dashboard/page.tsx"
+      ]
+    },
+    {
+      "timestamp": "2026-02-17T21:05:00+07:00",
+      "type": "feature",
+      "description": "UUPM light theme redesign of QuickModePanel + QuickModePricingWrapper. Navy CTA, semantic badges, collapsible mode guide for GM, Source of Truth section. Commit f6d5e2b.",
+      "files": [
+        "apps/web/components/dashboard/QuickModePanel.tsx",
+        "apps/web/components/dashboard/QuickModePricingWrapper.tsx"
+      ]
+    },
+    {
+      "timestamp": "2026-02-17T20:30:00+07:00",
+      "type": "feature",
+      "description": "Pricing Unification: schema migration (action, delta_pct, reason_code, reason_text_vi on price_recommendations), pipeline update, UI Quick Mode + navigation merge. AC-6 idempotency test passed.",
+      "files": [
+        "prisma/schema.prisma",
+        "apps/web/lib/pricing/engine/runPricingEngine.ts",
+        "apps/web/components/dashboard/QuickModePanel.tsx",
+        "apps/web/components/dashboard/QuickModePricingWrapper.tsx",
+        "apps/web/app/dashboard/page.tsx"
+      ]
+    },
     {
       "timestamp": "2026-02-17T19:34:00+07:00",
       "type": "improvement",
       "description": "PDF export: JPEG 80% + scale 1.5x (lighter files), smart page-break scans for whitespace rows to avoid cutting text. Commit c128358.",
       "files": [
         "apps/web/lib/pdf/exportToPdf.ts"
-      ]
-    },
-    {
-      "timestamp": "2026-02-17T19:29:00+07:00",
-      "type": "bugfix",
-      "description": "Cancel forecast chart was empty because /api/analytics/features omitted expected_cxl, net_remaining, cxl_confidence, cxl_rate_used from response. Data existed in DB (489 buckets) but never reached frontend. Commit 93613cd.",
-      "files": [
-        "apps/web/app/api/analytics/features/route.ts"
-      ]
-    },
-    {
-      "timestamp": "2026-02-17T19:21:00+07:00",
-      "type": "bugfix",
-      "description": "Added diagnostic logging to cancel pipeline (buildCancelStats + buildFeatures). Logs query window, row counts, book_time coverage, segment distribution. Commit 7d8f0de.",
-      "files": [
-        "apps/web/app/actions/buildCancelStats.ts",
-        "apps/web/app/actions/buildFeatures.ts"
-      ]
-    },
-    {
-      "timestamp": "2026-02-17T19:07:00+07:00",
-      "type": "bugfix",
-      "description": "3 fixes: (1) Cancel-by-date reads from reservationsRaw (unified for CSV/XLSX/XML) instead of cancellationRaw (XML-only). (2) buildCancelStats lookback 365→730 days. (3) Unknown accounts renamed to 'Direct / Walk-in'. Commit c3a1bdc.",
-      "files": [
-        "apps/web/app/data/page.tsx",
-        "apps/web/app/actions/buildCancelStats.ts",
-        "apps/web/app/api/analytics/top-accounts/route.ts"
       ]
     }
   ],
@@ -101,16 +102,24 @@
   ],
   "decisions_made": [
     {
+      "decision": "Pricing Unification: 1 Engine, 2 Display Modes (Quick + Detailed)",
+      "reason": "Quick Mode for daily 1-click review, Detailed Mode for in-depth OTB/forecast analysis. Both read from same price_recommendations table. Reduces confusion and maintenance."
+    },
+    {
+      "decision": "UUPM SaaS Pro Light theme applied to all pricing components",
+      "reason": "Consistency with rest of dashboard. Navy #1E3A8A CTA, semantic badges (emerald/amber/rose), white surface cards, slate text hierarchy per design-specs.md V01.7."
+    },
+    {
+      "decision": "Reason text computed from OCC + supply/demand context",
+      "reason": "GM needs to know WHY system recommends each price. Taxonomy: OCC% based (high OCC → increase, low OCC → decrease), demand vs supply comparison, deadband |delta| < 1% = KEEP."
+    },
+    {
       "decision": "reservationsRaw is the single source of truth for all cancellations",
       "reason": "CSV, XLSX, and XML booked data all go to reservationsRaw. cancellationRaw is only for separate XML cancel reports. For unified cancellation display, always query reservationsRaw WHERE status=cancelled OR cancel_time IS NOT NULL."
     },
     {
       "decision": "Cancel stats lookback window set to 730 days (2 years)",
       "reason": "365 days was too short for hotels with historical data spanning longer periods. 730 days ensures adequate training data for cancel rate statistics."
-    },
-    {
-      "decision": "Null account_name_norm displayed as 'Direct / Walk-in'",
-      "reason": "More descriptive than 'Unknown'. Bookings without company_name are typically direct/walk-in guests. Future: build admin page for explicit account mapping."
     },
     {
       "decision": "PDF uses JPEG 80% at scale 1.5x with smart page-break",
