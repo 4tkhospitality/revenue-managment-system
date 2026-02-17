@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json();
-        const { name, code, date_ranges, priority, is_active } = body;
+        const { name, code, date_ranges, priority, is_active, multiplier } = body;
 
         // Validate required fields
         if (!name || !code) {
@@ -98,6 +98,7 @@ export async function POST(request: NextRequest) {
                 name: name.trim(),
                 code: codeUpper,
                 date_ranges: date_ranges || [],
+                multiplier: multiplier ?? 1.0,
                 priority: priority ?? 0,
                 is_active: is_active ?? true,
             },

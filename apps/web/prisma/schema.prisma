@@ -1331,6 +1331,7 @@ model SeasonConfig {
   name        String   // "Normal Season", "High Season", "Holiday"
   code        String   // "NORMAL", "HIGH", "HOLIDAY"
   date_ranges Json     // [{"start":"2026-05-01","end":"2026-10-31"}]
+  multiplier  Float    @default(1.0) // Rack rate = base_rate × multiplier (per hotel)
   priority    Int      @default(0) // Holiday(3) > High(2) > Normal(1)
   is_active   Boolean  @default(true)
   created_at  DateTime @default(now())

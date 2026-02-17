@@ -9,6 +9,7 @@ interface Season {
     name: string;
     code: string;
     priority: number;
+    multiplier: number;
     is_active: boolean;
     date_ranges: Array<{ start: string; end: string }>;
 }
@@ -18,9 +19,9 @@ interface Props {
 }
 
 const SEASON_PRESETS = [
-    { code: 'NORMAL', name: 'Normal Season', priority: 1 },
-    { code: 'HIGH', name: 'High Season', priority: 2 },
-    { code: 'HOLIDAY', name: 'Holiday / Peak', priority: 3 },
+    { code: 'NORMAL', name: 'Normal Season', priority: 1, multiplier: 1.0 },
+    { code: 'HIGH', name: 'High Season', priority: 2, multiplier: 1.2 },
+    { code: 'HOLIDAY', name: 'Holiday / Peak', priority: 3, multiplier: 1.5 },
 ];
 
 export default function SeasonConfigPanel({ onSeasonsChange }: Props) {
@@ -55,6 +56,7 @@ export default function SeasonConfigPanel({ onSeasonsChange }: Props) {
                     name: preset.name,
                     code: preset.code,
                     priority: preset.priority,
+                    multiplier: preset.multiplier,
                     date_ranges: [],
                 }),
             });
@@ -78,6 +80,7 @@ export default function SeasonConfigPanel({ onSeasonsChange }: Props) {
                     name: season.name,
                     code: season.code,
                     priority: season.priority,
+                    multiplier: season.multiplier,
                     date_ranges: season.date_ranges,
                     is_active: season.is_active,
                 }),
@@ -200,12 +203,33 @@ export default function SeasonConfigPanel({ onSeasonsChange }: Props) {
                                 {isExpanded ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
                                 <span className="text-sm font-medium text-slate-700 flex-1">{season.name}</span>
                                 {priorityBadge(season.code)}
+                                <span className="text-xs font-mono text-slate-500">×{season.multiplier?.toFixed(1) ?? '1.0'}</span>
                                 <span className="text-xs text-slate-400">{season.date_ranges.length} khoảng</span>
                             </div>
 
                             {/* Expanded content */}
                             {isExpanded && (
                                 <div className="px-3 pb-3 space-y-3 border-t border-slate-100">
+                                    {/* Multiplier input */}
+                                    <div className="mt-2 flex items-center gap-2">
+                                        <span className="text-xs text-slate-500 font-medium">Hệ số nhân (rack = base × hệ số):</span>
+                                        <input
+                                            type="number"
+                                            step="0.1"
+                                            min="0.5"
+                                            max="3.0"
+                                            value={season.multiplier ?? 1.0}
+                                            onChange={(e) => {
+                                                const val = parseFloat(e.target.value);
+                                                if (!isNaN(val)) {
+                                                    setSeasons(prev => prev.map(s =>
+                                                        s.id === season.id ? { ...s, multiplier: val } : s
+                                                    ));
+                                                }
+                                            }}
+                                            className="w-20 px-2 py-1 text-sm font-mono border border-slate-300 rounded text-center"
+                                        />
+                                    </div>
                                     {/* Date ranges */}
                                     <div className="mt-2 space-y-1.5">
                                         <div className="flex items-center justify-between">

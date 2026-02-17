@@ -276,7 +276,7 @@ export async function runPricingEngine(hotelId: string, asOfDate: Date) {
 
 function getSeasonMultiplier(
     stayDate: Date,
-    seasonConfigs: Array<{ code: string; date_ranges: any; priority: number }>
+    seasonConfigs: Array<{ code: string; date_ranges: any; priority: number; multiplier?: number }>
 ): number {
     const mmdd = stayDate.toISOString().slice(5, 10); // "MM-DD"
 
@@ -286,11 +286,11 @@ function getSeasonMultiplier(
             const rStart = range.start.slice(5); // "MM-DD"
             const rEnd = range.end.slice(5);
             if (mmdd >= rStart && mmdd <= rEnd) {
-                // Map season code to multiplier
+                // Use DB multiplier if available, fallback to legacy hardcoded values
+                if (sc.multiplier != null && sc.multiplier > 0) return sc.multiplier;
                 const code = sc.code.toUpperCase();
                 if (code === 'HOLIDAY') return 1.5;
                 if (code === 'HIGH') return 1.2;
-                if (code === 'NORMAL') return 1.0;
                 return 1.0;
             }
         }

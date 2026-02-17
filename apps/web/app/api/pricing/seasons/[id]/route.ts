@@ -64,6 +64,7 @@ export async function PUT(
         }
         if (body.priority !== undefined) updateData.priority = body.priority;
         if (body.is_active !== undefined) updateData.is_active = body.is_active;
+        if (body.multiplier !== undefined) updateData.multiplier = body.multiplier;
 
         const updated = await prisma.seasonConfig.update({
             where: { id },
