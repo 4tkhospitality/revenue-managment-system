@@ -162,6 +162,9 @@ export async function GET(request: NextRequest) {
         pace_vs_ly: number | null; remaining_supply: number | null;
         stly_is_approx: boolean | null;
         dod_delta: number | null; dod_delta_rev: number | null;
+        // Cancel forecast fields
+        expected_cxl: number | null; net_remaining: number | null;
+        cxl_confidence: string | null; cxl_rate_used: number | null;
     }>;
 
     if (features.length > 0) {
@@ -188,6 +191,11 @@ export async function GET(request: NextRequest) {
                 stly_is_approx: f.stly_is_approx,
                 dod_delta: ydData ? (otbData?.rooms_otb ?? 0) - ydData.rooms_otb : null,
                 dod_delta_rev: ydData ? (otbData?.revenue_otb ?? 0) - ydData.revenue_otb : null,
+                // Cancel forecast
+                expected_cxl: f.expected_cxl,
+                net_remaining: f.net_remaining,
+                cxl_confidence: f.cxl_confidence,
+                cxl_rate_used: f.cxl_rate_used,
             };
         });
     } else {
@@ -215,6 +223,11 @@ export async function GET(request: NextRequest) {
                 stly_is_approx: null,
                 dod_delta: ydData ? o.rooms_otb - ydData.rooms_otb : null,
                 dod_delta_rev: ydData ? Number(o.revenue_otb) - ydData.revenue_otb : null,
+                // Cancel forecast: not available in OTB-only fallback
+                expected_cxl: null,
+                net_remaining: null,
+                cxl_confidence: null,
+                cxl_rate_used: null,
             };
         });
     }
