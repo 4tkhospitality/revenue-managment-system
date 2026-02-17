@@ -2,7 +2,7 @@
   "meta": {
     "schema_version": "2.0.0",
     "awf_version": "4.1.2",
-    "last_updated": "2026-02-17T12:34:00+07:00"
+    "last_updated": "2026-02-17T20:04:00+07:00"
   },
   "project": {
     "name": "revenue-management-system",
@@ -795,7 +795,13 @@
     "V02.1: Cancel-Aware Occupancy — dailyAction.ts uses net_remaining from FeaturesDaily for occupancy instead of raw capacity - roomsSold",
     "V02.1: Vercel Cron — /api/cron/check-subscription at 19:00 UTC (02:00 VN). Checks expired subs, syncs PayPal, 3-day grace for SePay, auto-expires PENDING txns",
     "V02.1: CancelForecastChart component — Visualizes predicted vs actual cancel rates on Analytics tab",
-    "V02.1: FullPipelineButton — One-click trigger for complete analytics pipeline from Analytics tab"
+    "V02.1: FullPipelineButton — One-click trigger for complete analytics pipeline from Analytics tab",
+    "V02.1: Unified Cancel-by-Date — Data page reads cancellations from reservationsRaw (CSV/XLSX/XML) instead of cancellationRaw (XML-only). Computes nights from arrival/departure dates",
+    "V02.1: Cancel Forecast API Fix — /api/analytics/features now returns expected_cxl, net_remaining, cxl_confidence, cxl_rate_used to frontend. Previously omitted from response mapping",
+    "V02.1: Cancel Stats Lookback 730d — buildCancelStats expanded from 365→730 days training window for historical data coverage",
+    "V02.1: Cancel Stats Diagnostic Logging — buildCancelStats + buildFeatures log query window, row counts, book_time coverage for debugging",
+    "V02.1: Unknown Accounts → Direct/Walk-in — top-accounts API renames null account_name_norm to 'Direct / Walk-in' instead of 'Unknown'",
+    "V02.1: PDF Smart Page-Break — exportToPdf.ts uses findSmartCutPoint() to scan bottom 15% for whitespace rows instead of cutting through text. JPEG 80% + scale 1.5x for lighter files"
   ],
   "cancellation_bridge_v011": {
     "status": "Implemented",

@@ -46,7 +46,6 @@ const navGroups = [
         label: 'Định giá',
         items: [
             { href: '/pricing', label: 'Tính giá OTA', icon: DollarSign, minRole: 'viewer' },
-            { href: '/daily', label: 'Daily Actions', icon: CalendarCheck, minRole: 'viewer', requiredTier: 'SUPERIOR' as const },
             { href: '/rate-shopper', label: 'So sánh giá', icon: BarChart3, minRole: 'viewer', requiredTier: 'SUITE' as const },
         ],
     },

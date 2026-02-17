@@ -4,6 +4,7 @@ import { KpiCards } from '@/components/dashboard/KpiCards';
 import { OtbChart } from '@/components/dashboard/OtbChart';
 import { AnalyticsPanel } from '@/components/dashboard';
 import { RecommendationTable } from '@/components/dashboard/RecommendationTable';
+import { QuickModePricingWrapper } from '@/components/dashboard/QuickModePricingWrapper';
 import { DateUtils } from '@/lib/date';
 import { PricingLogic } from '@/lib/pricing';
 import { PageHeader } from '@/components/shared/PageHeader';
@@ -169,7 +170,7 @@ async function fetchDashboardData(hotelId: string, today: Date) {
 export default async function DashboardPage({
     searchParams
 }: {
-    searchParams: Promise<{ as_of_date?: string; tab?: string }>
+    searchParams: Promise<{ as_of_date?: string; tab?: string; mode?: string }>
 }) {
     const pageStart = Date.now();
     const params = await searchParams;
@@ -182,6 +183,8 @@ export default async function DashboardPage({
         today = new Date();
     }
     today.setHours(0, 0, 0, 0);
+
+    const isQuickMode = params.mode === 'quick';
 
     // Get active hotel from cookie/session (deterministic, no auto-detect)
     const hotelId = await getActiveHotelId();
@@ -332,6 +335,56 @@ export default async function DashboardPage({
         };
     });
 
+    // ── Quick Mode: fetch PriceRecommendations + existing decisions ──
+    let quickModeData: any[] = [];
+    if (isQuickMode) {
+        const actualAsOf = otbData[0]?.as_of_date || today;
+        const [priceRecs, existingDecisions] = await Promise.all([
+            prisma.priceRecommendations.findMany({
+                where: { hotel_id: hotelId, as_of_date: actualAsOf },
+                orderBy: { stay_date: 'asc' },
+                select: {
+                    stay_date: true,
+                    current_price: true,
+                    recommended_price: true,
+                    action: true,
+                    delta_pct: true,
+                    reason_code: true,
+                    reason_text_vi: true,
+                    uplift_pct: true,
+                    explanation: true,
+                },
+            }),
+            prisma.pricingDecision.findMany({
+                where: { hotel_id: hotelId, as_of_date: actualAsOf },
+                select: { stay_date: true, decision_id: true, action: true },
+            }),
+        ]);
+
+        const decisionMap = new Map(
+            existingDecisions.map(d => [d.stay_date.toISOString(), d])
+        );
+
+        quickModeData = priceRecs.map(rec => {
+            const decision = decisionMap.get(rec.stay_date.toISOString());
+            let explanation: any = {};
+            try { explanation = rec.explanation ? JSON.parse(rec.explanation) : {}; } catch { }
+
+            return {
+                stayDate: rec.stay_date.toISOString(),
+                action: rec.action,
+                currentPrice: Number(rec.current_price || 0),
+                recommendedPrice: Number(rec.recommended_price || 0),
+                deltaPct: rec.delta_pct != null ? Number(rec.delta_pct) : null,
+                reasonTextVi: rec.reason_text_vi,
+                reasonCode: rec.reason_code,
+                projectedOcc: explanation.projectedOcc ?? null,
+                isAccepted: !!decision,
+                decisionId: decision?.decision_id ?? null,
+            };
+        });
+    }
+
     // Server Actions for Accept/Override decisions
     const handleAccept = async (id: string) => {
         'use server';
@@ -368,6 +421,61 @@ export default async function DashboardPage({
 
         // Override requires a reason
         await submitDecision(hotelId, stayDate, asOfDate, 'override', currentPrice, 'User rejected recommendation');
+    };
+
+    // Quick Mode: Accept one recommendation
+    const handleQuickAcceptOne = async (stayDateStr: string) => {
+        'use server';
+        const { submitDecision } = await import('@/app/actions/submitDecision');
+        const db = (await import('@/lib/prisma')).default;
+        const stayDate = new Date(stayDateStr);
+        const asOfDate = new Date();
+        asOfDate.setHours(0, 0, 0, 0);
+
+        const rec = await db.priceRecommendations.findFirst({
+            where: { hotel_id: hotelId, stay_date: stayDate },
+            orderBy: { as_of_date: 'desc' },
+        });
+        if (rec && rec.action !== 'STOP_SELL') {
+            await submitDecision(hotelId, stayDate, asOfDate, 'accept', Number(rec.recommended_price || 0));
+        }
+    };
+
+    // Quick Mode: Accept All (skip STOP_SELL — AC-9)
+    const handleQuickAcceptAll = async () => {
+        'use server';
+        const { submitDecision } = await import('@/app/actions/submitDecision');
+        const db = (await import('@/lib/prisma')).default;
+        const asOfDate = new Date();
+        asOfDate.setHours(0, 0, 0, 0);
+
+        const recs = await db.priceRecommendations.findMany({
+            where: {
+                hotel_id: hotelId,
+                action: { not: 'STOP_SELL' },  // AC-9: skip STOP_SELL
+            },
+            orderBy: { as_of_date: 'desc' },
+        });
+
+        // Filter only latest as_of_date per stay_date
+        const latestByStay = new Map<string, typeof recs[0]>();
+        for (const r of recs) {
+            const key = r.stay_date.toISOString();
+            if (!latestByStay.has(key)) latestByStay.set(key, r);
+        }
+
+        // Check existing decisions to avoid duplicates
+        const existingDecs = await db.pricingDecision.findMany({
+            where: { hotel_id: hotelId, as_of_date: asOfDate },
+            select: { stay_date: true },
+        });
+        const decidedDates = new Set(existingDecs.map(d => d.stay_date.toISOString()));
+
+        for (const rec of latestByStay.values()) {
+            if (!decidedDates.has(rec.stay_date.toISOString())) {
+                await submitDecision(hotelId, rec.stay_date, asOfDate, 'accept', Number(rec.recommended_price || 0));
+            }
+        }
     };
 
     // Get data timestamp for display
@@ -501,10 +609,18 @@ export default async function DashboardPage({
                         />
                     }
                     pricingContent={
-                        <RecommendationTable
-                            data={tableData}
-                            onAccept={handleAccept}
-                            onOverride={handleOverride}
+                        <QuickModePricingWrapper
+                            isQuickMode={isQuickMode}
+                            quickModeData={quickModeData}
+                            onAcceptAll={handleQuickAcceptAll}
+                            onAcceptOne={handleQuickAcceptOne}
+                            detailedContent={
+                                <RecommendationTable
+                                    data={tableData}
+                                    onAccept={handleAccept}
+                                    onOverride={handleOverride}
+                                />
+                            }
                         />
                     }
                 />

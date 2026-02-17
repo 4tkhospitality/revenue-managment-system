@@ -294,16 +294,21 @@ model DemandForecast {
 }
 
 model PriceRecommendations {
-  hotel_id          String   @db.Uuid
-  as_of_date        DateTime @db.Date
-  stay_date         DateTime @db.Date
-  current_price     Decimal? @db.Decimal
-  recommended_price Decimal? @db.Decimal
-  expected_revenue  Decimal? @db.Decimal
+  hotel_id          String                @db.Uuid
+  as_of_date        DateTime              @db.Date
+  stay_date         DateTime              @db.Date
+  current_price     Decimal?              @db.Decimal
+  recommended_price Decimal?              @db.Decimal
+  expected_revenue  Decimal?              @db.Decimal
   uplift_pct        Float?
   explanation       String?
-  created_at        DateTime @default(now())
-  hotel             Hotel    @relation(fields: [hotel_id], references: [hotel_id])
+  action            RecommendationAction?
+  delta_pct         Decimal?              @db.Decimal(5, 2)
+  reason_code       String?
+  reason_text_vi    String?
+  updated_at        DateTime              @default(now()) @updatedAt
+  created_at        DateTime              @default(now())
+  hotel             Hotel                 @relation(fields: [hotel_id], references: [hotel_id])
 
   @@id([hotel_id, as_of_date, stay_date])
   @@unique([hotel_id, stay_date, as_of_date], name: "unique_rec")
@@ -467,6 +472,13 @@ enum ReservationStatus {
 enum DecisionAction {
   accept
   override
+}
+
+enum RecommendationAction {
+  INCREASE
+  KEEP
+  DECREASE
+  STOP_SELL
 }
 
 enum ImportType {

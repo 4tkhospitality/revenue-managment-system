@@ -1,89 +1,120 @@
 {
-  "updated_at": "2026-02-17T12:34:00+07:00",
+  "updated_at": "2026-02-17T20:04:00+07:00",
   "working_on": {
-    "feature": "Dashboard V2 Panels + Analytics Pipeline Finalization",
-    "task": "Integrated 3 V2 panels into dashboard, updated dailyAction for cancel-aware occupancy, brainstormed Distribution & Conversion Clinic",
+    "feature": "Debug Pricing & Cancellation Issues",
+    "task": "Fixed 3 cancellation/forecast bugs + PDF export optimization",
     "status": "completed",
     "files": [
-      "apps/web/app/dashboard/page.tsx",
-      "apps/web/lib/engine/dailyAction.ts"
+      "apps/web/app/data/page.tsx",
+      "apps/web/app/api/analytics/features/route.ts",
+      "apps/web/app/api/analytics/top-accounts/route.ts",
+      "apps/web/app/actions/buildCancelStats.ts",
+      "apps/web/app/actions/buildFeatures.ts",
+      "apps/web/lib/pdf/exportToPdf.ts"
     ],
     "blockers": [],
-    "notes": "Commit bdd5d0e pushed. All 41 cancel forecast tests pass. Brainstorm analysis complete for next feature."
+    "notes": "4 commits pushed: c3a1bdc, 7d8f0de, 93613cd, c128358. Cancel stats build confirmed working (489 buckets, 6979 rows). Pricing unification brief created but not yet coded."
   },
   "pending_tasks": [
     {
+      "task": "Pricing Unification — Merge 'Giá đề xuất' and 'Daily Actions' views",
+      "priority": "high",
+      "notes": "Brief created at brief_pricing_unification.md. Uses PriceRecommendations as single source of truth. Architecture: 1 Engine – 2 Display Modes."
+    },
+    {
+      "task": "Account Mapping Admin Page",
+      "priority": "medium",
+      "notes": "Quick fix done (Unknown → Direct/Walk-in). Need full admin page to let users map company_name to accounts/segments. Brainstorm needed."
+    },
+    {
+      "task": "Distribution & Conversion Clinic — Channel Revenue & Risk (P0)",
+      "priority": "medium",
+      "notes": "Brainstorm complete. Data exists in reservations_raw + OTAChannel.commission. Needs: 1 API route (channel-performance) + 1 UI component."
+    },
+    {
       "task": "Switch PayPal from Sandbox to Live",
       "priority": "critical",
-      "notes": "Change 4 env vars on Vercel: PAYPAL_API_URL=https://api-m.paypal.com, PAYPAL_CLIENT_ID (Live), PAYPAL_SECRET (Live), PAYPAL_WEBHOOK_ID (Live webhook for production URL). Then redeploy."
+      "notes": "Change 4 env vars on Vercel: PAYPAL_API_URL=https://api-m.paypal.com, PAYPAL_CLIENT_ID (Live), PAYPAL_SECRET (Live), PAYPAL_WEBHOOK_ID (Live). Then redeploy."
     },
     {
       "task": "Add payment env vars to Vercel Dashboard (production)",
       "priority": "critical",
       "notes": "SEPAY_API_KEY, SEPAY_WEBHOOK_SECRET, SEPAY_BANK_ACCOUNT, SEPAY_BANK_NAME — then redeploy"
-    },
-    {
-      "task": "Distribution & Conversion Clinic — Channel Revenue & Risk (P0)",
-      "priority": "medium",
-      "notes": "Brainstorm complete. Data exists in reservations_raw + OTAChannel.commission. Needs: 1 API route (channel-performance) + 1 UI component. See brainstorm at .gemini/antigravity/brain/09d320e7-*/brainstorm_distribution_clinic.md"
-    },
-    {
-      "task": "Distribution & Conversion Clinic — Rate Calendar Grid UI (P0)",
-      "priority": "medium",
-      "notes": "Backend 85% done (PriceRecommendations + PricingDecision tables). Needs: Calendar heatmap UI + batch apply + publish workflow."
-    },
-    {
-      "task": "Distribution & Conversion Clinic — ota_funnel_daily table + CSV import (P1)",
-      "priority": "low",
-      "notes": "Completely new: Prisma schema + import API + validation. Enables funnel dashboard per OTA."
     }
   ],
   "recent_changes": [
     {
-      "timestamp": "2026-02-17T12:30:00+07:00",
-      "type": "feature",
-      "description": "Integrated 3 GM Dashboard V2 panels (TopAccountsTable, RoomLosMixPanel, LeadTimeBuckets) into dashboard Overview tab with Suspense wrapper. Updated dailyAction.ts to use net_remaining for cancel-aware occupancy calculation. Commit bdd5d0e.",
+      "timestamp": "2026-02-17T19:34:00+07:00",
+      "type": "improvement",
+      "description": "PDF export: JPEG 80% + scale 1.5x (lighter files), smart page-break scans for whitespace rows to avoid cutting text. Commit c128358.",
       "files": [
-        "apps/web/app/dashboard/page.tsx",
-        "apps/web/lib/engine/dailyAction.ts"
+        "apps/web/lib/pdf/exportToPdf.ts"
       ]
     },
     {
-      "timestamp": "2026-02-17T12:24:00+07:00",
-      "type": "analysis",
-      "description": "Brainstormed Distribution & Conversion Clinic BA Spec v0.1 against codebase. Result: ~55% already built, ~20% needs UI only, ~25% needs new dev. Key gaps: ota_funnel_daily table, channel-performance API, calendar grid UI.",
-      "files": []
+      "timestamp": "2026-02-17T19:29:00+07:00",
+      "type": "bugfix",
+      "description": "Cancel forecast chart was empty because /api/analytics/features omitted expected_cxl, net_remaining, cxl_confidence, cxl_rate_used from response. Data existed in DB (489 buckets) but never reached frontend. Commit 93613cd.",
+      "files": [
+        "apps/web/app/api/analytics/features/route.ts"
+      ]
     },
     {
-      "timestamp": "2026-02-16T23:34:00+07:00",
+      "timestamp": "2026-02-17T19:21:00+07:00",
       "type": "bugfix",
-      "description": "Fixed onboarding redirect loop (part 2): Set rms_active_hotel cookie in /api/onboarding/complete response + use window.location.href instead of router.push for hard redirect. Commit e19562a.",
+      "description": "Added diagnostic logging to cancel pipeline (buildCancelStats + buildFeatures). Logs query window, row counts, book_time coverage, segment distribution. Commit 7d8f0de.",
       "files": [
-        "apps/web/app/api/onboarding/complete/route.ts",
-        "apps/web/app/onboarding/page.tsx"
+        "apps/web/app/actions/buildCancelStats.ts",
+        "apps/web/app/actions/buildFeatures.ts"
+      ]
+    },
+    {
+      "timestamp": "2026-02-17T19:07:00+07:00",
+      "type": "bugfix",
+      "description": "3 fixes: (1) Cancel-by-date reads from reservationsRaw (unified for CSV/XLSX/XML) instead of cancellationRaw (XML-only). (2) buildCancelStats lookback 365→730 days. (3) Unknown accounts renamed to 'Direct / Walk-in'. Commit c3a1bdc.",
+      "files": [
+        "apps/web/app/data/page.tsx",
+        "apps/web/app/actions/buildCancelStats.ts",
+        "apps/web/app/api/analytics/top-accounts/route.ts"
       ]
     }
   ],
   "errors_encountered": [
     {
-      "error": "Onboarding → 'Vào Dashboard' redirects back to onboarding step 1 (stuck in loop)",
-      "solution": "Root cause: JWT session has stale hasPendingActivation=true and accessibleHotels=[]. Fix: 1) Set rms_active_hotel cookie in /api/onboarding/complete response 2) Use window.location.href instead of router.push for hard page reload with fresh cookies.",
+      "error": "'Cancellations theo Ngày hủy' shows no data when CSV/XLSX uploaded",
+      "solution": "Section read from cancellationRaw (XML-only table). Fixed to read from reservationsRaw which is the unified table for all upload formats (CSV/XLSX/XML).",
       "resolved": true,
-      "file": "apps/web/app/onboarding/page.tsx"
+      "file": "apps/web/app/data/page.tsx"
+    },
+    {
+      "error": "Cancel forecast chart ('Dự báo Hủy phòng') always empty",
+      "solution": "Two causes: (1) buildCancelStats lookback 365 days was too short for some data → expanded to 730. (2) /api/analytics/features route omitted expected_cxl fields from response mapping → added 4 cancel forecast fields.",
+      "resolved": true,
+      "file": "apps/web/app/api/analytics/features/route.ts"
+    },
+    {
+      "error": "PDF export cuts text at page boundaries, file too heavy",
+      "solution": "Replaced PNG scale 2x with JPEG 80% scale 1.5x (lighter). Added findSmartCutPoint() that scans bottom 15% of each page for whitespace rows to cut at.",
+      "resolved": true,
+      "file": "apps/web/lib/pdf/exportToPdf.ts"
     }
   ],
   "decisions_made": [
     {
-      "decision": "Use net_remaining (cancel-aware) for occupancy calculation in dailyAction.ts",
-      "reason": "FeaturesDaily already computes net_remaining = rooms_otb - expected_cxl via cancel forecast engine. Using this gives more accurate occupancy than raw capacity - roomsSold."
+      "decision": "reservationsRaw is the single source of truth for all cancellations",
+      "reason": "CSV, XLSX, and XML booked data all go to reservationsRaw. cancellationRaw is only for separate XML cancel reports. For unified cancellation display, always query reservationsRaw WHERE status=cancelled OR cancel_time IS NOT NULL."
     },
     {
-      "decision": "Wrap V2 dashboard panels in single Suspense boundary",
-      "reason": "All 3 panels share same data dependency pattern. Single Suspense with skeleton fallback keeps UI responsive."
+      "decision": "Cancel stats lookback window set to 730 days (2 years)",
+      "reason": "365 days was too short for hotels with historical data spanning longer periods. 730 days ensures adequate training data for cancel rate statistics."
     },
     {
-      "decision": "Distribution Clinic: prioritize Channel Revenue & Risk first (P0)",
-      "reason": "Data already exists in reservations_raw + OTAChannel. Lowest effort, highest ROI. ota_funnel_daily needs new table + user CSV exports from OTA extranets."
+      "decision": "Null account_name_norm displayed as 'Direct / Walk-in'",
+      "reason": "More descriptive than 'Unknown'. Bookings without company_name are typically direct/walk-in guests. Future: build admin page for explicit account mapping."
+    },
+    {
+      "decision": "PDF uses JPEG 80% at scale 1.5x with smart page-break",
+      "reason": "PNG at 2x was too heavy. JPEG 80% is visually equivalent but ~60% smaller. Smart cut point algorithm scans for bright (white) horizontal lines in the bottom 15% of each page to avoid cutting through text rows."
     }
   ]
 }

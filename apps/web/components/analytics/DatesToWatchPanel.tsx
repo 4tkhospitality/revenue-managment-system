@@ -40,7 +40,7 @@ export function DatesToWatchPanel({
                             return (
                                 <Link
                                     key={d.stay_date}
-                                    href={`/daily-actions?date=${d.stay_date}`}
+                                    href={`/dashboard?tab=pricing&mode=quick&asOf=${d.stay_date}`}
                                     className={`inline-flex items-center gap-1.5 px-2.5 py-1 
                                         rounded-full border text-xs font-medium whitespace-nowrap
                                         hover:shadow-sm transition-all cursor-pointer shrink-0
