@@ -19,12 +19,31 @@ type ReasonCode =
 const UPSERT_CHUNK_SIZE = 200; // L10
 
 export async function runPricingEngine(hotelId: string, asOfDate: Date) {
-    // 1. Load hotel config
+    // 1. Load hotel config (including pricing settings)
     const hotel = await prisma.hotel.findUnique({
         where: { hotel_id: hotelId },
-        select: { capacity: true, currency: true },
+        select: {
+            capacity: true,
+            currency: true,
+            default_base_rate: true,
+            min_rate: true,
+            max_rate: true,
+        },
     });
     const capacity = hotel?.capacity ?? 100;
+
+    // ── Base Rate: hotel.default_base_rate (Settings page) ──
+    const baseRate = hotel?.default_base_rate
+        ? Number(hotel.default_base_rate)
+        : 1000000; // 1M VND fallback if not configured
+
+    // ── Guardrails: hotel.min_rate / hotel.max_rate (Settings page) ──
+    const minRate = hotel?.min_rate
+        ? Number(hotel.min_rate)
+        : Math.round(baseRate * 0.7);
+    const maxRate = hotel?.max_rate
+        ? Number(hotel.max_rate)
+        : Math.round(baseRate * 2.0);
 
     // 2. Load season configs for season multiplier
     const seasonConfigs = await prisma.seasonConfig.findMany({
@@ -32,30 +51,14 @@ export async function runPricingEngine(hotelId: string, asOfDate: Date) {
         orderBy: { priority: 'desc' },
     });
 
-    // 3. Load guardrails from OCC tier config (or default)
+    // 3. Load OCC tier configs (still used by optimizer for zone interpolation)
     const tierConfigs = await prisma.occTierConfig.findMany({
         where: { hotel_id: hotelId },
         orderBy: { tier_index: 'asc' },
     });
 
-    // Compute base rate from season net rates or fallback
-    const seasonNetRate = await prisma.seasonNetRate.findFirst({
-        where: { hotel_id: hotelId },
-        orderBy: { net_rate: 'asc' },
-        select: { net_rate: true },
-    });
-    const baseRate = seasonNetRate ? Number(seasonNetRate.net_rate) : 1000000; // 1M VND default
-
-    // Compute guardrails from tier multipliers
-    const minRate = tierConfigs.length > 0
-        ? Math.round(baseRate * Math.min(...tierConfigs.map(t => t.adjustment_type === 'FIXED' ? (t.fixed_amount / Math.max(baseRate, 1)) : t.multiplier)))
-        : Math.round(baseRate * 0.7);
-    const maxRate = tierConfigs.length > 0
-        ? Math.round(baseRate * Math.max(...tierConfigs.map(t => t.multiplier)) * 1.3)
-        : Math.round(baseRate * 2.0);
-
-    // 4. Load features + forecasts for this as_of_date
-    const [features, forecasts] = await Promise.all([
+    // 4. Load features + forecasts + last accepted decisions
+    const [features, forecasts, lastDecisions] = await Promise.all([
         prisma.featuresDaily.findMany({
             where: { hotel_id: hotelId, as_of_date: asOfDate },
             orderBy: { stay_date: 'asc' },
@@ -63,12 +66,36 @@ export async function runPricingEngine(hotelId: string, asOfDate: Date) {
         prisma.demandForecast.findMany({
             where: { hotel_id: hotelId, as_of_date: asOfDate },
         }),
+        // Option E: Load last accepted/overridden decisions for anchor
+        prisma.pricingDecision.findMany({
+            where: {
+                hotel_id: hotelId,
+                decided_at: { lte: asOfDate },
+            },
+            orderBy: { decided_at: 'desc' },
+            select: {
+                decision_id: true,
+                stay_date: true,
+                final_price: true,
+                action: true,
+                decided_at: true,
+            },
+        }),
     ]);
 
     // Index forecasts by stay_date string
     const forecastMap = new Map(
         forecasts.map(f => [f.stay_date.toISOString().slice(0, 10), f])
     );
+
+    // Index last decisions by stay_date (first match = most recent due to ORDER BY decided_at DESC)
+    const lastDecisionMap = new Map<string, typeof lastDecisions[0]>();
+    for (const d of lastDecisions) {
+        const key = d.stay_date.toISOString().slice(0, 10);
+        if (!lastDecisionMap.has(key)) {
+            lastDecisionMap.set(key, d); // first = most recent
+        }
+    }
 
     const recommendations: any[] = [];
 
@@ -80,8 +107,22 @@ export async function runPricingEngine(hotelId: string, asOfDate: Date) {
         // Season multiplier for this date
         const seasonMult = getSeasonMultiplier(feat.stay_date, seasonConfigs);
 
-        // L1: Compute current_price ONCE — this exact value is persisted AND used for delta
-        const currentPrice = baseRate * seasonMult;
+        // ── Option E: Anchor cascade ──────────────────────────────
+        // Priority 1: Last accepted/published price for this stay_date
+        // Priority 2: Rack rate (base × seasonMult)
+        const lastDecision = lastDecisionMap.get(stayDateStr);
+        let currentPrice: number;
+        let currentSource: 'LAST_ACCEPTED' | 'RACK_FALLBACK';
+        let anchorDecisionId: string | null = null;
+
+        if (lastDecision?.final_price && Number(lastDecision.final_price) > 0) {
+            currentPrice = Math.round(Number(lastDecision.final_price));
+            currentSource = 'LAST_ACCEPTED';
+            anchorDecisionId = lastDecision.decision_id;
+        } else {
+            currentPrice = Math.round(baseRate * seasonMult);
+            currentSource = 'RACK_FALLBACK';
+        }
 
         const remainingSupply = feat.remaining_supply ?? Math.max(0, capacity - roomsOtb);
 
@@ -95,9 +136,10 @@ export async function runPricingEngine(hotelId: string, asOfDate: Date) {
             seasonMultiplier: seasonMult,
             guardrails: {
                 minRate,
-                maxRate: Math.round(maxRate),
+                maxRate,
                 maxStepPct: 0.25,
             },
+            currentRate: currentPrice, // pass anchor as currentRate for step-change guardrail
             confidence: (fc?.confidence as ForecastConfidence) ?? 'fallback',
         };
 
@@ -127,7 +169,7 @@ export async function runPricingEngine(hotelId: string, asOfDate: Date) {
             finalRecommendedPrice = currentPrice; // keep same so UI doesn't show NaN
         }
         else {
-            // L1: delta from the SAME persisted currentPrice
+            // L1: delta from the SAME persisted currentPrice (anchor)
             const rawDelta = ((result.recommendedPrice - currentPrice) / currentPrice) * 100;
             // L2: Decimal conversion
             deltaPctDecimal = new Prisma.Decimal(rawDelta.toFixed(2));
@@ -163,6 +205,16 @@ export async function runPricingEngine(hotelId: string, asOfDate: Date) {
                 projectedOcc: result.projectedOcc,
                 expectedFinalRooms: result.expectedFinalRooms,
                 trace: result.trace,
+                // ── Provenance (Option E) ──
+                anchor: {
+                    currentPrice,
+                    source: currentSource,
+                    anchorDecisionId,
+                    baseRate,
+                    seasonMult,
+                    rackRate: Math.round(baseRate * seasonMult),
+                },
+                guardrailsUsed: { minRate, maxRate, source: 'HOTEL_SETTINGS' },
             }),
             action,
             delta_pct: deltaPctDecimal,
