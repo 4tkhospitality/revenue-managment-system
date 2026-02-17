@@ -315,13 +315,51 @@ export default async function DashboardPage({
         const remaining = hotelCapacity - otb.rooms_otb;
         const adr = otb.rooms_otb > 0 ? Number(otb.revenue_otb) / otb.rooms_otb : 0;
         const forecastDemand = fcst?.remaining_demand || 0;
+        const currentPrice = Math.round(adr);
 
         // Use Pricing Engine to calculate recommended price
         const pricingResult = PricingLogic.optimize(
-            Math.round(adr),
+            currentPrice,
             forecastDemand,
             remaining
         );
+
+        const isStopSell = remaining <= 0 || pricingResult.recommendedPrice === null;
+        const recPrice = pricingResult.recommendedPrice || currentPrice;
+
+        // ── Compute action / delta / reason (same logic as runPricingEngine) ──
+        let action: 'INCREASE' | 'KEEP' | 'DECREASE' | 'STOP_SELL' | null = null;
+        let deltaPct: number | null = null;
+        let reasonTextVi: string | null = null;
+
+        if (isStopSell) {
+            action = 'STOP_SELL';
+            deltaPct = 0;
+            reasonTextVi = 'Hết phòng — ngừng bán';
+        } else if (!currentPrice || currentPrice <= 0) {
+            action = 'KEEP';
+            deltaPct = null;
+            reasonTextVi = 'Thiếu giá hiện tại — không đề xuất thay đổi';
+        } else {
+            const rawDelta = ((recPrice - currentPrice) / currentPrice) * 100;
+            deltaPct = Math.round(rawDelta * 100) / 100;
+            const occ = hotelCapacity > 0 ? (otb.rooms_otb / hotelCapacity) * 100 : 0;
+
+            if (Math.abs(rawDelta) < 1.0) {
+                action = 'KEEP';
+                reasonTextVi = 'Bán đúng nhịp, giữ giá';
+            } else if (rawDelta > 0) {
+                action = 'INCREASE';
+                if (occ >= 80) reasonTextVi = `OCC ${Math.round(occ)}% cao — tăng giá tối ưu doanh thu`;
+                else if (forecastDemand > remaining) reasonTextVi = `Nhu cầu (${forecastDemand}) > Còn (${remaining}) — tăng giá`;
+                else reasonTextVi = `Tối ưu doanh thu — đề xuất tăng ${deltaPct.toFixed(1)}%`;
+            } else {
+                action = 'DECREASE';
+                if (occ < 40) reasonTextVi = `OCC ${Math.round(occ)}% thấp — giảm giá kích cầu`;
+                else if (forecastDemand < remaining * 0.3) reasonTextVi = `Nhu cầu thấp (${forecastDemand}) — giảm giá`;
+                else reasonTextVi = `Điều chỉnh cạnh tranh — đề xuất giảm ${Math.abs(deltaPct).toFixed(1)}%`;
+            }
+        }
 
         return {
             id: otb.stay_date.toISOString(),
@@ -329,9 +367,12 @@ export default async function DashboardPage({
             roomsOtb: otb.rooms_otb,
             remaining,
             forecast: forecastDemand,
-            currentPrice: Math.round(adr),
-            recommendedPrice: pricingResult.recommendedPrice || Math.round(adr),
-            isStopSell: remaining <= 0 || pricingResult.recommendedPrice === null,
+            currentPrice,
+            recommendedPrice: recPrice,
+            isStopSell,
+            action,
+            deltaPct,
+            reasonTextVi,
         };
     });
 

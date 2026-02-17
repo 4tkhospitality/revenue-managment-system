@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Check, X, Calendar } from 'lucide-react';
+import { Check, X, Calendar, ArrowUp, ArrowDown, Minus, Ban, Info } from 'lucide-react';
 
 interface Recommendation {
     id: string;
@@ -12,6 +12,9 @@ interface Recommendation {
     currentPrice: number;
     recommendedPrice: number;
     isStopSell: boolean;
+    action: 'INCREASE' | 'KEEP' | 'DECREASE' | 'STOP_SELL' | null;
+    deltaPct: number | null;
+    reasonTextVi: string | null;
 }
 
 interface RecommendationTableProps {
@@ -21,6 +24,27 @@ interface RecommendationTableProps {
 }
 
 type QuickFilter = 'today' | '7days' | '14days' | '30days' | 'custom';
+
+// ─── UUPM Surface ───────────────────────────────────────────────
+const surface = "rounded-[var(--card-radius)] bg-white border border-slate-200/80 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-card-hover)] transition-shadow duration-200";
+
+// ─── Helpers ────────────────────────────────────────────────────
+
+function getActionBadge(action: string | null) {
+    const base = "inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap";
+    switch (action) {
+        case 'INCREASE':
+            return <span className={`${base} bg-emerald-50 text-emerald-700 border border-emerald-200`}><ArrowUp className="w-3 h-3" /> Tăng</span>;
+        case 'DECREASE':
+            return <span className={`${base} bg-amber-50 text-amber-700 border border-amber-200`}><ArrowDown className="w-3 h-3" /> Giảm</span>;
+        case 'KEEP':
+            return <span className={`${base} bg-slate-50 text-slate-600 border border-slate-200`}><Minus className="w-3 h-3" /> Giữ</span>;
+        case 'STOP_SELL':
+            return <span className={`${base} bg-rose-50 text-rose-700 border border-rose-200`}><Ban className="w-3 h-3" /> Ngừng bán</span>;
+        default:
+            return <span className={`${base} bg-slate-50 text-slate-400 border border-slate-200`}><Info className="w-3 h-3" /> —</span>;
+    }
+}
 
 export function RecommendationTable({
     data,
@@ -46,10 +70,6 @@ export function RecommendationTable({
         });
         const isWeekend = date.getDay() === 0 || date.getDay() === 6;
         return { formatted, dayOfWeek, isWeekend };
-    };
-
-    const formatInputDate = (date: Date) => {
-        return date.toISOString().split('T')[0];
     };
 
     // Calculate date range based on filter
@@ -105,9 +125,6 @@ export function RecommendationTable({
         { key: 'custom', label: 'Tuỳ chọn' },
     ];
 
-    // Surface styling - consistent with other components
-    const surface = "rounded-[var(--card-radius)] bg-white border border-slate-200/80 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-card-hover)] transition-shadow duration-200";
-
     return (
         <div className={`${surface} overflow-hidden`}>
             {/* Header with Filters */}
@@ -124,7 +141,7 @@ export function RecommendationTable({
                                 <button
                                     key={key}
                                     onClick={() => setQuickFilter(key)}
-                                    className={`px-3 py-1.5 text-xs font-medium transition-colors ${quickFilter === key
+                                    className={`px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer ${quickFilter === key
                                         ? 'text-white'
                                         : 'text-gray-600 hover:text-gray-900'
                                         }`}
@@ -178,25 +195,31 @@ export function RecommendationTable({
                 <table className="w-full text-sm">
                     <thead className="sticky top-0 z-10">
                         <tr style={{ backgroundColor: '#f8fafc' }} className="text-left">
-                            <th className="px-4 py-3 font-medium text-gray-500 sticky left-0" style={{ backgroundColor: '#f8fafc' }}>
+                            <th className="px-4 py-3 font-semibold text-slate-500 text-xs uppercase tracking-wider sticky left-0" style={{ backgroundColor: '#f8fafc' }}>
                                 Ngày
                             </th>
-                            <th className="px-4 py-3 font-medium text-gray-500 text-right">
+                            <th className="px-3 py-3 font-semibold text-slate-500 text-xs uppercase tracking-wider text-right">
                                 OTB
                             </th>
-                            <th className="px-4 py-3 font-medium text-gray-500 text-right">
+                            <th className="px-3 py-3 font-semibold text-slate-500 text-xs uppercase tracking-wider text-right">
                                 Còn
                             </th>
-                            <th className="px-4 py-3 font-medium text-gray-500 text-right">
+                            <th className="px-3 py-3 font-semibold text-slate-500 text-xs uppercase tracking-wider text-right">
                                 D.Báo
                             </th>
-                            <th className="px-4 py-3 font-medium text-gray-500 text-right">
+                            <th className="px-3 py-3 font-semibold text-slate-500 text-xs uppercase tracking-wider text-right">
                                 Hiện tại
                             </th>
-                            <th className="px-4 py-3 font-medium text-gray-500 text-right">
+                            <th className="px-3 py-3 font-semibold text-slate-500 text-xs uppercase tracking-wider text-right">
                                 Đề xuất
                             </th>
-                            <th className="px-4 py-3 font-medium text-gray-500 text-center">
+                            <th className="px-3 py-3 font-semibold text-slate-500 text-xs uppercase tracking-wider text-center">
+                                Hành động
+                            </th>
+                            <th className="px-3 py-3 font-semibold text-slate-500 text-xs uppercase tracking-wider text-left">
+                                Lý do
+                            </th>
+                            <th className="px-3 py-3 font-semibold text-slate-500 text-xs uppercase tracking-wider text-center">
                                 Thao tác
                             </th>
                         </tr>
@@ -204,7 +227,7 @@ export function RecommendationTable({
                     <tbody>
                         {filteredData.length === 0 ? (
                             <tr>
-                                <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
+                                <td colSpan={9} className="px-4 py-8 text-center text-gray-400">
                                     Không có dữ liệu cho khoảng thời gian đã chọn
                                 </td>
                             </tr>
@@ -215,9 +238,9 @@ export function RecommendationTable({
                                     <tr
                                         key={row.id}
                                         className={`transition-colors ${row.isStopSell
-                                            ? 'bg-rose-50'
+                                            ? 'bg-rose-50/50'
                                             : isWeekend
-                                                ? 'bg-amber-50'
+                                                ? 'bg-amber-50/50'
                                                 : 'hover:bg-gray-50'
                                             }`}
                                         style={{ borderTop: '1px solid #e2e8f0' }}
@@ -231,19 +254,19 @@ export function RecommendationTable({
                                                 <span className="text-gray-900">{formatted}</span>
                                             </div>
                                         </td>
-                                        <td className="px-4 py-3 text-gray-900 text-right">
+                                        <td className="px-3 py-3 text-gray-900 text-right tabular-nums">
                                             {row.roomsOtb}
                                         </td>
-                                        <td className="px-4 py-3 text-gray-900 text-right">
+                                        <td className="px-3 py-3 text-gray-900 text-right tabular-nums">
                                             {row.remaining}
                                         </td>
-                                        <td className="px-4 py-3 text-gray-900 text-right">
+                                        <td className="px-3 py-3 text-gray-900 text-right tabular-nums">
                                             {row.forecast}
                                         </td>
-                                        <td className="px-4 py-3 text-gray-500 text-right">
+                                        <td className="px-3 py-3 text-gray-500 text-right font-[family-name:var(--font-mono)] tabular-nums">
                                             {formatCurrency(row.currentPrice)}
                                         </td>
-                                        <td className="px-4 py-3 text-right">
+                                        <td className="px-3 py-3 text-right font-[family-name:var(--font-mono)] tabular-nums">
                                             {row.isStopSell ? (
                                                 <span className="text-rose-600 font-semibold">
                                                     NGỪNG BÁN
@@ -254,21 +277,31 @@ export function RecommendationTable({
                                                 </span>
                                             )}
                                         </td>
-                                        <td className="px-4 py-3 text-center">
+                                        {/* Hành động badge */}
+                                        <td className="px-3 py-3 text-center">
+                                            {getActionBadge(row.action)}
+                                        </td>
+                                        {/* Lý do */}
+                                        <td className="px-3 py-3 text-xs text-slate-500 max-w-[180px]">
+                                            <span className="line-clamp-2" title={row.reasonTextVi || ''}>
+                                                {row.reasonTextVi || '—'}
+                                            </span>
+                                        </td>
+                                        <td className="px-3 py-3 text-center">
                                             {row.isStopSell ? (
                                                 <span className="text-xs text-gray-400">N/A</span>
                                             ) : (
                                                 <div className="flex items-center justify-center gap-2">
                                                     <button
                                                         onClick={() => onAccept(row.id)}
-                                                        className="p-1.5 rounded bg-emerald-100 text-emerald-600 hover:bg-emerald-200 transition-colors"
+                                                        className="p-1.5 rounded bg-emerald-100 text-emerald-600 hover:bg-emerald-200 transition-colors cursor-pointer"
                                                         title="Chấp nhận"
                                                     >
                                                         <Check className="w-4 h-4" />
                                                     </button>
                                                     <button
                                                         onClick={() => onOverride(row.id)}
-                                                        className="p-1.5 rounded bg-rose-100 text-rose-600 hover:bg-rose-200 transition-colors"
+                                                        className="p-1.5 rounded bg-rose-100 text-rose-600 hover:bg-rose-200 transition-colors cursor-pointer"
                                                         title="Bỏ qua"
                                                     >
                                                         <X className="w-4 h-4" />
@@ -290,10 +323,11 @@ export function RecommendationTable({
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1 text-[10px] font-mono text-gray-400">
                     <div><span className="text-gray-500">Ngày:</span> Ngày ở (stay_date)</div>
                     <div><span className="text-gray-500">OTB:</span> SUM(rooms) từ reservations</div>
-                    <div><span className="text-gray-500">Còn:</span> Capacity (240) − OTB</div>
+                    <div><span className="text-gray-500">Còn:</span> Capacity − OTB</div>
                     <div><span className="text-gray-500">D.Báo:</span> remaining_demand từ ML</div>
                     <div><span className="text-gray-500">Hiện tại:</span> ADR = Revenue ÷ Rooms</div>
-                    <div><span className="text-gray-500">Đề xuất:</span> Hiện tại × 1.1 (+10%)</div>
+                    <div><span className="text-gray-500">Đề xuất:</span> Pricing Engine tối ưu Rev</div>
+                    <div><span className="text-gray-500">Lý do:</span> Giải thích từ supply/demand</div>
                 </div>
                 <div className="text-[10px] text-gray-400 mt-2 pt-2 border-t" style={{ borderColor: '#e2e8f0' }}>
                     🟡 Cuối tuần (T7/CN) | 🔴 Ngừng bán (Còn ≤ 0)
