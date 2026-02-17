@@ -12,7 +12,7 @@ import { Prisma } from '@prisma/client';
  * Features computed:
  * - STLY (Same Time Last Year) with nearest-snapshot fallback (D11, D12)
  * - Pace pickup (T-30, T-15, T-7, T-5, T-3) strict exact match (D13)
- * - Pace vs LY (pace_vs_ly = (rooms_otb - stly_rooms_otb) / stly_rooms_otb as ratio)
+ * - Pace vs LY (pace_vs_ly = rooms_otb - stly_rooms_otb, absolute diff)
  * - Remaining Supply (capacity - rooms_otb)
  * 
  * 🚨 GATED VALIDATION:
@@ -252,9 +252,9 @@ export async function buildFeaturesDaily(
                     p.pickup_t7,
                     p.pickup_t5,
                     p.pickup_t3,
-                    -- pace_vs_ly: ratio (current - STLY) / STLY, NULL if no STLY or STLY=0
-                    CASE WHEN s.stly_rooms_otb IS NOT NULL AND s.stly_rooms_otb > 0
-                         THEN (c.rooms_otb - s.stly_rooms_otb)::numeric / s.stly_rooms_otb
+                    -- pace_vs_ly: absolute room diff (UI converts to %)
+                    CASE WHEN s.stly_rooms_otb IS NOT NULL 
+                         THEN c.rooms_otb - s.stly_rooms_otb 
                          ELSE NULL END AS pace_vs_ly,
                     -- Remaining supply
                     ${capacity} - c.rooms_otb AS remaining_supply,

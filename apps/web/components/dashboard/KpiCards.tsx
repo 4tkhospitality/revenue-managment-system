@@ -85,10 +85,12 @@ export function KpiCards({ data, hotelCapacity }: KpiCardsProps) {
             />
             <KpiCard
                 title="Còn trống"
-                value={nf0.format(data.remainingSupply)}
-                trend={data.remainingSupply < 20 ? -1 : 0}
-                trendLabel={data.remainingSupply < 20 ? 'Thấp' : ''}
-                formula={`(${hotelCapacity} × ${days}) − ${nf0.format(data.roomsOtb)}`}
+                value={nf0.format(Math.max(0, data.remainingSupply))}
+                trend={data.remainingSupply <= 0 ? -1 : data.remainingSupply < 20 ? -1 : 0}
+                trendLabel={data.remainingSupply <= 0 ? 'Full / Vượt' : data.remainingSupply < 20 ? 'Thấp' : ''}
+                formula={data.remainingSupply < 0
+                    ? `⚠️ OTB vượt capacity (${hotelCapacity} × ${days} = ${nf0.format(hotelCapacity * days)})`
+                    : `(${hotelCapacity} × ${days}) − ${nf0.format(data.roomsOtb)}`}
             />
             <KpiCard
                 title="Pickup TB (7 ngày)"
@@ -119,22 +121,22 @@ export function KpiCards({ data, hotelCapacity }: KpiCardsProps) {
 
             {/* Card 5: Cancellation dual-stat — merged from separate row */}
             {hasCancellation && (
-                <div className={`${surface} p-5 flex flex-col gap-2 col-span-2 lg:col-span-1`}>
+                <div className={`${surface} p-5 flex flex-col gap-2 col-span-2 lg:col-span-1 overflow-hidden`}>
                     <div className="flex items-center gap-2">
-                        <XCircle className="w-4 h-4 text-rose-500" aria-hidden="true" />
+                        <XCircle className="w-4 h-4 text-rose-500 flex-shrink-0" aria-hidden="true" />
                         <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
                             Hủy / Mất (30d)
                         </p>
                     </div>
-                    <div className="flex items-end gap-4">
-                        <div>
+                    <div className="flex items-end gap-3 min-w-0">
+                        <div className="flex-shrink-0">
                             <p className="text-2xl font-bold text-rose-600">
                                 {nf0.format(data.cancelledRooms || 0)}
                             </p>
                             <p className="text-[10px] text-slate-400">RN hủy</p>
                         </div>
-                        <div className="border-l border-slate-200 pl-4">
-                            <p className="text-lg font-bold text-slate-700">
+                        <div className="border-l border-slate-200 pl-3 min-w-0">
+                            <p className="text-sm font-bold text-slate-700 truncate" title={nfCurrency.format(data.lostRevenue || 0)}>
                                 {nfCurrency.format(data.lostRevenue || 0)}
                             </p>
                             <p className="text-[10px] text-slate-400">doanh thu mất</p>

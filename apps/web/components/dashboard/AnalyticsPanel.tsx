@@ -159,9 +159,9 @@ export default function AnalyticsPanel({ hotelId, asOfDate, maxDays }: Analytics
             if (rows.length > 0) {
                 const totalRooms = rows.reduce((s: number, x: any) => s + x.rooms_otb, 0);
                 const stlyRooms = rows.reduce((s: number, x: any) => s + (x.stly_rooms_otb || 0), 0);
-                const paceItems = rows.filter((x: any) => x.pace_vs_ly != null);
-                const paceVsLy = paceItems.length > 0
-                    ? paceItems.reduce((s: number, x: any) => s + (x.pace_vs_ly || 0), 0) / paceItems.length
+                // paceVsLy as decimal ratio: (total - stly) / stly
+                const paceVsLy = stlyRooms > 0
+                    ? (totalRooms - stlyRooms) / stlyRooms
                     : 0;
                 const pickup7Items = rows.filter((x: any) => x.pickup_t7 != null);
                 const avgPickup7 = pickup7Items.length > 0
@@ -407,8 +407,10 @@ export default function AnalyticsPanel({ hotelId, asOfDate, maxDays }: Analytics
                                             {row.stly_rooms ?? '—'}
                                             {row.stly_is_approx && <span className="text-xs text-amber-500 ml-1">~</span>}
                                         </td>
-                                        <td className={`text-right py-2 px-2 ${getTrendColor(row.pace_vs_ly)}`}>
-                                            {formatPercent(row.pace_vs_ly)}
+                                        <td className={`text-right py-2 px-2 ${getTrendColor(row.stly_rooms != null && row.stly_rooms > 0 ? (row.rooms_otb - row.stly_rooms) / row.stly_rooms : row.pace_vs_ly)}`}>
+                                            {row.stly_rooms != null && row.stly_rooms > 0
+                                                ? formatPercent((row.rooms_otb - row.stly_rooms) / row.stly_rooms)
+                                                : formatPercent(row.pace_vs_ly)}
                                         </td>
                                         <td className="text-right py-2 px-2">
                                             {row.pickup_t7 != null ? (row.pickup_t7 > 0 ? `+${row.pickup_t7}` : row.pickup_t7) : '—'}
