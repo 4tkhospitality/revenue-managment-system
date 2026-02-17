@@ -560,25 +560,135 @@ function AnalyticsSection() {
                 <Tip>Nếu Pace âm (−), nghĩa là bán chậm hơn năm ngoái &rarr; cần xem xét giảm giá hoặc tăng KM.</Tip>
             </Card>
 
-            <Card id="rec-table" title="Tôi nên tăng hay giảm giá?" icon={<DollarSign className="w-5 h-5 text-blue-600" />}>
-                <p className="text-sm text-gray-600 mb-3">Bảng <strong>Khuyến nghị giá</strong> (Recommendations) hiển thị giá đề xuất cho từng ngày:</p>
-                <table className="w-full text-sm mb-3">
+            <Card id="rec-table" title="Cách đọc bảng Giá Đề Xuất" icon={<DollarSign className="w-5 h-5 text-blue-600" />}>
+                <p className="text-sm text-gray-600 mb-4">Dashboard có <strong>2 chế độ xem</strong>: Duyệt nhanh (Quick) và Phân tích chi tiết (Detail).</p>
+
+                {/* Quick vs Detail */}
+                <div className="grid sm:grid-cols-2 gap-3 mb-4">
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                        <div className="font-medium text-blue-800 mb-2">⚡ Duyệt nhanh</div>
+                        <p className="text-xs text-gray-600">Xem nhanh giá đề xuất, hành động (Tăng/Giảm/Giữ), và bấm Duyệt.</p>
+                        <p className="text-xs text-gray-500 mt-1">Dành cho: GM duyệt giá hàng ngày (5 phút)</p>
+                    </div>
+                    <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
+                        <div className="font-medium text-purple-800 mb-2">📊 Phân tích chi tiết</div>
+                        <p className="text-xs text-gray-600">Xem OTB, Còn, Dự báo, Anchor, ADR — hiểu TẠI SAO hệ thống đề xuất.</p>
+                        <p className="text-xs text-gray-500 mt-1">Dành cho: phân tích sâu, override giá</p>
+                    </div>
+                </div>
+
+                {/* Column explanation */}
+                <h3 className="text-sm font-semibold text-gray-800 mb-2">Ý nghĩa các cột (Phân tích chi tiết)</h3>
+                <table className="w-full text-sm mb-4">
                     <thead className="bg-gray-100">
                         <tr>
                             <th className="px-3 py-2 text-left text-gray-600">Cột</th>
                             <th className="px-3 py-2 text-left text-gray-600">Ý nghĩa</th>
+                            <th className="px-3 py-2 text-left text-gray-600">Nguồn</th>
                         </tr>
                     </thead>
                     <tbody className="text-gray-700">
-                        <tr className="border-t"><td className="px-3 py-2 font-medium">Stay Date</td><td className="px-3 py-2">Ngày lưu trú</td></tr>
-                        <tr className="border-t"><td className="px-3 py-2 font-medium">OTB</td><td className="px-3 py-2">Số phòng đã đặt cho ngày đó</td></tr>
-                        <tr className="border-t"><td className="px-3 py-2 font-medium">Remaining</td><td className="px-3 py-2">Số phòng còn trống</td></tr>
-                        <tr className="border-t"><td className="px-3 py-2 font-medium">Pickup</td><td className="px-3 py-2">Lượng đặt mới 7 ngày qua</td></tr>
-                        <tr className="border-t bg-blue-50"><td className="px-3 py-2 font-medium">REC Price</td><td className="px-3 py-2"><strong>Giá hệ thống khuyến nghị</strong> dựa trên OCC, Pace, Season</td></tr>
-                        <tr className="border-t bg-emerald-50"><td className="px-3 py-2 font-medium">Action</td><td className="px-3 py-2"><strong>Accept</strong> (đồng ý) hoặc <strong>Override</strong> (nhập giá khác)</td></tr>
+                        <tr className="border-t"><td className="px-3 py-2 font-medium">Ngày</td><td className="px-3 py-2">Ngày lưu trú (stay_date)</td><td className="px-3 py-2 text-xs text-gray-400">-</td></tr>
+                        <tr className="border-t"><td className="px-3 py-2 font-medium">OTB</td><td className="px-3 py-2">Số phòng đã đặt</td><td className="px-3 py-2 text-xs text-gray-400">daily_otb</td></tr>
+                        <tr className="border-t"><td className="px-3 py-2 font-medium">Còn</td><td className="px-3 py-2">Phòng còn trống (capacity – OTB)</td><td className="px-3 py-2 text-xs text-gray-400">tính toán</td></tr>
+                        <tr className="border-t"><td className="px-3 py-2 font-medium">D.Báo</td><td className="px-3 py-2">Nhu cầu dự báo (remaining demand từ ML)</td><td className="px-3 py-2 text-xs text-gray-400">demand_forecast</td></tr>
+                        <tr className="border-t bg-blue-50"><td className="px-3 py-2 font-medium">Anchor</td><td className="px-3 py-2"><strong>Giá neo</strong> — giá GM đang chọn bán</td><td className="px-3 py-2 text-xs text-gray-400">last accepted hoặc rack</td></tr>
+                        <tr className="border-t bg-blue-50"><td className="px-3 py-2 font-medium text-gray-400 text-xs pl-6">ADR (nhỏ)</td><td className="px-3 py-2 text-xs text-gray-500">Giá bán trung bình thực tế (tham khảo)</td><td className="px-3 py-2 text-xs text-gray-400">revenue / rooms</td></tr>
+                        <tr className="border-t bg-emerald-50"><td className="px-3 py-2 font-medium">Đề Xuất</td><td className="px-3 py-2"><strong>Giá hệ thống khuyến nghị</strong></td><td className="px-3 py-2 text-xs text-gray-400">pricing engine</td></tr>
+                        <tr className="border-t"><td className="px-3 py-2 font-medium">Hành Động</td><td className="px-3 py-2">Tăng / Giảm / Giữ / Ngừng bán</td><td className="px-3 py-2 text-xs text-gray-400">so sánh đề xuất vs anchor</td></tr>
+                        <tr className="border-t"><td className="px-3 py-2 font-medium">Lý Do</td><td className="px-3 py-2">Giải thích: &quot;OTB X%, dự phóng Y%&quot;</td><td className="px-3 py-2 text-xs text-gray-400">pricing engine</td></tr>
                     </tbody>
                 </table>
-                <DeepLink href="/dashboard">Mở Daily Actions</DeepLink>
+
+                {/* OTB% vs Projected OCC */}
+                <Accordion title="OTB% vs Dự phóng% — khác nhau thế nào?" defaultOpen>
+                    <div className="space-y-2">
+                        <div className="flex items-start gap-3">
+                            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium shrink-0 mt-0.5">OTB%</span>
+                            <span className="text-sm">Số phòng đã đặt hiện tại / tổng phòng. <strong>Đây là thực tế</strong>, không dự đoán.</span>
+                        </div>
+                        <div className="flex items-start gap-3">
+                            <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-medium shrink-0 mt-0.5">Dự phóng%</span>
+                            <span className="text-sm">Projected OCC = (OTB – huỷ dự kiến + booking mới dự kiến) / tổng phòng. <strong>Đây là dự đoán</strong> (có thể sai).</span>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-3 text-xs">
+                            <p className="font-mono">VD: OTB = 162/270 = <strong>60%</strong>, dự phóng = (162 − 49 + 0) / 270 = <strong>42%</strong></p>
+                            <p className="text-gray-500 mt-1">Nghĩa là: hiện tại 60% phòng đã book, nhưng dự kiến cuối cùng chỉ còn 42% (do cancel).</p>
+                        </div>
+                    </div>
+                </Accordion>
+
+                {/* Anchor explanation */}
+                <Accordion title="Anchor là gì? Tại sao không dùng ADR?">
+                    <div className="space-y-2">
+                        <p><strong>Anchor</strong> = giá GM đang chọn bán (intention signal):</p>
+                        <div className="bg-gray-50 rounded-lg p-3 text-xs space-y-1">
+                            <p>1. <strong>Ưu tiên 1:</strong> Giá đã duyệt/override gần nhất cho ngày đó (last accepted)</p>
+                            <p>2. <strong>Ưu tiên 2:</strong> Rack rate = Base Rate × Season (nếu chưa có decision)</p>
+                        </div>
+                        <p className="text-sm"><strong>ADR</strong> (Average Daily Rate) = giá bán trung bình thực tế. Đây là <em>outcome signal</em> — bị nhiễu bởi room type mix, discount, OTA channel. <strong>Không dùng ADR làm gốc quyết định</strong> vì sẽ gây feedback loop (ADR cao → tăng giá → ADR cao hơn → xoắn ốc).</p>
+                        <Tip>ADR hiện dưới Anchor dưới dạng chữ nhỏ để tham khảo. Nếu ADR lệch Anchor {'>'} 30%, banner vàng sẽ cảnh báo.</Tip>
+                    </div>
+                </Accordion>
+
+                {/* How engine decides */}
+                <Accordion title="Hệ thống quyết định tăng/giảm giá thế nào?">
+                    <div className="space-y-3">
+                        <p className="text-sm">Pricing Engine dùng <strong>Anchor + Projected OCC</strong> (không phải ADR):</p>
+                        <Pipeline steps={['Chọn Anchor', 'Tính Projected OCC', 'Xác định Zone', 'Áp multiplier', 'Guardrails']} />
+                        <div className="bg-gray-50 rounded-lg p-3 text-xs font-mono space-y-1">
+                            <p>finalOcc = (OTB − expectedCxl + expectedNew) / capacity</p>
+                            <p>pressure = finalOcc / 0.40 (breakpoint)</p>
+                            <p>recommended = anchor × multiplier(pressure)</p>
+                            <p>recommended = clamp(recommended, min_rate, max_rate)</p>
+                        </div>
+
+                        <h4 className="font-medium text-gray-800 text-sm mt-2">Bảng Zone</h4>
+                        <table className="w-full text-xs">
+                            <thead className="bg-gray-100">
+                                <tr>
+                                    <th className="px-2 py-1.5 text-left">Projected OCC</th>
+                                    <th className="px-2 py-1.5 text-center">Zone</th>
+                                    <th className="px-2 py-1.5 text-center">Hệ số</th>
+                                    <th className="px-2 py-1.5 text-left">Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody className="text-gray-700">
+                                <tr className="border-t bg-red-50"><td className="px-2 py-1.5">{'<'} 10%</td><td className="px-2 py-1.5 text-center text-red-600 font-medium">DISTRESS</td><td className="px-2 py-1.5 text-center font-mono">×0.85</td><td className="px-2 py-1.5">Giảm mạnh</td></tr>
+                                <tr className="border-t bg-amber-50"><td className="px-2 py-1.5">10–24%</td><td className="px-2 py-1.5 text-center text-amber-600 font-medium">SOFT</td><td className="px-2 py-1.5 text-center font-mono">×0.90–0.95</td><td className="px-2 py-1.5">Giảm nhẹ</td></tr>
+                                <tr className="border-t"><td className="px-2 py-1.5">24–48%</td><td className="px-2 py-1.5 text-center text-gray-600 font-medium">NORMAL</td><td className="px-2 py-1.5 text-center font-mono">×0.95–1.00</td><td className="px-2 py-1.5">Giữ giá</td></tr>
+                                <tr className="border-t bg-blue-50"><td className="px-2 py-1.5">48–80%</td><td className="px-2 py-1.5 text-center text-blue-600 font-medium">STRONG</td><td className="px-2 py-1.5 text-center font-mono">×1.00–1.15</td><td className="px-2 py-1.5">Tăng</td></tr>
+                                <tr className="border-t bg-purple-50"><td className="px-2 py-1.5">{'>'} 80%</td><td className="px-2 py-1.5 text-center text-purple-600 font-medium">SURGE</td><td className="px-2 py-1.5 text-center font-mono">×1.15–1.25</td><td className="px-2 py-1.5">Tăng mạnh</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </Accordion>
+
+                {/* ADR sanity banner */}
+                <Accordion title="Banner vàng 'ADR lệch lớn' nghĩa là gì?">
+                    <p className="text-sm">Khi nhiều ngày có ADR lệch {'>'} 30% so với Anchor, hệ thống cảnh báo:</p>
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-2 text-xs text-amber-800">
+                        ⚠️ ADR lệch lớn: X ngày có ADR lệch {'>'} 30% so với giá anchor. Kiểm tra giá đã duyệt hoặc cập nhật Base Rate trong Settings.
+                    </div>
+                    <p className="text-sm mt-2"><strong>Nguyên nhân:</strong> Có thể do KM OTA quá nhiều, room type mix, hoặc Base Rate trong Settings chưa cập nhật.</p>
+                    <p className="text-sm"><strong>Hành động:</strong> Kiểm tra Settings → Base Rate, hoặc review các quyết định giá đã duyệt.</p>
+                </Accordion>
+
+                {/* When to override */}
+                <Accordion title="Khi nào GM nên Override giá?">
+                    <div className="space-y-2 text-sm">
+                        <p>Hệ thống đề xuất giá tự động, nhưng GM có quyền Override khi:</p>
+                        <ul className="list-disc list-inside space-y-1 text-gray-600 ml-2">
+                            <li><strong>Sự kiện đặc biệt</strong> mà hệ thống chưa biết (VIP group, event)</li>
+                            <li><strong>ADR {'>'} Anchor + 30%</strong> → thị trường trả giá cao hơn, cân nhắc tăng Anchor</li>
+                            <li><strong>ADR {'<'} Anchor − 30%</strong> → có thể đang xả discount nhiều quá</li>
+                            <li><strong>Competitor</strong> thay đổi giá đột ngột (chưa có rate shopper tích hợp)</li>
+                        </ul>
+                        <Tip>Rule vận hành: GM duyệt theo Anchor-based recommendation; ADR chỉ để xác nhận thị trường chấp nhận mức đó hay không (sanity check).</Tip>
+                    </div>
+                </Accordion>
+
+                <DeepLink href="/dashboard">Mở Dashboard</DeepLink>
             </Card>
 
             {/* Dynamic Pricing subsection */}
