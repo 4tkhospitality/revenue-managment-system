@@ -265,7 +265,7 @@ export function Sidebar() {
                 </div>
 
                 {/* Hotel + Plan — unified compact card */}
-                <div className="mx-3 mb-2 bg-white/[0.08] rounded-xl overflow-hidden">
+                <div className="mx-3 mb-2 bg-white/[0.08] rounded-xl">
                     {/* Hotel Switcher */}
                     <HotelSwitcher />
                     {/* Plan Info — compact single row */}
