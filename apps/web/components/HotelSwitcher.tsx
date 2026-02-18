@@ -106,7 +106,7 @@ export function HotelSwitcher() {
         const userRole = accessibleHotels[0]?.role || 'viewer';
         const roleLabel = userRole === 'hotel_admin' ? 'Admin' : userRole === 'manager' ? 'Manager' : 'Viewer';
         return (
-            <div className="flex items-center gap-2.5 px-3 py-2.5 bg-white/10 rounded-xl">
+            <div className="flex items-center gap-2.5 px-3 py-2">
                 <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center"><Building2 className="w-4 h-4 text-blue-300" /></div>
                 <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-white truncate">{hotelName}</div>
@@ -125,7 +125,7 @@ export function HotelSwitcher() {
             {/* Trigger button — dark sidebar style */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 bg-white/10 hover:bg-white/15 rounded-xl transition-colors text-left"
+                className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-white/10 transition-colors text-left"
             >
                 <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0"><Building2 className="w-4 h-4 text-blue-300" /></div>
                 <div className="flex-1 min-w-0">
