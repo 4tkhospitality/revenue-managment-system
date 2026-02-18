@@ -1,8 +1,8 @@
 # Technical Specification
-## Revenue Management System (RMS) v01.9
+## Revenue Management System (RMS) v01.9.1
 
-**Document Version:** 1.9.0  
-**Last Updated:** 2026-02-16  
+**Document Version:** 1.9.1  
+**Last Updated:** 2026-02-18  
 **Status:** ✅ Production  
 **Author:** 4TK Hospitality Engineering
 
@@ -95,11 +95,12 @@ revenue-management-system/
 │       │   │   └── WhenToBoost.tsx         # Boost guide
 │       │   ├── pricing/        # Pricing components
 │       │   └── shared/         # Shared UI
-│       ├── lib/                # Business logic
-│       │   ├── pricing/        # Pricing engine
-│       │   ├── analytics/      # Analytics functions
+│       │   ├── auth.ts            # NextAuth.js config + JWT callback
+│       │   ├── telegram.ts        # Telegram notification utilities (V01.9.1)
+│       │   ├── pricing/           # Pricing engine
+│       │   ├── analytics/         # Analytics functions
 │       │   ├── ota-score-calculator.ts  # OTA scoring engine
-│       │   └── date.ts         # Date utilities
+│       │   └── date.ts            # Date utilities
 │       ├── prisma/             # Database schema
 │       └── public/             # Static assets
 ├── docs/                       # Documentation
@@ -347,9 +348,12 @@ ORDER BY r.reservation_id, COALESCE(j.snapshot_ts, j.created_at) DESC;
 │       ├── create-order/    # POST create PayPal order
 │       └── capture-order/   # POST capture PayPal payment
 ├── onboarding/
-│   └── complete/            # POST complete onboarding + link orphan payments
+│   └── complete/            # POST complete onboarding + link orphan payments (atomic Prisma TX V01.9.1)
+├── debug/
+│   ├── user-state/          # GET diagnostic user state (V01.9.1)
+│   └── repair-user/         # POST repair broken user state (V01.9.1)
 └── user/
-    └── switch-hotel/       # POST set active hotel
+    └── switch-hotel/       # GET active hotel + role from DB / POST set active hotel (V01.9.1)
 ```
 
 ### 3.2 API Response Format
@@ -387,33 +391,87 @@ export const { auth, signIn, signOut } = NextAuth({
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     })],
     callbacks: {
-        async signIn({ user }) {
-            // Create user in DB if not exists
-            await prisma.user.upsert({
-                where: { email: user.email },
-                create: { email: user.email, name: user.name },
-                update: { name: user.name }
-            });
-            return true;
-        },
-        async jwt({ token, user, account }) {
-            if (account) {
-                // First login - populate token with user data
+        async jwt({ token, account, profile, trigger }) {
+            if (account && profile?.email) {
+                token.email = profile.email
+                token.name = profile.name
+            }
+            
+            // Fetch from DB on initial sign in OR session update
+            if ((account && token.email) || trigger === 'update') {
                 const dbUser = await prisma.user.findUnique({
                     where: { email: token.email },
-                    include: { hotel_users: true }
+                    include: { hotel_users: { include: { hotel: true } } }
                 });
-                token.role = dbUser.role;
-                token.hotels = dbUser.hotel_users.map(hu => ({
-                    id: hu.hotel_id,
-                    role: hu.role
-                }));
+                
+                if (dbUser) {
+                    token.role = dbUser.role;
+                    token.accessibleHotels = dbUser.hotel_users.map(hu => ({
+                        hotelId: hu.hotel_id,
+                        hotelName: hu.hotel?.name || 'Unknown',
+                        role: hu.role,
+                        isPrimary: hu.is_primary,
+                    }));
+                    
+                    // Telegram notification on actual sign-in (V01.9.1)
+                    if (account) {
+                        const hotelNames = dbUser.hotel_users
+                            .map(hu => hu.hotel?.name || 'Unknown')
+                            .filter(n => n !== 'Demo Hotel');
+                        notifyUserLogin({
+                            email: dbUser.email,
+                            name: token.name || null,
+                            isNew: false,
+                            hotels: hotelNames,
+                        }); // fire-and-forget
+                    }
+                } else {
+                    // New user: create + notify
+                    const newUser = await prisma.user.create({
+                        data: { email: token.email, name: token.name }
+                    });
+                    notifyUserLogin({
+                        email: newUser.email,
+                        name: token.name || null,
+                        isNew: true,
+                    }); // fire-and-forget
+                }
             }
             return token;
         }
     }
 });
 ```
+
+### 3.4 Hotel Resolution Chain (V01.9.1)
+
+```typescript
+// getActiveHotelId() in lib/pricing/get-hotel.ts
+// Validates cookie against DB, NOT stale JWT
+async function getActiveHotelId(): Promise<string | null> {
+    // 1. Cookie rms_active_hotel → validate against HotelUser table
+    // 2. JWT accessibleHotels → fallback
+    // 3. First real hotel (non-demo, admin role)
+    // 4. Demo Hotel
+    const cookieHotelId = cookies().get('rms_active_hotel')?.value;
+    if (cookieHotelId) {
+        const valid = await prisma.hotelUser.findUnique({
+            where: { user_id_hotel_id: { user_id, hotel_id: cookieHotelId } }
+        });
+        if (valid) return cookieHotelId;
+    }
+    // ... fallback chain
+}
+```
+
+### 3.5 Sidebar Role Determination (V01.9.1)
+
+```typescript
+// GET /api/user/switch-hotel returns:
+// { activeHotelId, activeHotelName, activeHotelRole }
+// activeHotelRole is fetched from HotelUser table in DB
+// Sidebar component uses this as source of truth:
+const userRole = fetchedRole || jwtRole || session?.user?.role || 'viewer';
 
 ---
 
@@ -737,6 +795,10 @@ GOOGLE_CLIENT_SECRET=xxx
 NEXTAUTH_URL=https://your-domain.vercel.app
 NEXTAUTH_SECRET=xxx
 
+# Telegram Notifications (V01.9.1)
+TELEGRAM_BOT_TOKEN=xxx
+TELEGRAM_CHAT_ID=xxx
+
 # Config
 DEFAULT_HOTEL_ID=xxx
 ADMIN_EMAIL=admin@example.com
@@ -795,7 +857,24 @@ console.error(`[IngestCSV] Error: ${error.message}`, {
     fileName,
     lineNumber 
 });
+
+// Auth/Onboarding debug logging (V01.9.1)
+console.log(`[AUTH] JWT Callback TRIGGER: account=${!!account}, trigger=${trigger}, email=${token.email}`);
+console.log(`[AUTH] JWT accessibleHotels = ${JSON.stringify(token.accessibleHotels)}`);
+console.log(`[ONBOARDING-COMPLETE] Transaction step: ${stepName}`);
+console.log(`[GET-HOTEL] Resolution chain: cookie=${cookieVal}, valid=${isValid}`);
 ```
+
+### 8.3 Telegram Notifications (V01.9.1)
+
+| Event | Notification |
+|-------|--------------|
+| New user login | 🆕 User MỎI đăng nhập + email + tên |
+| Returning user login | 🔑 User đăng nhập + email + tên + hotels |
+| New user registration | 🎉 User mới đăng ký (existing) |
+| Payment confirmed | ✅ Thanh toán thành công (existing) |
+
+**Implementation:** `lib/telegram.ts` with `sendTelegramMessage()`, `notifyNewUser()`, `notifyPaymentConfirmed()`, `notifyUserLogin()`.
 
 ### 8.2 Health Checks
 
@@ -838,3 +917,4 @@ console.error(`[IngestCSV] Error: ${error.message}`, {
 | 1.7 | 2026-02-12 | Eng | 3 Calculator Modes, Timing Conflict Resolution |
 | 1.8 | 2026-02-13 | Eng | GM Reporting Dimensions, Forecast Timezone Fix, Import Job Stale Cleanup |
 | 1.9 | 2026-02-16 | Eng | Payment Gateways (SePay, PayPal), Pay-First Flow, Orphan Payment Recovery, Payment API Routes |
+| 1.9.1 | 2026-02-18 | Eng | Telegram Login Notifications, DB-based Hotel Resolution, Sidebar Role from DB, Onboarding Atomic Transaction, Debug Logging, Diagnostic APIs |

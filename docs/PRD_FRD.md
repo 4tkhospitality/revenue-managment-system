@@ -1,8 +1,8 @@
 # Product Requirements Document (PRD) & Functional Requirements Document (FRD)
-## Revenue Management System (RMS) v01.9
+## Revenue Management System (RMS) v01.9.1
 
-**Document Version:** 1.9.0  
-**Last Updated:** 2026-02-16  
+**Document Version:** 1.9.1  
+**Last Updated:** 2026-02-18  
 **Status:** ✅ Production  
 **Product Owner:** 4TK Hospitality
 
@@ -115,6 +115,11 @@ RMS cung cấp:
 | Pay-First Flow (Demo Users) | P1 | ✅ Done | V01.9 |
 | Orphan Payment Recovery | P1 | ✅ Done | V01.9 |
 | Dynamic Pricing Config | P1 | ✅ Done | V01.9 |
+| Telegram Login Notifications | P1 | ✅ Done | V01.9.1 |
+| Onboarding Race-Condition Fix | P0 | ✅ Done | V01.9.1 |
+| DB-based Hotel Resolution | P0 | ✅ Done | V01.9.1 |
+| Sidebar Role from DB | P1 | ✅ Done | V01.9.1 |
+| Diagnostic & Repair APIs | P2 | ✅ Done | V01.9.1 |
 | PDF Export | P2 | ✅ Done | V01.5 |
 | Rate Shopper | P2 | ⬜ Schema ready | Deferred |
 | ML Forecasting | P3 | ⬜ Future | - |
@@ -353,6 +358,9 @@ Morning (08:00)
 | AUTH-04 | Session persists via JWT cookie | P0 | ✅ |
 | AUTH-05 | User can logout | P0 | ✅ |
 | AUTH-06 | Auto-assign new user to Demo Hotel | P1 | ✅ |
+| AUTH-07 | Telegram notification on every login (new + returning) (V01.9.1) | P1 | ✅ |
+| AUTH-08 | JWT role fallback: DB-fetched role preferred over JWT stale role (V01.9.1) | P0 | ✅ |
+| AUTH-09 | Pending activation detection: redirect to onboarding if orphan payment found (V01.9.1) | P0 | ✅ |
 
 ### 6.2 Module: Data Import (IMPORT)
 
@@ -455,6 +463,7 @@ Morning (08:00)
 | HOTEL-04 | Configure ladder_steps | P1 | ✅ |
 | HOTEL-05 | Switch active hotel | P1 | ✅ |
 | HOTEL-06 | Demo Hotel for testing | P1 | ✅ |
+| HOTEL-07 | DB-based hotel resolution (validate cookie against HotelUser table) (V01.9.1) | P0 | ✅ |
 
 ### 6.10 Module: OTA Growth Playbook (PLAYBOOK)
 
@@ -479,6 +488,9 @@ Morning (08:00)
 | SAAS-05 | 4-step onboarding wizard | P1 | ✅ | V01.3 |
 | SAAS-06 | Trial system (7 + 7 days) | P1 | ✅ | V01.3 |
 | SAAS-07 | Feature limits per plan tier | P1 | ✅ | V01.3 |
+| SAAS-08 | Onboarding completion atomic transaction (race-condition fix) | P0 | ✅ | V01.9.1 |
+| SAAS-09 | Diagnostic API to debug user state | P2 | ✅ | V01.9.1 |
+| SAAS-10 | Repair API to fix broken user states | P2 | ✅ | V01.9.1 |
 
 ### 6.12 Module: Guide Page (GUIDE)
 
@@ -603,6 +615,7 @@ const ERROR_MESSAGES = {
 | 1.7 | 2026-02-12 | PM | 3 Calculator Modes, Timing Conflicts, Guide Page |
 | 1.8 | 2026-02-13 | PM | GM Reporting Dimensions, Forecast Timezone Fix, Import Job Stale Cleanup |
 | 1.9 | 2026-02-16 | PM | Payment Gateways (SePay, PayPal), Pay-First Flow, Orphan Payment Recovery |
+| 1.9.1 | 2026-02-18 | PM | Telegram Login Notifications, Onboarding Race-Condition Fix, DB-based Hotel Resolution, Sidebar Role from DB, Diagnostic APIs |
 
 ### 10.3 Sign-off
 

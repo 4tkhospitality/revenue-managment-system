@@ -1,8 +1,8 @@
 # Software Requirements Specification (SRS)
-## Revenue Management System (RMS) v01.9
+## Revenue Management System (RMS) v01.9.1
 
-**Document Version:** 1.9.0  
-**Last Updated:** 2026-02-16  
+**Document Version:** 1.9.1  
+**Last Updated:** 2026-02-18  
 **Status:** ✅ Production  
 **Author:** 4TK Hospitality
 
@@ -112,6 +112,9 @@ RMS là hệ thống độc lập, tích hợp với:
 | **Flow** | 1. Click "Đăng nhập bằng Google"<br>2. Chọn tài khoản Google<br>3. Hệ thống kiểm tra email trong whitelist<br>4. Tạo session JWT<br>5. Redirect về Dashboard |
 | **Postconditions** | User logged in, JWT stored |
 | **Exceptions** | Email không được phép → Blocked page |
+| **Notifications** | Telegram notification sent on every login (new + returning) (V01.9.1) |
+| **Role Resolution** | Sidebar role fetched from DB via `/api/user/switch-hotel`, JWT role as fallback (V01.9.1) |
+| **Hotel Resolution** | Active hotel validated against `HotelUser` table in DB, not stale JWT (V01.9.1) |
 
 ### 3.2 FR-002: Data Import
 
@@ -265,6 +268,18 @@ RMS là hệ thống độc lập, tích hợp với:
 | **Standard Flow** | 1. Hotel admin chọn gói upgrade<br>2. PaymentTransaction tạo với hotel_id<br>3. Webhook/capture → applySubscriptionChange → activate ngay |
 | **Transaction States** | PENDING → COMPLETED (webhook confirms)<br>PENDING → FAILED (amount mismatch/timeout) |
 | **Idempotency** | @@unique([gateway, gateway_transaction_id]) chống duplicate webhook |
+| **Onboarding Atomicity** | All onboarding completion steps (payment link, subscription activate, Demo Hotel removal, user.hotel_id update) in single Prisma $transaction (V01.9.1) |
+
+### 3.15 FR-015: Monitoring & Notifications (V01.9.1)
+
+| ID | FR-015 |
+|----|--------|
+| **Title** | Telegram Login Notifications & Diagnostic Tools |
+| **Priority** | P1 - Important |
+| **Description** | Gửi thông báo Telegram khi user đăng nhập (new + returning). Cung cấp API chẩn đoán và sửa user state. |
+| **Notifications** | 1. 🆕 New user login: email + name<br>2. 🔑 Returning user login: email + name + hotel list<br>3. Fire-and-forget (không block login) |
+| **Diagnostic APIs** | 1. `GET /api/debug/user-state`: xem state hiện tại của user<br>2. `POST /api/debug/repair-user`: sửa broken user state |
+| **Implementation** | `notifyUserLogin()` in `lib/telegram.ts`, called from JWT callback in `lib/auth.ts` |
 
 
 ---
@@ -414,6 +429,15 @@ Standalone Tables:
 - [ ] Onboarding completion links orphan payment and activates subscription
 - [ ] Duplicate webhooks rejected (idempotency via gateway_transaction_id)
 
+### 6.8 Monitoring & Notifications (V01.9.1)
+- [ ] New user login triggers Telegram notification (🆕)
+- [ ] Returning user login triggers Telegram notification (🔑) with hotel list
+- [ ] Notifications are fire-and-forget (do not slow down login)
+- [ ] Sidebar role matches DB (not stale JWT)
+- [ ] Hotel resolution validates cookie against HotelUser DB table
+- [ ] `GET /api/debug/user-state` returns user's current diagnostic state
+- [ ] `POST /api/debug/repair-user` fixes broken user-hotel associations
+
 ---
 
 ## 7. Appendix
@@ -432,6 +456,7 @@ Standalone Tables:
 | 1.7.0 | 2026-02-12 | 3 Calculator Modes, Timing Conflict Resolution, Guide Page |
 | 1.8.0 | 2026-02-13 | GM Reporting Dimensions, Forecast Timezone Fix, Import Job Stale Cleanup |
 | 1.9.0 | 2026-02-16 | Payment Gateways (SePay, PayPal), Pay-First Flow, Orphan Payment Recovery |
+| 1.9.1 | 2026-02-18 | Telegram Login Notifications, Onboarding Race-Condition Fix, DB-based Hotel Resolution, Sidebar Role from DB, Diagnostic APIs |
 
 ### 7.2 Sign-off
 

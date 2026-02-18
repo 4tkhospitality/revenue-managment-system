@@ -1,8 +1,8 @@
 # Functional Specification Document (FSD)
-## Revenue Management System (RMS) v01.9
+## Revenue Management System (RMS) v01.9.1
 
-**Document Version:** 1.9.0  
-**Last Updated:** 2026-02-16  
+**Document Version:** 1.9.1  
+**Last Updated:** 2026-02-18  
 **Status:** ✅ Production  
 **Author:** 4TK Hospitality Engineering
 
@@ -19,7 +19,7 @@ Tài liệu này mô tả chi tiết **hành vi chức năng** của từng modu
 - Integration points
 
 ### 1.2 Scope
-Bao gồm tất cả các module production của RMS v01.7.
+Bao gồm tất cả các module production của RMS v01.9.1.
 
 ### 1.3 Related Documents
 | Document | Purpose |
@@ -62,10 +62,32 @@ User                    RMS                     Google              DB
 |-------|-----------|----------|
 | `NOT_AUTHENTICATED` | No JWT cookie | Redirect to /login |
 | `AUTHENTICATED_NO_HOTEL` | JWT valid, no hotel_users | Redirect to /waiting |
+| `PENDING_ACTIVATION` | JWT valid, has completed payment but no real hotel | Redirect to /onboarding (V01.9.1) |
 | `AUTHENTICATED` | JWT valid, has hotel | Access granted |
 | `BLOCKED` | User is_active = false | Show blocked message |
 
-### 2.3 Session Management
+### 2.3 Telegram Login Notifications (V01.9.1)
+
+Mọi lần đăng nhập đều gửi thông báo Telegram (fire-and-forget, không block login flow).
+
+| User Type | Icon | Message |
+|-----------|------|---------|
+| **New user** | 🆕 | `User MỚI đăng nhập` + email + tên |
+| **Returning user** | 🔑 | `User đăng nhập` + email + tên + danh sách hotels |
+
+**Implementation:** `notifyUserLogin()` in `lib/telegram.ts`, called from JWT callback in `lib/auth.ts` only on `account` path (actual sign-in), not on `trigger === 'update'` (session refresh).
+
+**Notification Format:**
+```
+🔑 User đăng nhập
+
+📧 Email: user@example.com
+👋 Tên: Nguyễn Văn A
+🏨 Hotels: Gia Han Resort
+🕐 18/02/2026, 16:33:47
+```
+
+### 2.4 Session Management
 
 | Property | Value |
 |----------|-------|
@@ -73,8 +95,31 @@ User                    RMS                     Google              DB
 | Token Expiry | 30 days |
 | Refresh Strategy | Automatic on page load |
 | Logout | Clear cookie + redirect |
+| Role Source | DB-fetched via `/api/user/switch-hotel` (V01.9.1 — JWT may be stale) |
 
-### 2.4 UI Specification: Login Page
+### 2.5 Hotel Resolution Logic (V01.9.1)
+
+```
+Active Hotel Resolution Chain:
+1. Cookie (rms_active_hotel) → validate against HotelUser table in DB
+2. Session hotels (JWT accessibleHotels) — may be stale
+3. First real hotel (non-demo, where role = hotel_admin)
+4. Demo Hotel fallback
+```
+
+| Step | Source | Validation |
+|------|--------|------------|
+| 1 | `rms_active_hotel` cookie | Check against `HotelUser` table (DB query) |
+| 2 | JWT `accessibleHotels` | Fallback if cookie invalid |
+| 3 | DB: first real hotel | Auto-select admin's primary hotel |
+| 4 | Demo Hotel | Last resort for new users |
+
+**Sidebar Role Determination (V01.9.1):**
+- Role is fetched from DB via `GET /api/user/switch-hotel` → `HotelUser.role`
+- JWT role is used as fallback only
+- Ensures `hotel_admin` users see Settings/Team tabs immediately after onboarding
+
+### 2.6 UI Specification: Login Page
 
 ```
 ┌────────────────────────────────────────────────────────┐
@@ -920,6 +965,32 @@ Demo User ──▶ Pricing Page ──▶ Select Plan
                         └───────────────────────┘
 ```
 
+### 10.8 Onboarding Completion — Atomic Transaction (V01.9.1)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  POST /api/onboarding/complete (Prisma Transaction)          │
+│                                                               │
+│  Step 1: Find COMPLETED payment with hotel_id = NULL         │
+│  Step 2: Link payment → new hotel_id                         │
+│  Step 3: applySubscriptionChange (activate plan)             │
+│  Step 4: Delete Demo HotelUser record                        │
+│  Step 5: Update user.hotel_id → new hotel                    │
+│                                                               │
+│  All steps in single Prisma $transaction → atomic            │
+│  If any step fails → entire operation rolls back             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Race Condition Fix (V01.9.1):** Previously, steps 4 & 5 were outside the transaction, causing intermittent failures where users would see "Demo Hotel" after onboarding. Now all operations are atomic.
+
+### 10.9 Diagnostic & Repair APIs (V01.9.1)
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/debug/user-state` | GET | Show user's current state: payments, hotels, subscriptions |
+| `/api/debug/repair-user` | POST | Repair broken user state: re-link orphan payments, fix hotel assignments |
+
 ### 10.3 Checkout Flow (Existing Hotel)
 
 ```
@@ -1084,4 +1155,5 @@ COMPLETED + hotel_id=NULL: Orphan payment (pending activation)
 | 1.7 | 2026-02-12 | Eng | 3 Calculator Modes, Timing Conflicts, SaaS Infrastructure |
 | 1.8 | 2026-02-13 | Eng | GM Reporting Fields, Forecast Timezone Fix, Import Job Stale Cleanup |
 | 1.9 | 2026-02-16 | Eng | Payment Gateways (SePay, PayPal), Pay-First Flow, Orphan Payment Recovery, Dynamic Pricing Config |
+| 1.9.1 | 2026-02-18 | Eng | Telegram Login Notifications, Onboarding Race-Condition Fix, DB-based Hotel Resolution, Sidebar Role from DB, Debug Logging, Diagnostic APIs |
 
