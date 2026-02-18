@@ -9,6 +9,22 @@ import { cookies } from 'next/headers'
 
 const ACTIVE_HOTEL_COOKIE = 'rms_active_hotel'
 
+const ROLE_RANK: Record<string, number> = {
+    viewer: 0,
+    manager: 1,
+    hotel_admin: 2,
+    super_admin: 3,
+}
+
+/** Shared guard: requires hotel_admin+ or super_admin */
+function requireHotelAdmin(session: any, activeHotelId: string): boolean {
+    if (session.user.isAdmin || session.user.role === 'super_admin') return true
+    const access = session.user.accessibleHotels?.find(
+        (h: any) => h.hotelId === activeHotelId
+    )
+    return (ROLE_RANK[access?.role] ?? 0) >= ROLE_RANK['hotel_admin']
+}
+
 export async function GET() {
     const session = await auth()
     if (!session?.user?.id) {
@@ -21,6 +37,11 @@ export async function GET() {
 
         if (!activeHotelId) {
             return NextResponse.json({ error: 'No active hotel' }, { status: 400 })
+        }
+
+        // Permission check: hotel_admin+ (same as DELETE revoke)
+        if (!requireHotelAdmin(session, activeHotelId)) {
+            return NextResponse.json({ error: 'Admin required' }, { status: 403 })
         }
 
         const invites = await prisma.hotelInvite.findMany({
@@ -70,15 +91,9 @@ export async function DELETE(request: NextRequest) {
             return NextResponse.json({ error: 'No active hotel' }, { status: 400 })
         }
 
-        // Permission check
-        const isSuperAdmin = session.user.role === 'super_admin' || session.user.isAdmin
-        if (!isSuperAdmin) {
-            const hotelAccess = session.user.accessibleHotels?.find(
-                h => h.hotelId === activeHotelId
-            )
-            if (!hotelAccess || hotelAccess.role !== 'hotel_admin') {
-                return NextResponse.json({ error: 'Admin required' }, { status: 403 })
-            }
+        // Permission check: hotel_admin+ (shared with GET)
+        if (!requireHotelAdmin(session, activeHotelId)) {
+            return NextResponse.json({ error: 'Admin required' }, { status: 403 })
         }
 
         const { inviteId } = await request.json()

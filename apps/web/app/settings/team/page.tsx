@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
-import { Users, Ticket, AlertTriangle, Trash2, Clock, XCircle } from 'lucide-react'
+import { Users, Ticket, AlertTriangle, Trash2, Clock, XCircle, ChevronDown, Shield, ShieldCheck, Eye } from 'lucide-react'
 
 interface InviteData {
     inviteId: string
@@ -37,6 +37,12 @@ interface ActiveInvite {
     isUsedUp: boolean
 }
 
+const ROLE_LABELS: Record<string, string> = {
+    hotel_admin: 'Admin',
+    manager: 'Manager',
+    viewer: 'Viewer',
+}
+
 export default function TeamSettingsPage() {
     const { data: session } = useSession()
     const [members, setMembers] = useState<TeamMember[]>([])
@@ -44,22 +50,42 @@ export default function TeamSettingsPage() {
     const [inviteLoading, setInviteLoading] = useState(false)
     const [invite, setInvite] = useState<InviteData | null>(null)
     const [error, setError] = useState('')
+    const [success, setSuccess] = useState('')
     const [copied, setCopied] = useState(false)
     const [seats, setSeats] = useState<{ current: number; max: number; available: boolean; plan: string | null; activeMembers: number; pendingInvites: number } | null>(null)
     const [orgInfo, setOrgInfo] = useState<{ orgName: string; roomBand: string } | null>(null)
     const [activeInvites, setActiveInvites] = useState<ActiveInvite[]>([])
     const [revoking, setRevoking] = useState<string | null>(null)
+    const [inviteRole, setInviteRole] = useState<'viewer' | 'manager'>('viewer')
+    const [changingRole, setChangingRole] = useState<string | null>(null)
+    const [removing, setRemoving] = useState<string | null>(null)
+    const [confirmRemove, setConfirmRemove] = useState<string | null>(null)
 
     const isAdmin = session?.user?.accessibleHotels?.some(
         (h) => h.role === 'hotel_admin'
     ) || session?.user?.isAdmin
 
+    // Determine if current user is Owner (is_primary=true for this hotel)
+    const currentUserMembership = members.find(m => m.user.id === session?.user?.id)
+    const isOwner = currentUserMembership?.is_primary === true || session?.user?.isAdmin === true
+
     const atLimit = seats ? !seats.available : false
+
+    // Count active hotel_admins for "last admin" guard
+    const adminCount = members.filter(m => m.role === 'hotel_admin').length
 
     useEffect(() => {
         loadMembers()
         loadInvites()
     }, [])
+
+    // Auto-clear success message
+    useEffect(() => {
+        if (success) {
+            const t = setTimeout(() => setSuccess(''), 3000)
+            return () => clearTimeout(t)
+        }
+    }, [success])
 
     const loadMembers = async () => {
         try {
@@ -114,16 +140,7 @@ export default function TeamSettingsPage() {
             })
             if (res.ok) {
                 setActiveInvites(prev => prev.filter(i => i.invite_id !== inviteId))
-                // Refresh seats after revoking
-                const membersRes = await fetch('/api/team/members')
-                if (membersRes.ok) {
-                    const data = await membersRes.json()
-                    if (data.seats) setSeats({
-                        ...data.seats,
-                        activeMembers: data.seats.activeMembers ?? data.seats.current,
-                        pendingInvites: data.seats.pendingInvites ?? 0,
-                    })
-                }
+                loadMembers() // Refresh seats
             }
         } catch (err) {
             console.error('Failed to revoke invite:', err)
@@ -140,7 +157,7 @@ export default function TeamSettingsPage() {
             const res = await fetch('/api/invite/create', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ role: 'viewer', maxUses: 5, expiryDays: 7 }),
+                body: JSON.stringify({ role: inviteRole, maxUses: 5, expiryDays: 7 }),
             })
 
             const data = await res.json()
@@ -151,9 +168,8 @@ export default function TeamSettingsPage() {
                     shortCode: data.shortCode,
                     inviteUrl: data.inviteUrl,
                     expiresAt: data.expiresAt,
-                    role: 'viewer',
+                    role: inviteRole,
                 })
-                // Refresh invites list
                 loadInvites()
             } else {
                 if (data.error === 'TIER_LIMIT_REACHED') {
@@ -169,6 +185,54 @@ export default function TeamSettingsPage() {
         }
     }
 
+    const changeRole = async (memberId: string, newRole: string) => {
+        setChangingRole(memberId)
+        setError('')
+        try {
+            const res = await fetch('/api/team/members', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ memberId, newRole }),
+            })
+            const data = await res.json()
+            if (res.ok) {
+                setSuccess(`Đã đổi vai trò thành ${ROLE_LABELS[newRole] || newRole}`)
+                loadMembers()
+            } else {
+                setError(data.error || 'Không thể đổi vai trò')
+            }
+        } catch (err) {
+            setError('Có lỗi xảy ra')
+        } finally {
+            setChangingRole(null)
+        }
+    }
+
+    const removeMember = async (memberId: string) => {
+        setRemoving(memberId)
+        setConfirmRemove(null)
+        setError('')
+        try {
+            const res = await fetch('/api/team/members', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ memberId }),
+            })
+            const data = await res.json()
+            if (res.ok) {
+                setSuccess('Đã xóa thành viên')
+                loadMembers()
+                loadInvites()
+            } else {
+                setError(data.error || 'Không thể xóa thành viên')
+            }
+        } catch (err) {
+            setError('Có lỗi xảy ra')
+        } finally {
+            setRemoving(null)
+        }
+    }
+
     const copyInvite = async () => {
         if (!invite) return
         await navigator.clipboard.writeText(invite.inviteUrl)
@@ -176,24 +240,72 @@ export default function TeamSettingsPage() {
         setTimeout(() => setCopied(false), 2000)
     }
 
+    // ── Permission helpers for each member row ──────────────────────
+
+    const canChangeRole = (member: TeamMember): boolean => {
+        if (!isAdmin) return false
+        if (member.is_primary) return false // Cannot change Owner
+        if (member.user.id === session?.user?.id) return false // Cannot change self
+        if (!isOwner && member.role === 'hotel_admin') return false // Non-owner cannot touch admin
+        return true
+    }
+
+    const canRemove = (member: TeamMember): boolean => {
+        if (!isAdmin) return false
+        if (member.is_primary) return false // Cannot remove Owner
+        if (member.user.id === session?.user?.id) return false // Cannot remove self
+        if (!isOwner && member.role === 'hotel_admin') return false // Non-owner cannot remove admin
+        if (member.role === 'hotel_admin' && adminCount <= 1) return false // Cannot remove last admin
+        return true
+    }
+
+    const canDemoteAdmin = (member: TeamMember): boolean => {
+        if (member.role !== 'hotel_admin') return true
+        return adminCount > 1 // Cannot demote if last admin
+    }
+
+    const getAvailableRoles = (member: TeamMember): string[] => {
+        const roles: string[] = []
+        if (member.role !== 'viewer') roles.push('viewer')
+        if (member.role !== 'manager') roles.push('manager')
+        if (isOwner && member.role !== 'hotel_admin') roles.push('hotel_admin')
+        // Filter: if demoting an admin, check last-admin guard
+        return roles.filter(r => {
+            if (member.role === 'hotel_admin' && r !== 'hotel_admin') return canDemoteAdmin(member)
+            return true
+        })
+    }
+
     const getRoleBadge = (role: string, isPrimary: boolean) => {
         if (isPrimary) {
-            return <span className="px-2 py-1 text-xs rounded-full bg-amber-100 text-amber-700">Owner</span>
+            return <span className="px-2 py-1 text-xs rounded-full bg-amber-100 text-amber-700 font-medium">Owner</span>
         }
-        const badges: Record<string, { bg: string; text: string }> = {
-            hotel_admin: { bg: 'bg-purple-100', text: 'text-purple-700' },
-            manager: { bg: 'bg-blue-100', text: 'text-blue-700' },
-            viewer: { bg: 'bg-gray-100', text: 'text-gray-600' },
+        const badges: Record<string, { bg: string; text: string; icon: any }> = {
+            hotel_admin: { bg: 'bg-purple-100', text: 'text-purple-700', icon: ShieldCheck },
+            manager: { bg: 'bg-blue-100', text: 'text-blue-700', icon: Shield },
+            viewer: { bg: 'bg-gray-100', text: 'text-gray-600', icon: Eye },
         }
         const badge = badges[role] || badges.viewer
-        return <span className={`px-2 py-1 text-xs rounded-full ${badge.bg} ${badge.text}`}>{role}</span>
+        const Icon = badge.icon
+        return (
+            <span className={`px-2 py-1 text-xs rounded-full ${badge.bg} ${badge.text} font-medium inline-flex items-center gap-1`}>
+                <Icon className="w-3 h-3" />
+                {ROLE_LABELS[role] || role}
+            </span>
+        )
+    }
+
+    const getRoleIcon = (role: string) => {
+        if (role === 'hotel_admin') return <ShieldCheck className="w-3.5 h-3.5" />
+        if (role === 'manager') return <Shield className="w-3.5 h-3.5" />
+        return <Eye className="w-3.5 h-3.5" />
     }
 
     const formatDate = (d: string) => new Date(d).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
     return (
         <div className="mx-auto max-w-[1400px] px-4 sm:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
-            {/* Header - consistent with other pages */}
+            {/* Header */}
             <header
                 className="rounded-2xl px-4 sm:px-6 py-4 text-white shadow-sm"
                 style={{ background: 'linear-gradient(to right, #1E3A8A, #102A4C)' }}
@@ -206,6 +318,14 @@ export default function TeamSettingsPage() {
                 <p className="text-white/70 text-sm mt-1">Mời thành viên và quản lý quyền truy cập</p>
             </header>
 
+            {/* Success Toast */}
+            {success && (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 text-sm font-medium">
+                    ✓ {success}
+                </div>
+            )}
+
+            {/* Error */}
             {error && (
                 <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
                     {error}
@@ -239,7 +359,7 @@ export default function TeamSettingsPage() {
                     {invite ? (
                         <div className="space-y-4">
                             <div className="p-4 bg-gray-50 rounded-xl">
-                                <p className="text-sm text-gray-500 mb-2">Mã mời:</p>
+                                <p className="text-sm text-gray-500 mb-2">Mã mời (vai trò: {ROLE_LABELS[invite.role] || invite.role}):</p>
                                 <p className="text-2xl font-mono font-bold text-gray-900 tracking-wider">{invite.shortCode}</p>
                             </div>
                             <div className="p-4 bg-gray-50 rounded-xl">
@@ -259,19 +379,42 @@ export default function TeamSettingsPage() {
                                     </button>
                                 </div>
                             </div>
-                            <p className="text-xs text-gray-400">
-                                Hết hạn: {formatDate(invite.expiresAt)}
-                            </p>
+                            <div className="flex items-center justify-between">
+                                <p className="text-xs text-gray-400">
+                                    Hết hạn: {formatDate(invite.expiresAt)}
+                                </p>
+                                <button
+                                    onClick={() => setInvite(null)}
+                                    className="text-xs text-blue-600 hover:underline"
+                                >
+                                    Tạo mã mời khác
+                                </button>
+                            </div>
                         </div>
                     ) : (
-                        <button
-                            onClick={createInvite}
-                            disabled={inviteLoading || atLimit}
-                            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                            title={atLimit ? 'Đã đạt giới hạn thành viên' : ''}
-                        >
-                            {inviteLoading ? 'Đang tạo...' : atLimit ? 'Đã đạt giới hạn' : '+ Tạo mã mời mới'}
-                        </button>
+                        <div className="flex items-center gap-3">
+                            {/* Role picker */}
+                            <div className="relative">
+                                <select
+                                    value={inviteRole}
+                                    onChange={(e) => setInviteRole(e.target.value as 'viewer' | 'manager')}
+                                    className="appearance-none pl-3 pr-8 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                                    disabled={atLimit}
+                                >
+                                    <option value="viewer">👁 Viewer</option>
+                                    <option value="manager">🔧 Manager</option>
+                                </select>
+                                <ChevronDown className="w-4 h-4 text-gray-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                            </div>
+                            <button
+                                onClick={createInvite}
+                                disabled={inviteLoading || atLimit}
+                                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                title={atLimit ? 'Đã đạt giới hạn thành viên' : ''}
+                            >
+                                {inviteLoading ? 'Đang tạo...' : atLimit ? 'Đã đạt giới hạn' : '+ Tạo mã mời mới'}
+                            </button>
+                        </div>
                     )}
                 </div>
             )}
@@ -294,7 +437,7 @@ export default function TeamSettingsPage() {
                                     <div className="min-w-0">
                                         <p className="font-mono font-bold text-gray-900">{inv.short_code}</p>
                                         <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
-                                            <span className="px-1.5 py-0.5 bg-gray-100 rounded">{inv.role}</span>
+                                            <span className="px-1.5 py-0.5 bg-gray-100 rounded">{ROLE_LABELS[inv.role] || inv.role}</span>
                                             <span>Dùng: {inv.used_count}/{inv.max_uses}</span>
                                             <span className="flex items-center gap-0.5">
                                                 <Clock className="w-3 h-3" />
@@ -337,24 +480,87 @@ export default function TeamSettingsPage() {
                     <div className="p-8 text-center text-gray-400">Chưa có thành viên nào</div>
                 ) : (
                     <div className="divide-y divide-gray-100">
-                        {members.map((member) => (
-                            <div key={member.id} className="p-4 flex items-center justify-between">
-                                <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold shrink-0">
-                                        {member.user.name?.[0] || member.user.email[0].toUpperCase()}
+                        {members.map((member) => {
+                            const availableRoles = getAvailableRoles(member)
+                            const showActions = isAdmin && canChangeRole(member)
+                            const showRemove = canRemove(member)
+
+                            return (
+                                <div key={member.id} className="p-4 flex items-center justify-between gap-3">
+                                    <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold shrink-0">
+                                            {member.user.name?.[0] || member.user.email[0].toUpperCase()}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-gray-900 font-medium truncate">
+                                                {member.user.name || 'Unnamed'}
+                                                {member.user.id === session?.user?.id && (
+                                                    <span className="ml-1.5 text-xs text-gray-400">(bạn)</span>
+                                                )}
+                                            </p>
+                                            <p className="text-sm text-gray-500 truncate">{member.user.email}</p>
+                                        </div>
                                     </div>
-                                    <div className="min-w-0">
-                                        <p className="text-gray-900 font-medium truncate">{member.user.name || 'Unnamed'}</p>
-                                        <p className="text-sm text-gray-500 truncate">{member.user.email}</p>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        {/* Role badge or change dropdown */}
+                                        {showActions && availableRoles.length > 0 ? (
+                                            <div className="relative">
+                                                <select
+                                                    value={member.role}
+                                                    onChange={(e) => changeRole(member.id, e.target.value)}
+                                                    disabled={changingRole === member.id}
+                                                    className="appearance-none pl-2 pr-7 py-1 text-xs font-medium rounded-full border border-gray-200 bg-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50"
+                                                >
+                                                    <option value={member.role}>{ROLE_LABELS[member.role] || member.role}</option>
+                                                    {availableRoles.map(r => (
+                                                        <option key={r} value={r}>{ROLE_LABELS[r] || r}</option>
+                                                    ))}
+                                                </select>
+                                                <ChevronDown className="w-3 h-3 text-gray-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                            </div>
+                                        ) : (
+                                            getRoleBadge(member.role, member.is_primary)
+                                        )}
+
+                                        {/* Remove button */}
+                                        {showRemove && (
+                                            <>
+                                                {confirmRemove === member.id ? (
+                                                    <div className="flex items-center gap-1">
+                                                        <button
+                                                            onClick={() => removeMember(member.id)}
+                                                            disabled={removing === member.id}
+                                                            className="px-2 py-1 text-xs bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
+                                                        >
+                                                            {removing === member.id ? '...' : 'Xác nhận'}
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setConfirmRemove(null)}
+                                                            className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-md hover:bg-gray-200"
+                                                        >
+                                                            Hủy
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => setConfirmRemove(member.id)}
+                                                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                        title="Xóa thành viên"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                )}
+                                            </>
+                                        )}
                                     </div>
                                 </div>
-                                {getRoleBadge(member.role, member.is_primary)}
-                            </div>
-                        ))}
+                            )
+                        })}
                     </div>
                 )}
             </div>
         </div>
     )
 }
+
 
