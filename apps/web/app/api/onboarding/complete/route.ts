@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
                 user_id: session.user.id,
                 status: 'COMPLETED',
                 OR: [
-                    { hotel_id: { equals: undefined } },
+                    { hotel_id: null },
                     ...(demoHotel ? [{ hotel_id: demoHotel.hotel_id }] : []),
                 ],
             },
