@@ -118,6 +118,7 @@ export function Sidebar() {
 
 
     // Check if Demo Hotel + fetch subscription plan + active hotel
+    // Also: gateway-agnostic pending-activation check (catches SePay, PayPal, etc.)
     useEffect(() => {
         const checkDemoHotel = async () => {
             try {
@@ -127,6 +128,20 @@ export function Sidebar() {
             } catch (error) {
                 console.error('Error checking demo hotel:', error);
             }
+        };
+        // Gateway-agnostic: if user has a completed orphan payment → redirect to onboarding
+        // This catches ALL gateways (SePay, PayPal, future gateways) without gateway-specific code
+        const checkPendingActivation = async () => {
+            try {
+                const res = await fetch('/api/payments/pending-activation');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.hasPendingActivation) {
+                        console.log('[Sidebar] 💳 Pending activation detected → redirecting to /onboarding');
+                        window.location.href = '/onboarding';
+                    }
+                }
+            } catch { /* ignore */ }
         };
         const fetchPlan = async () => {
             try {
@@ -153,6 +168,7 @@ export function Sidebar() {
             } catch { /* ignore */ }
         };
         checkDemoHotel();
+        checkPendingActivation();
         fetchPlan();
         fetchActiveHotel();
     }, []);

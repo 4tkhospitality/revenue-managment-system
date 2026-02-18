@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import Image from "next/image"
@@ -50,6 +50,7 @@ export default function OnboardingPage() {
     const [hotelId, setHotelId] = useState<string | null>(null)
     const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle')
     const [importResult, setImportResult] = useState<{ count: number, valid: boolean } | null>(null)
+    const [maxRooms, setMaxRooms] = useState<number | null>(null)
 
     const [formData, setFormData] = useState({
         name: "",
@@ -63,6 +64,22 @@ export default function OnboardingPage() {
         priceFloor: "",
         priceCeiling: "",
     })
+
+    // Fetch purchased band → derive max rooms for capacity input
+    useEffect(() => {
+        const BAND_MAX: Record<string, number> = { R30: 30, R80: 80, R150: 150, R300P: 9999 };
+        fetch('/api/payments/pending-activation')
+            .then(r => r.json())
+            .then(data => {
+                if (data.hasPendingActivation && data.transaction?.roomBand) {
+                    const max = BAND_MAX[data.transaction.roomBand] ?? 30;
+                    setMaxRooms(max);
+                    // Pre-fill capacity with max rooms
+                    setFormData(prev => ({ ...prev, capacity: String(max) }));
+                }
+            })
+            .catch(() => { /* ignore */ });
+    }, []);
 
     // Format number with thousands separator (Vietnamese style: 1.000.000)
     const formatNumber = (value: string) => {
@@ -301,11 +318,19 @@ export default function OnboardingPage() {
                                             type="number"
                                             required
                                             min="1"
+                                            max={maxRooms ?? undefined}
                                             value={formData.capacity}
-                                            onChange={(e) => updateFormData('capacity', e.target.value)}
+                                            onChange={(e) => {
+                                                let val = e.target.value;
+                                                if (maxRooms && parseInt(val) > maxRooms) val = String(maxRooms);
+                                                updateFormData('capacity', val);
+                                            }}
                                             className={inputStyles}
-                                            placeholder="VD: 120"
+                                            placeholder={maxRooms ? `Tối đa ${maxRooms} phòng` : 'VD: 120'}
                                         />
+                                        {maxRooms && (
+                                            <p className="text-xs text-blue-400 mt-1">Gói của bạn hỗ trợ tối đa {maxRooms} phòng</p>
+                                        )}
                                     </div>
 
                                     <div>
