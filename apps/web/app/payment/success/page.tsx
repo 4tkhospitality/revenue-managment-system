@@ -9,7 +9,7 @@
  * 🔧 VERBOSE LOGGING for live debugging — remove after stable
  */
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
@@ -18,6 +18,18 @@ import { CheckCircle2, ArrowRight, Loader2, XCircle } from 'lucide-react';
 type Status = 'loading' | 'success' | 'error';
 
 export default function PaymentSuccessPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen flex items-center justify-center">
+                <Loader2 className="w-12 h-12 text-blue-600 animate-spin" />
+            </div>
+        }>
+            <PaymentSuccessContent />
+        </Suspense>
+    );
+}
+
+function PaymentSuccessContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const { update: updateSession } = useSession();
