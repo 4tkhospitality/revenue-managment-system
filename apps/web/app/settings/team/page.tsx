@@ -60,10 +60,25 @@ export default function TeamSettingsPage() {
     const [changingRole, setChangingRole] = useState<string | null>(null)
     const [removing, setRemoving] = useState<string | null>(null)
     const [confirmRemove, setConfirmRemove] = useState<string | null>(null)
+    const [fetchedRole, setFetchedRole] = useState<string | null>(null)
 
-    const isAdmin = session?.user?.accessibleHotels?.some(
+    // Fetch real role from DB (JWT may be stale)
+    useEffect(() => {
+        fetch('/api/user/switch-hotel')
+            .then(res => res.ok ? res.json() : null)
+            .then(data => {
+                if (data?.activeHotelRole) {
+                    setFetchedRole(data.activeHotelRole)
+                }
+            })
+            .catch(() => { })
+    }, [])
+
+    const jwtRole = session?.user?.accessibleHotels?.find(
         (h) => h.role === 'hotel_admin'
-    ) || session?.user?.isAdmin
+    )?.role
+    const effectiveRole = fetchedRole || jwtRole || session?.user?.role || 'viewer'
+    const isAdmin = effectiveRole === 'hotel_admin' || session?.user?.isAdmin
 
     // Determine if current user is Owner (is_primary=true for this hotel)
     const currentUserMembership = members.find(m => m.user.id === session?.user?.id)
