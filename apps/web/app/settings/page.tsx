@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Save, Hotel, AlertCircle, CheckCircle, Lock, Settings, DollarSign, Lightbulb, Zap, Target, Rocket, Tag, CreditCard } from 'lucide-react';
+import { Save, Hotel, AlertCircle, CheckCircle, Lock, Settings, DollarSign, Lightbulb, Zap, Target, Rocket, Tag, CreditCard, Receipt } from 'lucide-react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 
@@ -10,6 +10,7 @@ const PromoRedeemCard = dynamic(() => import('@/components/billing/PromoRedeemCa
 const OrgContextBadge = dynamic(() => import('@/components/settings/OrgContextBadge').then(mod => ({ default: mod.OrgContextBadge })), { ssr: false });
 const SubscriptionBadge = dynamic(() => import('@/components/settings/SubscriptionBadge').then(mod => ({ default: mod.SubscriptionBadge })), { ssr: false });
 const QuotaUsagePanel = dynamic(() => import('@/components/settings/QuotaUsagePanel').then(mod => ({ default: mod.QuotaUsagePanel })), { ssr: false });
+const PaymentHistoryPanel = dynamic(() => import('@/components/settings/PaymentHistoryPanel').then(mod => ({ default: mod.PaymentHistoryPanel })), { ssr: false });
 
 // Ladder presets
 const LADDER_PRESETS = {
@@ -471,6 +472,15 @@ export default function SettingsPage() {
                         <BillingCard hotelId={getHotelId()} />
                         <PromoRedeemCard hotelId={getHotelId()} />
                     </div>
+                </div>
+
+                {/* Payment History */}
+                <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-4 shadow-sm">
+                    <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                        <Receipt className="w-5 h-5" />
+                        Lịch sử thanh toán
+                    </h3>
+                    <PaymentHistoryPanel />
                 </div>
 
                 {/* Save Button */}

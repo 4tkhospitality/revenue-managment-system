@@ -53,8 +53,8 @@ const navGroups = [
         id: 'data',
         label: 'Quản lý dữ liệu',
         items: [
-            { href: '/upload', label: 'Tải lên', icon: Upload, minRole: 'manager', requiredTier: 'SUPERIOR' as const },
-            { href: '/data', label: 'Dữ liệu', icon: Database, minRole: 'manager', requiredTier: 'SUPERIOR' as const },
+            { href: '/upload', label: 'Tải lên', icon: Upload, minRole: 'manager', requiredTier: 'DELUXE' as const },
+            { href: '/data', label: 'Dữ liệu', icon: Database, minRole: 'manager', requiredTier: 'DELUXE' as const },
         ],
     },
     {
