@@ -70,6 +70,9 @@ export async function POST(request: NextRequest) {
             const termMonths = (paymentToLink as any).term_months || 1
             const periodEnd = new Date(now.getTime() + termMonths * 30 * 24 * 60 * 60 * 1000)
 
+            // ALL critical operations in ONE transaction to prevent race conditions
+            // Previously Demo Hotel deletion was OUTSIDE the tx, causing a race with JWT refresh
+            // where the session would still include Demo Hotel in accessibleHotels
             await prisma.$transaction(async (tx) => {
                 // 1. Link orphan payment to new hotel
                 await tx.paymentTransaction.update({
@@ -85,36 +88,63 @@ export async function POST(request: NextRequest) {
                     plan: paymentToLink.purchased_tier!,
                     roomBand: paymentToLink.purchased_room_band!,
                 })
+
+                // 3. Update user.hotel_id to new hotel (ensures session resolves to real hotel)
+                await tx.user.update({
+                    where: { id: session.user!.id! },
+                    data: { hotel_id: hotelId },
+                })
+
+                // 4. Remove Demo Hotel from user's accessible hotels (INSIDE tx to prevent race)
+                // This MUST happen before JWT refresh so accessibleHotels doesn't include Demo Hotel
+                if (demoHotel) {
+                    await tx.hotelUser.deleteMany({
+                        where: {
+                            user_id: session.user!.id!,
+                            hotel_id: demoHotel.hotel_id,
+                        },
+                    })
+                    console.log(`[Onboarding Complete] ✅ Removed Demo Hotel from user ${session.user!.email}`)
+                }
+
+                // 5. Log event inside tx
+                await tx.productEvent.create({
+                    data: {
+                        user_id: session.user!.id!,
+                        hotel_id: hotelId,
+                        event_type: 'ORPHAN_PAYMENT_LINKED',
+                        event_data: {
+                            paymentId: paymentToLink.id,
+                            tier: paymentToLink.purchased_tier,
+                            roomBand: paymentToLink.purchased_room_band,
+                            termMonths,
+                            demoHotelRemoved: !!demoHotel,
+                        },
+                    },
+                })
             })
 
             subscriptionActivated = true
             console.log(`[Onboarding Complete] ✅ Payment linked + subscription activated for hotel ${hotelId}`)
+        } else {
+            // No payment found or missing tier/band → still remove Demo and update user.hotel_id
+            // This handles free-tier users who go through onboarding without paying
+            console.log(`[Onboarding Complete] ⚠️ No valid payment found — still switching hotel`)
 
-            // 3. Remove Demo Hotel from user's accessible hotels (they now have a real hotel)
-            if (demoHotel) {
-                await prisma.hotelUser.deleteMany({
-                    where: {
-                        user_id: session.user.id,
-                        hotel_id: demoHotel.hotel_id,
-                    },
+            await prisma.$transaction(async (tx) => {
+                await tx.user.update({
+                    where: { id: session.user!.id! },
+                    data: { hotel_id: hotelId },
                 })
-                console.log(`[Onboarding Complete] ✅ Removed Demo Hotel from user ${session.user.email}`)
-            }
-
-            // Log event
-            await prisma.productEvent.create({
-                data: {
-                    user_id: session.user.id,
-                    hotel_id: hotelId,
-                    event_type: 'ORPHAN_PAYMENT_LINKED',
-                    event_data: {
-                        paymentId: paymentToLink.id,
-                        tier: paymentToLink.purchased_tier,
-                        roomBand: paymentToLink.purchased_room_band,
-                        termMonths,
-                        demoHotelRemoved: !!demoHotel,
-                    },
-                },
+                if (demoHotel) {
+                    await tx.hotelUser.deleteMany({
+                        where: {
+                            user_id: session.user!.id!,
+                            hotel_id: demoHotel.hotel_id,
+                        },
+                    })
+                    console.log(`[Onboarding Complete] ✅ Removed Demo Hotel (no payment) for ${session.user!.email}`)
+                }
             })
         }
 

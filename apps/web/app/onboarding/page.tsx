@@ -216,8 +216,8 @@ export default function OnboardingPage() {
             window.location.href = '/dashboard'
         } catch (error) {
             console.error('[Onboarding] ❌ Error during completion:', error)
-            // Even on error, try to navigate
-            window.location.href = '/dashboard'
+            // DO NOT navigate to dashboard on error — user would see Demo Hotel with wrong plan
+            alert('Có lỗi khi hoàn tất đăng ký. Vui lòng thử lại hoặc liên hệ hỗ trợ.')
         } finally {
             setLoading(false)
         }
