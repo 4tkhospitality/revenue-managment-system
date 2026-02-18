@@ -86,16 +86,27 @@ export async function getActiveHotelId(): Promise<string | null> {
         });
 
         if (hotelExists) {
-            // Validate user has access: Super Admin can access any hotel
-            const hasAccess = isAdmin || accessibleHotels.some(
-                (h: any) => h.hotelId === cookieHotelId
-            );
-
-            if (hasAccess) {
+            // Validate user has access: check DB directly (JWT may be stale after onboarding)
+            // Super Admin can access any hotel
+            if (isAdmin) {
+                return cookieHotelId;
+            }
+            // Check HotelUser table directly — this is the source of truth
+            // The JWT's accessibleHotels may be stale (e.g. right after onboarding/complete)
+            const hotelUser = await prisma.hotelUser.findUnique({
+                where: {
+                    user_id_hotel_id: {
+                        user_id: session.user.userId || session.user.id,
+                        hotel_id: cookieHotelId,
+                    },
+                },
+                select: { hotel_id: true },
+            });
+            if (hotelUser) {
                 return cookieHotelId;
             }
             // Cookie points to unauthorized hotel — ignore, fall through
-            console.warn('[Hotel] Cookie hotel not authorized for user, ignoring');
+            console.warn('[Hotel] Cookie hotel not authorized for user (DB check), ignoring');
         } else {
             console.warn('[Hotel] Cookie hotel_id not found in DB:', cookieHotelId);
         }

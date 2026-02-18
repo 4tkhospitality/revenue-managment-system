@@ -199,6 +199,9 @@ export default function OnboardingPage() {
 
             if (!completeRes.ok) {
                 console.error('[Onboarding] ❌ Complete failed:', completeData.error)
+                alert(`Có lỗi khi hoàn tất: ${completeData.error || 'Unknown error'}. Vui lòng thử lại.`)
+                setLoading(false)
+                return // STOP! Don't navigate to dashboard with broken state
             }
 
             // Force JWT session refresh so middleware sees updated accessibleHotels
