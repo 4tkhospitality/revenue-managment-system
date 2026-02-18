@@ -114,10 +114,10 @@ Active Hotel Resolution Chain:
 | 3 | DB: first real hotel | Auto-select admin's primary hotel |
 | 4 | Demo Hotel | Last resort for new users |
 
-**Sidebar Role Determination (V01.9.1):**
-- Role is fetched from DB via `GET /api/user/switch-hotel` → `HotelUser.role`
+**UI Role Determination (V01.9.1):**
+- Both **Sidebar** and **Team page** fetch role from DB via `GET /api/user/switch-hotel` → `HotelUser.role`
 - JWT role is used as fallback only
-- Ensures `hotel_admin` users see Settings/Team tabs immediately after onboarding
+- Ensures `hotel_admin` users see Settings/Team tabs and Team invite section immediately after onboarding
 
 ### 2.6 UI Specification: Login Page
 

@@ -464,14 +464,21 @@ async function getActiveHotelId(): Promise<string | null> {
 }
 ```
 
-### 3.5 Sidebar Role Determination (V01.9.1)
+### 3.5 UI Role Determination (V01.9.1)
 
 ```typescript
 // GET /api/user/switch-hotel returns:
 // { activeHotelId, activeHotelName, activeHotelRole }
 // activeHotelRole is fetched from HotelUser table in DB
-// Sidebar component uses this as source of truth:
+
+// Sidebar component:
 const userRole = fetchedRole || jwtRole || session?.user?.role || 'viewer';
+
+// Team page (settings/team/page.tsx):
+// Same pattern — fetches role from /api/user/switch-hotel on mount
+// isAdmin = effectiveRole === 'hotel_admin' || session?.user?.isAdmin
+// Gates the invite section: only hotel_admin can create/manage invites
+```
 
 ---
 

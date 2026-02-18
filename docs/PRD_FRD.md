@@ -118,7 +118,7 @@ RMS cung cấp:
 | Telegram Login Notifications | P1 | ✅ Done | V01.9.1 |
 | Onboarding Race-Condition Fix | P0 | ✅ Done | V01.9.1 |
 | DB-based Hotel Resolution | P0 | ✅ Done | V01.9.1 |
-| Sidebar Role from DB | P1 | ✅ Done | V01.9.1 |
+| UI Role from DB (Sidebar + Team page) | P1 | ✅ Done | V01.9.1 |
 | Diagnostic & Repair APIs | P2 | ✅ Done | V01.9.1 |
 | PDF Export | P2 | ✅ Done | V01.5 |
 | Rate Shopper | P2 | ⬜ Schema ready | Deferred |

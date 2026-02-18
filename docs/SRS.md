@@ -434,6 +434,7 @@ Standalone Tables:
 - [ ] Returning user login triggers Telegram notification (🔑) with hotel list
 - [ ] Notifications are fire-and-forget (do not slow down login)
 - [ ] Sidebar role matches DB (not stale JWT)
+- [ ] Team page isAdmin matches DB (invite section visible for hotel_admin)
 - [ ] Hotel resolution validates cookie against HotelUser DB table
 - [ ] `GET /api/debug/user-state` returns user's current diagnostic state
 - [ ] `POST /api/debug/repair-user` fixes broken user-hotel associations
