@@ -59,26 +59,45 @@ export async function POST(request: NextRequest) {
 export async function GET() {
     // Use the robust fallback chain from getActiveHotelId():
     // 1. Cookie → 2. Session hotels → 3. First real hotel (admin) → 4. Demo Hotel
-    // This ensures upload page always gets a valid hotel ID.
     const { getActiveHotelId } = await import('@/lib/pricing/get-hotel');
     const activeHotelId = await getActiveHotelId();
 
     if (!activeHotelId) {
         return NextResponse.json({
             activeHotelId: null,
-            activeHotelName: null
+            activeHotelName: null,
+            activeHotelRole: null,
         })
     }
 
-    // Fetch hotel name from DB for consistency
+    // Get session for user ID
+    const session = await auth();
+    const userId = (session?.user as any)?.userId || (session?.user as any)?.id;
+
+    // Fetch hotel name + user's role from DB (not JWT — JWT may be stale)
     const hotel = await prisma.hotel.findUnique({
         where: { hotel_id: activeHotelId },
         select: { name: true }
     })
 
+    let activeHotelRole: string | null = null;
+    if (userId) {
+        const hotelUser = await prisma.hotelUser.findUnique({
+            where: {
+                user_id_hotel_id: {
+                    user_id: userId,
+                    hotel_id: activeHotelId,
+                },
+            },
+            select: { role: true },
+        });
+        activeHotelRole = hotelUser?.role || null;
+    }
+
     return NextResponse.json({
         activeHotelId,
-        activeHotelName: hotel?.name || null
+        activeHotelName: hotel?.name || null,
+        activeHotelRole,
     })
 }
 

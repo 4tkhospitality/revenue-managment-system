@@ -79,6 +79,7 @@ export function Sidebar() {
     const [isDemo, setIsDemo] = useState(false);
     const [currentPlan, setCurrentPlan] = useState<string>('STANDARD');
     const [activeHotelId, setActiveHotelId] = useState<string | null>(null);
+    const [fetchedRole, setFetchedRole] = useState<string | null>(null);
     const [subInfo, setSubInfo] = useState<{
         periodStart: string | null;
         periodEnd: string | null;
@@ -88,12 +89,14 @@ export function Sidebar() {
         status: string;
     } | null>(null);
 
-    // Get user's role level — derive from accessibleHotels for the active hotel
+    // Get user's role level — prefer DB-fetched role (from /api/user/switch-hotel),
+    // fallback to JWT's accessibleHotels (may be stale after onboarding)
     const accessibleHotels = session?.user?.accessibleHotels || [];
-    const activeHotelRole = activeHotelId
+    const jwtRole = activeHotelId
         ? accessibleHotels.find((h: any) => h.hotelId === activeHotelId)?.role
         : accessibleHotels[0]?.role;
-    const userRole = activeHotelRole || session?.user?.role || 'viewer';
+    // fetchedRole (from DB) is the source of truth; jwtRole is fallback
+    const userRole = fetchedRole || jwtRole || session?.user?.role || 'viewer';
     const userRoleLevel = ROLE_LEVELS[userRole] ?? 0;
     const isAdmin = session?.user?.isAdmin;
 
@@ -165,6 +168,7 @@ export function Sidebar() {
                 const res = await fetch('/api/user/switch-hotel', { credentials: 'include' });
                 const data = await res.json();
                 if (data.activeHotelId) setActiveHotelId(data.activeHotelId);
+                if (data.activeHotelRole) setFetchedRole(data.activeHotelRole);
             } catch { /* ignore */ }
         };
         checkDemoHotel();
