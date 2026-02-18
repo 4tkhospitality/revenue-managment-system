@@ -86,3 +86,31 @@ export async function notifyPaymentConfirmed(params: {
 
     await sendTelegramMessage(msg);
 }
+
+/**
+ * Notify when any user logs in (new or returning)
+ */
+export async function notifyUserLogin(params: {
+    email: string;
+    name: string | null;
+    isNew: boolean;
+    hotels?: string[];
+}): Promise<void> {
+    const now = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+    const icon = params.isNew ? '🆕' : '🔑';
+    const label = params.isNew ? 'User MỚI đăng nhập' : 'User đăng nhập';
+    const hotelList = params.hotels?.length
+        ? params.hotels.join(', ')
+        : 'Chưa có hotel';
+
+    const msg = [
+        `${icon} <b>${label}</b>`,
+        '',
+        `📧 Email: <code>${params.email}</code>`,
+        `👋 Tên: ${params.name || 'N/A'}`,
+        `🏨 Hotels: ${hotelList}`,
+        `🕐 ${now}`,
+    ].join('\n');
+
+    await sendTelegramMessage(msg);
+}

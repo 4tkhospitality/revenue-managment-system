@@ -3,7 +3,7 @@ import Google from "next-auth/providers/google"
 import prisma from "./prisma"
 import { UserRole } from "@prisma/client"
 import { serverLog } from "./logger"
-import { notifyNewUser } from "./telegram"
+import { notifyNewUser, notifyUserLogin } from "./telegram"
 
 // Admin email - super_admin access
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "phan.le@vleisure.com"
@@ -105,6 +105,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                             serverLog.info(`[AUTH] User ${user.email} has pending activation: paid=${!!hasCompletedPayment}, hasRealHotel=${hasRealHotel}`)
                         }
 
+                        // Notify Telegram on actual sign-in (not session update)
+                        if (account) {
+                            const hotelNames = user.hotel_users.map(hu => hu.hotel?.name || 'Unknown').filter(n => n !== 'Demo Hotel');
+                            notifyUserLogin({
+                                email: user.email,
+                                name: token.name as string || null,
+                                isNew: false,
+                                hotels: hotelNames,
+                            }); // fire-and-forget
+                        }
+
 
                     } else {
                         // NEW USER: Create user WITHOUT hotel assignment
@@ -127,6 +138,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                         token.isActive = true
                         token.isAdmin = token.email === ADMIN_EMAIL
                         token.accessibleHotels = [] // Empty - triggers /welcome redirect
+
+                        // Notify Telegram — new user!
+                        notifyUserLogin({
+                            email: newUser.email,
+                            name: token.name as string || null,
+                            isNew: true,
+                        }); // fire-and-forget
                     }
                 } catch (error) {
                     serverLog.error('[AUTH] ERROR in JWT callback:', error)
