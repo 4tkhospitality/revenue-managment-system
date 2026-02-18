@@ -175,10 +175,11 @@ export async function middleware(request: NextRequest) {
         const hotelAccess = accessibleHotels.find(h => h.hotelId === activeHotelId)
 
         if (!hotelAccess) {
-            // Clear invalid cookie and redirect
-            const response = NextResponse.redirect(new URL("/select-hotel", request.url))
-            response.cookies.delete(ACTIVE_HOTEL_COOKIE)
-            return response
+            // Cookie hotel not in JWT's list — JWT might be stale (e.g., right after onboarding)
+            // Don't delete the cookie! Allow through and let page-level getActiveHotelId()
+            // resolve from DB (it runs in Node.js and can query Prisma directly)
+            console.log(`[MW] ⚠️ Cookie hotel ${activeHotelId} not in JWT list → allowing through (JWT may be stale) | email=${session.user.email}`)
+            return NextResponse.next()
         }
 
         // Check per-hotel role for route

@@ -13,10 +13,12 @@ import prisma from '@/lib/prisma'
 import { applySubscriptionChange } from '@/lib/payments/activation'
 
 export async function POST(request: NextRequest) {
+    console.log('[Onboarding Complete] ━━━━ START ━━━━')
     const session = await auth()
     if (!session?.user?.id) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    console.log(`[Onboarding Complete] User: ${session.user.email} (${session.user.id})`)
 
     try {
         const { hotelId } = await request.json()
@@ -60,6 +62,8 @@ export async function POST(request: NextRequest) {
 
         let subscriptionActivated = false
 
+        console.log(`[Onboarding Complete] Payment found: ${paymentToLink ? `id=${paymentToLink.id}, tier=${paymentToLink.purchased_tier}, hotel_id=${paymentToLink.hotel_id}` : 'NONE'}`)
+
         if (paymentToLink && paymentToLink.purchased_tier && paymentToLink.purchased_room_band) {
             // Link payment to the new hotel + activate subscription
             const now = new Date()
@@ -84,6 +88,7 @@ export async function POST(request: NextRequest) {
             })
 
             subscriptionActivated = true
+            console.log(`[Onboarding Complete] ✅ Payment linked + subscription activated for hotel ${hotelId}`)
 
             // 3. Remove Demo Hotel from user's accessible hotels (they now have a real hotel)
             if (demoHotel) {
@@ -153,10 +158,12 @@ export async function POST(request: NextRequest) {
             },
         })
 
+        console.log(`[Onboarding Complete] ━━━━ DONE ━━━━ subscriptionActivated=${subscriptionActivated}, trialExtended=${trialExtended}`)
         const response = NextResponse.json({
             success: true,
             trialExtended,
             subscriptionActivated,
+            hotelId,
             message: subscriptionActivated
                 ? `Đã kích hoạt gói ${paymentToLink?.purchased_tier}! Chào mừng bạn!`
                 : trialExtended

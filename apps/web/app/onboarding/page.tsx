@@ -169,20 +169,36 @@ export default function OnboardingPage() {
                 })
             }
 
-            // Mark onboarding complete (API also sets rms_active_hotel cookie)
-            await fetch('/api/onboarding/complete', {
+            // Mark onboarding complete (API links payment, creates subscription,
+            // removes Demo Hotel, and sets rms_active_hotel cookie)
+            console.log('[Onboarding] 🔄 Completing onboarding for hotel:', hotelId)
+            const completeRes = await fetch('/api/onboarding/complete', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ hotelId }),
             })
+            const completeData = await completeRes.json()
+            console.log('[Onboarding] 📦 Complete response:', JSON.stringify(completeData))
 
-            // Force JWT session refresh so hasPendingActivation recalculates
+            if (!completeRes.ok) {
+                console.error('[Onboarding] ❌ Complete failed:', completeData.error)
+            }
+
+            // Force JWT session refresh so middleware sees updated accessibleHotels
+            // This re-queries hotel_users from DB (Demo Hotel should be removed by now)
+            console.log('[Onboarding] 🔑 Refreshing JWT session...')
             await updateSession()
+            console.log('[Onboarding] ✅ JWT session refreshed')
+
+            // Small delay to ensure cookies (both rms_active_hotel and JWT session)
+            // are fully processed by the browser before navigation
+            await new Promise(resolve => setTimeout(resolve, 300))
 
             // Hard redirect to force full page load with fresh cookies
-            // router.push won't work because middleware may still read stale JWT
+            console.log('[Onboarding] 🚀 Navigating to /dashboard')
             window.location.href = '/dashboard'
         } catch (error) {
+            console.error('[Onboarding] ❌ Error during completion:', error)
             // Even on error, try to navigate
             window.location.href = '/dashboard'
         } finally {
