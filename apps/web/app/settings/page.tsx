@@ -272,11 +272,7 @@ export default function SettingsPage() {
                 }),
             });
             if (res.ok) {
-                const data = await res.json();
-                const msg = data.bandWarning
-                    ? `Đã lưu cài đặt! ⚠️ ${data.bandWarning}`
-                    : 'Đã lưu cài đặt thành công!';
-                setMessage({ type: 'success', text: msg });
+                setMessage({ type: 'success', text: 'Đã lưu cài đặt thành công!' });
             }
             else {
                 const data = await res.json();

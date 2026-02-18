@@ -281,8 +281,8 @@ export function Sidebar() {
                 {/* Navigation with Groups */}
                 <nav className="flex-1 py-2 overflow-y-auto">
                     {navGroups.map((group, groupIndex) => {
-                        // Filter items based on Demo Hotel status
-                        const visibleItems = group.items.filter(item => !isDemo || !('hideForDemo' in item && item.hideForDemo));
+                        // Filter items: hide demo-only items unless user is admin
+                        const visibleItems = group.items.filter(item => isAdmin || !isDemo || !('hideForDemo' in item && item.hideForDemo));
                         if (visibleItems.length === 0) return null;
 
                         return (

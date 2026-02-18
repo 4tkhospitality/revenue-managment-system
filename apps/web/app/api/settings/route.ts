@@ -67,16 +67,59 @@ export async function POST(request: NextRequest) {
             ladderSteps
         } = body;
 
-        // Validate capacity against subscription band
-        let bandWarning: string | null = null;
+        // ═══════════════════════════════════════════════════════════════
+        // CAPACITY BAND PROTECTION — prevent revenue leakage
+        // If new capacity requires a higher band than what was purchased,
+        // BLOCK the change (unless super_admin overrides).
+        // ═══════════════════════════════════════════════════════════════
+        const BAND_ORDER: Record<string, number> = {
+            R30: 1, R80: 2, R150: 3, R300P: 4,
+        };
+        const BAND_MAX_ROOMS: Record<string, number> = {
+            R30: 30, R80: 80, R150: 150, R300P: 9999,
+        };
+
         if (capacity !== undefined) {
             const newBand = deriveBand(capacity);
             const sub = await prisma.subscription.findFirst({
                 where: { hotel_id: hotelId },
-                select: { room_band: true },
+                select: { room_band: true, capacity_snapshot: true },
             });
-            if (sub && sub.room_band && newBand !== sub.room_band) {
-                bandWarning = `Số phòng ${capacity} tương ứng band ${newBand} (hiện tại: ${sub.room_band}). Gói sẽ được cập nhật tự động.`;
+
+            if (sub && sub.room_band) {
+                const currentBandLevel = BAND_ORDER[sub.room_band] ?? 0;
+                const newBandLevel = BAND_ORDER[newBand] ?? 0;
+                const maxRooms = BAND_MAX_ROOMS[sub.room_band] ?? 0;
+
+                // Block if new capacity exceeds purchased band (unless super_admin)
+                if (newBandLevel > currentBandLevel && !session.user.isAdmin) {
+                    return NextResponse.json({
+                        error: `Số phòng ${capacity} vượt quá giới hạn gói hiện tại (${sub.room_band}, tối đa ${maxRooms} phòng). Vui lòng nâng cấp gói hoặc liên hệ Zalo 0778602953 để được hỗ trợ.`,
+                        bandExceeded: true,
+                        currentBand: sub.room_band,
+                        requiredBand: newBand,
+                        maxRooms,
+                    }, { status: 400 });
+                }
+
+                // Super admin can override — but log it
+                if (newBandLevel > currentBandLevel && session.user.isAdmin) {
+                    console.warn(`[SETTINGS] Super Admin override: capacity ${sub.capacity_snapshot} → ${capacity}, band ${sub.room_band} → ${newBand}, hotel ${hotelId}`);
+                    // Super admin: update band + capacity_snapshot
+                    await prisma.$executeRaw`
+                        UPDATE subscriptions
+                        SET room_band = ${newBand}::"RoomBand",
+                            capacity_snapshot = ${capacity}
+                        WHERE hotel_id = ${hotelId}::uuid
+                    `;
+                } else {
+                    // Same or lower band — just update capacity_snapshot
+                    await prisma.$executeRaw`
+                        UPDATE subscriptions
+                        SET capacity_snapshot = ${capacity}
+                        WHERE hotel_id = ${hotelId}::uuid
+                    `;
+                }
             }
         }
 
@@ -95,18 +138,7 @@ export async function POST(request: NextRequest) {
             },
         });
 
-        // Auto-sync subscription band when capacity changes
-        if (capacity !== undefined) {
-            const newBand = deriveBand(capacity);
-            await prisma.$executeRaw`
-                UPDATE subscriptions
-                SET room_band = ${newBand}::"RoomBand",
-                    capacity_snapshot = ${capacity}
-                WHERE hotel_id = ${hotelId}::uuid
-            `;
-        }
-
-        return NextResponse.json({ success: true, hotel, bandWarning });
+        return NextResponse.json({ success: true, hotel });
     } catch (error) {
         console.error('Error saving settings:', error);
         return NextResponse.json({ error: 'Failed to save settings' }, { status: 500 });
