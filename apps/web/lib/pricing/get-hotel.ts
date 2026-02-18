@@ -60,62 +60,72 @@ export async function isDemoHotel(hotelId: string): Promise<boolean> {
  * Cookies are set via /api/user/switch-hotel POST only.
  */
 export async function getActiveHotelId(): Promise<string | null> {
+    const TAG = '[getActiveHotelId]'
     let session: any = null;
 
     try {
         session = await auth();
     } catch (error) {
-        console.error('[Hotel] Error getting session:', error);
+        console.error(TAG, 'Error getting session:', error);
         return null;
     }
 
-    if (!session?.user) return null;
+    if (!session?.user) {
+        console.log(TAG, '❌ No session user → return null')
+        return null;
+    }
 
     const isAdmin = session.user.isAdmin === true;
     const accessibleHotels = session.user.accessibleHotels || [];
+    const userId = session.user.userId || session.user.id;
+    console.log(TAG, `👤 email=${session.user.email} userId=${userId} isAdmin=${isAdmin} accessibleHotels=${JSON.stringify(accessibleHotels.map((h: any) => ({ id: h.hotelId, name: h.hotelName })))}`)
 
     // 1. Try cookie first (cookie = preference, validated against permissions)
     const cookieStore = await cookies();
     const cookieHotelId = cookieStore.get(ACTIVE_HOTEL_COOKIE)?.value;
+    console.log(TAG, `🍪 Cookie rms_active_hotel = ${cookieHotelId || 'NOT SET'}`)
 
     if (cookieHotelId) {
         // Check hotel exists in DB
         const hotelExists = await prisma.hotel.findUnique({
             where: { hotel_id: cookieHotelId },
-            select: { hotel_id: true },
+            select: { hotel_id: true, name: true },
         });
+        console.log(TAG, `🏨 Cookie hotel exists in DB: ${hotelExists ? `YES (${(hotelExists as any).name})` : 'NO'}`)
 
         if (hotelExists) {
             // Validate user has access: check DB directly (JWT may be stale after onboarding)
-            // Super Admin can access any hotel
             if (isAdmin) {
+                console.log(TAG, `✅ RESULT: cookie hotel (admin bypass) → ${cookieHotelId}`)
                 return cookieHotelId;
             }
             // Check HotelUser table directly — this is the source of truth
-            // The JWT's accessibleHotels may be stale (e.g. right after onboarding/complete)
             const hotelUser = await prisma.hotelUser.findUnique({
                 where: {
                     user_id_hotel_id: {
-                        user_id: session.user.userId || session.user.id,
+                        user_id: userId,
                         hotel_id: cookieHotelId,
                     },
                 },
                 select: { hotel_id: true },
             });
+            console.log(TAG, `👤 HotelUser DB check: userId=${userId} hotelId=${cookieHotelId} → ${hotelUser ? 'HAS ACCESS' : 'NO ACCESS'}`)
             if (hotelUser) {
+                console.log(TAG, `✅ RESULT: cookie hotel (DB validated) → ${cookieHotelId}`)
                 return cookieHotelId;
             }
-            // Cookie points to unauthorized hotel — ignore, fall through
-            console.warn('[Hotel] Cookie hotel not authorized for user (DB check), ignoring');
+            console.warn(TAG, `⚠️ Cookie hotel ${cookieHotelId} NOT authorized (DB check) → falling through`);
         } else {
-            console.warn('[Hotel] Cookie hotel_id not found in DB:', cookieHotelId);
+            console.warn(TAG, `⚠️ Cookie hotel ${cookieHotelId} NOT in DB → falling through`);
         }
     }
 
     // 2. Fallback to session's accessible hotels
+    console.log(TAG, `📋 Fallback: accessibleHotels count = ${accessibleHotels.length}`)
     if (accessibleHotels.length > 0) {
         const primaryHotel = accessibleHotels.find((h: any) => h.isPrimary);
         const candidateId = primaryHotel?.hotelId || accessibleHotels[0].hotelId;
+        console.log(TAG, `📋 Primary candidate: ${candidateId} (isPrimary=${!!primaryHotel})`)
 
         const hotelExists = await prisma.hotel.findUnique({
             where: { hotel_id: candidateId },
@@ -123,6 +133,7 @@ export async function getActiveHotelId(): Promise<string | null> {
         });
 
         if (hotelExists) {
+            console.log(TAG, `✅ RESULT: session primary hotel → ${candidateId}`)
             return candidateId;
         }
 
@@ -133,7 +144,10 @@ export async function getActiveHotelId(): Promise<string | null> {
                 where: { hotel_id: h.hotelId },
                 select: { hotel_id: true },
             });
-            if (exists) return h.hotelId;
+            if (exists) {
+                console.log(TAG, `✅ RESULT: session fallback hotel → ${h.hotelId}`)
+                return h.hotelId;
+            }
         }
     }
 
@@ -145,13 +159,14 @@ export async function getActiveHotelId(): Promise<string | null> {
             select: { hotel_id: true },
         });
         if (firstRealHotel) {
+            console.log(TAG, `✅ RESULT: admin first real hotel → ${firstRealHotel.hotel_id}`)
             return firstRealHotel.hotel_id;
         }
-        // System only has Demo Hotel — fall through to Demo
     }
 
     // 4. Normal user with no valid hotels → Demo Hotel (onboarding)
     const demoHotelId = await getOrCreateDemoHotel();
+    console.log(TAG, `⚠️ RESULT: FALLBACK TO DEMO HOTEL → ${demoHotelId}`)
     return demoHotelId;
 }
 

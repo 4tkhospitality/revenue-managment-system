@@ -40,6 +40,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             // trigger === 'update' is called after demo hotel assignment, invite redeem, etc.
             if ((account && token.email) || trigger === 'update') {
                 try {
+                    console.log(`[AUTH] JWT Callback TRIGGER: account=${!!account}, trigger=${trigger}, email=${token.email}`)
 
                     // Single query with include instead of 3 sequential queries
                     const user = await prisma.user.findUnique({
@@ -84,6 +85,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                             role: hu.role,
                             isPrimary: hu.is_primary,
                         }))
+                        console.log(`[AUTH] JWT accessibleHotels = ${JSON.stringify(token.accessibleHotels)}`)
 
                         // Check if user paid but hasn't created their own hotel yet
                         // This handles: payment linked to Demo Hotel, or orphan (hotel_id=null)

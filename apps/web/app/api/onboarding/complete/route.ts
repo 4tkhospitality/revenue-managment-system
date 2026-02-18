@@ -60,9 +60,26 @@ export async function POST(request: NextRequest) {
             orderBy: { created_at: 'desc' },
         })
 
+        // Also list ALL payments for this user for debugging
+        const allPayments = await prisma.paymentTransaction.findMany({
+            where: { user_id: session.user.id },
+            select: { id: true, status: true, hotel_id: true, purchased_tier: true, purchased_room_band: true, gateway: true },
+            orderBy: { created_at: 'desc' },
+            take: 5,
+        })
+        console.log(`[OC] ALL payments for user: ${JSON.stringify(allPayments)}`)
+
+        // List ALL hotelUsers for this user
+        const allHotelUsers = await prisma.hotelUser.findMany({
+            where: { user_id: session.user.id },
+            include: { hotel: { select: { name: true } } },
+        })
+        console.log(`[OC] ALL hotelUsers BEFORE tx: ${JSON.stringify(allHotelUsers.map(hu => ({ hotelId: hu.hotel_id, name: hu.hotel?.name, role: hu.role })))}`)
+
         let subscriptionActivated = false
 
-        console.log(`[Onboarding Complete] Payment found: ${paymentToLink ? `id=${paymentToLink.id}, tier=${paymentToLink.purchased_tier}, hotel_id=${paymentToLink.hotel_id}` : 'NONE'}`)
+        console.log(`[OC] Payment to link: ${paymentToLink ? `id=${paymentToLink.id}, tier=${paymentToLink.purchased_tier}, band=${paymentToLink.purchased_room_band}, hotel_id=${paymentToLink.hotel_id}, gateway=${paymentToLink.gateway}` : 'NONE FOUND'}`)
+        console.log(`[OC] demoHotel: ${demoHotel ? demoHotel.hotel_id : 'NOT FOUND'}`)
 
         if (paymentToLink && paymentToLink.purchased_tier && paymentToLink.purchased_room_band) {
             // Link payment to the new hotel + activate subscription
@@ -71,16 +88,18 @@ export async function POST(request: NextRequest) {
             const periodEnd = new Date(now.getTime() + termMonths * 30 * 24 * 60 * 60 * 1000)
 
             // ALL critical operations in ONE transaction to prevent race conditions
-            // Previously Demo Hotel deletion was OUTSIDE the tx, causing a race with JWT refresh
-            // where the session would still include Demo Hotel in accessibleHotels
+            console.log(`[OC] 🟢 ENTERING TRANSACTION: paid flow (tier=${paymentToLink.purchased_tier}, band=${paymentToLink.purchased_room_band})`)
             await prisma.$transaction(async (tx) => {
                 // 1. Link orphan payment to new hotel
+                console.log(`[OC] Step 1: Linking payment ${paymentToLink.id} to hotel ${hotelId}`)
                 await tx.paymentTransaction.update({
                     where: { id: paymentToLink.id },
                     data: { hotel_id: hotelId },
                 })
+                console.log(`[OC] Step 1: ✅ Done`)
 
                 // 2. Activate subscription for the new hotel
+                console.log(`[OC] Step 2: Activating subscription ${paymentToLink.purchased_tier}/${paymentToLink.purchased_room_band} for hotel ${hotelId}`)
                 await applySubscriptionChange(tx, hotelId, session.user!.id!, {
                     periodStart: now,
                     periodEnd,
@@ -88,23 +107,28 @@ export async function POST(request: NextRequest) {
                     plan: paymentToLink.purchased_tier!,
                     roomBand: paymentToLink.purchased_room_band!,
                 })
+                console.log(`[OC] Step 2: ✅ Done`)
 
-                // 3. Update user.hotel_id to new hotel (ensures session resolves to real hotel)
+                // 3. Update user.hotel_id to new hotel
+                console.log(`[OC] Step 3: Updating user.hotel_id to ${hotelId}`)
                 await tx.user.update({
                     where: { id: session.user!.id! },
                     data: { hotel_id: hotelId },
                 })
+                console.log(`[OC] Step 3: ✅ Done`)
 
-                // 4. Remove Demo Hotel from user's accessible hotels (INSIDE tx to prevent race)
-                // This MUST happen before JWT refresh so accessibleHotels doesn't include Demo Hotel
+                // 4. Remove Demo Hotel from user's accessible hotels (INSIDE tx)
                 if (demoHotel) {
-                    await tx.hotelUser.deleteMany({
+                    console.log(`[OC] Step 4: Removing Demo Hotel ${demoHotel.hotel_id} from user's hotelUsers`)
+                    const deleteResult = await tx.hotelUser.deleteMany({
                         where: {
                             user_id: session.user!.id!,
                             hotel_id: demoHotel.hotel_id,
                         },
                     })
-                    console.log(`[Onboarding Complete] ✅ Removed Demo Hotel from user ${session.user!.email}`)
+                    console.log(`[OC] Step 4: ✅ Deleted ${deleteResult.count} Demo HotelUser records`)
+                } else {
+                    console.log(`[OC] Step 4: No Demo Hotel to remove`)
                 }
 
                 // 5. Log event inside tx
@@ -123,29 +147,34 @@ export async function POST(request: NextRequest) {
                     },
                 })
             })
+            console.log(`[OC] 🟢 TRANSACTION COMMITTED`)
 
             subscriptionActivated = true
-            console.log(`[Onboarding Complete] ✅ Payment linked + subscription activated for hotel ${hotelId}`)
+            console.log(`[OC] ✅ Payment linked + subscription activated for hotel ${hotelId}`)
         } else {
             // No payment found or missing tier/band → still remove Demo and update user.hotel_id
-            // This handles free-tier users who go through onboarding without paying
-            console.log(`[Onboarding Complete] ⚠️ No valid payment found — still switching hotel`)
+            console.log(`[OC] 🟡 ENTERING TRANSACTION: no-payment flow`)
+            console.log(`[OC] paymentToLink=${!!paymentToLink}, tier=${paymentToLink?.purchased_tier || 'null'}, band=${paymentToLink?.purchased_room_band || 'null'}`)
 
             await prisma.$transaction(async (tx) => {
+                console.log(`[OC] Step A: Updating user.hotel_id to ${hotelId}`)
                 await tx.user.update({
                     where: { id: session.user!.id! },
                     data: { hotel_id: hotelId },
                 })
+                console.log(`[OC] Step A: ✅ Done`)
                 if (demoHotel) {
-                    await tx.hotelUser.deleteMany({
+                    console.log(`[OC] Step B: Removing Demo Hotel ${demoHotel.hotel_id}`)
+                    const deleteResult = await tx.hotelUser.deleteMany({
                         where: {
                             user_id: session.user!.id!,
                             hotel_id: demoHotel.hotel_id,
                         },
                     })
-                    console.log(`[Onboarding Complete] ✅ Removed Demo Hotel (no payment) for ${session.user!.email}`)
+                    console.log(`[OC] Step B: ✅ Deleted ${deleteResult.count} Demo HotelUser records`)
                 }
             })
+            console.log(`[OC] 🟡 TRANSACTION COMMITTED (no-payment)`)
         }
 
         // ── Legacy: Check trial extension (for non-pay-first users) ─────
@@ -202,6 +231,7 @@ export async function POST(request: NextRequest) {
         })
 
         // Set active hotel cookie so middleware allows through even before JWT refreshes
+        console.log(`[OC] 🍪 Setting rms_active_hotel cookie = ${hotelId}`)
         response.cookies.set('rms_active_hotel', hotelId, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
@@ -209,6 +239,14 @@ export async function POST(request: NextRequest) {
             maxAge: 60 * 60 * 24 * 30,
             path: '/',
         })
+
+        // Verify final state of hotelUsers
+        const finalHotelUsers = await prisma.hotelUser.findMany({
+            where: { user_id: session.user.id },
+            include: { hotel: { select: { name: true } } },
+        })
+        console.log(`[OC] 🏁 FINAL hotelUsers: ${JSON.stringify(finalHotelUsers.map(hu => ({ hotelId: hu.hotel_id, name: hu.hotel?.name, role: hu.role })))}`)
+        console.log(`[OC] ━━━━ END ━━━━ success=true`)
 
         return response
     } catch (error) {
