@@ -271,7 +271,13 @@ export default function SettingsPage() {
                     ladderSteps: JSON.stringify(LADDER_PRESETS[settings.ladderPreset].steps),
                 }),
             });
-            if (res.ok) setMessage({ type: 'success', text: 'Đã lưu cài đặt thành công!' });
+            if (res.ok) {
+                const data = await res.json();
+                const msg = data.bandWarning
+                    ? `Đã lưu cài đặt! ⚠️ ${data.bandWarning}`
+                    : 'Đã lưu cài đặt thành công!';
+                setMessage({ type: 'success', text: msg });
+            }
             else {
                 const data = await res.json();
                 setMessage({ type: 'error', text: data.error || 'Lưu thất bại' });
