@@ -38,6 +38,27 @@ export async function GET(request: Request) {
             select: { capacity: true, org_id: true },
         });
 
+        // Get subscription period dates
+        let periodStart: string | null = null;
+        let periodEnd: string | null = null;
+        let isExpired = false;
+
+        const sub = hotel?.org_id
+            ? await prisma.subscription.findUnique({
+                where: { org_id: hotel.org_id },
+                select: { current_period_start: true, current_period_end: true, status: true },
+            })
+            : await prisma.subscription.findFirst({
+                where: { hotel_id: hotelId },
+                select: { current_period_start: true, current_period_end: true, status: true },
+            });
+
+        if (sub) {
+            periodStart = sub.current_period_start?.toISOString() ?? null;
+            periodEnd = sub.current_period_end?.toISOString() ?? null;
+            isExpired = sub.status === 'CANCELLED' || (sub.current_period_end ? sub.current_period_end < new Date() : false);
+        }
+
         // Get usage counts
         const now = new Date();
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -61,6 +82,9 @@ export async function GET(request: Request) {
             isTrialActive: entitlements.isTrialActive,
             isTrialExpired: entitlements.isTrialExpired,
             trialDaysRemaining: entitlements.trialDaysRemaining,
+            periodStart,
+            periodEnd,
+            isExpired,
             hotelCapacity: hotel?.capacity ?? 0,
             derivedBand: hotel ? deriveBand(hotel.capacity) : 'R30',
             price: getPrice(entitlements.plan, entitlements.roomBand),

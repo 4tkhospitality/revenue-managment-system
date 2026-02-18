@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { useState, useEffect } from 'react';
 import { SubscriptionBanner } from './SubscriptionBanner';
-import { LayoutDashboard, Upload, Database, Settings, BookOpen, Shield, Menu, X, LogOut, DollarSign, BarChart3, TrendingUp, CalendarCheck, Crown, Lock, Users } from 'lucide-react';
+import { LayoutDashboard, Upload, Database, Settings, BookOpen, Shield, Menu, X, LogOut, DollarSign, BarChart3, TrendingUp, CalendarCheck, Crown, Lock, Users, CreditCard } from 'lucide-react';
 import { HotelSwitcher } from '@/components/HotelSwitcher';
 
 // Role levels for permission checks
@@ -26,6 +26,7 @@ const TIER_LEVELS: Record<string, number> = {
 };
 
 const TIER_DISPLAY: Record<string, string> = {
+    STANDARD: 'Standard',
     SUPERIOR: 'Superior',
     DELUXE: 'Deluxe',
     SUITE: 'Suite',
@@ -77,6 +78,14 @@ export function Sidebar() {
     const [isOpen, setIsOpen] = useState(false);
     const [isDemo, setIsDemo] = useState(false);
     const [currentPlan, setCurrentPlan] = useState<string>('STANDARD');
+    const [subInfo, setSubInfo] = useState<{
+        periodStart: string | null;
+        periodEnd: string | null;
+        isExpired: boolean;
+        isTrialActive: boolean;
+        trialDaysRemaining: number;
+        status: string;
+    } | null>(null);
 
     // Get user's role level (hotelRole is dynamically added at runtime from hotel_access)
     const userRole = (session?.user as { hotelRole?: string })?.hotelRole || session?.user?.role || 'viewer';
@@ -100,6 +109,8 @@ export function Sidebar() {
         }
     };
 
+    const formatDateShort = (d: string) => new Date(d).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
     // Check if Demo Hotel + fetch subscription plan
     useEffect(() => {
         const checkDemoHotel = async () => {
@@ -117,6 +128,14 @@ export function Sidebar() {
                 if (res.ok) {
                     const data = await res.json();
                     setCurrentPlan(data.plan || 'STANDARD');
+                    setSubInfo({
+                        periodStart: data.periodStart ?? null,
+                        periodEnd: data.periodEnd ?? null,
+                        isExpired: data.isExpired ?? false,
+                        isTrialActive: data.isTrialActive ?? false,
+                        trialDaysRemaining: data.trialDaysRemaining ?? 0,
+                        status: data.status ?? 'ACTIVE',
+                    });
                 }
             } catch { /* keep default */ }
         };
@@ -212,9 +231,38 @@ export function Sidebar() {
                 </div>
 
                 {/* Hotel Switcher */}
-                <div className="px-4 pb-4">
+                <div className="px-4 pb-2">
                     <HotelSwitcher />
                 </div>
+
+                {/* Subscription Info Card */}
+                {subInfo && (
+                    <div className="mx-3 mb-3 px-3 py-2.5 bg-white/10 rounded-xl">
+                        <div className="flex items-center gap-2 mb-1.5">
+                            <CreditCard className="w-3.5 h-3.5 text-white/70" />
+                            <span className="text-xs font-semibold text-white">
+                                Gói {TIER_DISPLAY[currentPlan] || currentPlan}
+                            </span>
+                            {subInfo.isTrialActive && (
+                                <span className="px-1.5 py-0.5 text-[10px] font-medium bg-amber-400/20 text-amber-300 rounded">
+                                    Trial {subInfo.trialDaysRemaining}d
+                                </span>
+                            )}
+                            {subInfo.isExpired && (
+                                <span className="px-1.5 py-0.5 text-[10px] font-medium bg-red-400/20 text-red-300 rounded">
+                                    Hết hạn
+                                </span>
+                            )}
+                        </div>
+                        {(subInfo.periodStart || subInfo.periodEnd) && (
+                            <p className="text-[10px] text-white/50 leading-tight">
+                                {subInfo.periodStart ? formatDateShort(subInfo.periodStart) : '—'}
+                                {' → '}
+                                {subInfo.periodEnd ? formatDateShort(subInfo.periodEnd) : '—'}
+                            </p>
+                        )}
+                    </div>
+                )}
 
                 {/* Navigation with Groups */}
                 <nav className="flex-1 py-2 overflow-y-auto">
