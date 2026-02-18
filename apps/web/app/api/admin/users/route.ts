@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
                         gateway: payment.gateway,
                         completedAt: payment.completed_at,
                         createdAt: payment.created_at,
-                        hasHotel: !!payment.hotel_id,
+                        hasHotel: !!payment.hotel_id || u.hotel_users.some(hu => hu.hotel.name !== 'Demo Hotel'),
                     } : null,
                 }
             }),
