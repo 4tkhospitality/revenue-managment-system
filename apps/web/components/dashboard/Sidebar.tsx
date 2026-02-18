@@ -78,6 +78,7 @@ export function Sidebar() {
     const [isOpen, setIsOpen] = useState(false);
     const [isDemo, setIsDemo] = useState(false);
     const [currentPlan, setCurrentPlan] = useState<string>('STANDARD');
+    const [activeHotelId, setActiveHotelId] = useState<string | null>(null);
     const [subInfo, setSubInfo] = useState<{
         periodStart: string | null;
         periodEnd: string | null;
@@ -87,8 +88,12 @@ export function Sidebar() {
         status: string;
     } | null>(null);
 
-    // Get user's role level (hotelRole is dynamically added at runtime from hotel_access)
-    const userRole = (session?.user as { hotelRole?: string })?.hotelRole || session?.user?.role || 'viewer';
+    // Get user's role level — derive from accessibleHotels for the active hotel
+    const accessibleHotels = session?.user?.accessibleHotels || [];
+    const activeHotelRole = activeHotelId
+        ? accessibleHotels.find((h: any) => h.hotelId === activeHotelId)?.role
+        : accessibleHotels[0]?.role;
+    const userRole = activeHotelRole || session?.user?.role || 'viewer';
     const userRoleLevel = ROLE_LEVELS[userRole] ?? 0;
     const isAdmin = session?.user?.isAdmin;
 
@@ -111,7 +116,8 @@ export function Sidebar() {
 
     const formatDateShort = (d: string) => new Date(d).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-    // Check if Demo Hotel + fetch subscription plan
+
+    // Check if Demo Hotel + fetch subscription plan + active hotel
     useEffect(() => {
         const checkDemoHotel = async () => {
             try {
@@ -139,8 +145,16 @@ export function Sidebar() {
                 }
             } catch { /* keep default */ }
         };
+        const fetchActiveHotel = async () => {
+            try {
+                const res = await fetch('/api/user/switch-hotel', { credentials: 'include' });
+                const data = await res.json();
+                if (data.activeHotelId) setActiveHotelId(data.activeHotelId);
+            } catch { /* ignore */ }
+        };
         checkDemoHotel();
         fetchPlan();
+        fetchActiveHotel();
     }, []);
 
     // Close sidebar when route changes (mobile)
