@@ -20,7 +20,7 @@ interface FileResult {
 }
 
 export default function UploadPage() {
-    const { hasAccess, loading: tierLoading } = useTierAccess('SUPERIOR');
+    const { hasAccess, loading: tierLoading } = useTierAccess('DELUXE');
     const { data: session } = useSession();
     const [activeTab, setActiveTab] = useState<ReportType>('booked');
     const [isProcessing, setIsProcessing] = useState(false);
@@ -67,7 +67,7 @@ export default function UploadPage() {
             <TierPaywall
                 title="Tải lên Reservations"
                 subtitle="Import báo cáo đặt phòng từ PMS"
-                tierDisplayName="Superior"
+                tierDisplayName="Deluxe"
                 colorScheme="blue"
                 features={[
                     { icon: <Upload className="w-4 h-4" />, label: 'Upload nhiều file CSV/XML cùng lúc' },

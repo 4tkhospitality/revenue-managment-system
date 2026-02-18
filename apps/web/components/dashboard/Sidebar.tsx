@@ -327,8 +327,8 @@ export function Sidebar() {
                                     const effectivePlan = (isDemo && !isAdmin) ? 'SUPERIOR' : currentPlan;
                                     const hasTier = !needsTier || isAdmin || (TIER_LEVELS[effectivePlan] ?? 0) >= (TIER_LEVELS[needsTier as string] ?? 0);
 
-                                    if (canAccess) {
-                                        // Normal clickable item (still links to page; page handles paywall)
+                                    if (canAccess && hasTier) {
+                                        // Fully accessible item
                                         return (
                                             <Link
                                                 key={item.href}
@@ -342,10 +342,27 @@ export function Sidebar() {
                                             >
                                                 <Icon className="w-5 h-5" />
                                                 <span className="flex-1">{item.label}</span>
-                                                {needsTier && !hasTier && (
-                                                    <Lock className="w-3.5 h-3.5 text-amber-400/70" />
-                                                )}
                                             </Link>
+                                        );
+                                    } else if (canAccess && !hasTier) {
+                                        // Has role permission but plan is too low → locked
+                                        return (
+                                            <div
+                                                key={item.href}
+                                                className="flex items-center gap-3 px-6 py-2.5 text-sm font-medium mx-2 rounded-lg cursor-pointer group relative hover:bg-white/5 transition-colors"
+                                                style={{ color: 'rgba(255,255,255,0.5)' }}
+                                                onClick={() => { setIsOpen(false); window.location.href = '/pricing-plans'; }}
+                                                title={`Cần nâng cấp lên gói ${needsTier}`}
+                                            >
+                                                <Icon className="w-5 h-5" />
+                                                <span className="flex-1">{item.label}</span>
+                                                <Lock className="w-3.5 h-3.5 text-amber-400/70" />
+
+                                                {/* Tooltip */}
+                                                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
+                                                    Cần nâng cấp gói {needsTier}
+                                                </div>
+                                            </div>
                                         );
                                     } else {
                                         // Disabled item (no permission)

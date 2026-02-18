@@ -6,7 +6,7 @@ import { TierPaywall } from '@/components/paywall/TierPaywall';
 import { useTierAccess } from '@/hooks/useTierAccess';
 
 export function DataTierGate({ children }: { children: ReactNode }) {
-    const { hasAccess, loading } = useTierAccess('SUPERIOR');
+    const { hasAccess, loading } = useTierAccess('DELUXE');
 
     if (loading) {
         return (
@@ -24,7 +24,7 @@ export function DataTierGate({ children }: { children: ReactNode }) {
             <TierPaywall
                 title="Data Inspector"
                 subtitle="Xem dữ liệu đã import và trạng thái hệ thống"
-                tierDisplayName="Superior"
+                tierDisplayName="Deluxe"
                 colorScheme="blue"
                 features={[
                     { icon: <Database className="w-4 h-4" />, label: 'Xem chi tiết reservations & OTB data' },
