@@ -85,6 +85,17 @@ export async function POST(request: NextRequest) {
 
             subscriptionActivated = true
 
+            // 3. Remove Demo Hotel from user's accessible hotels (they now have a real hotel)
+            if (demoHotel) {
+                await prisma.hotelUser.deleteMany({
+                    where: {
+                        user_id: session.user.id,
+                        hotel_id: demoHotel.hotel_id,
+                    },
+                })
+                console.log(`[Onboarding Complete] ✅ Removed Demo Hotel from user ${session.user.email}`)
+            }
+
             // Log event
             await prisma.productEvent.create({
                 data: {
@@ -96,6 +107,7 @@ export async function POST(request: NextRequest) {
                         tier: paymentToLink.purchased_tier,
                         roomBand: paymentToLink.purchased_room_band,
                         termMonths,
+                        demoHotelRemoved: !!demoHotel,
                     },
                 },
             })
