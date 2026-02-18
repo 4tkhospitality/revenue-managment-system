@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Lock } from 'lucide-react';
 import { SetupTab, PromotionsTab, OverviewTab, DynamicPricingTab } from '@/components/pricing';
 import { OTAPlaybookGuide } from '@/components/guide/OTAPlaybookGuide';
@@ -20,7 +20,16 @@ type TabId = typeof TABS[number]['id'];
 export default function PricingPage() {
     const [activeTab, setActiveTab] = useState<TabId>('setup');
     const { hasAccess: hasOtaAccess, loading: tierLoading } = useTierAccess('SUPERIOR');
+    const [isDemo, setIsDemo] = useState(false);
 
+    useEffect(() => {
+        fetch('/api/is-demo-hotel').then(r => r.json()).then(d => setIsDemo(d.isDemo || false)).catch(() => { });
+    }, []);
+
+    const isGated = (tabId: string) => {
+        if (tabId === 'ota-growth') return !tierLoading && (!hasOtaAccess || isDemo);
+        return false;
+    };
     return (
         <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>
             <div className="mx-auto max-w-[1400px] px-4 sm:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
@@ -33,7 +42,7 @@ export default function PricingPage() {
                 {/* Tab Navigation - horizontal scroll on mobile */}
                 <div className="flex gap-1 border-b border-slate-200 bg-white rounded-t-xl px-2 overflow-x-auto">
                     {TABS.map((tab) => {
-                        const isGated = tab.id === 'ota-growth' && !tierLoading && !hasOtaAccess;
+                        const gated = isGated(tab.id);
                         return (
                             <button
                                 key={tab.id}
@@ -44,7 +53,7 @@ export default function PricingPage() {
                                     }`}
                             >
                                 {tab.label}
-                                {isGated && <Lock className="w-3 h-3 text-amber-500" />}
+                                {gated && <Lock className="w-3 h-3 text-amber-500" />}
                                 {activeTab === tab.id && (
                                     <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full" />
                                 )}
@@ -60,7 +69,7 @@ export default function PricingPage() {
                     {activeTab === 'overview' && <OverviewTab />}
                     {activeTab === 'dynamic-pricing' && <DynamicPricingTab />}
                     {activeTab === 'ota-growth' && (
-                        <OTAPlaybookGuide hasAccess={tierLoading || hasOtaAccess} />
+                        <OTAPlaybookGuide hasAccess={!isDemo && (tierLoading || hasOtaAccess)} />
                     )}
                 </div>
             </div>

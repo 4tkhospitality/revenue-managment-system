@@ -55,10 +55,10 @@ export function useTierAccess(requiredTier: string): TierAccessResult {
         return () => { cancelled = true; };
     }, []);
 
-    // Demo hotel viewers see STANDARD tier (paywall shows).
-    // The demo hotel's DB subscription (DELUXE) is for super_admin showcase only.
+    // Demo hotel viewers get SUPERIOR tier access → can see Analytics to evaluate the product.
+    // Rate Shopper (SUITE) still shows paywall for demo users.
     // Expired subscriptions are already downgraded server-side, but double-check here.
-    const effectivePlan = (isDemo && !isSuperAdmin) ? 'STANDARD' : currentPlan;
+    const effectivePlan = (isDemo && !isSuperAdmin) ? 'SUPERIOR' : currentPlan;
     const userLevel = TIER_LEVELS[effectivePlan] ?? 0;
     const requiredLevel = TIER_LEVELS[requiredTier] ?? 0;
     const hasAccess = isSuperAdmin || userLevel >= requiredLevel;

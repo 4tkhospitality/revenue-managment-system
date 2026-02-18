@@ -3,7 +3,9 @@
 import { ReactNode, useCallback, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { QuickModePanel, type QuickModeRecommendation } from './QuickModePanel';
-import { Zap, Table2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Zap, Table2, ChevronDown, ChevronUp, DollarSign, TrendingUp, BarChart3, ShieldCheck } from 'lucide-react';
+import { TierPaywall } from '@/components/paywall/TierPaywall';
+import { useTierAccess } from '@/hooks/useTierAccess';
 
 // ─── UUPM Surface ───────────────────────────────────────────────
 const surface = "rounded-[var(--card-radius)] bg-white border border-slate-200/80 shadow-[var(--shadow-card)]";
@@ -23,6 +25,7 @@ export function QuickModePricingWrapper({
     onAcceptOne,
     detailedContent,
 }: QuickModePricingWrapperProps) {
+    const { hasAccess, isDemo, loading: tierLoading } = useTierAccess('SUPERIOR');
     const router = useRouter();
     const searchParams = useSearchParams();
     const [showGuide, setShowGuide] = useState(false);
@@ -38,6 +41,32 @@ export function QuickModePricingWrapper({
         router.push(`/dashboard?${params.toString()}`);
     }, [isQuickMode, router, searchParams]);
 
+    // ── Tier gate: SUPERIOR required + Demo users always see paywall ──
+    if (tierLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-[300px]">
+                <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full" />
+            </div>
+        );
+    }
+
+    if (!hasAccess || isDemo) {
+        return (
+            <TierPaywall
+                title="Giá đề xuất thông minh"
+                subtitle="Hệ thống tự động phân tích demand & supply để đề xuất giá tối ưu"
+                tierDisplayName="Superior"
+                colorScheme="blue"
+                features={[
+                    { icon: <DollarSign className="w-4 h-4" />, label: 'Đề xuất giá hàng ngày dựa trên OTB & Forecast' },
+                    { icon: <TrendingUp className="w-4 h-4" />, label: 'Phân tích Demand vs Supply theo từng ngày' },
+                    { icon: <Zap className="w-4 h-4" />, label: 'Chế độ Duyệt nhanh — quyết định giá trong 30 giây' },
+                    { icon: <ShieldCheck className="w-4 h-4" />, label: 'Guardrails tự động — không bao giờ đặt giá ngoài biên' },
+                ]}
+            />
+        );
+    }
+
     return (
         <div className="space-y-4">
             {/* ── Mode Selector + Explainer ─────────────────────── */}
@@ -50,8 +79,8 @@ export function QuickModePricingWrapper({
                             <button
                                 onClick={isQuickMode ? undefined : toggleMode}
                                 className={`px-4 py-2 text-xs font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer ${isQuickMode
-                                        ? 'text-white'
-                                        : 'text-slate-600 hover:text-slate-900'
+                                    ? 'text-white'
+                                    : 'text-slate-600 hover:text-slate-900'
                                     }`}
                                 style={{ backgroundColor: isQuickMode ? '#1E3A8A' : '#f8fafc' }}
                             >
@@ -60,8 +89,8 @@ export function QuickModePricingWrapper({
                             <button
                                 onClick={!isQuickMode ? undefined : toggleMode}
                                 className={`px-4 py-2 text-xs font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer ${!isQuickMode
-                                        ? 'text-white'
-                                        : 'text-slate-600 hover:text-slate-900'
+                                    ? 'text-white'
+                                    : 'text-slate-600 hover:text-slate-900'
                                     }`}
                                 style={{ backgroundColor: !isQuickMode ? '#1E3A8A' : '#f8fafc' }}
                             >

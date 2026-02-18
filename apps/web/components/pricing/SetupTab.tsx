@@ -39,7 +39,7 @@ const formatVND = (n: number) => new Intl.NumberFormat('vi-VN').format(n);
 
 // ─── Sub-section: "Hạng phòng" ──────────────────────────────
 
-function RoomTypesSection() {
+function RoomTypesSection({ isDemo }: { isDemo: boolean }) {
     const [roomTypes, setRoomTypes] = useState<RoomType[]>([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
@@ -128,17 +128,19 @@ function RoomTypesSection() {
                     <h3 className="text-base font-bold text-slate-800">Hạng phòng</h3>
                     <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[#EFF1F8] text-[#204183]">{roomTypes.length}</span>
                 </div>
-                <button
-                    onClick={() => {
-                        setEditing(null);
-                        setFormData({ name: '', description: '', net_price: '' });
-                        setShowForm(true);
-                    }}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-[#204183] hover:bg-[#1a3469] text-white text-sm font-semibold rounded-lg transition-colors"
-                >
-                    <Plus className="w-4 h-4" />
-                    Thêm
-                </button>
+                {!isDemo && (
+                    <button
+                        onClick={() => {
+                            setEditing(null);
+                            setFormData({ name: '', description: '', net_price: '' });
+                            setShowForm(true);
+                        }}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-[#204183] hover:bg-[#1a3469] text-white text-sm font-semibold rounded-lg transition-colors"
+                    >
+                        <Plus className="w-4 h-4" />
+                        Thêm
+                    </button>
+                )}
             </div>
 
             {/* Error */}
@@ -163,7 +165,7 @@ function RoomTypesSection() {
                                 <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Hạng phòng</th>
                                 <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Mô tả</th>
                                 <th className="text-right px-4 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Giá thu về</th>
-                                <th className="text-center px-3 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Thao tác</th>
+                                {!isDemo && <th className="text-center px-3 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Thao tác</th>}
                             </tr>
                         </thead>
                         <tbody>
@@ -172,22 +174,24 @@ function RoomTypesSection() {
                                     <td className="px-4 py-3 font-semibold text-slate-800">{rt.name}</td>
                                     <td className="px-4 py-3 text-slate-500">{rt.description || '—'}</td>
                                     <td className="px-4 py-3 text-right font-mono font-bold text-[#204183]">{formatVND(rt.net_price)} ₫</td>
-                                    <td className="px-3 py-3">
-                                        <div className="flex items-center justify-center gap-1">
-                                            <button
-                                                onClick={() => handleEdit(rt)}
-                                                className="p-1.5 text-slate-300 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                            >
-                                                <Pencil className="w-4 h-4" />
-                                            </button>
-                                            <button
-                                                onClick={() => handleDelete(rt.id)}
-                                                className="p-1.5 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    </td>
+                                    {!isDemo && (
+                                        <td className="px-3 py-3">
+                                            <div className="flex items-center justify-center gap-1">
+                                                <button
+                                                    onClick={() => handleEdit(rt)}
+                                                    className="p-1.5 text-slate-300 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                >
+                                                    <Pencil className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(rt.id)}
+                                                    className="p-1.5 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    )}
                                 </tr>
                             ))}
                         </tbody>
@@ -252,7 +256,7 @@ function RoomTypesSection() {
 
 // ─── Sub-section: "Kênh OTA" ─────────────────────────────────
 
-function OTAChannelsSection() {
+function OTAChannelsSection({ isDemo }: { isDemo: boolean }) {
     const [channels, setChannels] = useState<OTAChannel[]>([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
@@ -367,17 +371,19 @@ function OTAChannelsSection() {
                     <h3 className="text-base font-bold text-slate-800">Kênh OTA</h3>
                     <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[#EFF1F8] text-[#204183]">{channels.length}</span>
                 </div>
-                <button
-                    onClick={() => {
-                        setEditing(null);
-                        setFormData({ name: '', code: '', commission: '', calc_type: 'PROGRESSIVE', is_active: true });
-                        setShowForm(true);
-                    }}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-[#204183] hover:bg-[#1a3469] text-white text-sm font-semibold rounded-lg transition-colors"
-                >
-                    <Plus className="w-4 h-4" />
-                    Thêm
-                </button>
+                {!isDemo && (
+                    <button
+                        onClick={() => {
+                            setEditing(null);
+                            setFormData({ name: '', code: '', commission: '', calc_type: 'PROGRESSIVE', is_active: true });
+                            setShowForm(true);
+                        }}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-[#204183] hover:bg-[#1a3469] text-white text-sm font-semibold rounded-lg transition-colors"
+                    >
+                        <Plus className="w-4 h-4" />
+                        Thêm
+                    </button>
+                )}
             </div>
 
             {/* Error */}
@@ -404,7 +410,7 @@ function OTAChannelsSection() {
                                 <th className="text-center px-3 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Hoa hồng</th>
                                 <th className="text-center px-3 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Chế độ</th>
                                 <th className="text-center px-3 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Trạng thái</th>
-                                <th className="text-center px-3 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Thao tác</th>
+                                {!isDemo && <th className="text-center px-3 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Thao tác</th>}
                             </tr>
                         </thead>
                         <tbody>
@@ -430,28 +436,31 @@ function OTAChannelsSection() {
                                         </td>
                                         <td className="px-3 py-3">
                                             <button
-                                                onClick={() => handleToggle(ch)}
-                                                className={`relative w-11 h-6 rounded-full transition-colors mx-auto block ${ch.is_active ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                                                onClick={() => !isDemo && handleToggle(ch)}
+                                                className={`relative w-11 h-6 rounded-full transition-colors mx-auto block ${isDemo ? 'cursor-not-allowed opacity-60' : ''} ${ch.is_active ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                                                disabled={isDemo}
                                             >
                                                 <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${ch.is_active ? 'left-6' : 'left-1'}`} />
                                             </button>
                                         </td>
-                                        <td className="px-3 py-3">
-                                            <div className="flex items-center justify-center gap-1">
-                                                <button
-                                                    onClick={() => handleEdit(ch)}
-                                                    className="p-1.5 text-slate-300 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                                >
-                                                    <Pencil className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(ch.id)}
-                                                    className="p-1.5 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        </td>
+                                        {!isDemo && (
+                                            <td className="px-3 py-3">
+                                                <div className="flex items-center justify-center gap-1">
+                                                    <button
+                                                        onClick={() => handleEdit(ch)}
+                                                        className="p-1.5 text-slate-300 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                    >
+                                                        <Pencil className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(ch.id)}
+                                                        className="p-1.5 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        )}
                                     </tr>
                                 );
                             })}
@@ -542,11 +551,20 @@ function OTAChannelsSection() {
 // ─── Main: Combined SetupTab ─────────────────────────────────
 
 export default function SetupTab() {
+    const [isDemo, setIsDemo] = useState(false);
+
+    useEffect(() => {
+        fetch('/api/is-demo-hotel')
+            .then(r => r.json())
+            .then(d => setIsDemo(d.isDemo || false))
+            .catch(() => { });
+    }, []);
+
     return (
         <div className="space-y-8">
-            <RoomTypesSection />
+            <RoomTypesSection isDemo={isDemo} />
             <div className="border-t border-[#DBE1EB]" />
-            <OTAChannelsSection />
+            <OTAChannelsSection isDemo={isDemo} />
         </div>
     );
 }

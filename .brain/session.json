@@ -1,17 +1,12 @@
 {
-  "updated_at": "2026-02-17T21:16:00+07:00",
+  "updated_at": "2026-02-18T09:47:00+07:00",
   "working_on": {
-    "feature": "Pricing Unification + UUPM Redesign",
-    "task": "Added reason column to Detailed Mode, committed and pushed",
+    "feature": "Payment Gateway Live Deployment",
+    "task": "SePay env vars added + PayPal switched from Sandbox to Live on Vercel",
     "status": "completed",
-    "files": [
-      "apps/web/components/dashboard/QuickModePanel.tsx",
-      "apps/web/components/dashboard/QuickModePricingWrapper.tsx",
-      "apps/web/components/dashboard/RecommendationTable.tsx",
-      "apps/web/app/dashboard/page.tsx"
-    ],
+    "files": [],
     "blockers": [],
-    "notes": "3 commits today: (1) f6d5e2b UUPM light theme redesign, (2) 0e5ca60 action badge + reason column in Detailed Mode. Both pushed to main."
+    "notes": "User confirmed: SePay env vars added to Vercel production, PayPal switched from Sandbox to Live (4 env vars updated). Payment gateway is now fully live."
   },
   "pending_tasks": [
     {
@@ -25,22 +20,49 @@
       "notes": "Brainstorm complete. Data exists in reservations_raw + OTAChannel.commission. Needs: 1 API route (channel-performance) + 1 UI component."
     },
     {
-      "task": "Switch PayPal from Sandbox to Live",
-      "priority": "critical",
-      "notes": "Change 4 env vars on Vercel: PAYPAL_API_URL=https://api-m.paypal.com, PAYPAL_CLIENT_ID (Live), PAYPAL_SECRET (Live), PAYPAL_WEBHOOK_ID (Live). Then redeploy."
-    },
-    {
-      "task": "Add payment env vars to Vercel Dashboard (production)",
-      "priority": "critical",
-      "notes": "SEPAY_API_KEY, SEPAY_WEBHOOK_SECRET, SEPAY_BANK_ACCOUNT, SEPAY_BANK_NAME — then redeploy"
-    },
-    {
       "task": "Manual Verification — Pricing Unification ACs",
       "priority": "high",
       "notes": "Run AC-1 to AC-9 on live app: STOP_SELL badge, delta rounding, deep-link preservation, mode toggle, Accept All logic."
     }
   ],
   "recent_changes": [
+    {
+      "timestamp": "2026-02-17T23:20:00+07:00",
+      "type": "feature",
+      "description": "Full Pipeline now includes OTB build: 6 steps — OTB(D-1) → OTB(D) → CancelStats → Features → Forecast → Pricing. Ensures DOD delta always has yesterday snapshot. Pipeline API handles 'buildOTB' action. Commit c2cc5d6.",
+      "files": [
+        "apps/web/components/analytics/FullPipelineButton.tsx",
+        "apps/web/app/api/analytics/pipeline/route.ts"
+      ]
+    },
+    {
+      "timestamp": "2026-02-17T23:15:00+07:00",
+      "type": "fix",
+      "description": "KPI 'Còn trống' card: replaced meaningless '— 0' trend with 'X% đã bán' (sold percentage). Calculates from OTB / (capacity × 30 days). Commit 7556152.",
+      "files": [
+        "apps/web/components/dashboard/KpiCards.tsx"
+      ]
+    },
+    {
+      "timestamp": "2026-02-17T23:10:00+07:00",
+      "type": "feature",
+      "description": "Season multiplier from DB: (1) Added multiplier Float @default(1.0) to SeasonConfig schema, (2) Engine reads sc.multiplier from DB with legacy fallback, (3) API POST/PUT accept multiplier, (4) UI shows ×1.0/×1.2/×1.5 input in SeasonConfigPanel, (5) Existing rows seeded NORMAL=1.0, HIGH=1.2, HOLIDAY=1.5. Commit a03d438.",
+      "files": [
+        "apps/web/prisma/schema.prisma",
+        "apps/web/app/actions/runPricingEngine.ts",
+        "apps/web/app/api/pricing/seasons/route.ts",
+        "apps/web/app/api/pricing/seasons/[id]/route.ts",
+        "apps/web/components/pricing/SeasonConfigPanel.tsx"
+      ]
+    },
+    {
+      "timestamp": "2026-02-17T22:30:00+07:00",
+      "type": "docs",
+      "description": "Dashboard guide (/guide page): rewrote rec-table section with comprehensive guide on reading the dashboard — Quick/Detail modes, OTB vs Projected OCC, Anchor pricing, Zone→Multiplier table, ADR sanity banner, GM override guidance.",
+      "files": [
+        "apps/web/app/guide/page.tsx"
+      ]
+    },
     {
       "timestamp": "2026-02-17T21:14:00+07:00",
       "type": "feature",
@@ -49,81 +71,34 @@
         "apps/web/components/dashboard/RecommendationTable.tsx",
         "apps/web/app/dashboard/page.tsx"
       ]
-    },
-    {
-      "timestamp": "2026-02-17T21:05:00+07:00",
-      "type": "feature",
-      "description": "UUPM light theme redesign of QuickModePanel + QuickModePricingWrapper. Navy CTA, semantic badges, collapsible mode guide for GM, Source of Truth section. Commit f6d5e2b.",
-      "files": [
-        "apps/web/components/dashboard/QuickModePanel.tsx",
-        "apps/web/components/dashboard/QuickModePricingWrapper.tsx"
-      ]
-    },
-    {
-      "timestamp": "2026-02-17T20:30:00+07:00",
-      "type": "feature",
-      "description": "Pricing Unification: schema migration (action, delta_pct, reason_code, reason_text_vi on price_recommendations), pipeline update, UI Quick Mode + navigation merge. AC-6 idempotency test passed.",
-      "files": [
-        "prisma/schema.prisma",
-        "apps/web/lib/pricing/engine/runPricingEngine.ts",
-        "apps/web/components/dashboard/QuickModePanel.tsx",
-        "apps/web/components/dashboard/QuickModePricingWrapper.tsx",
-        "apps/web/app/dashboard/page.tsx"
-      ]
-    },
-    {
-      "timestamp": "2026-02-17T19:34:00+07:00",
-      "type": "improvement",
-      "description": "PDF export: JPEG 80% + scale 1.5x (lighter files), smart page-break scans for whitespace rows to avoid cutting text. Commit c128358.",
-      "files": [
-        "apps/web/lib/pdf/exportToPdf.ts"
-      ]
     }
   ],
   "errors_encountered": [
     {
-      "error": "'Cancellations theo Ngày hủy' shows no data when CSV/XLSX uploaded",
-      "solution": "Section read from cancellationRaw (XML-only table). Fixed to read from reservationsRaw which is the unified table for all upload formats (CSV/XLSX/XML).",
+      "error": "KPI 'Còn trống' card shows '— 0' instead of useful info",
+      "solution": "Trend was set to 0 with empty label when remaining supply > 20. Replaced with calculated sold% (OTB / totalCapacity * 100), shows 'X% đã bán'.",
       "resolved": true,
-      "file": "apps/web/app/data/page.tsx"
+      "file": "apps/web/components/dashboard/KpiCards.tsx"
     },
     {
-      "error": "Cancel forecast chart ('Dự báo Hủy phòng') always empty",
-      "solution": "Two causes: (1) buildCancelStats lookback 365 days was too short for some data → expanded to 730. (2) /api/analytics/features route omitted expected_cxl fields from response mapping → added 4 cancel forecast fields.",
+      "error": "Analytics 'vs qua: 0 rms' always shows 0",
+      "solution": "DOD compares today's OTB snapshot vs yesterday's. If no yesterday snapshot exists, delta is null/0. Fixed by adding OTB(D-1) step to Full Pipeline so yesterday's snapshot is always built before comparison.",
       "resolved": true,
-      "file": "apps/web/app/api/analytics/features/route.ts"
-    },
-    {
-      "error": "PDF export cuts text at page boundaries, file too heavy",
-      "solution": "Replaced PNG scale 2x with JPEG 80% scale 1.5x (lighter). Added findSmartCutPoint() that scans bottom 15% of each page for whitespace rows to cut at.",
-      "resolved": true,
-      "file": "apps/web/lib/pdf/exportToPdf.ts"
+      "file": "apps/web/components/analytics/FullPipelineButton.tsx"
     }
   ],
   "decisions_made": [
     {
-      "decision": "Pricing Unification: 1 Engine, 2 Display Modes (Quick + Detailed)",
-      "reason": "Quick Mode for daily 1-click review, Detailed Mode for in-depth OTB/forecast analysis. Both read from same price_recommendations table. Reduces confusion and maintenance."
+      "decision": "Season multiplier stored in DB per hotel, not hardcoded",
+      "reason": "Different hotels have different seasonal pricing strategies. NORMAL=1.0, HIGH=1.2, HOLIDAY=1.5 are defaults but GM can customize. Engine falls back to legacy values if DB multiplier is null."
     },
     {
-      "decision": "UUPM SaaS Pro Light theme applied to all pricing components",
-      "reason": "Consistency with rest of dashboard. Navy #1E3A8A CTA, semantic badges (emerald/amber/rose), white surface cards, slate text hierarchy per design-specs.md V01.7."
+      "decision": "Full Pipeline builds OTB for D-1 and D before running Features/Forecast/Pricing",
+      "reason": "DOD (day-over-day) delta requires yesterday's OTB snapshot. Without it, 'vs qua' metric shows 0 or null. Pipeline now ensures both snapshots exist. /data page keeps separate OTB button for manual/bulk builds."
     },
     {
-      "decision": "Reason text computed from OCC + supply/demand context",
-      "reason": "GM needs to know WHY system recommends each price. Taxonomy: OCC% based (high OCC → increase, low OCC → decrease), demand vs supply comparison, deadband |delta| < 1% = KEEP."
-    },
-    {
-      "decision": "reservationsRaw is the single source of truth for all cancellations",
-      "reason": "CSV, XLSX, and XML booked data all go to reservationsRaw. cancellationRaw is only for separate XML cancel reports. For unified cancellation display, always query reservationsRaw WHERE status=cancelled OR cancel_time IS NOT NULL."
-    },
-    {
-      "decision": "Cancel stats lookback window set to 730 days (2 years)",
-      "reason": "365 days was too short for hotels with historical data spanning longer periods. 730 days ensures adequate training data for cancel rate statistics."
-    },
-    {
-      "decision": "PDF uses JPEG 80% at scale 1.5x with smart page-break",
-      "reason": "PNG at 2x was too heavy. JPEG 80% is visually equivalent but ~60% smaller. Smart cut point algorithm scans for bright (white) horizontal lines in the bottom 15% of each page to avoid cutting through text rows."
+      "decision": "/data Build OTB button kept as-is (no D-1 auto-build)",
+      "reason": "/data already builds by tier (daily/weekly/monthly) which usually covers D-1. Full Pipeline handles D-1+D for analytics DOD. Different tools, different purposes."
     }
   ]
 }

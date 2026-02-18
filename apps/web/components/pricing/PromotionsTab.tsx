@@ -998,84 +998,82 @@ export default function PromotionsTab() {
         AGODA_BOOSTERS.map(b => ({ ...b }))
     );
 
-    // Fetch channels
+    // ── Parallel initial load: channels + room types ──────────────
     useEffect(() => {
-        const fetchChannels = async () => {
+        const loadInitial = async () => {
             try {
-                const res = await fetch('/api/pricing/ota-channels', { credentials: 'include' });
-                if (!res.ok) throw new Error('Failed to fetch');
-                const data = await res.json();
-                setChannels(data);
-                if (data.length > 0) {
-                    setSelectedChannel(data[0].id);
+                const [channelsRes, roomsRes] = await Promise.all([
+                    fetch('/api/pricing/ota-channels', { credentials: 'include' }),
+                    fetch('/api/pricing/room-types', { credentials: 'include' }),
+                ]);
+
+                if (!channelsRes.ok) throw new Error('Failed to fetch channels');
+                if (!roomsRes.ok) throw new Error('Failed to fetch room types');
+
+                const [channelsData, roomsData] = await Promise.all([
+                    channelsRes.json(),
+                    roomsRes.json(),
+                ]);
+
+                setChannels(channelsData);
+                setRoomTypes(roomsData);
+
+                if (channelsData.length > 0) {
+                    setSelectedChannel(channelsData[0].id);
+                }
+                if (roomsData.length > 0) {
+                    setSelectedRoomId(roomsData[0].id);
                 }
             } catch (err: unknown) {
                 const error = err as Error;
                 setError(error.message);
             }
         };
-        fetchChannels();
+        loadInitial();
     }, []);
 
-    // Fetch room types
+    // ── Parallel channel-dependent load: catalog + campaigns ─────
     useEffect(() => {
-        const fetchRoomTypes = async () => {
-            try {
-                const res = await fetch('/api/pricing/room-types', { credentials: 'include' });
-                if (!res.ok) throw new Error('Failed to fetch');
-                const data = await res.json();
-                setRoomTypes(data);
-                if (data.length > 0) {
-                    setSelectedRoomId(data[0].id);
-                }
-            } catch (err: unknown) {
-                const error = err as Error;
-                setError(error.message);
-            }
-        };
-        fetchRoomTypes();
-    }, []);
+        if (!selectedChannel || channels.length === 0) return;
 
-    // Fetch catalog based on selected channel's vendor
-    useEffect(() => {
-        const fetchCatalog = async () => {
-            // Get vendor from selected channel's code
+        let cancelled = false;
+        const loadChannelData = async () => {
+            setLoading(true);
             const channel = channels.find((c) => c.id === selectedChannel);
             const vendor = channel?.code || 'agoda';
-            try {
-                const res = await fetch(`/api/pricing/catalog?vendor=${vendor}`);
-                if (!res.ok) throw new Error('Failed to fetch');
-                const data = await res.json();
-                setCatalog(data);
-            } catch (err: unknown) {
-                const error = err as Error;
-                setError(error.message);
-            }
-        };
-        if (selectedChannel && channels.length > 0) {
-            fetchCatalog();
-        }
-    }, [selectedChannel, channels]);
 
-    // Fetch campaigns for selected channel
-    useEffect(() => {
-        const fetchCampaigns = async () => {
-            if (!selectedChannel) return;
-            setLoading(true);
             try {
-                const res = await fetch(`/api/pricing/campaigns?channel_id=${selectedChannel}`);
-                if (!res.ok) throw new Error('Failed to fetch');
-                const data = await res.json();
-                setCampaigns(data);
+                const [catalogRes, campaignsRes] = await Promise.all([
+                    fetch(`/api/pricing/catalog?vendor=${vendor}`),
+                    fetch(`/api/pricing/campaigns?channel_id=${selectedChannel}`),
+                ]);
+
+                if (cancelled) return;
+
+                if (!catalogRes.ok) throw new Error('Failed to fetch catalog');
+                if (!campaignsRes.ok) throw new Error('Failed to fetch campaigns');
+
+                const [catalogData, campaignsData] = await Promise.all([
+                    catalogRes.json(),
+                    campaignsRes.json(),
+                ]);
+
+                if (cancelled) return;
+
+                setCatalog(catalogData);
+                setCampaigns(campaignsData);
             } catch (err: unknown) {
+                if (cancelled) return;
                 const error = err as Error;
                 setError(error.message);
             } finally {
-                setLoading(false);
+                if (!cancelled) setLoading(false);
             }
         };
-        fetchCampaigns();
-    }, [selectedChannel]);
+        loadChannelData();
+
+        return () => { cancelled = true; };
+    }, [selectedChannel, channels]);
 
     // Phase 03: Validation comes from server via usePricingPreview hook
     // No client-side validate() — engine.ts is the single source of truth

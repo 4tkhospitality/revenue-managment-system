@@ -271,9 +271,7 @@ export function PaymentMethodModal({
                                 </div>
                             </button>
 
-                            <p className="text-xs text-gray-400 text-center mt-4">
-                                Đảm bảo an toàn 100%. Hỗ trợ hoàn tiền trong 30 ngày.
-                            </p>
+
                         </div>
                     )}
 

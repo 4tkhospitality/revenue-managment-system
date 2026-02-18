@@ -22,7 +22,7 @@ import {
     resolveVendorStacking,
     calcEffectiveDiscount,
     computeDisplay,
-    applyOccMultiplier,
+    applyOccAdjustment,
     normalizeVendorCode,
 } from '../lib/pricing/engine';
 import type { DiscountItem, CalcType } from '../lib/pricing/types';
@@ -246,20 +246,39 @@ test('3b. Expedia: Member deal stacks with best non-member', () => {
 
 // ── Test 4: Trip.com same-box dedup ────────────────────────────
 
-test('4. Trip.com: Same-box (subcat) dedup keeps highest per box', () => {
+test('4. Trip.com: Group-level dedup (best per PORTFOLIO/TARGETED)', () => {
+    // Engine does group-level dedup: best per PORTFOLIO + best per TARGETED, SEASONAL=other passes through
+    // tripDiscounts has: Flash Sale 12% (SEASONAL), Flash Sale 2 8% (SEASONAL), Member Deal 10% (TARGETED)
+    // SEASONAL items go to 'other' (no dedup) → both kept
+    // TARGETED picks best → Member Deal 10% kept
+    // removedCount = 0 (no PORTFOLIO, TARGETED has 1 item, SEASONAL all kept)
     const { resolved, rule, removedCount } = resolveVendorStacking('trip', tripDiscounts);
 
-    assertEqual(rule, 'trip.com: additive + box dedup', 'rule');
-    assertEqual(removedCount, 1, 'should remove 1 (lower FLASH)');
+    assertEqual(rule, 'trip.com: additive + group dedup', 'rule');
+    assertEqual(removedCount, 0, 'should remove 0 (no group-level dupes)');
+    assertEqual(resolved.length, 3, 'should keep all 3 (2 SEASONAL + 1 TARGETED)');
 
-    // Flash Sale (12%) kept, Flash Sale 2 (8%) removed
-    const flash = resolved.filter(d => d.subCategory === 'FLASH');
-    assertEqual(flash.length, 1, 'should keep 1 FLASH');
-    assertEqual(flash[0].percent, 12, 'should keep higher FLASH');
-
-    // Member Deal (10%) kept
+    // Member Deal kept
     const member = resolved.filter(d => d.subCategory === 'MEMBER');
     assertEqual(member.length, 1, 'should keep MEMBER');
+});
+
+test('4b. Trip.com: PORTFOLIO group dedup keeps highest only', () => {
+    // Test actual group dedup with multiple PORTFOLIO items
+    const tripWithPortfolio: DiscountItem[] = [
+        { id: '1', name: 'Regular Promo A', percent: 15, group: 'PORTFOLIO' },
+        { id: '2', name: 'Regular Promo B', percent: 10, group: 'PORTFOLIO' },
+        { id: '3', name: 'Targeting Deal', percent: 12, group: 'TARGETED' },
+    ];
+    const { resolved, rule, removedCount } = resolveVendorStacking('trip', tripWithPortfolio);
+
+    assertEqual(rule, 'trip.com: additive + group dedup', 'rule');
+    assertEqual(removedCount, 1, 'should remove 1 (lower PORTFOLIO)');
+    assertEqual(resolved.length, 2, 'should keep 2 (best PORTFOLIO + TARGETED)');
+
+    const portfolio = resolved.filter(d => d.group === 'PORTFOLIO');
+    assertEqual(portfolio.length, 1, 'should keep 1 PORTFOLIO');
+    assertEqual(portfolio[0].percent, 15, 'should keep higher PORTFOLIO (15%)');
 });
 
 // ── Test 5: OCC multiplier × any case ─────────────────────────
@@ -267,7 +286,7 @@ test('4. Trip.com: Same-box (subcat) dedup keeps highest per box', () => {
 test('5. OCC multiplier 1.20 × Agoda NET price', () => {
     const netBase = 500_000;
     const multiplier = 1.20;
-    const adjustedNet = applyOccMultiplier(netBase, multiplier);
+    const adjustedNet = applyOccAdjustment(netBase, 'MULTIPLY', multiplier, 0);
 
     assertEqual(adjustedNet, 600_000, 'adjusted NET should be 600k');
 

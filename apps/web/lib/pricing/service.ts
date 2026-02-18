@@ -16,9 +16,9 @@ import {
     calcEffectiveDiscount,
     computeDisplay,
     applyOccAdjustment,
-    applyOccMultiplier,
     applyGuardrails,
     normalizeVendorCode,
+    formatVND,
 } from './engine';
 import type {
     CalcType,
@@ -274,9 +274,9 @@ export async function calculatePreview(input: PreviewInput): Promise<PreviewResu
         bar = effectiveDiscount >= 100 ? 0 : Math.round(display / (1 - effectiveDiscount / 100));
         net = Math.round(display * (1 - commission / 100));
         trace = [
-            { step: 'Giá khách thấy', description: `Hiển thị trên OTA = ${display}`, priceAfter: display },
-            { step: 'Tính BAR', description: `BAR = ${display} / (1 - ${effectiveDiscount.toFixed(1)}%) = ${bar}`, priceAfter: bar },
-            { step: 'Hoa hồng OTA', description: `Thu về = ${display} × (1 - ${commission}%) = ${net}`, priceAfter: net },
+            { step: 'Giá khách thấy', description: `Hiển thị trên OTA = ${formatVND(display)}`, priceAfter: display },
+            { step: 'Tính BAR', description: `BAR = ${formatVND(display)} / (1 - ${effectiveDiscount.toFixed(1)}%) = ${formatVND(bar)}`, priceAfter: bar },
+            { step: 'Hoa hồng OTA', description: `Thu về = ${formatVND(display)} × (1 - ${commission}%) = ${formatVND(net)}`, priceAfter: net },
         ];
     }
 

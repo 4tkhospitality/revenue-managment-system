@@ -13,7 +13,7 @@ const publicRoutes = ["/auth/login", "/api/auth"]
 const apiBypassRoutes = ["/api/pricing", "/api/onboarding", "/api/invite"]
 
 // Routes that don't require hotel access
-const noHotelRoutes = ["/admin", "/api/admin", "/blocked", "/no-hotel-access", "/select-hotel", "/onboarding", "/api/onboarding", "/welcome", "/invite", "/api/invite", "/api/payments/pending-activation"]
+const noHotelRoutes = ["/admin", "/api/admin", "/blocked", "/no-hotel-access", "/select-hotel", "/onboarding", "/api/onboarding", "/welcome", "/invite", "/api/invite", "/api/payments/pending-activation", "/payment", "/pricing-plans"]
 
 
 // Role hierarchy for permission checks
@@ -94,6 +94,14 @@ export async function middleware(request: NextRequest) {
         }
         console.log(`[MW] 🛡️ Admin bypass → allow through`)
         return NextResponse.next()
+    }
+
+    // 5b. Onboarding guard: prevent unauthorized hotel creation
+    // Allow if: user has pendingActivation in JWT (freshly set), OR user has 0 hotels (likely just paid, JWT might be stale)
+    // Block if: user already has hotels and no pending activation (trying to game the system)
+    if (pathname.startsWith("/onboarding") && !pendingActivation && hotels.length > 0) {
+        console.log(`[MW] 🚫 Has hotels + no pending activation → blocked from /onboarding | email=${session.user.email}`)
+        return NextResponse.redirect(new URL("/dashboard", request.url))
     }
 
     // 6. Blocked user check

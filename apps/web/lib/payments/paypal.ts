@@ -15,6 +15,11 @@ function getConfig() {
     const apiUrl = process.env.PAYPAL_API_URL || 'https://api-m.sandbox.paypal.com';
     const webhookId = process.env.PAYPAL_WEBHOOK_ID;
 
+    console.log(`[PayPal Config] clientId: ${clientId ? clientId.slice(0, 10) + '...' : 'MISSING'}`);
+    console.log(`[PayPal Config] secret: ${secret ? '***SET***' : 'MISSING'}`);
+    console.log(`[PayPal Config] apiUrl: ${apiUrl}`);
+    console.log(`[PayPal Config] webhookId: ${webhookId || 'MISSING'}`);
+
     if (!clientId || !secret) {
         throw new Error('Missing PAYPAL_CLIENT_ID or PAYPAL_SECRET env vars');
     }
@@ -29,11 +34,16 @@ let cachedToken: { token: string; expiresAt: number } | null = null;
 async function getAccessToken(): Promise<string> {
     // Return cached token if still valid (with 60s buffer)
     if (cachedToken && Date.now() < cachedToken.expiresAt - 60_000) {
+        console.log('[PayPal OAuth] Using cached token (valid)');
         return cachedToken.token;
     }
 
+    console.log('[PayPal OAuth] Requesting new token...');
     const { clientId, secret, apiUrl } = getConfig();
-    const res = await fetch(`${apiUrl}/v1/oauth2/token`, {
+    const tokenUrl = `${apiUrl}/v1/oauth2/token`;
+    console.log(`[PayPal OAuth] Token URL: ${tokenUrl}`);
+
+    const res = await fetch(tokenUrl, {
         method: 'POST',
         headers: {
             'Authorization': `Basic ${Buffer.from(`${clientId}:${secret}`).toString('base64')}`,
@@ -43,7 +53,9 @@ async function getAccessToken(): Promise<string> {
     });
 
     if (!res.ok) {
-        throw new Error(`PayPal OAuth failed: ${res.status} ${await res.text()}`);
+        const errText = await res.text();
+        console.error(`[PayPal OAuth] ❌ Failed: ${res.status}`, errText);
+        throw new Error(`PayPal OAuth failed: ${res.status} ${errText}`);
     }
 
     const data = await res.json();
@@ -51,6 +63,7 @@ async function getAccessToken(): Promise<string> {
         token: data.access_token,
         expiresAt: Date.now() + data.expires_in * 1000,
     };
+    console.log(`[PayPal OAuth] ✅ Token obtained, expires in ${data.expires_in}s`);
     return cachedToken.token;
 }
 
@@ -71,8 +84,14 @@ export async function createPayPalOrder(params: CreateOrderParams): Promise<{
     paypalOrderId: string;
     approvalUrl: string;
 }> {
+    console.log('[PayPal createOrder] Starting...');
     const { apiUrl } = getConfig();
     const token = await getAccessToken();
+
+    const returnUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/payment/success?provider=paypal`;
+    const cancelUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/pricing-plans`;
+    console.log(`[PayPal createOrder] return_url: ${returnUrl}`);
+    console.log(`[PayPal createOrder] cancel_url: ${cancelUrl}`);
 
     const body = {
         intent: 'CAPTURE',
@@ -89,12 +108,16 @@ export async function createPayPalOrder(params: CreateOrderParams): Promise<{
             brand_name: '4TK Hospitality',
             landing_page: 'NO_PREFERENCE',
             user_action: 'PAY_NOW',
-            return_url: `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/payment/success?provider=paypal`,
-            cancel_url: `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/pricing-plans`,
+            return_url: returnUrl,
+            cancel_url: cancelUrl,
         },
     };
 
-    const res = await fetch(`${apiUrl}/v2/checkout/orders`, {
+    console.log(`[PayPal createOrder] Request body:`, JSON.stringify(body, null, 2));
+    const orderUrl = `${apiUrl}/v2/checkout/orders`;
+    console.log(`[PayPal createOrder] POST ${orderUrl}`);
+
+    const res = await fetch(orderUrl, {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${token}`,
@@ -105,10 +128,12 @@ export async function createPayPalOrder(params: CreateOrderParams): Promise<{
 
     if (!res.ok) {
         const errText = await res.text();
+        console.error(`[PayPal createOrder] ❌ Failed: ${res.status}`, errText);
         throw new Error(`PayPal createOrder failed: ${res.status} ${errText}`);
     }
 
     const data = await res.json();
+    console.log(`[PayPal createOrder] ✅ Response:`, JSON.stringify(data, null, 2));
     const approvalLink = data.links?.find((l: { rel: string; href: string }) => l.rel === 'approve');
 
     return {

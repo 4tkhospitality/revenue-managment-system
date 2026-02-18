@@ -83,6 +83,7 @@ export default function DynamicPricingTab() {
     const [occOverride, setOccOverride] = useState<string>('');
     const [viewMode, setViewMode] = useState<ViewMode>('net');
     const [showConfig, setShowConfig] = useState(false);
+    const [isDemo, setIsDemo] = useState(false);
 
     // Data
     const [data, setData] = useState<DynamicMatrixResponse | null>(null);
@@ -92,13 +93,14 @@ export default function DynamicPricingTab() {
     // Cell drill-down
     const [selectedCell, setSelectedCell] = useState<{ roomTypeId: string; roomTypeName: string; tierIndex: number } | null>(null);
 
-    // ── Fetch channels & seasons on mount
+    // ── Fetch channels, seasons & demo status on mount
     useEffect(() => {
         (async () => {
             try {
-                const [chRes, sRes] = await Promise.all([
+                const [chRes, sRes, demoRes] = await Promise.all([
                     fetch('/api/pricing/ota-channels'),
                     fetch('/api/pricing/seasons'),
+                    fetch('/api/is-demo-hotel'),
                 ]);
                 if (chRes.ok) {
                     const chs = await chRes.json();
@@ -108,6 +110,10 @@ export default function DynamicPricingTab() {
                 if (sRes.ok) {
                     const ss = await sRes.json();
                     setSeasons(ss);
+                }
+                if (demoRes.ok) {
+                    const d = await demoRes.json();
+                    setIsDemo(d.isDemo || false);
                 }
             } catch { /* ignore */ }
         })();
@@ -277,8 +283,9 @@ export default function DynamicPricingTab() {
                 {/* Export */}
                 <button
                     onClick={handleExport}
-                    disabled={!data}
-                    className="ml-auto flex items-center gap-1.5 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-300 text-white text-sm font-semibold rounded-lg transition-colors"
+                    disabled={!data || isDemo}
+                    title={isDemo ? 'Tính năng này không khả dụng cho Demo Hotel' : 'Xuất CSV'}
+                    className={`ml-auto flex items-center gap-1.5 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-300 text-white text-sm font-semibold rounded-lg transition-colors ${isDemo ? 'cursor-not-allowed' : ''}`}
                 >
                     <Download className="w-4 h-4" />
                     Export

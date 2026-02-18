@@ -38,7 +38,6 @@ const navGroups = [
         label: 'Tổng quan - Phân tích',
         items: [
             { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, minRole: 'viewer' },
-            { href: '/analytics', label: 'Pace & Pickup', icon: TrendingUp, minRole: 'viewer', requiredTier: 'SUPERIOR' as const },
         ],
     },
     {
@@ -243,8 +242,8 @@ export function Sidebar() {
                                     const Icon = item.icon;
                                     const canAccess = hasPermission(item.minRole);
                                     const needsTier = 'requiredTier' in item && item.requiredTier;
-                                    // Demo hotel viewers see STANDARD tier (show lock icons)
-                                    const effectivePlan = (isDemo && !isAdmin) ? 'STANDARD' : currentPlan;
+                                    // Demo hotel viewers get SUPERIOR access to showcase features
+                                    const effectivePlan = (isDemo && !isAdmin) ? 'SUPERIOR' : currentPlan;
                                     const hasTier = !needsTier || isAdmin || (TIER_LEVELS[effectivePlan] ?? 0) >= (TIER_LEVELS[needsTier as string] ?? 0);
 
                                     if (canAccess) {

@@ -6,7 +6,6 @@ import { AnalyticsPanel } from '@/components/dashboard';
 import { RecommendationTable } from '@/components/dashboard/RecommendationTable';
 import { QuickModePricingWrapper } from '@/components/dashboard/QuickModePricingWrapper';
 import { DateUtils } from '@/lib/date';
-import { PricingLogic } from '@/lib/pricing';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { ExportPdfButton } from '@/components/shared/ExportPdfButton';
 
@@ -379,26 +378,39 @@ export default async function DashboardPage({
                 reasonTextVi = 'Hết phòng — ngừng bán';
             }
         } else {
-            // ⚠️ Fallback: compute from PricingLogic (only when pipeline hasn't run)
+            // ⚠️ Fallback: simple heuristic (only when pipeline hasn't run)
             source = 'FALLBACK';
-            currentPrice = adr || 0; // fallback uses ADR since no pipeline anchor available
-            const pricingResult = PricingLogic.optimize(currentPrice, forecastDemand, remaining);
-            isStopSell = remaining <= 0 || pricingResult.recommendedPrice === null;
-            recPrice = pricingResult.recommendedPrice || currentPrice;
+            currentPrice = adr || 0;
+            const isSupplyConstrained = remaining <= 0;
+            recPrice = currentPrice; // Default: keep price
 
-            if (isStopSell) {
+            if (isSupplyConstrained) {
                 action = 'STOP_SELL';
+                isStopSell = true;
                 deltaPct = 0;
                 reasonTextVi = 'Hết phòng — ngừng bán';
             } else if (!currentPrice || currentPrice <= 0) {
+                isStopSell = false;
                 action = 'KEEP';
                 reasonTextVi = 'Thiếu giá hiện tại';
             } else {
+                isStopSell = false;
+                // Simple heuristic: suggest increase if demand > supply, decrease if low demand
+                const demandRatio = remaining > 0 ? forecastDemand / remaining : 0;
+                if (demandRatio > 1.5) {
+                    recPrice = Math.round(currentPrice * 1.05);
+                    action = 'INCREASE';
+                } else if (demandRatio < 0.3) {
+                    recPrice = Math.round(currentPrice * 0.95);
+                    action = 'DECREASE';
+                } else {
+                    action = 'KEEP';
+                }
                 const rawDelta = ((recPrice - currentPrice) / currentPrice) * 100;
                 deltaPct = Math.round(rawDelta * 100) / 100;
-                if (Math.abs(rawDelta) < 1.0) { action = 'KEEP'; reasonTextVi = 'Giữ giá'; }
-                else if (rawDelta > 0) { action = 'INCREASE'; reasonTextVi = `Đề xuất tăng ${deltaPct.toFixed(1)}%`; }
-                else { action = 'DECREASE'; reasonTextVi = `Đề xuất giảm ${Math.abs(deltaPct).toFixed(1)}%`; }
+                if (action === 'KEEP') reasonTextVi = 'Giữ giá';
+                else if (action === 'INCREASE') reasonTextVi = `Đề xuất tăng ${deltaPct.toFixed(1)}%`;
+                else reasonTextVi = `Đề xuất giảm ${Math.abs(deltaPct).toFixed(1)}%`;
             }
         }
 
@@ -646,7 +658,7 @@ export default async function DashboardPage({
                             />
 
                             {/* GM Dashboard V2 — Phase A Panels */}
-                            <Suspense fallback={<div className="h-64 animate-pulse bg-gray-800/30 rounded-xl" />}>
+                            <Suspense key="v2-suspense" fallback={<div className="h-64 animate-pulse bg-gray-800/30 rounded-xl" />}>
                                 <div key="v2-panels" className="grid grid-cols-1 lg:grid-cols-5 gap-4">
                                     <div className="lg:col-span-3">
                                         <TopAccountsTable hotelId={hotelId} asOfDate={asOfDateStr || ''} />

@@ -150,6 +150,7 @@ export default function PricingPlansPage() {
                     return fetch('/api/is-demo-hotel').then(r => r.json()).then(demoData => {
                         if (demoData.isDemo) {
                             setCurrentTier(null); // Demo hotel — no "current plan" highlight
+                            setHotelId(''); // Pay-first flow: don't tie payment to Demo Hotel
                         } else {
                             setCurrentTier(data.plan || 'STANDARD');
                         }

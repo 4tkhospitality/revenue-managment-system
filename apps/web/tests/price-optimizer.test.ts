@@ -27,11 +27,17 @@ describe('priceOptimizer: optimizePrice', () => {
     // ── Zone assignment ──────────────────────────────────────
 
     it('SURGE zone when demand >> supply', () => {
+        // staying=50-5=45, net=20+5=25, new=min(120,25)=25, final=70
+        // finalOcc=70/100=0.70, pressure=0.70/0.40=1.75 → STRONG
+        // To get SURGE (≥2.0), need finalOcc≥0.80 → use higher OTB
         const result = optimizePrice(makeInput({
+            roomsOtb: 70,
             remainingDemand: 120,
-            remainingSupply: 20,
+            remainingSupply: 30,
             expectedCxl: 5,
-            // pressure = 120 / 25 = 4.8 → SURGE
+            capacity: 100,
+            // staying=70-5=65, net=30+5=35, new=min(120,35)=35, final=100
+            // finalOcc=100/100=1.0, pressure=1.0/0.40=2.5 → SURGE
         }));
         expect(result.zone).toBe('SURGE');
         expect(result.recommendedPrice).toBeGreaterThan(1000000);
@@ -49,32 +55,41 @@ describe('priceOptimizer: optimizePrice', () => {
     });
 
     it('NORMAL zone when demand ≈ supply', () => {
+        // staying=30-0=30, net=20+0=20, new=min(10,20)=10, final=40
+        // finalOcc=40/100=0.40, pressure=0.40/0.40=1.0 → NORMAL (≥0.6, <1.2)
         const result = optimizePrice(makeInput({
-            remainingDemand: 40,
-            remainingSupply: 40,
-            expectedCxl: 5,
-            // pressure = 40 / 45 ≈ 0.89 → NORMAL
+            roomsOtb: 30,
+            remainingDemand: 10,
+            remainingSupply: 20,
+            expectedCxl: 0,
+            capacity: 100,
         }));
         expect(result.zone).toBe('NORMAL');
     });
 
     it('SOFT zone when demand < supply', () => {
+        // staying=10-0=10, net=80+0=80, new=min(5,80)=5, final=15
+        // finalOcc=15/100=0.15, pressure=0.15/0.40=0.375 → SOFT (≥0.25, <0.6)
         const result = optimizePrice(makeInput({
-            remainingDemand: 10,
-            remainingSupply: 40,
+            roomsOtb: 10,
+            remainingDemand: 5,
+            remainingSupply: 80,
             expectedCxl: 0,
-            // pressure = 10 / 40 = 0.25 → SOFT boundary
+            capacity: 100,
         }));
-        expect(['SOFT', 'DISTRESS']).toContain(result.zone);
+        expect(result.zone).toBe('SOFT');
         expect(result.recommendedPrice).toBeLessThanOrEqual(1000000);
     });
 
     it('DISTRESS zone when very low demand', () => {
+        // staying=5-0=5, net=90+0=90, new=min(2,90)=2, final=7
+        // finalOcc=7/100=0.07, pressure=0.07/0.40=0.175 → DISTRESS (<0.25)
         const result = optimizePrice(makeInput({
+            roomsOtb: 5,
             remainingDemand: 2,
-            remainingSupply: 60,
+            remainingSupply: 90,
             expectedCxl: 0,
-            // pressure = 2 / 60 ≈ 0.033 → DISTRESS
+            capacity: 100,
         }));
         expect(result.zone).toBe('DISTRESS');
         expect(result.recommendedPrice).toBeLessThan(900000);
@@ -93,10 +108,14 @@ describe('priceOptimizer: optimizePrice', () => {
     });
 
     it('DISTRESS price decreases ~15%', () => {
+        // staying=5-0=5, net=90+0=90, new=min(0,90)=0, final=5
+        // finalOcc=5/100=0.05, pressure=0.05/0.40=0.125 → DISTRESS
         const result = optimizePrice(makeInput({
+            roomsOtb: 5,
             remainingDemand: 0,
-            remainingSupply: 80,
+            remainingSupply: 90,
             expectedCxl: 0,
+            capacity: 100,
         }));
         expect(result.multiplier).toBeLessThan(0.90);
     });
@@ -224,7 +243,7 @@ describe('priceOptimizer: optimizePrice', () => {
     it('trace contains key calculation steps', () => {
         const result = optimizePrice(makeInput());
         const traceStr = result.trace.join(' ');
-        expect(traceStr).toContain('net_remaining=');
+        expect(traceStr).toContain('occ:');
         expect(traceStr).toContain('demand_pressure=');
         expect(traceStr).toContain('zone=');
         expect(traceStr).toContain('final_price=');

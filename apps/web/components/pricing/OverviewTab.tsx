@@ -39,9 +39,15 @@ type CalcMode = 'net_to_bar' | 'bar_to_net';
 export default function OverviewTab() {
     const [data, setData] = useState<MatrixData | null>(null);
     const [loading, setLoading] = useState(true);
+    const [recalculating, setRecalculating] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [hoverCell, setHoverCell] = useState<string | null>(null);
     const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+    const [isDemo, setIsDemo] = useState(false);
+
+    useEffect(() => {
+        fetch('/api/is-demo-hotel').then(r => r.json()).then(d => setIsDemo(d.isDemo || false)).catch(() => { });
+    }, []);
 
     const [mode, setMode] = useState<CalcMode>('net_to_bar');
 
@@ -57,7 +63,12 @@ export default function OverviewTab() {
         calcMode: CalcMode = mode,
         prices?: Record<string, number>
     ) => {
-        setLoading(true);
+        // First load vs recalculation
+        if (data) {
+            setRecalculating(true);
+        } else {
+            setLoading(true);
+        }
         setError(null);
         try {
             const body: { mode: CalcMode; displayPrices?: Record<string, number> } = { mode: calcMode };
@@ -78,8 +89,9 @@ export default function OverviewTab() {
             setError(err.message);
         } finally {
             setLoading(false);
+            setRecalculating(false);
         }
-    }, [mode]);
+    }, [mode, data]);
 
     useEffect(() => { fetchMatrix(); }, []);
 
@@ -251,7 +263,12 @@ export default function OverviewTab() {
                     </span>
                 </div>
                 <div className="flex items-center gap-2">
-                    {loading && <Loader2 className="w-4 h-4 animate-spin text-blue-500" />}
+                    {(loading || recalculating) && (
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 border border-blue-200 rounded-lg">
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
+                            <span className="text-[11px] font-semibold text-blue-600">Đang tính...</span>
+                        </div>
+                    )}
                     {isBarToNet && (
                         <button
                             onClick={handleCalculate}
@@ -271,16 +288,18 @@ export default function OverviewTab() {
                     )}
                     <button
                         onClick={handleExportPDF}
-                        disabled={!data}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 disabled:opacity-50"
+                        disabled={!data || isDemo}
+                        title={isDemo ? 'Tính năng này không khả dụng cho Demo Hotel' : 'Xuất PDF'}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 disabled:opacity-50 ${isDemo ? 'cursor-not-allowed' : ''}`}
                     >
                         <FileText className="w-3.5 h-3.5" />
                         PDF
                     </button>
                     <button
                         onClick={handleExport}
-                        disabled={!data}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-[#1E3A8A] text-white rounded-lg hover:bg-[#204184] disabled:opacity-50"
+                        disabled={!data || isDemo}
+                        title={isDemo ? 'Tính năng này không khả dụng cho Demo Hotel' : 'Xuất CSV'}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-[#1E3A8A] text-white rounded-lg hover:bg-[#204184] disabled:opacity-50 ${isDemo ? 'cursor-not-allowed' : ''}`}
                     >
                         <Download className="w-3.5 h-3.5" />
                         CSV
@@ -409,7 +428,16 @@ export default function OverviewTab() {
                                                     onMouseEnter={(e) => handleMouseEnter(key, e)}
                                                     onMouseLeave={() => setHoverCell(null)}
                                                 >
-                                                    <div className="border border-slate-200 rounded-lg overflow-hidden hover:shadow-md hover:border-slate-300 transition-all cursor-default">
+                                                    <div className={`relative border border-slate-200 rounded-lg overflow-hidden hover:shadow-md hover:border-slate-300 transition-all cursor-default ${recalculating ? 'opacity-50' : ''}`}>
+                                                        {/* Recalculating shimmer overlay */}
+                                                        {recalculating && (
+                                                            <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 backdrop-blur-[1px]">
+                                                                <div className="flex items-center gap-1 px-2 py-0.5 bg-blue-50 border border-blue-200 rounded-full">
+                                                                    <Loader2 className="w-2.5 h-2.5 animate-spin text-blue-600" />
+                                                                    <span className="text-[8px] font-bold text-blue-600">Đang tính...</span>
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                         {/* Main output value */}
                                                         {!isBarToNet ? (
                                                             /* Net→Display mode: show Display price (orange) */

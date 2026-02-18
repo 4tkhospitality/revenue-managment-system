@@ -633,19 +633,6 @@ export function normalizeVendorCode(code: string): string {
     return VENDOR_MAP[lower] ?? lower;
 }
 
-import * as fs from 'fs';
-import * as path from 'path';
-
-function logDebug(msg: string) {
-    try {
-        // Write to project root for easy access
-        const logPath = path.resolve(process.cwd(), 'pricing-debug.log');
-        fs.appendFileSync(logPath, `[${new Date().toISOString()}] ${msg}\n`);
-    } catch (e) {
-        console.error('FAILED TO WRITE LOG:', e);
-    }
-}
-
 /**
  * Resolve vendor-specific discount stacking rules.
  * Extracted from PromotionsTab.tsx to enforce single source of truth.
@@ -1000,12 +987,5 @@ export function applyOccAdjustment(
         return Math.round(netBase + fixedAmount);
     }
     return Math.round(netBase * multiplier);
-}
-
-/**
- * @deprecated Use applyOccAdjustment instead. Kept for backward compatibility.
- */
-export function applyOccMultiplier(netBase: number, multiplier: number): number {
-    return applyOccAdjustment(netBase, 'MULTIPLY', multiplier, 0);
 }
 

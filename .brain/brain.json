@@ -2,13 +2,13 @@
   "meta": {
     "schema_version": "2.0.0",
     "awf_version": "4.1.2",
-    "last_updated": "2026-02-17T21:16:00+07:00"
+    "last_updated": "2026-02-17T23:27:00+07:00"
   },
   "project": {
     "name": "revenue-management-system",
     "type": "SaaS Web App",
     "status": "Production - Deployed to Vercel (icn1 region)",
-    "description": "RMS Version 02.1 - Revenue Management System with Room Band Pricing + Organization-based Multi-Hotel + OTB Time-Travel + OTA Pricing + Dynamic Pricing by OCC + Unified Pricing Logic + InsightsPanel V2 + Payment Gateway (SePay/PayPal/Zalo) + Analytics Layer (Cancel Forecast, Demand Model, Price Optimizer) + GM Dashboard V2 (Top Accounts, Room/LOS Mix, Lead-time Buckets) + Pricing Unification (Quick Mode + Detailed Mode with reason column). Full-stack TypeScript.",
+    "description": "RMS Version 02.1 - Revenue Management System with Room Band Pricing + Organization-based Multi-Hotel + OTB Time-Travel + OTA Pricing + Dynamic Pricing by OCC + Unified Pricing Logic + InsightsPanel V2 + Payment Gateway (SePay/PayPal/Zalo) + Analytics Layer (Cancel Forecast, Demand Model, Price Optimizer) + GM Dashboard V2 (Top Accounts, Room/LOS Mix, Lead-time Buckets) + Pricing Unification (Quick Mode + Detailed Mode with reason column) + Season Multiplier from DB (per-hotel) + Full Pipeline with OTB D-1/D. Full-stack TypeScript.",
     "github": "https://github.com/4tkhospitality/revenue-managment-system",
     "landing_page": {
       "path": "apps/landing",
@@ -199,9 +199,10 @@
         "v018_new": true
       },
       {
-        "name": "seasons",
-        "description": "V01.8: Named date ranges (Peak, Shoulder, Off-Peak, Tet, etc) with multiplier. Per-hotel. Validates no overlapping date ranges.",
-        "v018_new": true
+        "name": "seasons (season_configs)",
+        "description": "V01.8/V02.1: Named date ranges (Peak, Shoulder, Off-Peak, Tet, etc) with per-hotel multiplier (Float @default(1.0)). Engine reads sc.multiplier from DB, fallback to legacy hardcoded (NORMAL=1.0, HIGH=1.2, HOLIDAY=1.5). Rack rate = base_rate × multiplier. Validates no overlapping date ranges.",
+        "v018_new": true,
+        "v021_updated": "Added multiplier Float field, seeded existing rows"
       },
       {
         "name": "season_rates",
