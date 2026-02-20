@@ -23,6 +23,7 @@ import {
     calcEffectiveDiscount,
     computeDisplay,
     applyOccAdjustment,
+    applyGuardrails,
     normalizeVendorCode,
 } from '../lib/pricing/engine';
 import type { DiscountItem, CalcType } from '../lib/pricing/types';
@@ -81,9 +82,9 @@ const expediaDiscounts: DiscountItem[] = [
 ];
 
 const tripDiscounts: DiscountItem[] = [
-    { id: '1', name: 'Flash Sale', percent: 12, group: 'SEASONAL', subCategory: 'FLASH' },
-    { id: '2', name: 'Flash Sale 2', percent: 8, group: 'SEASONAL', subCategory: 'FLASH' }, // same box
-    { id: '3', name: 'Member Deal', percent: 10, group: 'TARGETED', subCategory: 'MEMBER' },
+    { id: 'tripcom-early-bird', name: 'Early Bird', percent: 12, group: 'ESSENTIAL', subCategory: 'DEAL_BOX' },
+    { id: 'tripcom-basic-deal', name: 'Basic Deal', percent: 10, group: 'ESSENTIAL', subCategory: 'DEAL_BOX' },
+    { id: 'tripcom-mobile-rate', name: 'Mobile Rate', percent: 15, group: 'TARGETED', subCategory: 'TARGETING' },
 ];
 
 // ── Test Suite ───────────────────────────────────────────────────
@@ -244,41 +245,47 @@ test('3b. Expedia: Member deal stacks with best non-member', () => {
     assertEqual(removedCount, 1, 'should remove 1 (Multi-Night)');
 });
 
-// ── Test 4: Trip.com same-box dedup ────────────────────────────
+// ── Test 4: Trip.com 7-box dedup ────────────────────────────────
 
-test('4. Trip.com: Group-level dedup (best per PORTFOLIO/TARGETED)', () => {
-    // Engine does group-level dedup: best per PORTFOLIO + best per TARGETED, SEASONAL=other passes through
-    // tripDiscounts has: Flash Sale 12% (SEASONAL), Flash Sale 2 8% (SEASONAL), Member Deal 10% (TARGETED)
-    // SEASONAL items go to 'other' (no dedup) → both kept
-    // TARGETED picks best → Member Deal 10% kept
-    // removedCount = 0 (no PORTFOLIO, TARGETED has 1 item, SEASONAL all kept)
-    const { resolved, rule, removedCount } = resolveVendorStacking('trip', tripDiscounts);
+test('4. Trip.com: 7-box dedup — pick highest per box, stack across boxes', () => {
+    // tripDiscounts: Early Bird 12% (box 1) + Basic Deal 10% (box 1) + Mobile Rate 15% (box 2)
+    // Box 1: Early Bird 12% wins (Basic Deal 10% dropped)
+    // Box 2: Mobile Rate 15% (only item)
+    // Result: 2 winners from 2 different boxes
+    const { resolved, rule, removedCount, ignored } = resolveVendorStacking('trip', tripDiscounts);
 
-    assertEqual(rule, 'trip.com: additive + group dedup', 'rule');
-    assertEqual(removedCount, 0, 'should remove 0 (no group-level dupes)');
-    assertEqual(resolved.length, 3, 'should keep all 3 (2 SEASONAL + 1 TARGETED)');
+    assertEqual(rule, 'trip.com: 7-box additive', 'rule');
+    assertEqual(removedCount, 1, 'should remove 1 (Basic Deal from same box 1)');
+    assertEqual(resolved.length, 2, 'should keep 2 (1 per box)');
 
-    // Member Deal kept
-    const member = resolved.filter(d => d.subCategory === 'MEMBER');
-    assertEqual(member.length, 1, 'should keep MEMBER');
+    // Early Bird wins box 1
+    const box1 = resolved.find(d => d.id === 'tripcom-early-bird');
+    if (!box1) throw new Error('Early Bird should survive box 1 dedup');
+    assertEqual(box1.percent, 12, 'Early Bird 12% wins box 1');
+
+    // Mobile Rate wins box 2
+    const box2 = resolved.find(d => d.id === 'tripcom-mobile-rate');
+    if (!box2) throw new Error('Mobile Rate should survive box 2');
+
+    // Basic Deal should be in ignored
+    const dropped = ignored.find(i => i.id === 'tripcom-basic-deal');
+    if (!dropped || !dropped.reason.includes('box 1')) {
+        throw new Error(`Basic Deal should be dropped from box 1, got: ${dropped?.reason}`);
+    }
 });
 
-test('4b. Trip.com: PORTFOLIO group dedup keeps highest only', () => {
-    // Test actual group dedup with multiple PORTFOLIO items
-    const tripWithPortfolio: DiscountItem[] = [
-        { id: '1', name: 'Regular Promo A', percent: 15, group: 'PORTFOLIO' },
-        { id: '2', name: 'Regular Promo B', percent: 10, group: 'PORTFOLIO' },
-        { id: '3', name: 'Targeting Deal', percent: 12, group: 'TARGETED' },
+test('4b. Trip.com: Multiple boxes additive — box 1 + box 2 + box 5', () => {
+    // 3 items from 3 different boxes → all kept
+    const tripMultiBox: DiscountItem[] = [
+        { id: 'tripcom-early-bird', name: 'Early Bird', percent: 12, group: 'ESSENTIAL', subCategory: 'DEAL_BOX' },
+        { id: 'tripcom-mobile-rate', name: 'Mobile Rate', percent: 15, group: 'TARGETED', subCategory: 'TARGETING' },
+        { id: 'tripcom-tripplus', name: 'TripPlus', percent: 10, group: 'TARGETED', subCategory: 'TRIPPLUS' },
     ];
-    const { resolved, rule, removedCount } = resolveVendorStacking('trip', tripWithPortfolio);
+    const { resolved, rule, removedCount } = resolveVendorStacking('trip', tripMultiBox);
 
-    assertEqual(rule, 'trip.com: additive + group dedup', 'rule');
-    assertEqual(removedCount, 1, 'should remove 1 (lower PORTFOLIO)');
-    assertEqual(resolved.length, 2, 'should keep 2 (best PORTFOLIO + TARGETED)');
-
-    const portfolio = resolved.filter(d => d.group === 'PORTFOLIO');
-    assertEqual(portfolio.length, 1, 'should keep 1 PORTFOLIO');
-    assertEqual(portfolio[0].percent, 15, 'should keep higher PORTFOLIO (15%)');
+    assertEqual(rule, 'trip.com: 7-box additive', 'rule');
+    assertEqual(removedCount, 0, 'should remove 0 (all different boxes)');
+    assertEqual(resolved.length, 3, 'should keep all 3 (boxes 1, 2, 5)');
 });
 
 // ── Test 5: OCC multiplier × any case ─────────────────────────
@@ -362,8 +369,8 @@ test('8. Booking: Genius L1 + L2 → only L2 (no stacking within Genius)', () =>
     // Genius L1 should be in ignored list
     const ignoredGenius = ignored.filter(i => i.id === '1');
     assertEqual(ignoredGenius.length, 1, 'Genius L1 should be in ignored');
-    if (!ignoredGenius[0].reason.includes('cao hơn')) {
-        throw new Error(`Ignored reason should mention "cao hơn", got: ${ignoredGenius[0].reason}`);
+    if (!ignoredGenius[0].reason.includes('higher')) {
+        throw new Error(`Ignored reason should mention "higher", got: ${ignoredGenius[0].reason}`);
     }
 });
 
@@ -419,6 +426,299 @@ test('10. Booking: Mobile + Country → StackingResult.ignored[] has reason', ()
     if (!result.ignored[0].reason.includes('Mobile Rate')) {
         throw new Error(`Reason should mention "Mobile Rate", got: ${result.ignored[0].reason}`);
     }
+});
+
+// ── Phase 04: Edge Case Tests ───────────────────────────────────
+
+console.log('\n── Phase 04: Edge Cases ──────────────────\n');
+
+// ── Test 11: Zero discounts → BAR = gross (no discount applied) ──
+
+test('11. Zero discounts: BAR = NET / (1 - commission), no discount applied', () => {
+    const result = calcBarFromNet(500_000, 18, [], 'PROGRESSIVE', 'CEIL_1000', 'agoda');
+    const expectedGross = 500000 / (1 - 0.18);
+    const expectedBar = Math.ceil(expectedGross / 1000) * 1000;
+    assertEqual(result.bar, expectedBar, `BAR should be ${expectedBar}`);
+    assertEqual(result.totalDiscount, 0, 'totalDiscount should be 0');
+
+    // Reverse: NET from BAR with no discounts
+    const reverse = calcNetFromBar(result.bar, 18, [], 'PROGRESSIVE', 'agoda');
+    // NET should be close to original (within rounding delta from CEIL_1000)
+    if (reverse.net < 500_000) {
+        throw new Error(`Reverse NET (${reverse.net}) should be >= original (500000) since BAR was rounded up`);
+    }
+});
+
+// ── Test 12: Commission = 0 → BAR = NET / discount factor only ──
+
+test('12. Commission 0%: BAR = NET / discount factor (no commission markup)', () => {
+    const discounts: DiscountItem[] = [
+        { id: '1', name: 'Promo', percent: 10, group: 'SEASONAL' },
+    ];
+    const result = calcBarFromNet(500_000, 0, discounts, 'PROGRESSIVE', 'NONE', 'agoda');
+    // No commission: gross = NET / 1.0 = 500k
+    // PROGRESSIVE: BAR = 500000 / (1 - 0.10) = 555555.55...
+    const expected = 500000 / (1 - 0.10);
+    assertClose(result.bar, expected, 1, 'BAR with 0% commission');
+    assertEqual(result.commission, 0, 'commission should be 0');
+});
+
+// ── Test 13: Commission near 100% → very high BAR ──
+
+test('13. Commission 99%: yields very high BAR (boundary test)', () => {
+    const result = calcBarFromNet(500_000, 99, [], 'PROGRESSIVE', 'NONE', 'agoda');
+    // gross = 500000 / (1 - 0.99) = 500000 / 0.01 = 50,000,000
+    const expected = 500000 / 0.01;
+    assertClose(result.bar, expected, 1, 'BAR with 99% commission');
+});
+
+// ── Test 14: Commission = 100% → error ──
+
+test('14. Commission 100%: returns error (calcNetFromBar)', () => {
+    const result = calcNetFromBar(1_000_000, 100, [], 'PROGRESSIVE', 'agoda');
+    assertEqual(result.validation.isValid, false, 'should be invalid');
+    if (!result.validation.errors.some(e => e.includes('100'))) {
+        throw new Error(`Should have error about commission >= 100%, got: ${result.validation.errors}`);
+    }
+});
+
+// ── Test 15: Commission boosters increase effective commission ──
+
+test('15. Commission boosters: base 18% + AGP 3% + AGX 2% = 23%', () => {
+    const boosters: import('../lib/pricing/types').CommissionBooster[] = [
+        { id: 'agp', name: 'Agoda Growth Program', program: 'AGP', boostPct: 3, enabled: true },
+        { id: 'agx', name: 'Agoda Extra Boost', program: 'AGX', boostPct: 2, enabled: true },
+        { id: 'disabled', name: 'Disabled Boost', program: 'SL', boostPct: 5, enabled: false },
+    ];
+
+    const resultWithBoosters = calcBarFromNet(500_000, 18, [], 'PROGRESSIVE', 'NONE', 'agoda', boosters);
+    const resultWithout = calcBarFromNet(500_000, 18, [], 'PROGRESSIVE', 'NONE', 'agoda');
+
+    // With boosters: gross = 500000 / (1 - 0.23) = 649350.649...
+    const expectedGross = 500000 / (1 - 0.23);
+    assertClose(resultWithBoosters.bar, expectedGross, 1, 'BAR with boosters');
+
+    // Should be higher than without boosters
+    if (resultWithBoosters.bar <= resultWithout.bar) {
+        throw new Error('BAR with boosters should be > BAR without');
+    }
+
+    // effectiveCommission should be reported
+    assertEqual(resultWithBoosters.effectiveCommission, 23, 'effectiveCommission should be 23');
+
+    // Disabled booster should NOT count
+    assertEqual(resultWithBoosters.boosters?.length, 2, 'should have 2 active boosters');
+});
+
+// ── Test 16: Guardrails — MIN_RATE clamp ──
+
+test('16. Guardrails: MIN_RATE clamp (price below min → clamped up)', () => {
+    const result = applyGuardrails(200_000, {
+        min_rate: 500_000,
+        max_rate: 2_000_000,
+        max_step_change_pct: 0.2,
+        rounding_rule: 'CEIL_1000',
+    });
+    assertEqual(result.primary_reason, 'MIN_RATE', 'primary_reason should be MIN_RATE');
+    assertEqual(result.after_price, 500_000, 'should clamp to min_rate');
+    assertEqual(result.clamped, true, 'should be clamped');
+});
+
+// ── Test 17: Guardrails — MAX_RATE clamp ──
+
+test('17. Guardrails: MAX_RATE clamp (price above max → clamped down)', () => {
+    const result = applyGuardrails(5_000_000, {
+        min_rate: 500_000,
+        max_rate: 2_000_000,
+        max_step_change_pct: 0.2,
+        rounding_rule: 'CEIL_1000',
+    });
+    assertEqual(result.primary_reason, 'MAX_RATE', 'primary_reason should be MAX_RATE');
+    assertEqual(result.after_price, 2_000_000, 'should clamp to max_rate');
+    assertEqual(result.clamped, true, 'should be clamped');
+});
+
+// ── Test 18: Guardrails — STEP_CAP (> 20% change from previous) ──
+
+test('18. Guardrails: STEP_CAP limits price change to 20% from previous', () => {
+    const result = applyGuardrails(1_500_000, {
+        min_rate: 500_000,
+        max_rate: 5_000_000,
+        max_step_change_pct: 0.2,
+        previous_bar: 1_000_000,
+        rounding_rule: 'CEIL_1000',
+    });
+    // 1.5M is 50% above 1M → step-capped to 1M × 1.2 = 1.2M
+    if (!result.reason_codes.includes('STEP_CAP')) {
+        throw new Error(`Should have STEP_CAP reason, got: ${result.reason_codes}`);
+    }
+    // After step-cap + CEIL_1000 rounding, should be <= 1.2M
+    if (result.after_price > 1_200_000) {
+        throw new Error(`Price (${result.after_price}) should be <= 1,200,000 after step-cap`);
+    }
+});
+
+// ── Test 19: Guardrails — MANUAL_OVERRIDE bypass with warnings ──
+
+test('19. Guardrails: Manual override bypasses clamping, but adds warnings', () => {
+    const result = applyGuardrails(200_000, {
+        min_rate: 500_000,
+        max_rate: 2_000_000,
+        max_step_change_pct: 0.2,
+        is_manual: true,
+        enforce_guardrails_on_manual: false,
+        rounding_rule: 'CEIL_1000',
+    });
+    assertEqual(result.primary_reason, 'MANUAL_OVERRIDE', 'should be MANUAL_OVERRIDE');
+    assertEqual(result.clamped, false, 'should NOT be clamped (manual bypass)');
+    assertEqual(result.after_price, 200_000, 'price should be unchanged');
+    // Should still have warning about being outside min
+    if (!result.warnings.includes('OUTSIDE_MIN')) {
+        throw new Error(`Should warn about OUTSIDE_MIN, got: ${result.warnings}`);
+    }
+});
+
+// ── Test 20: Guardrails — INVALID_NET (price <= 0) ──
+
+test('20. Guardrails: INVALID_NET hard stop for price <= 0', () => {
+    const result = applyGuardrails(-100_000, {
+        min_rate: 500_000,
+        max_rate: 2_000_000,
+        max_step_change_pct: 0.2,
+        rounding_rule: 'CEIL_1000',
+    });
+    assertEqual(result.primary_reason, 'INVALID_NET', 'should be INVALID_NET');
+    assertEqual(result.after_price, 0, 'price should be 0 for invalid');
+});
+
+// ── Test 21: Additive calc mode (Trip.com full pipeline) ──
+
+test('21. Trip.com ADDITIVE: BAR = NET / (1 - comm) / (1 - Σdᵢ)', () => {
+    const discounts: DiscountItem[] = [
+        { id: '1', name: 'Flash Sale', percent: 10, group: 'SEASONAL' },
+        { id: '2', name: 'Member Deal', percent: 5, group: 'TARGETED', subCategory: 'MEMBER' },
+    ];
+    const result = calcBarFromNet(500_000, 15, discounts, 'ADDITIVE', 'CEIL_1000', 'trip');
+    // Additive: totalDiscount = 10 + 5 = 15%
+    // gross = 500000 / (1 - 0.15) = 588235.29...
+    // BAR = gross / (1 - 0.15) = 588235.29 / 0.85 = 691,453.28...
+    const expectedGross = 500000 / (1 - 0.15);
+    const expectedBar = Math.ceil(expectedGross / (1 - 0.15) / 1000) * 1000;
+    assertEqual(result.bar, expectedBar, `BAR should be ${expectedBar}`);
+    assertEqual(result.totalDiscount, 15, 'totalDiscount should be 15 (additive sum)');
+
+    // Effective discount should match additive sum
+    const eff = calcEffectiveDiscount(discounts, 'ADDITIVE');
+    assertEqual(eff, 15, 'ADDITIVE effective = sum = 15%');
+});
+
+// ── Test 22: OCC FIXED adjustment ──
+
+test('22. OCC FIXED adjustment: NET + fixedAmount', () => {
+    const adjusted = applyOccAdjustment(500_000, 'FIXED', 1, 100_000);
+    assertEqual(adjusted, 600_000, 'FIXED: 500k + 100k = 600k');
+
+    // Negative fixed = discount below base
+    const negative = applyOccAdjustment(500_000, 'FIXED', 1, -50_000);
+    assertEqual(negative, 450_000, 'FIXED negative: 500k - 50k = 450k');
+});
+
+// ── Test 23: computeDisplay edge cases ──
+
+test('23. computeDisplay: 0% discount → display = BAR, 100% → display = 0', () => {
+    assertEqual(computeDisplay(1_000_000, 0), 1_000_000, '0% discount → BAR unchanged');
+    assertEqual(computeDisplay(1_000_000, 100), 0, '100% discount → 0');
+    assertEqual(computeDisplay(1_000_000, 50), 500_000, '50% discount → half');
+});
+
+// ── Test 24: Unknown vendor → default (no dedup, pass-through) ──
+
+test('24. Unknown vendor: all discounts pass through (no dedup)', () => {
+    const discounts: DiscountItem[] = [
+        { id: '1', name: 'Deal A', percent: 20, group: 'PORTFOLIO' },
+        { id: '2', name: 'Deal B', percent: 15, group: 'PORTFOLIO' },
+        { id: '3', name: 'Deal C', percent: 10, group: 'TARGETED' },
+    ];
+    const { resolved, rule, removedCount } = resolveVendorStacking('traveloka', discounts);
+
+    assertEqual(rule, 'default (no vendor rules)', 'should use default rule');
+    assertEqual(resolved.length, 3, 'all discounts should pass through');
+    assertEqual(removedCount, 0, 'should remove 0');
+});
+
+// ── Test 25: Trip.com Campaign EXCLUSIVE blocks all other discounts ──
+
+test('25. Trip.com: Campaign EXCLUSIVE blocks all non-campaign discounts', () => {
+    const discounts: DiscountItem[] = [
+        { id: 'tripcom-campaign-2026', name: 'Trip.com 2026 Campaign', percent: 20, group: 'CAMPAIGN' },
+        { id: 'tripcom-early-bird', name: 'Early Bird', percent: 12, group: 'ESSENTIAL', subCategory: 'DEAL_BOX' },
+        { id: 'tripcom-mobile-rate', name: 'Mobile Rate', percent: 15, group: 'TARGETED', subCategory: 'TARGETING' },
+    ];
+    const { resolved, rule, ignored, removedCount } = resolveVendorStacking('trip', discounts);
+
+    assertEqual(rule, 'trip.com: 7-box + campaign exclusive', 'should use 7-box campaign exclusive rule');
+    assertEqual(resolved.length, 1, 'should keep only campaign');
+    assertEqual(resolved[0].name, 'Trip.com 2026 Campaign', 'should keep campaign');
+    assertEqual(removedCount, 2, 'should remove 2');
+
+    // Both non-campaigns should be in ignored
+    assertEqual(ignored.length, 2, 'should have 2 ignored');
+    const earlyBirdIgnored = ignored.find(i => i.id === 'tripcom-early-bird');
+    if (!earlyBirdIgnored || !earlyBirdIgnored.reason.includes('Campaign')) {
+        throw new Error(`Early Bird should be blocked by Campaign, got: ${earlyBirdIgnored?.reason}`);
+    }
+});
+
+// ── Test 26: Trip.com tie-break determinism (same %) ──
+
+test('26. Trip.com: Tie-break — same % in same box → stable pick by id asc', () => {
+    const discounts: DiscountItem[] = [
+        { id: 'tripcom-last-minute', name: 'Last Minute', percent: 15, group: 'ESSENTIAL', subCategory: 'DEAL_BOX' },
+        { id: 'tripcom-early-bird', name: 'Early Bird', percent: 15, group: 'ESSENTIAL', subCategory: 'DEAL_BOX' },
+    ];
+    const { resolved, rule, removedCount } = resolveVendorStacking('trip', discounts);
+
+    assertEqual(rule, 'trip.com: 7-box additive', 'rule');
+    assertEqual(resolved.length, 1, 'should keep 1 from box 1');
+    assertEqual(removedCount, 1, 'should remove 1');
+    // Tie-break: same pct → id asc → 'tripcom-early-bird' < 'tripcom-last-minute'
+    assertEqual(resolved[0].id, 'tripcom-early-bird', 'tie-break: early-bird wins by id asc');
+});
+
+// ── Test 27: Trip.com priceImpact=false (CoinPlus) ──
+
+test('27. Trip.com: CoinPlus (priceImpact=false) is resolved but not a real discount', () => {
+    // CoinPlus has priceImpact=false in catalog — engine resolves it
+    // but the ADDITIVE calc should NOT include it in Σdiscount
+    // (priceImpact filtering happens at service layer, not resolveVendorStacking)
+    // This test verifies CoinPlus survives stacking resolution
+    const discounts: DiscountItem[] = [
+        { id: 'tripcom-early-bird', name: 'Early Bird', percent: 12, group: 'ESSENTIAL', subCategory: 'DEAL_BOX' },
+        { id: 'tripcom-coinplus', name: 'CoinPlus', percent: 5, group: 'TARGETED', subCategory: 'COINPLUS' },
+    ];
+    const { resolved, rule, removedCount } = resolveVendorStacking('trip', discounts);
+
+    assertEqual(rule, 'trip.com: 7-box additive', 'rule');
+    assertEqual(resolved.length, 2, 'CoinPlus should survive stacking (different box)');
+    assertEqual(removedCount, 0, 'should remove 0');
+
+    const coinplus = resolved.find(d => d.id === 'tripcom-coinplus');
+    if (!coinplus) throw new Error('CoinPlus should be in resolved list');
+});
+
+// ── Test 28: Trip.com unknown discount (no catalog match) ──
+
+test('28. Trip.com: Unknown discount → box 99, still resolved', () => {
+    const discounts: DiscountItem[] = [
+        { id: 'tripcom-early-bird', name: 'Early Bird', percent: 12, group: 'ESSENTIAL', subCategory: 'DEAL_BOX' },
+        { id: 'custom-unknown', name: 'Custom Promo', percent: 8, group: 'ESSENTIAL' },
+    ];
+    const { resolved, rule, removedCount } = resolveVendorStacking('trip', discounts);
+
+    assertEqual(rule, 'trip.com: 7-box additive', 'rule');
+    // Early Bird → box 1, Custom Promo → box 99 (unknown) — different boxes, both kept
+    assertEqual(resolved.length, 2, 'unknown gets own box (99), both kept');
+    assertEqual(removedCount, 0, 'should remove 0');
 });
 
 // ── Summary ─────────────────────────────────────────────────────

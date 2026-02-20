@@ -252,7 +252,7 @@ export const BOOKING_BOOSTERS: CommissionBooster[] = [
         name: 'Preferred Partner',
         program: 'PREFERRED',
         boostPct: 0,
-        isVariable: true, // User nhập %
+        isVariable: true, // User inputs %
         enabled: false,
     },
 ];
@@ -268,7 +268,7 @@ export const EXPEDIA_BOOSTERS: CommissionBooster[] = [
         name: 'Accelerator',
         program: 'ACCELERATOR',
         boostPct: 5,
-        isVariable: true, // Hotel chọn % boost
+        isVariable: true, // Hotel chooses % boost
         enabled: false,
     },
     {
@@ -565,68 +565,93 @@ export const EXPEDIA_PROMOTIONS: PromotionCatalogItem[] = [
 
 // =============================================================================
 // TRIP.COM / CTRIP PROMOTIONS
-// Stacking: Additive within allowed groups, Campaign = EXCLUSIVE
+// 7-Box Model (per Trip.com Partner Center docs):
+//   Box 1: Deal Box (pick 1) — Basic Deal, Early Bird, Last Minute, etc.
+//   Box 2: Targeting (pick 1) — Mobile Rate, XPOS
+//   Box 3: Package (pick 1)
+//   Box 4: Campaign (pick 1) — exclusive by default (configurable)
+//   Box 5: TripPlus (pick 1) — Member Program
+//   Box 6: Smart Choice (pick 1)
+//   Box 7: CoinPlus (pick 1) — priceImpact=false (coin-back, not price discount)
+// Stacking: Additive across boxes, pick 1 within each box
 // Engine mode: ADDITIVE (18% commission)
 // =============================================================================
 export const CTRIP_PROMOTIONS: PromotionCatalogItem[] = [
-    // ─── ESSENTIAL (Regular box) ───
+    // ─── Box 1: Deal Box (non-stackable within, stackable with other boxes) ───
     {
         id: 'tripcom-basic-deal',
         vendor: 'ctrip',
         name: 'Basic Deal',
         groupType: 'ESSENTIAL',
-        subCategory: 'REGULAR',
+        subCategory: 'DEAL_BOX',
         defaultPct: 10,
         allowStack: true,
         maxOneInGroup: false,
         maxOnePerSubcategory: true,
+        tripBox: 1,
     },
     {
         id: 'tripcom-early-bird',
         vendor: 'ctrip',
         name: 'Early Bird',
         groupType: 'ESSENTIAL',
-        subCategory: 'REGULAR',
+        subCategory: 'DEAL_BOX',
         defaultPct: 12,
         allowStack: true,
         maxOneInGroup: false,
         maxOnePerSubcategory: true,
+        tripBox: 1,
     },
     {
         id: 'tripcom-last-minute',
         vendor: 'ctrip',
         name: 'Last Minute',
         groupType: 'ESSENTIAL',
-        subCategory: 'REGULAR',
+        subCategory: 'DEAL_BOX',
         defaultPct: 15,
         allowStack: true,
         maxOneInGroup: false,
         maxOnePerSubcategory: true,
+        tripBox: 1,
     },
     {
         id: 'tripcom-minimum-stay',
         vendor: 'ctrip',
         name: 'Minimum Stay',
         groupType: 'ESSENTIAL',
-        subCategory: 'REGULAR',
+        subCategory: 'DEAL_BOX',
         defaultPct: 10,
         allowStack: true,
         maxOneInGroup: false,
         maxOnePerSubcategory: true,
+        tripBox: 1,
     },
     {
         id: 'tripcom-offer-tonight',
         vendor: 'ctrip',
         name: 'Offer For Tonight',
         groupType: 'ESSENTIAL',
-        subCategory: 'REGULAR',
+        subCategory: 'DEAL_BOX',
         defaultPct: 20,
         allowStack: true,
         maxOneInGroup: false,
         maxOnePerSubcategory: true,
+        tripBox: 1,
+    },
+    {
+        id: 'tripcom-new-property',
+        vendor: 'ctrip',
+        name: 'New Property Deal',
+        groupType: 'ESSENTIAL',
+        subCategory: 'DEAL_BOX',
+        defaultPct: 15,
+        allowStack: true,
+        maxOneInGroup: false,
+        maxOnePerSubcategory: true,
+        tripBox: 1,
     },
 
-    // ─── TARGETED (Targeting box) ───
+    // ─── Box 2: Targeting (non-stackable within) ───
     {
         id: 'tripcom-mobile-rate',
         vendor: 'ctrip',
@@ -637,6 +662,7 @@ export const CTRIP_PROMOTIONS: PromotionCatalogItem[] = [
         allowStack: true,
         maxOneInGroup: false,
         maxOnePerSubcategory: true,
+        tripBox: 2,
     },
     {
         id: 'tripcom-xpos',
@@ -648,31 +674,10 @@ export const CTRIP_PROMOTIONS: PromotionCatalogItem[] = [
         allowStack: true,
         maxOneInGroup: false,
         maxOnePerSubcategory: true,
-    },
-    {
-        id: 'tripcom-tripplus',
-        vendor: 'ctrip',
-        name: 'TripPlus',
-        groupType: 'TARGETED',
-        subCategory: 'TARGETING',
-        defaultPct: 10,
-        allowStack: true,
-        maxOneInGroup: false,
-        maxOnePerSubcategory: true,
-    },
-    {
-        id: 'tripcom-geo-rate',
-        vendor: 'ctrip',
-        name: 'Country Rate',
-        groupType: 'TARGETED',
-        subCategory: 'GEOGRAPHY',
-        defaultPct: 10,
-        allowStack: true,
-        maxOneInGroup: false,
-        maxOnePerSubcategory: true,
+        tripBox: 2,
     },
 
-    // ─── ESSENTIAL (Package box) ───
+    // ─── Box 3: Package ───
     {
         id: 'tripcom-package',
         vendor: 'ctrip',
@@ -683,9 +688,10 @@ export const CTRIP_PROMOTIONS: PromotionCatalogItem[] = [
         allowStack: true,
         maxOneInGroup: false,
         maxOnePerSubcategory: true,
+        tripBox: 3,
     },
 
-    // ─── CAMPAIGN (Exclusive — blocks all other promos) ───
+    // ─── Box 4: Campaign (exclusive by default, configurable via TRIP_CAMPAIGN_MODE) ───
     {
         id: 'tripcom-campaign-2026',
         vendor: 'ctrip',
@@ -696,6 +702,64 @@ export const CTRIP_PROMOTIONS: PromotionCatalogItem[] = [
         maxOneInGroup: true,
         maxOnePerSubcategory: true,
         stackBehavior: 'EXCLUSIVE',
+        tripBox: 4,
+    },
+
+    // ─── Box 5: TripPlus (Member Program) ───
+    {
+        id: 'tripcom-tripplus',
+        vendor: 'ctrip',
+        name: 'TripPlus',
+        groupType: 'TARGETED',
+        subCategory: 'TRIPPLUS',
+        defaultPct: 10,
+        allowStack: true,
+        maxOneInGroup: false,
+        maxOnePerSubcategory: true,
+        tripBox: 5,
+    },
+
+    // ─── Box 6: Smart Choice (Smart-C) ───
+    {
+        id: 'tripcom-smart-choice',
+        vendor: 'ctrip',
+        name: 'Smart Choice',
+        groupType: 'TARGETED',
+        subCategory: 'SMART_CHOICE',
+        defaultPct: 8,
+        allowStack: true,
+        maxOneInGroup: false,
+        maxOnePerSubcategory: true,
+        tripBox: 6,
+    },
+
+    // ─── Box 7: CoinPlus (coin-back reward, NOT price discount) ───
+    {
+        id: 'tripcom-coinplus',
+        vendor: 'ctrip',
+        name: 'CoinPlus',
+        groupType: 'TARGETED',
+        subCategory: 'COINPLUS',
+        defaultPct: 5,
+        allowStack: true,
+        maxOneInGroup: false,
+        maxOnePerSubcategory: true,
+        tripBox: 7,
+        priceImpact: false, // Coin-back reward: shown as benefit but NOT subtracted from price
+    },
+
+    // ─── Geo Rate (standalone, stacks with all boxes) ───
+    {
+        id: 'tripcom-geo-rate',
+        vendor: 'ctrip',
+        name: 'Country Rate',
+        groupType: 'TARGETED',
+        subCategory: 'GEOGRAPHY',
+        defaultPct: 10,
+        allowStack: true,
+        maxOneInGroup: false,
+        maxOnePerSubcategory: true,
+        tripBox: 2, // Same box as targeting (Mobile/XPOS/Geo pick 1)
     },
 ];
 
@@ -759,39 +823,39 @@ export const GROUP_COLORS: Record<PromotionGroup, { bg: string; text: string; la
     CAMPAIGN: { bg: 'bg-rose-100', text: 'text-rose-700', label: 'Campaign' },
 };
 
-// Unified group labels — same Vietnamese names across ALL vendors (no per-vendor variation)
+// Unified group labels across ALL vendors (no per-vendor variation)
 export const VENDOR_GROUP_LABELS: Record<string, Record<PromotionGroup, string>> = {
     agoda: {
-        SEASONAL: 'Theo mùa',
-        ESSENTIAL: 'Cơ bản',
-        TARGETED: 'Mục tiêu',
+        SEASONAL: 'Seasonal',
+        ESSENTIAL: 'Essential',
+        TARGETED: 'Targeted',
         GENIUS: 'Genius',
-        PORTFOLIO: 'Gói ưu đãi',
-        CAMPAIGN: 'Chiến dịch',
+        PORTFOLIO: 'Portfolio',
+        CAMPAIGN: 'Campaign',
     },
     booking: {
-        SEASONAL: 'Theo mùa',
-        ESSENTIAL: 'Cơ bản',
-        TARGETED: 'Mục tiêu',
+        SEASONAL: 'Seasonal',
+        ESSENTIAL: 'Essential',
+        TARGETED: 'Targeted',
         GENIUS: 'Genius',
-        PORTFOLIO: 'Gói ưu đãi',
-        CAMPAIGN: 'Chiến dịch',
+        PORTFOLIO: 'Portfolio',
+        CAMPAIGN: 'Campaign',
     },
     expedia: {
-        SEASONAL: 'Theo mùa',
-        ESSENTIAL: 'Cơ bản',
-        TARGETED: 'Mục tiêu',
+        SEASONAL: 'Seasonal',
+        ESSENTIAL: 'Essential',
+        TARGETED: 'Targeted',
         GENIUS: 'Genius',
-        PORTFOLIO: 'Gói ưu đãi',
-        CAMPAIGN: 'Chiến dịch',
+        PORTFOLIO: 'Portfolio',
+        CAMPAIGN: 'Campaign',
     },
     ctrip: {
-        SEASONAL: 'Theo mùa',
-        ESSENTIAL: 'Cơ bản',
-        TARGETED: 'Mục tiêu',
+        SEASONAL: 'Seasonal',
+        ESSENTIAL: 'Essential',
+        TARGETED: 'Targeted',
         GENIUS: 'Genius',
-        PORTFOLIO: 'Gói ưu đãi',
-        CAMPAIGN: 'Chiến dịch',
+        PORTFOLIO: 'Portfolio',
+        CAMPAIGN: 'Campaign',
     },
 };
 

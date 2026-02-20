@@ -4,6 +4,7 @@
 export type CalcType = 'PROGRESSIVE' | 'ADDITIVE' | 'SINGLE_DISCOUNT';
 export type PromotionGroup = 'SEASONAL' | 'ESSENTIAL' | 'TARGETED' | 'GENIUS' | 'PORTFOLIO' | 'CAMPAIGN';
 export type StackBehavior = 'STACKABLE' | 'HIGHEST_WINS' | 'EXCLUSIVE' | 'ONLY_WITH_GENIUS';
+export type TripBox = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
 // Marketing program types (commission boosters)
 export type BoosterProgram = 'AGP' | 'AGX' | 'SL' | 'PREFERRED' | 'ACCELERATOR';
@@ -33,7 +34,7 @@ export interface CommissionBooster {
     program: BoosterProgram;
     boostPct: number;         // Incremental % (0-100)
     tier?: string;            // AGP: 'basic'|'standard'|'premium'
-    isVariable?: boolean;     // SL: true (user nhập %)
+    isVariable?: boolean;     // SL: true (user inputs %)
     enabled: boolean;
 }
 
@@ -76,6 +77,8 @@ export interface PromotionCatalogItem {
     maxOneInGroup: boolean;
     maxOnePerSubcategory: boolean;
     stackBehavior?: StackBehavior;      // Engine layer: stacking rule
+    tripBox?: TripBox;                  // Trip.com specific: 1-7 box group number
+    priceImpact?: boolean;              // false = reward/coin-back, not price discount. Default true
     isFreeNights?: boolean;             // True = render Stay X / Pay Y input
     freeNightsStay?: number;            // Default Stay value (X)
     freeNightsPay?: number;             // Default Pay value (Y)

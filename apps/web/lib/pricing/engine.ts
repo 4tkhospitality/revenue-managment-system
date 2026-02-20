@@ -5,6 +5,7 @@
 
 import type { CalcType, CalcResult, DiscountItem, CommissionBooster, TraceStep, ValidationResult } from './types';
 import { validatePromotions } from './validators';
+import { getCatalogItem } from './catalog';
 
 /**
  * Calculate effective commission with boosters
@@ -32,8 +33,8 @@ const LAST_MINUTE_PATTERN = /last.?minute/i;
 /**
  * Resolve Early Bird + Last-Minute conflict.
  * These promotions are mutually exclusive by booking window:
- * - Early Bird: khách đặt sớm (14-30 ngày trước check-in)
- * - Last-Minute: khách đặt gấp (1-7 ngày trước check-in)
+ * - Early Bird: early booker (14-30 days before check-in)
+ * - Last-Minute: last-minute booker (1-7 days before check-in)
  * When both are active, only the LARGER discount is applied.
  */
 export function resolveTimingConflicts(discounts: DiscountItem[]): {
@@ -76,8 +77,8 @@ export function calcBarFromNet(
     const { resolved: effectiveDiscounts, removed, hadConflict } = resolveTimingConflicts(discounts);
     if (hadConflict && removed) {
         trace.push({
-            step: '⚠️ Không cộng dồn',
-            description: `Early Bird + Last-Minute không stack → Bỏ "${removed.name}" (${removed.percent}%), giữ KM lớn hơn`,
+            step: '⚠️ Non-stackable',
+            description: `Early Bird + Last-Minute do not stack → Removed "${removed.name}" (${removed.percent}%), keeping larger discount`,
             priceAfter: net,
         });
     }
@@ -108,7 +109,7 @@ export function calcBarFromNet(
             totalDiscount: 0,
             validation: {
                 isValid: false,
-                errors: ['Commission phải < 100%'],
+                errors: ['Commission must be < 100%'],
                 warnings: [],
             },
             trace: [],
@@ -171,7 +172,7 @@ export function calcBarFromNet(
         if (totalDiscount >= 100) {
             return {
                 bar: 0, barRaw: 0, net, commission, totalDiscount,
-                validation: { isValid: false, errors: ['Giảm giá phải < 100%'], warnings: [] },
+                validation: { isValid: false, errors: ['Discount must be < 100%'], warnings: [] },
                 trace,
             };
         }
@@ -197,7 +198,7 @@ export function calcBarFromNet(
                 totalDiscount,
                 validation: {
                     isValid: false,
-                    errors: ['Tổng giảm giá phải < 100%'],
+                    errors: ['Total discount must be < 100%'],
                     warnings: [],
                 },
                 trace,
@@ -268,8 +269,8 @@ export function calcNetFromBar(
     const { resolved: effectiveDiscounts, removed, hadConflict } = resolveTimingConflicts(discounts);
     if (hadConflict && removed) {
         trace.push({
-            step: '⚠️ Không cộng dồn',
-            description: `Early Bird + Last-Minute không stack → Bỏ "${removed.name}" (${removed.percent}%), giữ KM lớn hơn`,
+            step: '⚠️ Non-stackable',
+            description: `Early Bird + Last-Minute do not stack → Removed "${removed.name}" (${removed.percent}%), keeping larger discount`,
             priceAfter: bar,
         });
     }
@@ -287,7 +288,7 @@ export function calcNetFromBar(
             totalDiscount: 0,
             validation: {
                 isValid: false,
-                errors: ['Commission phải < 100%'],
+                errors: ['Commission must be < 100%'],
                 warnings: [],
             },
             trace: [],
@@ -295,7 +296,7 @@ export function calcNetFromBar(
     }
 
     trace.push({
-        step: 'Giá hiển thị',
+        step: 'Display Price',
         description: `BAR = ${formatVND(bar)}`,
         priceAfter: bar,
     });
@@ -331,7 +332,7 @@ export function calcNetFromBar(
         if (totalDiscount >= 100) {
             return {
                 bar, barRaw: bar, net: 0, commission, totalDiscount,
-                validation: { isValid: false, errors: ['Giảm giá phải < 100%'], warnings: [] },
+                validation: { isValid: false, errors: ['Discount must be < 100%'], warnings: [] },
                 trace,
             };
         }
@@ -356,7 +357,7 @@ export function calcNetFromBar(
                 totalDiscount,
                 validation: {
                     isValid: false,
-                    errors: ['Tổng giảm giá phải < 100%'],
+                    errors: ['Total discount must be < 100%'],
                     warnings: [],
                 },
                 trace,
@@ -366,7 +367,7 @@ export function calcNetFromBar(
         afterDiscount = bar * (1 - totalDiscount / 100);
 
         trace.push({
-            step: 'Tổng KM',
+            step: 'Total Discounts',
             description: `${formatVND(bar)} × (1 - ${totalDiscount.toFixed(1)}%) = ${formatVND(afterDiscount)}`,
             priceAfter: afterDiscount,
         });
@@ -389,7 +390,7 @@ export function calcNetFromBar(
     }
 
     trace.push({
-        step: 'Hoa hồng OTA',
+        step: 'OTA Commission',
         description: `${formatVND(afterDiscount)} × (1 - ${effectiveCommission}%) = ${formatVND(net)}`,
         priceAfter: net,
     });
@@ -397,7 +398,7 @@ export function calcNetFromBar(
     const netRounded = Math.round(net);
 
     trace.push({
-        step: '💰 Thu về',
+        step: '💰 Net Revenue',
         description: `NET = ${formatVND(netRounded)}`,
         priceAfter: netRounded,
     });
@@ -680,10 +681,10 @@ export function resolveVendorStacking(
             if (!key) { noSubcat.push(d); continue; }
             const existing = subcatMap.get(key);
             if (!existing || d.percent > existing.percent) {
-                if (existing) dropped.push({ id: existing.id, name: existing.name, reason: `Cùng nhóm "${key}" — "${d.name}" cao hơn (${d.percent}% > ${existing.percent}%)` });
+                if (existing) dropped.push({ id: existing.id, name: existing.name, reason: `Same group "${key}" — "${d.name}" is higher (${d.percent}% > ${existing.percent}%)` });
                 subcatMap.set(key, d);
             } else {
-                dropped.push({ id: d.id, name: d.name, reason: `Cùng nhóm "${key}" — "${existing.name}" cao hơn (${existing.percent}% > ${d.percent}%)` });
+                dropped.push({ id: d.id, name: d.name, reason: `Same group "${key}" — "${existing.name}" is higher (${existing.percent}% > ${d.percent}%)` });
             }
         }
         return { kept: [...noSubcat, ...subcatMap.values()], dropped };
@@ -695,7 +696,7 @@ export function resolveVendorStacking(
         const best = items.reduce((b, d) => d.percent > b.percent ? d : b);
         const ignored = items.filter(d => d.id !== best.id).map(d => ({
             id: d.id, name: d.name,
-            reason: `${reason} — "${best.name}" cao hơn (${best.percent}% > ${d.percent}%)`
+            reason: `${reason} — "${best.name}" is higher (${best.percent}% > ${d.percent}%)`
         }));
         return { best, ignored };
     };
@@ -785,16 +786,16 @@ export function resolveVendorStacking(
                 .forEach(c => allIgnored.push({
                     id: c.id, name: c.name,
                     reason: winner.campaign
-                        ? `Scenario "${winner.label}" (${winner.eff.toFixed(1)}%) thắng`
-                        : `Scenario không campaign (${winner.eff.toFixed(1)}%) thắng`
+                        ? `Scenario "${winner.label}" (${winner.eff.toFixed(1)}%) wins`
+                        : `Scenario without campaign (${winner.eff.toFixed(1)}%) wins`
                 }));
 
             // Ignored genius (blocked or lower level)
             geniusDeals.filter(g => !resolvedIds.has(g.id))
                 .forEach(g => {
                     const reason = winner.blockedGroups.includes('GENIUS')
-                        ? `Bị chặn bởi Deep Deal "${winner.campaign!.name}" (EXCLUSIVE — không stack với Genius)`
-                        : bestGenius ? `Genius: "${bestGenius.name}" có level cao hơn` : 'Genius bị loại';
+                        ? `Blocked by Deep Deal "${winner.campaign!.name}" (EXCLUSIVE - does not stack with Genius)`
+                        : bestGenius ? `Genius: "${bestGenius.name}" has higher level` : 'Genius excluded';
                     allIgnored.push({ id: g.id, name: g.name, reason });
                 });
 
@@ -802,13 +803,13 @@ export function resolveVendorStacking(
             if (winner.blockedGroups.includes('TARGETED')) {
                 targeted.forEach(d => allIgnored.push({
                     id: d.id, name: d.name,
-                    reason: `Bị chặn bởi Campaign "${winner.campaign!.name}" (TARGETED không stack với Campaign)`
+                    reason: `Blocked by Campaign "${winner.campaign!.name}" (TARGETED does not stack with Campaign)`
                 }));
             }
             if (winner.blockedGroups.includes('PORTFOLIO')) {
                 portfolio.forEach(d => allIgnored.push({
                     id: d.id, name: d.name,
-                    reason: `Bị chặn bởi Campaign "${winner.campaign!.name}" (PORTFOLIO không stack với Campaign)`
+                    reason: `Blocked by Campaign "${winner.campaign!.name}" (PORTFOLIO does not stack with Campaign)`
                 }));
             }
 
@@ -825,7 +826,7 @@ export function resolveVendorStacking(
         if (businessBookers.length > 0) {
             const kept = businessBookers[0];
             const ignored = active.filter(d => d.id !== kept.id)
-                .map(d => ({ id: d.id, name: d.name, reason: `Bị chặn bởi Business Bookers "${kept.name}"` }));
+                .map(d => ({ id: d.id, name: d.name, reason: `Blocked by Business Bookers "${kept.name}"` }));
             return { resolved: [kept], ignored, removedCount: active.length - 1, rule: 'booking: business_bookers exclusive' };
         }
 
@@ -837,9 +838,9 @@ export function resolveVendorStacking(
             d.group !== 'PORTFOLIO' && d.group !== 'TARGETED' && d.group !== 'GENIUS'
         );
 
-        const { best: bp, ignored: pi } = pickBest(portfolio, 'Portfolio: chỉ giữ cao nhất');
-        const { best: bt, ignored: ti } = pickBest(targeted, 'Targeted: chỉ giữ cao nhất (Mobile/Country không cộng dồn)');
-        const { best: bg, ignored: gi } = pickBest(genius, 'Genius: chỉ giữ level cao nhất');
+        const { best: bp, ignored: pi } = pickBest(portfolio, 'Portfolio: keep highest only');
+        const { best: bt, ignored: ti } = pickBest(targeted, 'Targeted: keep highest only (Mobile/Country non-stackable)');
+        const { best: bg, ignored: gi } = pickBest(genius, 'Genius: keep highest level only');
 
         const resolved = [bg, bt, bp, ...other].filter(Boolean) as DiscountItem[];
         return {
@@ -862,8 +863,8 @@ export function resolveVendorStacking(
 
         if (memberDeals.length > 0) {
             // Keep best Member + best non-member
-            const { best: bestMember, ignored: memberIgnored } = pickBest(memberDeals, 'Member: chỉ giữ deal cao nhất');
-            const { best: bestNonMember, ignored: nonMemberIgnored } = pickBest(nonMemberDeals, 'Non-member: chỉ giữ deal cao nhất (stack với Member)');
+            const { best: bestMember, ignored: memberIgnored } = pickBest(memberDeals, 'Member: keep highest deal only');
+            const { best: bestNonMember, ignored: nonMemberIgnored } = pickBest(nonMemberDeals, 'Non-member: keep highest deal only (stacks with Member)');
             const resolved = [bestMember, bestNonMember].filter(Boolean) as DiscountItem[];
             return {
                 resolved,
@@ -874,50 +875,125 @@ export function resolveVendorStacking(
         }
 
         // No member deals → only highest wins
-        const { best, ignored } = pickBest(active, 'Expedia: chỉ cho phép 1 discount (không có Member)');
+        const { best, ignored } = pickBest(active, 'Expedia: only 1 discount allowed (no Member deal)');
         return { resolved: best ? [best] : [], ignored, removedCount: active.length - 1, rule: 'expedia: single_discount (highest wins)' };
     }
 
-    // ── Trip.com: Campaign EXCLUSIVE, else Additive + group dedup ──
-    // BA rules:
-    //   1. Regular Promotions (PORTFOLIO): pick MAX only
-    //   2. Targeting Deals (TARGETED): pick MAX only
-    //   3. Campaign/Deep Deal (CAMPAIGN): EXCLUSIVE — blocks everything
-    //   4. Without Campaign: Regular(max) + Targeting(max) + others additive
+    // ── Trip.com: 7-Box Model ──
+    // Per Trip.com Partner Center docs:
+    //   Box 1: Deal Box (Basic Deal, Early Bird, Last Minute, etc.)
+    //   Box 2: Targeting (Mobile Rate, XPOS, Geo Rate)
+    //   Box 3: Package
+    //   Box 4: Campaign
+    //   Box 5: TripPlus (Member Program)
+    //   Box 6: Smart Choice
+    //   Box 7: CoinPlus (priceImpact=false)
+    // Rules: pick 1 per box (highest %), stack across boxes (additive)
+    // Campaign mode: configurable (EXCLUSIVE blocks all, NON_STACK_WITH_PACKAGE blocks box 3 only)
     if (vendorNorm === 'trip') {
-        const campaigns = active.filter(d => d.group === 'CAMPAIGN');
-        const nonCampaigns = active.filter(d => d.group !== 'CAMPAIGN');
+        // Config: change to 'NON_STACK_WITH_PACKAGE' if Trip.com confirms Campaign stacks with non-Package
+        const TRIP_CAMPAIGN_MODE: 'EXCLUSIVE' | 'NON_STACK_WITH_PACKAGE' = 'EXCLUSIVE';
+        const UNKNOWN_BOX = 99;
 
-        if (campaigns.length > 0) {
-            // Campaign is EXCLUSIVE — pick highest Campaign, block everything else
-            const { best: bestCampaign, ignored: campaignIgnored } = pickBest(campaigns, 'Campaign: chỉ giữ cao nhất');
-            const blockedIgnored = nonCampaigns.map(d => ({
-                id: d.id, name: d.name,
-                reason: `Bị chặn bởi Campaign "${bestCampaign!.name}" (Campaign không cộng dồn với KM khác)`
-            }));
-            const resolved = bestCampaign ? [bestCampaign] : [];
-            return {
-                resolved,
-                ignored: [...campaignIgnored, ...blockedIgnored],
-                removedCount: active.length - resolved.length,
-                rule: 'trip.com: campaign exclusive'
-            };
+        // Step 1: Assign tripBox from catalog, fallback to UNKNOWN_BOX
+        const boxed = active.map(d => {
+            const cat = getCatalogItem(d.id);
+            const box = cat?.tripBox ?? UNKNOWN_BOX;
+            if (box === UNKNOWN_BOX) {
+                console.warn(`[Trip.com stacking] Discount "${d.name}" (${d.id}) has no tripBox in catalog → assigned to UNKNOWN box`);
+            }
+            return { ...d, _tripBox: box, _priceImpact: cat?.priceImpact !== false };
+        });
+
+        // Step 2: Group by box
+        const boxGroups = new Map<number, typeof boxed>();
+        for (const d of boxed) {
+            const group = boxGroups.get(d._tripBox) || [];
+            group.push(d);
+            boxGroups.set(d._tripBox, group);
         }
 
-        // No Campaign — group-level dedup then additive
-        const portfolio = nonCampaigns.filter(d => d.group === 'PORTFOLIO');
-        const targeted = nonCampaigns.filter(d => d.group === 'TARGETED');
-        const other = nonCampaigns.filter(d => d.group !== 'PORTFOLIO' && d.group !== 'TARGETED');
+        // Step 3: Pick highest per box (deterministic tie-break: pct desc → id asc)
+        const winners: typeof boxed = [];
+        const allIgnored: StackingIgnored[] = [];
 
-        const { best: bp, ignored: pi } = pickBest(portfolio, 'Portfolio: chỉ giữ cao nhất');
-        const { best: bt, ignored: ti } = pickBest(targeted, 'Targeted: chỉ giữ cao nhất');
+        for (const [boxNum, items] of boxGroups) {
+            // Sort: highest pct first, then id asc for tie-break stability
+            const sorted = [...items].sort((a, b) => b.percent - a.percent || a.id.localeCompare(b.id));
+            winners.push(sorted[0]);
+            for (let i = 1; i < sorted.length; i++) {
+                allIgnored.push({
+                    id: sorted[i].id,
+                    name: sorted[i].name,
+                    reason: `Dropped: same Trip.com box ${boxNum} — "${sorted[0].name}" (${sorted[0].percent}%) wins`
+                });
+            }
+        }
 
-        const resolved = [bp, bt, ...other].filter(Boolean) as DiscountItem[];
+        // Step 4: Campaign mode handling
+        const campaignWinner = winners.find(w => w._tripBox === 4);
+        if (campaignWinner) {
+            if (TRIP_CAMPAIGN_MODE === 'EXCLUSIVE') {
+                // EXCLUSIVE: Campaign blocks ALL other boxes
+                const blocked = winners.filter(w => w._tripBox !== 4);
+                for (const b of blocked) {
+                    allIgnored.push({
+                        id: b.id,
+                        name: b.name,
+                        reason: `Blocked by Campaign "${campaignWinner.name}" (EXCLUSIVE mode — Campaign blocks all other discounts)`
+                    });
+                }
+                const resolved = [campaignWinner] as DiscountItem[];
+                return {
+                    resolved,
+                    ignored: allIgnored,
+                    removedCount: active.length - resolved.length,
+                    rule: 'trip.com: 7-box + campaign exclusive'
+                };
+            } else {
+                // NON_STACK_WITH_PACKAGE: Campaign vs Package — higher wins
+                const packageWinner = winners.find(w => w._tripBox === 3);
+                if (packageWinner) {
+                    if (campaignWinner.percent >= packageWinner.percent) {
+                        allIgnored.push({
+                            id: packageWinner.id,
+                            name: packageWinner.name,
+                            reason: `Dropped: Campaign "${campaignWinner.name}" (${campaignWinner.percent}%) non-stackable with Package (same row)`
+                        });
+                        const finalWinners = winners.filter(w => w._tripBox !== 3);
+                        const resolved = finalWinners as DiscountItem[];
+                        return {
+                            resolved,
+                            ignored: allIgnored,
+                            removedCount: active.length - resolved.length,
+                            rule: 'trip.com: 7-box + campaign beats package'
+                        };
+                    } else {
+                        allIgnored.push({
+                            id: campaignWinner.id,
+                            name: campaignWinner.name,
+                            reason: `Dropped: Package "${packageWinner.name}" (${packageWinner.percent}%) beats Campaign (same row)`
+                        });
+                        const finalWinners = winners.filter(w => w._tripBox !== 4);
+                        const resolved = finalWinners as DiscountItem[];
+                        return {
+                            resolved,
+                            ignored: allIgnored,
+                            removedCount: active.length - resolved.length,
+                            rule: 'trip.com: 7-box + package beats campaign'
+                        };
+                    }
+                }
+            }
+        }
+
+        // Step 5: No campaign or campaign handled — return all box winners
+        const resolved = winners as DiscountItem[];
         return {
             resolved,
-            ignored: [...pi, ...ti],
+            ignored: allIgnored,
             removedCount: active.length - resolved.length,
-            rule: 'trip.com: additive + group dedup'
+            rule: 'trip.com: 7-box additive'
         };
     }
 
