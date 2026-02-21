@@ -764,21 +764,142 @@ export const CTRIP_PROMOTIONS: PromotionCatalogItem[] = [
 ];
 
 // =============================================================================
+// TRAVELOKA PROMOTIONS (TERA — Traveloka Extra Revenue Accelerator)
+// Two types: Campaign (Traveloka-led) and Basic (hotel-customized)
+// Stacking: ADDITIVE
+//   - Campaign can stack with Basic promotions, NOT with other campaigns
+//   - Basic can stack with other Basic promotions + up to 1 campaign
+//   - Rate Channels (Mobile, Priority User) are separate — additive on top
+//   - Promotion Stacking must be opted-in per promotion
+// Engine mode: ADDITIVE (commission typically 18%)
+// =============================================================================
+export const TRAVELOKA_PROMOTIONS: PromotionCatalogItem[] = [
+    // ─── Campaign Promotions (Traveloka-led, exclusive among campaigns) ───
+    {
+        id: 'traveloka-epic-sale',
+        vendor: 'traveloka',
+        name: 'Epic Sale',
+        groupType: 'CAMPAIGN',
+        subCategory: 'CAMPAIGN',
+        defaultPct: 5,
+        allowStack: true,           // Can stack with Basic
+        maxOneInGroup: true,        // Only 1 campaign at a time
+        maxOnePerSubcategory: true,
+        stackBehavior: 'EXCLUSIVE', // Campaign doesn't stack with other campaigns
+    },
+    {
+        id: 'traveloka-special-sale',
+        vendor: 'traveloka',
+        name: 'Special Sale',
+        groupType: 'CAMPAIGN',
+        subCategory: 'CAMPAIGN',
+        defaultPct: 10,
+        allowStack: true,
+        maxOneInGroup: true,
+        maxOnePerSubcategory: true,
+        stackBehavior: 'EXCLUSIVE',
+    },
+    {
+        id: 'traveloka-payday-sale',
+        vendor: 'traveloka',
+        name: 'Payday Sale',
+        groupType: 'CAMPAIGN',
+        subCategory: 'CAMPAIGN',
+        defaultPct: 8,
+        allowStack: true,
+        maxOneInGroup: true,
+        maxOnePerSubcategory: true,
+        stackBehavior: 'EXCLUSIVE',
+    },
+
+    // ─── Basic Promotions (hotel-customized, stackable with each other) ───
+    {
+        id: 'traveloka-early-bird',
+        vendor: 'traveloka',
+        name: 'Early Bird',
+        groupType: 'ESSENTIAL',
+        subCategory: 'BASIC',
+        defaultPct: 10,
+        allowStack: true,           // Stacks with other basics + 1 campaign
+        maxOneInGroup: false,
+        maxOnePerSubcategory: false, // Multiple basics can coexist
+    },
+    {
+        id: 'traveloka-last-minute',
+        vendor: 'traveloka',
+        name: 'Last Minute',
+        groupType: 'ESSENTIAL',
+        subCategory: 'BASIC',
+        defaultPct: 15,
+        allowStack: true,
+        maxOneInGroup: false,
+        maxOnePerSubcategory: false,
+    },
+    {
+        id: 'traveloka-customized-deal',
+        vendor: 'traveloka',
+        name: 'Customized Deal',
+        groupType: 'ESSENTIAL',
+        subCategory: 'BASIC',
+        defaultPct: 10,
+        allowStack: true,
+        maxOneInGroup: false,
+        maxOnePerSubcategory: false,
+    },
+    {
+        id: 'traveloka-extra-benefit',
+        vendor: 'traveloka',
+        name: 'Extra Benefit Promotion',
+        groupType: 'ESSENTIAL',
+        subCategory: 'BASIC',
+        defaultPct: 5,
+        allowStack: true,
+        maxOneInGroup: false,
+        maxOnePerSubcategory: false,
+    },
+
+    // ─── Targeting / Rate Channel (additive, pick 1 per sub) ───
+    {
+        id: 'traveloka-mobile-rate',
+        vendor: 'traveloka',
+        name: 'Mobile Exclusive',
+        groupType: 'TARGETED',
+        subCategory: 'MOBILE',
+        defaultPct: 5,
+        allowStack: true,
+        maxOneInGroup: false,
+        maxOnePerSubcategory: true,
+    },
+    {
+        id: 'traveloka-priority-user',
+        vendor: 'traveloka',
+        name: 'Silver Priority User',
+        groupType: 'TARGETED',
+        subCategory: 'PRIORITY',
+        defaultPct: 5,
+        allowStack: true,
+        maxOneInGroup: false,
+        maxOnePerSubcategory: true,
+    },
+];
+
+// =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
 
 // Get all promotions for a vendor
-export function getPromotionsByVendor(vendor: 'agoda' | 'booking' | 'expedia' | 'ctrip'): PromotionCatalogItem[] {
+export function getPromotionsByVendor(vendor: 'agoda' | 'booking' | 'expedia' | 'ctrip' | 'traveloka'): PromotionCatalogItem[] {
     if (vendor === 'agoda') return AGODA_PROMOTIONS;
     if (vendor === 'booking') return BOOKING_COM_PROMOTIONS;
     if (vendor === 'expedia') return EXPEDIA_PROMOTIONS;
     if (vendor === 'ctrip') return CTRIP_PROMOTIONS;
+    if (vendor === 'traveloka') return TRAVELOKA_PROMOTIONS;
     return [];
 }
 
 // Look up stackBehavior from static catalog by promo ID
 const _catalogMap = new Map<string, PromotionCatalogItem>();
-[...AGODA_PROMOTIONS, ...BOOKING_COM_PROMOTIONS, ...EXPEDIA_PROMOTIONS, ...CTRIP_PROMOTIONS].forEach(p => _catalogMap.set(p.id, p));
+[...AGODA_PROMOTIONS, ...BOOKING_COM_PROMOTIONS, ...EXPEDIA_PROMOTIONS, ...CTRIP_PROMOTIONS, ...TRAVELOKA_PROMOTIONS].forEach(p => _catalogMap.set(p.id, p));
 
 export function getCatalogItem(promoId: string): PromotionCatalogItem | undefined {
     return _catalogMap.get(promoId);
@@ -792,7 +913,9 @@ export function getPromotionsByGroup(group: PromotionGroup, vendor?: string): Pr
             ? AGODA_PROMOTIONS
             : vendor === 'expedia'
                 ? EXPEDIA_PROMOTIONS
-                : [...AGODA_PROMOTIONS, ...BOOKING_COM_PROMOTIONS, ...EXPEDIA_PROMOTIONS];
+                : vendor === 'traveloka'
+                    ? TRAVELOKA_PROMOTIONS
+                    : [...AGODA_PROMOTIONS, ...BOOKING_COM_PROMOTIONS, ...EXPEDIA_PROMOTIONS, ...TRAVELOKA_PROMOTIONS];
     return all.filter(p => p.groupType === group);
 }
 
@@ -804,7 +927,9 @@ export function getTargetedSubcategories(vendor?: string): string[] {
             ? AGODA_PROMOTIONS
             : vendor === 'expedia'
                 ? EXPEDIA_PROMOTIONS
-                : [...AGODA_PROMOTIONS, ...BOOKING_COM_PROMOTIONS, ...EXPEDIA_PROMOTIONS];
+                : vendor === 'traveloka'
+                    ? TRAVELOKA_PROMOTIONS
+                    : [...AGODA_PROMOTIONS, ...BOOKING_COM_PROMOTIONS, ...EXPEDIA_PROMOTIONS, ...TRAVELOKA_PROMOTIONS];
 
     const subcats = new Set<string>();
     promos
@@ -853,6 +978,14 @@ export const VENDOR_GROUP_LABELS: Record<string, Record<PromotionGroup, string>>
         SEASONAL: 'Seasonal',
         ESSENTIAL: 'Essential',
         TARGETED: 'Targeted',
+        GENIUS: 'Genius',
+        PORTFOLIO: 'Portfolio',
+        CAMPAIGN: 'Campaign',
+    },
+    traveloka: {
+        SEASONAL: 'Seasonal',
+        ESSENTIAL: 'Basic',
+        TARGETED: 'Rate Channel',
         GENIUS: 'Genius',
         PORTFOLIO: 'Portfolio',
         CAMPAIGN: 'Campaign',
