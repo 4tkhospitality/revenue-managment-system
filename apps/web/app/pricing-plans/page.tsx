@@ -309,13 +309,13 @@ export default function PricingPlansPage() {
                                     <>
                                         <div className="flex items-end gap-2 mb-1">
                                             <span className="text-4xl font-bold text-gray-900">
-                                                {formatVND(monthlyPrice)}
+                                                {formatVND(monthlyPrice)}₫
                                             </span>
                                             <span className="text-gray-500 text-sm mb-1">/{t('month')}</span>
                                         </div>
                                         {cycle === '3-months' && (
                                             <div className="text-xs text-gray-400 line-through">
-                                                {formatVND(getOriginalPrice(tier.id))}/{t('month')}
+                                                {formatVND(getOriginalPrice(tier.id))}₫/{t('month')}
                                             </div>
                                         )}
                                     </>
