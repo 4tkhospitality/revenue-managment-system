@@ -1,9 +1,0 @@
-{
-    "redirects": [
-        {
-            "source": "/(.*)",
-            "destination": "https://rms.pakhos.com",
-            "permanent": false
-        }
-    ]
-}

@@ -1,22 +1,29 @@
 {
-  "updated_at": "2026-02-21T21:30:00+07:00",
+  "updated_at": "2026-02-22T09:32:00+07:00",
   "working_on": {
-    "feature": "OTA Pricing Engine — Vendor Stacking Audit & Fix",
-    "task": "Completed: Traveloka TERA catalog, Trip.com Row-Column stacking fix, Expedia B2B net revenue. All pushed to main (b8bc277)",
+    "feature": "i18n Internationalization — Completeness & Cleanup",
+    "task": "Completed: Date locale fix, missing keys (dashboard + rateShopper), 3 TS errors fix, 61 scripts archived, i18n audit (2338 keys × 5 locales = 0 missing). All pushed to main (37d3533)",
     "status": "completed",
     "files": [
-      "apps/web/lib/pricing/catalog.ts",
-      "apps/web/lib/pricing/engine.ts",
-      "apps/web/components/pricing/OverviewTab.tsx"
+      "apps/web/lib/insights/insightsV2Engine.ts",
+      "apps/web/components/dashboard/RecommendationTable.tsx",
+      "apps/web/messages/en.json",
+      "apps/web/messages/vi.json",
+      "apps/web/messages/id.json",
+      "apps/web/messages/ms.json",
+      "apps/web/messages/th.json",
+      "apps/web/app/data/BuildFeaturesButton.tsx",
+      "apps/web/app/data/RunForecastButton.tsx",
+      "apps/web/app/upload/page.tsx"
     ],
     "blockers": [],
-    "notes": "Trip.com stacking now uses scenario-based Row-Column model matching Partner Center diagram. Traveloka has 9 promotions with TERA additive rules. Expedia B2B shows net revenue row."
+    "notes": "rms.pakhos.com Vercel project did NOT auto-deploy. User needs to check Vercel Settings > Git > Production Branch or manually Redeploy."
   },
   "pending_tasks": [
     {
-      "task": "guidePage i18n for id/ms/th",
-      "priority": "medium",
-      "notes": "~241 keys still English fallback. Largest remaining i18n gap. Need dedicated patch script."
+      "task": "Fix rms.pakhos.com Vercel deployment",
+      "priority": "high",
+      "notes": "Project 'revenue-managment-system' (rms.pakhos.com) not auto-deploying from main. The other project 'revenue-managment-system-1lzs' (www.pakhos.com) deployed fine. Check Vercel Git settings or Redeploy manually."
     },
     {
       "task": "Account Mapping Admin Page",
@@ -36,75 +43,88 @@
     {
       "task": "Editable Commission Inline per OTA",
       "priority": "medium",
-      "notes": "Planned earlier this session. Allows hotel to override default commission % directly in pricing overview."
+      "notes": "Planned earlier. Allows hotel to override default commission % directly in pricing overview."
     }
   ],
   "recent_changes": [
     {
-      "timestamp": "2026-02-21T21:14:00+07:00",
+      "timestamp": "2026-02-22T09:22:00+07:00",
       "type": "fix",
-      "description": "Trip.com: Rewrote 7-box stacking with Row-Column scenario model. Box 1/3/4 non-stackable (horizontal), Box 2/5/6/7 stackable (vertical). Campaign only stacks with CoinPlus. Engine builds all valid scenarios and picks highest total discount.",
+      "description": "Fixed 3 pre-existing TypeScript errors: nullish coalescing (?? 0) for optional count params in t() calls. Files: BuildFeaturesButton.tsx, RunForecastButton.tsx, upload/page.tsx. npx tsc --noEmit → 0 errors.",
       "files": [
-        "apps/web/lib/pricing/engine.ts"
+        "apps/web/app/data/BuildFeaturesButton.tsx",
+        "apps/web/app/data/RunForecastButton.tsx",
+        "apps/web/app/upload/page.tsx"
       ]
     },
     {
-      "timestamp": "2026-02-21T20:30:00+07:00",
-      "type": "feature",
-      "description": "Traveloka: Added TRAVELOKA_PROMOTIONS catalog (9 items) with TERA stacking rules. Campaign (3, EXCLUSIVE among self), Basic (4, stackable), Rate Channel (2, pick 1/subcategory). ADDITIVE mode. Wired into all helper functions.",
+      "timestamp": "2026-02-22T08:43:00+07:00",
+      "type": "refactor",
+      "description": "Archived 61 one-time i18n migration scripts to apps/web/scripts/_archive_i18n/. Created i18n-audit.js for key parity checking. Audit result: 2338 keys × 5 locales = 0 missing.",
       "files": [
-        "apps/web/lib/pricing/catalog.ts",
-        "apps/web/lib/pricing/engine.ts"
+        "apps/web/scripts/_archive_i18n/",
+        "apps/web/scripts/i18n-audit.js"
       ]
     },
     {
-      "timestamp": "2026-02-21T17:30:00+07:00",
-      "type": "feature",
-      "description": "Expedia B2B: Added net revenue row in OverviewTab for B2B merchant model channels. Shows NET after commission deduction.",
+      "timestamp": "2026-02-22T08:20:00+07:00",
+      "type": "fix",
+      "description": "Added missing rateShopper.thCheckIn and rateShopper.thTaxFee keys to all 5 locale files. These were used in rate-shopper/page.tsx but never defined.",
       "files": [
-        "apps/web/components/pricing/OverviewTab.tsx"
+        "apps/web/messages/en.json",
+        "apps/web/messages/vi.json",
+        "apps/web/messages/id.json",
+        "apps/web/messages/ms.json",
+        "apps/web/messages/th.json"
       ]
     },
     {
-      "timestamp": "2026-02-21T16:00:00+07:00",
-      "type": "feature",
-      "description": "Editable commission per OTA: Planned inline commission override feature for pricing overview. Implementation plan created.",
-      "files": []
+      "timestamp": "2026-02-22T01:30:00+07:00",
+      "type": "fix",
+      "description": "Fixed date locale formatting: insightsV2Engine.ts uses Intl.DateTimeFormat with BCP 47 locale mapping. RecommendationTable.tsx uses useLocale() for toLocaleDateString. Translated ~40 untranslated dashboard keys in id/ms/th.",
+      "files": [
+        "apps/web/lib/insights/insightsV2Engine.ts",
+        "apps/web/components/dashboard/RecommendationTable.tsx",
+        "apps/web/messages/id.json",
+        "apps/web/messages/ms.json",
+        "apps/web/messages/th.json"
+      ]
     }
   ],
   "errors_encountered": [
     {
-      "error": "Trip.com stacking treated all 7 boxes as independently stackable — wrong per Partner Center diagram",
-      "solution": "Rewrote with scenario-based Row-Column model: Box 1/3/4 non-stackable row, Box 2/5/6/7 stackable column. Picks best scenario.",
+      "error": "MISSING_MESSAGE for rateShopper.thCheckIn and rateShopper.thTaxFee in Indonesian locale",
+      "solution": "Keys were never defined in ANY locale file (including en.json). Added to all 5 locales.",
       "resolved": true
     },
     {
-      "error": "Trip.com Campaign EXCLUSIVE blocked ALL boxes including CoinPlus",
-      "solution": "Changed to scenario C: Campaign + CoinPlus (Box 7) only. User clarified: 'Campaign không stack với ai trừ CoinPlus'",
+      "error": "Date formatting showed English day names in Vietnamese/Indonesian/etc locales",
+      "solution": "Replaced hardcoded English day abbreviations with Intl.DateTimeFormat using BCP 47 locale mapping (e.g., 'vi' → 'vi-VN'). Also added useLocale() in RecommendationTable.",
       "resolved": true
     },
     {
-      "error": "git commit appeared stuck in terminal (no output for 10+ minutes)",
-      "solution": "Command actually completed silently. Check git log --oneline to verify commit before retrying.",
+      "error": "3 TypeScript errors: 'number | undefined' not assignable to 'string | number | Date' in t() calls",
+      "solution": "Added ?? 0 nullish coalescing for optional count params: result.rowsBuilt ?? 0, result.count ?? 0",
       "resolved": true
+    },
+    {
+      "error": "rms.pakhos.com Vercel project not auto-deploying latest commits",
+      "solution": "Need to check Vercel Settings > Git > Production Branch or manually trigger Redeploy",
+      "resolved": false
     }
   ],
   "decisions_made": [
     {
-      "decision": "Trip.com: Scenario-based stacking (deal-box vs package vs campaign)",
-      "reason": "Partner Center diagram shows horizontal non-stackable row (Box 1/3/4) and vertical stackable column (Box 2/5/6/7). Each scenario has different stackable boxes."
+      "decision": "Use Intl.DateTimeFormat with BCP 47 locale mapping for date formatting",
+      "reason": "More robust than hardcoded English abbreviations. Supports all 5 locales correctly."
     },
     {
-      "decision": "Trip.com: Box 2 (Mobile Rate) only stacks with Box 1 (Deal Box)",
-      "reason": "User clarified: 'basic deal và mobile rate sẽ ko stack với package'. Same column in diagram."
+      "decision": "Archive i18n migration scripts to _archive_i18n/ instead of deleting",
+      "reason": "Preserves history in case scripts need to be referenced. Keeps main scripts/ folder clean."
     },
     {
-      "decision": "Trip.com: Campaign only stacks with CoinPlus (Box 7)",
-      "reason": "User clarified: 'campaign là lớn nhất không stack với ai trừ Coinplus'. Most exclusive."
-    },
-    {
-      "decision": "Traveloka: ADDITIVE stacking (campaign + basics + rate channels)",
-      "reason": "Per TERA documentation. All groups stack additively. Only restriction: 1 campaign max."
+      "decision": "Keep i18n-audit.js as a permanent utility script",
+      "reason": "Useful for ongoing key parity checking. Can be run anytime to verify locale completeness."
     }
   ]
 }
