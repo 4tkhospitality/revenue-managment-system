@@ -879,21 +879,20 @@ export function resolveVendorStacking(
         return { resolved: best ? [best] : [], ignored, removedCount: active.length - 1, rule: 'expedia: single_discount (highest wins)' };
     }
 
-    // ── Trip.com: Row-Column Stacking Matrix ──
-    // Per Trip.com Partner Center docs (visual stacking diagram):
+    // ── Trip.com: Box-based Stacking (BA confirmed) ──
+    // Per BA diagram (Trip.com Partner Center):
+    //   - Within each box: highest wins (non-stackable horizontally)
+    //   - Across ALL boxes: additive stacking (stackable vertically)
+    //   - Campaign (Box 4): only "highest wins" within its own box,
+    //     but still stacks additively with all other box winners.
     //
-    //   NON-STACKABLE ROW (horizontal — pick 1 group, they don't stack):
-    //     Box 1: Deal Box (Basic Deal, Early Bird, Last Minute, etc.)
-    //     Box 3: Package
-    //     Box 4: Campaign
-    //
-    //   STACKABLE COLUMN (vertical — add on top of row winner):
-    //     Box 2: Targeting (Mobile Rate, XPOS) — stacks with Box 1 only
-    //     Box 5: TripPlus (Member Program) — stacks with Box 1/3 (not Box 4)
-    //     Box 6: Smart Choice — stacks with Box 1/3 (not Box 4)
-    //     Box 7: CoinPlus (priceImpact=false) — stacks with everything incl. Box 4
-    //
-    // Scenario-based: build valid combos, pick highest total discount.
+    //   Box 1: Deal Box (Basic Deal, Early Bird, Last Minute, Offer Tonight, etc.)
+    //   Box 2: Targeting (Mobile Rate, XPOS, Geo)
+    //   Box 3: Package
+    //   Box 4: Campaign (highest wins within box, stacks with others)
+    //   Box 5: TripPlus (Member Program)
+    //   Box 6: Smart Choice (Smart-C)
+    //   Box 7: CoinPlus
     if (vendorNorm === 'trip') {
         const UNKNOWN_BOX = 99;
 
@@ -907,7 +906,7 @@ export function resolveVendorStacking(
             return { ...d, _tripBox: box, _priceImpact: cat?.priceImpact !== false };
         });
 
-        // Step 2: Group by box, pick highest per box
+        // Step 2: Group by box, pick highest per box (within-box dedup)
         const boxGroups = new Map<number, typeof boxed>();
         for (const d of boxed) {
             const group = boxGroups.get(d._tripBox) || [];
@@ -915,12 +914,14 @@ export function resolveVendorStacking(
             boxGroups.set(d._tripBox, group);
         }
 
-        const boxWinners = new Map<number, (typeof boxed)[0]>();
         const allIgnored: StackingIgnored[] = [];
+        const resolved: DiscountItem[] = [];
 
         for (const [boxNum, items] of boxGroups) {
             const sorted = [...items].sort((a, b) => b.percent - a.percent || a.id.localeCompare(b.id));
-            boxWinners.set(boxNum, sorted[0]);
+            // Keep the winner from each box
+            resolved.push(sorted[0]);
+            // Mark losers within the same box as ignored
             for (let i = 1; i < sorted.length; i++) {
                 allIgnored.push({
                     id: sorted[i].id,
@@ -930,69 +931,14 @@ export function resolveVendorStacking(
             }
         }
 
-        // Helper: get box winner
-        const bw = (box: number) => boxWinners.get(box) ?? null;
-
-        // Step 3: Build scenarios from non-stackable row {1,3,4} + stackable column
-        // Stacking matrix:
-        //   Deal Box (1) → +Box2 +Box5 +Box6 +Box7
-        //   Package  (3) → +Box5 +Box6 +Box7  (NO Box2)
-        //   Campaign (4) → +Box7 ONLY          (most exclusive)
-        type TripScenario = { label: string; discounts: DiscountItem[]; total: number };
-        const scenarios: TripScenario[] = [];
-
-        // Unknown-box items always stack (safety net for custom promos)
-        const unknowns = bw(UNKNOWN_BOX) ? [bw(UNKNOWN_BOX)!] : [];
-
-        // Scenario A: Deal Box wins → Box1 + Box2 + Box5 + Box6 + Box7
-        if (bw(1)) {
-            const combo = [bw(1), bw(2), bw(5), bw(6), bw(7), ...unknowns].filter(Boolean) as DiscountItem[];
-            scenarios.push({ label: 'deal-box', discounts: combo, total: combo.reduce((s, d) => s + d.percent, 0) });
-        }
-
-        // Scenario B: Package wins → Box3 + Box5 + Box6 + Box7 (NO Box2)
-        if (bw(3)) {
-            const combo = [bw(3), bw(5), bw(6), bw(7), ...unknowns].filter(Boolean) as DiscountItem[];
-            scenarios.push({ label: 'package', discounts: combo, total: combo.reduce((s, d) => s + d.percent, 0) });
-        }
-
-        // Scenario C: Campaign wins → Box4 + Box7 ONLY (most exclusive)
-        if (bw(4)) {
-            const combo = [bw(4), bw(7)].filter(Boolean) as DiscountItem[];
-            scenarios.push({ label: 'campaign', discounts: combo, total: combo.reduce((s, d) => s + d.percent, 0) });
-        }
-
-        // Scenario D: No top-row winner → stackable-only (Box2 + Box5 + Box6 + Box7)
-        if (!bw(1) && !bw(3) && !bw(4)) {
-            const combo = [bw(2), bw(5), bw(6), bw(7), ...unknowns].filter(Boolean) as DiscountItem[];
-            scenarios.push({ label: 'stackable-only', discounts: combo, total: combo.reduce((s, d) => s + d.percent, 0) });
-        }
-
-        if (scenarios.length === 0) {
-            return { resolved: [], ignored: allIgnored, removedCount: active.length, rule: 'trip.com: no active discounts' };
-        }
-
-        // Step 4: Pick winning scenario (highest total discount)
-        scenarios.sort((a, b) => b.total - a.total);
-        const winner = scenarios[0];
-
-        // Build ignored: box winners that didn't make it into the winning scenario
-        const resolvedIds = new Set(winner.discounts.map(d => d.id));
-        for (const [, w] of boxWinners) {
-            if (!resolvedIds.has(w.id)) {
-                allIgnored.push({
-                    id: w.id,
-                    name: w.name,
-                    reason: `Blocked: scenario "${winner.label}" wins — this box not stackable in winning combo`
-                });
-            }
-        }
+        // Step 3: All box winners stack additively
+        const total = resolved.reduce((s, d) => s + d.percent, 0);
 
         return {
-            resolved: winner.discounts,
+            resolved,
             ignored: allIgnored,
-            removedCount: active.length - winner.discounts.length,
-            rule: `trip.com: ${winner.label} (${winner.total}%)`
+            removedCount: active.length - resolved.length,
+            rule: `trip.com: box-dedup + additive (${total}%)`
         };
     }
 

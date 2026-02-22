@@ -335,7 +335,7 @@ export default function PricingPlansPage() {
                                             <span className={feature.included ? 'text-gray-700' : 'text-gray-400'}>
                                                 {t(feature.textKey)}
                                             </span>
-                                            {feature.hintKey && (
+                                            {'hintKey' in feature && feature.hintKey && (
                                                 <div title={t(feature.hintKey)} className="ml-1 inline-flex cursor-help text-gray-400 hover:text-gray-600">
                                                     <HelpCircle className="w-3 h-3" />
                                                 </div>
