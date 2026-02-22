@@ -95,6 +95,15 @@ export function AnalyticsTabContent({ hotelId, asOfDate: initialAsOf }: Analytic
         return enrichRows(data.rows, data.capacity);
     }, [data]);
 
+    // ── Forward-looking rows: filter from TODAY for charts ───
+    // Hybrid approach: charts start from today (not asOfDate)
+    // so users always see the current/future picture first.
+    const todayRows = useMemo(() => {
+        if (!data) return [];
+        const todayStr = new Date().toISOString().split('T')[0];
+        return data.rows.filter(r => r.stay_date >= todayStr);
+    }, [data]);
+
     // ── Avg ADR for KPI card ────────────────────────────────
     const avgAdr = useMemo(() => {
         if (!data) return null;
@@ -205,19 +214,19 @@ export function AnalyticsTabContent({ hotelId, asOfDate: initialAsOf }: Analytic
             {/* ── Charts Row 1: STLY + Supply (above fold!) ── */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
                 <StlyComparisonChart
-                    rows={data.rows}
+                    rows={todayRows}
                     capacity={data.capacity}
                     viewMode={viewMode}
                 />
                 <SupplyChart
-                    rows={data.rows}
+                    rows={todayRows}
                     capacity={data.capacity}
                 />
             </div>
 
             {/* ── Cancel Forecast Chart (Phase 03) ── */}
             <CancelForecastChart
-                rows={data.rows}
+                rows={todayRows}
                 capacity={data.capacity}
             />
 
