@@ -20,6 +20,7 @@ export interface PricingInput {
 
 export interface DiscountItem {
     id: string;
+    catalogId?: string;       // Static catalog ID (e.g. 'tripcom-basic-deal') for engine lookups (tripBox, priceImpact)
     name: string;
     percent: number;          // % (0-100)
     group: PromotionGroup;

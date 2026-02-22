@@ -1,30 +1,22 @@
 {
-  "updated_at": "2026-02-22T09:32:00+07:00",
+  "updated_at": "2026-02-22T17:41:00+07:00",
   "working_on": {
-    "feature": "i18n Internationalization — Completeness & Cleanup",
-    "task": "Completed: Date locale fix, missing keys (dashboard + rateShopper), 3 TS errors fix, 61 scripts archived, i18n audit (2338 keys × 5 locales = 0 missing). All pushed to main (37d3533)",
+    "feature": "OTA Pricing Labels + Trip.com Stacking Fix",
+    "task": "Completed: Renamed 'Doanh thu' → 'Giá thu về', 'Doanh thu thuần' → 'Giá thu về', 'Giá NET cơ sở' → 'Giá thu về' across 5 locales (vi/en/th/ms/id) in both overviewTab and promotionsTab. Rewrote Trip.com stacking logic from scenario-based exclusion to box-dedup + additive. Fixed pricing-plans feature descriptions. Added VND currency label.",
     "status": "completed",
     "files": [
-      "apps/web/lib/insights/insightsV2Engine.ts",
-      "apps/web/components/dashboard/RecommendationTable.tsx",
-      "apps/web/messages/en.json",
       "apps/web/messages/vi.json",
-      "apps/web/messages/id.json",
-      "apps/web/messages/ms.json",
+      "apps/web/messages/en.json",
       "apps/web/messages/th.json",
-      "apps/web/app/data/BuildFeaturesButton.tsx",
-      "apps/web/app/data/RunForecastButton.tsx",
-      "apps/web/app/upload/page.tsx"
+      "apps/web/messages/ms.json",
+      "apps/web/messages/id.json",
+      "apps/web/lib/pricing/engine.ts",
+      "apps/web/app/pricing-plans/page.tsx"
     ],
     "blockers": [],
-    "notes": "rms.pakhos.com Vercel project did NOT auto-deploy. User needs to check Vercel Settings > Git > Production Branch or manually Redeploy."
+    "notes": "All changes pushed to main. Vercel auto-deploys."
   },
   "pending_tasks": [
-    {
-      "task": "Fix rms.pakhos.com Vercel deployment",
-      "priority": "high",
-      "notes": "Project 'revenue-managment-system' (rms.pakhos.com) not auto-deploying from main. The other project 'revenue-managment-system-1lzs' (www.pakhos.com) deployed fine. Check Vercel Git settings or Redeploy manually."
-    },
     {
       "task": "Account Mapping Admin Page",
       "priority": "medium",
@@ -48,83 +40,73 @@
   ],
   "recent_changes": [
     {
+      "timestamp": "2026-02-22T17:00:00+07:00",
+      "type": "fix",
+      "description": "Renamed all OTA pricing labels across 5 locales × 2 sections (overviewTab + promotionsTab): 'Doanh thu' → 'Giá thu về', 'Doanh thu thuần' → 'Giá thu về', 'Giá NET cơ sở' → 'Giá thu về'. Keys: netRevenue, netRevenueLabel, baseNetPrice, revenue, tooltipRevenue, netView, enterNetRevenue. EN equivalents: 'Revenue' → 'Hotel Revenue'.",
+      "files": [
+        "apps/web/messages/vi.json",
+        "apps/web/messages/en.json",
+        "apps/web/messages/th.json",
+        "apps/web/messages/ms.json",
+        "apps/web/messages/id.json"
+      ]
+    },
+    {
+      "timestamp": "2026-02-22T15:30:00+07:00",
+      "type": "fix",
+      "description": "Rewrote Trip.com stacking logic in resolveVendorStacking(): from scenario-based exclusion (Box1/3/4 mutually exclusive) to box-dedup + additive per BA diagram. Highest discount wins within each box, all box winners stack additively. Fixes lower-than-expected discount issue.",
+      "files": [
+        "apps/web/lib/pricing/engine.ts"
+      ]
+    },
+    {
+      "timestamp": "2026-02-22T13:00:00+07:00",
+      "type": "fix",
+      "description": "Updated pricing-plans page: fixed Superior tier feature descriptions to match actual plan features, added VND currency label, fixed hintKey TypeScript access with 'in' operator type narrowing.",
+      "files": [
+        "apps/web/app/pricing-plans/page.tsx"
+      ]
+    },
+    {
       "timestamp": "2026-02-22T09:22:00+07:00",
       "type": "fix",
-      "description": "Fixed 3 pre-existing TypeScript errors: nullish coalescing (?? 0) for optional count params in t() calls. Files: BuildFeaturesButton.tsx, RunForecastButton.tsx, upload/page.tsx. npx tsc --noEmit → 0 errors.",
+      "description": "Fixed 3 pre-existing TypeScript errors: nullish coalescing (?? 0) for optional count params in t() calls.",
       "files": [
         "apps/web/app/data/BuildFeaturesButton.tsx",
         "apps/web/app/data/RunForecastButton.tsx",
         "apps/web/app/upload/page.tsx"
       ]
-    },
-    {
-      "timestamp": "2026-02-22T08:43:00+07:00",
-      "type": "refactor",
-      "description": "Archived 61 one-time i18n migration scripts to apps/web/scripts/_archive_i18n/. Created i18n-audit.js for key parity checking. Audit result: 2338 keys × 5 locales = 0 missing.",
-      "files": [
-        "apps/web/scripts/_archive_i18n/",
-        "apps/web/scripts/i18n-audit.js"
-      ]
-    },
-    {
-      "timestamp": "2026-02-22T08:20:00+07:00",
-      "type": "fix",
-      "description": "Added missing rateShopper.thCheckIn and rateShopper.thTaxFee keys to all 5 locale files. These were used in rate-shopper/page.tsx but never defined.",
-      "files": [
-        "apps/web/messages/en.json",
-        "apps/web/messages/vi.json",
-        "apps/web/messages/id.json",
-        "apps/web/messages/ms.json",
-        "apps/web/messages/th.json"
-      ]
-    },
-    {
-      "timestamp": "2026-02-22T01:30:00+07:00",
-      "type": "fix",
-      "description": "Fixed date locale formatting: insightsV2Engine.ts uses Intl.DateTimeFormat with BCP 47 locale mapping. RecommendationTable.tsx uses useLocale() for toLocaleDateString. Translated ~40 untranslated dashboard keys in id/ms/th.",
-      "files": [
-        "apps/web/lib/insights/insightsV2Engine.ts",
-        "apps/web/components/dashboard/RecommendationTable.tsx",
-        "apps/web/messages/id.json",
-        "apps/web/messages/ms.json",
-        "apps/web/messages/th.json"
-      ]
     }
   ],
   "errors_encountered": [
     {
-      "error": "MISSING_MESSAGE for rateShopper.thCheckIn and rateShopper.thTaxFee in Indonesian locale",
-      "solution": "Keys were never defined in ANY locale file (including en.json). Added to all 5 locales.",
+      "error": "Trip.com stacking logic gave lower-than-expected discounts",
+      "solution": "Rewrote from scenario-based Box1/3/4 exclusion to box-dedup + additive. All box winners stack together additively.",
       "resolved": true
     },
     {
-      "error": "Date formatting showed English day names in Vietnamese/Indonesian/etc locales",
-      "solution": "Replaced hardcoded English day abbreviations with Intl.DateTimeFormat using BCP 47 locale mapping (e.g., 'vi' → 'vi-VN'). Also added useLocale() in RecommendationTable.",
+      "error": "TypeScript error accessing feature.hintKey on union type in pricing-plans page",
+      "solution": "Used 'in' operator for type narrowing: 'hintKey' in feature && feature.hintKey",
       "resolved": true
     },
     {
-      "error": "3 TypeScript errors: 'number | undefined' not assignable to 'string | number | Date' in t() calls",
-      "solution": "Added ?? 0 nullish coalescing for optional count params: result.rowsBuilt ?? 0, result.count ?? 0",
+      "error": "OTA pricing labels showing 'Doanh thu' instead of 'Giá thu về'",
+      "solution": "Updated 7 keys across 5 locales in both overviewTab and promotionsTab sections",
       "resolved": true
-    },
-    {
-      "error": "rms.pakhos.com Vercel project not auto-deploying latest commits",
-      "solution": "Need to check Vercel Settings > Git > Production Branch or manually trigger Redeploy",
-      "resolved": false
     }
   ],
   "decisions_made": [
     {
-      "decision": "Use Intl.DateTimeFormat with BCP 47 locale mapping for date formatting",
-      "reason": "More robust than hardcoded English abbreviations. Supports all 5 locales correctly."
+      "decision": "Trip.com stacking: box-dedup + additive (not scenario-based)",
+      "reason": "BA diagram shows all boxes stack additively. Previous scenario-based approach incorrectly treated Box1/3/4 as mutually exclusive, losing valid discounts."
     },
     {
-      "decision": "Archive i18n migration scripts to _archive_i18n/ instead of deleting",
-      "reason": "Preserves history in case scripts need to be referenced. Keeps main scripts/ folder clean."
+      "decision": "Label 'Doanh thu' → 'Giá thu về' (not 'Giá KS thu về')",
+      "reason": "User wants simpler, consistent label across all places. 'Giá thu về' = price received back by hotel."
     },
     {
-      "decision": "Keep i18n-audit.js as a permanent utility script",
-      "reason": "Useful for ongoing key parity checking. Can be run anytime to verify locale completeness."
+      "decision": "Label 'Doanh thu thuần' → 'Giá thu về' (same as Doanh thu)",
+      "reason": "User wants consistent terminology. Both refer to the same concept: what the hotel actually receives."
     }
   ]
 }

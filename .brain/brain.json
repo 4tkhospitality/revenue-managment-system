@@ -2,7 +2,7 @@
   "meta": {
     "schema_version": "2.0.0",
     "awf_version": "4.1.2",
-    "last_updated": "2026-02-22T09:32:00+07:00"
+    "last_updated": "2026-02-22T17:41:00+07:00"
   },
   "project": {
     "name": "revenue-management-system",
@@ -825,7 +825,10 @@
     "V02.2: Traveloka TERA Catalog — Added TRAVELOKA_PROMOTIONS (9 items: Epic Sale, Special Sale, Payday Sale as Campaign EXCLUSIVE; Early Bird, Last Minute, Customized Deal, Extra Benefit as Basic STACKABLE; Mobile Exclusive, Silver Priority User as Rate Channel). Wired into getPromotionsByVendor, _catalogMap, getPromotionsByGroup, getTargetedSubcategories, VENDOR_GROUP_LABELS",
     "V02.2: Traveloka TERA Stacking Rules — resolveVendorStacking in engine.ts: ADDITIVE mode, pick 1 Campaign (highest), all Basics stack, Rate Channels pick 1 per subcategory. All groups stack with each other",
     "V02.2: Trip.com Row-Column Stacking Fix — Rewrote 7-box stacking from 'all boxes stack' to scenario-based Row-Column model. Non-stackable row (Box 1/3/4 pick 1 group), stackable column (Box 2/5/6/7 add on top). Campaign (Box 4) only stacks with CoinPlus (Box 7). Engine builds all valid scenarios and picks highest total discount",
-    "V02.2: Expedia B2B Net Revenue Row — Added B2B net revenue calculation in OverviewTab. Shows NET after Expedia commission deduction for B2B merchant model channels"
+    "V02.2: Expedia B2B Net Revenue Row — Added B2B net revenue calculation in OverviewTab. Shows NET after Expedia commission deduction for B2B merchant model channels",
+    "V02.2: OTA Pricing Label Rename — 'Doanh thu' → 'Giá thu về', 'Doanh thu thuần' → 'Giá thu về', 'Giá NET cơ sở' → 'Giá thu về' across 5 locales (vi/en/th/ms/id) in overviewTab + promotionsTab. EN: 'Revenue' → 'Hotel Revenue'. Keys: netRevenue, netRevenueLabel, baseNetPrice, revenue, tooltipRevenue, netView, enterNetRevenue",
+    "V02.2: Trip.com Stacking Rewrite V2 — Changed from scenario-based Row-Column model to box-dedup + additive. Highest discount wins within each box (dedup), all box winners stack additively. Aligns with BA additive stacking diagram",
+    "V02.2: Pricing Plans Feature Labels — Updated Superior tier feature descriptions to match actual plan. Added VND currency label. Fixed hintKey TS access with 'in' operator"
   ],
   "cancellation_bridge_v011": {
     "status": "Implemented",
@@ -964,7 +967,9 @@
     "V02.2: UI text in English for international readiness — Vietnamese strings only in reasonTextVi (DB column), VND formatters (intentional), vi-VN date locale (team/settings page)",
     "V02.2: Trip.com stacking = Row-Column scenario model — Box 1/3/4 NON-STACKABLE horizontally (pick best scenario). Box 2 stacks with Box 1 only. Box 5/6 stack with Box 1/3 (not Box 4). Box 7 (CoinPlus) stacks with everything. Engine builds Scenario A (deal-box), B (package), C (campaign), picks highest total",
     "V02.2: Traveloka TERA stacking = ADDITIVE (pick 1 Campaign + all Basics + 1 Rate Channel per subcategory). Derived from Traveloka Extra Revenue Accelerator documentation",
-    "V02.2: Expedia B2B model — merchant channels show net revenue after commission deduction. Different from agency model where commission is paid separately"
+    "V02.2: Expedia B2B model — merchant channels show net revenue after commission deduction. Different from agency model where commission is paid separately",
+    "V02.2: Trip.com stacking CORRECTED to box-dedup + additive — BA confirmed all box winners stack additively (not scenario-based Row-Column). Previous Row-Column model was incorrect. New logic: group discounts by box → pick highest per box → sum all winners. Simpler and correct",
+    "V02.2: OTA pricing labels standardized — 'Doanh thu' (Revenue) too generic, replaced with 'Giá thu về' (Hotel Revenue / price received back). Consistent across all tabs and all 5 locales"
   ],
   "ui_design": {
     "theme": "SaaS Pro Light",
@@ -1066,7 +1071,9 @@
       "V02.2: i18n guidePage namespace very large (~241 keys) — Still has English fallback for id/ms/th. Needs dedicated patch script for proper translation",
       "V02.2: Trip.com old stacking (all 7 boxes stack) was critically wrong — Box 1/3/4 should NOT stack horizontally. Fixed with scenario-based stacking matrix",
       "V02.2: Trip.com Campaign was EXCLUSIVE blocking everything — should only block everything except CoinPlus (Box 7). User clarification: 'Campaign không stack với ai trừ CoinPlus'",
-      "V02.2: git commit can appear stuck in Antigravity terminal — command actually succeeds silently. Check git log to verify before retrying"
+      "V02.2: git commit can appear stuck in Antigravity terminal — command actually succeeds silently. Check git log to verify before retrying",
+      "V02.2: Trip.com scenario-based stacking was WRONG — BA clarified all boxes stack additively after per-box dedup. Reverted from Row-Column scenarios back to simple box-dedup + additive. The scenario model over-complicated what should be straightforward",
+      "V02.2: netRevenueLabel vs netRevenue vs baseNetPrice — Three separate keys used in different UI sections. Must update ALL when renaming. overviewTab uses netRevenueLabel (legend), revenue (cell header), baseNetPrice (input label). promotionsTab has its own netRevenue and netRevenueLabel"
     ],
     "formulas": {
       "rooms_otb": "SUM(num_rooms) from reservations for that stay_date",

@@ -897,11 +897,14 @@ export function resolveVendorStacking(
         const UNKNOWN_BOX = 99;
 
         // Step 1: Assign tripBox from catalog, fallback to UNKNOWN_BOX
+        // Use catalogId (static catalog ID like 'tripcom-basic-deal') for lookup,
+        // NOT d.id which is a DB instance UUID.
         const boxed = active.map(d => {
-            const cat = getCatalogItem(d.id);
+            const lookupId = d.catalogId ?? d.id;
+            const cat = getCatalogItem(lookupId);
             const box = cat?.tripBox ?? UNKNOWN_BOX;
             if (box === UNKNOWN_BOX) {
-                console.warn(`[Trip.com stacking] Discount "${d.name}" (${d.id}) has no tripBox in catalog → assigned to UNKNOWN box`);
+                console.warn(`[Trip.com stacking] Discount "${d.name}" (${lookupId}) has no tripBox in catalog → assigned to UNKNOWN box`);
             }
             return { ...d, _tripBox: box, _priceImpact: cat?.priceImpact !== false };
         });

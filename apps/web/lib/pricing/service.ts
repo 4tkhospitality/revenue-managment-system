@@ -190,6 +190,7 @@ export async function calculatePreview(input: PreviewInput): Promise<PreviewResu
         const catalogItem = getCatalogItem(c.promo_id);
         return {
             id: c.id,
+            catalogId: c.promo_id,  // Static catalog ID for engine tripBox/priceImpact lookup
             name: c.promo?.name ?? 'Unknown',
             percent: c.discount_pct,
             // Self-healing: prefer static catalog groupType over DB group_type
@@ -405,6 +406,7 @@ export async function calculateMatrix(
         const catalogItem = getCatalogItem(c.promo_id);
         channelCampaigns.get(channelId)!.push({
             id: c.id,
+            catalogId: c.promo_id,  // Static catalog ID for engine tripBox/priceImpact lookup
             name: c.promo?.name ?? 'Unknown',
             percent: c.discount_pct,
             // Self-healing: prefer static catalog groupType over DB group_type
@@ -672,6 +674,7 @@ export async function calculateDynamicMatrix(
         const catalogItem = getCatalogItem(c.promo_id);
         return {
             id: c.id,
+            catalogId: c.promo_id,  // Static catalog ID for engine tripBox/priceImpact lookup
             name: c.promo?.name ?? 'Unknown',
             percent: c.discount_pct,
             // Self-healing: prefer static catalog groupType over DB group_type
