@@ -79,6 +79,7 @@ export interface PromotionCatalogItem {
     maxOnePerSubcategory: boolean;
     stackBehavior?: StackBehavior;      // Engine layer: stacking rule
     tripBox?: TripBox;                  // Trip.com specific: 1-7 box group number
+    displayLabel?: string;              // Optional UI label override (e.g. 'Member' for TripPlus instead of 'Targeted')
     priceImpact?: boolean;              // false = reward/coin-back, not price discount. Default true
     isFreeNights?: boolean;             // True = render Stay X / Pay Y input
     freeNightsStay?: number;            // Default Stay value (X)

@@ -1418,7 +1418,9 @@ export default function PromotionsTab() {
                                         }[stackBehavior]!;
                                         const pill = groupPillConfig[catalogGroupType] || groupPillConfig.ESSENTIAL;
                                         const vendorCode = selectedChannelData?.code || 'agoda';
-                                        const groupLabel = UNIFIED_GROUP_LABELS[catalogGroupType as keyof typeof GROUP_CONFIG] || pill.short;
+                                        // Use catalog displayLabel override (e.g. TripPlus→"Member") if available
+                                        const catalogDisplayLabel = getCatalogItem(c.promo.id)?.displayLabel;
+                                        const groupLabel = catalogDisplayLabel || UNIFIED_GROUP_LABELS[catalogGroupType as keyof typeof GROUP_CONFIG] || pill.short;
 
                                         return (
                                             <tr key={c.id} className="border-t border-[#F2F4F8] hover:bg-[#FAFBFD] transition-colors">

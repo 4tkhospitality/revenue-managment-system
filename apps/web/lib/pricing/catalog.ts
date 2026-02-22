@@ -717,6 +717,7 @@ export const CTRIP_PROMOTIONS: PromotionCatalogItem[] = [
         maxOneInGroup: false,
         maxOnePerSubcategory: true,
         tripBox: 5,
+        displayLabel: 'Member',
     },
 
     // ─── Box 6: Smart Choice (Smart-C) ───
@@ -731,6 +732,7 @@ export const CTRIP_PROMOTIONS: PromotionCatalogItem[] = [
         maxOneInGroup: false,
         maxOnePerSubcategory: true,
         tripBox: 6,
+        displayLabel: 'Smart Choice',
     },
 
     // ─── Box 7: CoinPlus (coin-back reward, NOT price discount) ───
@@ -745,6 +747,7 @@ export const CTRIP_PROMOTIONS: PromotionCatalogItem[] = [
         maxOneInGroup: false,
         maxOnePerSubcategory: true,
         tripBox: 7,
+        displayLabel: 'Reward',
         priceImpact: false, // Coin-back reward: shown as benefit but NOT subtracted from price
     },
 
