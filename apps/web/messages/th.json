@@ -1250,7 +1250,7 @@
     "feat": {
       "netToBar": "คำนวณราคา NET → BAR",
       "otaChannels": "5 ช่อง OTA พื้นฐาน",
-      "singleUser": "1 ผู้ใช้",
+      "singleUser": "1 ผู้ใช้ — Demo Hotel",
       "otaOptDemo": "ปรับ OTA (Demo)",
       "otaOptDemoHint": "ดูหน้าจอ demo ไม่ป้อนข้อมูลจริง",
       "dashAnalytics": "Dashboard & Analytics",
@@ -1260,7 +1260,7 @@
       "fullOtaHint": "Scorecard, Checklist, ROI, Review Simulator...",
       "promoStack": "โปรโมชั่น Stacking",
       "exportMatrix": "ส่งออก Price Matrix",
-      "threeUsers": "3 ผู้ใช้",
+      "threeUsers": "3 ผู้ใช้ — 1 โรงแรมส่วนตัว",
       "allSuperior": "ฟีเจอร์ Superior ทั้งหมด",
       "dashKpi": "Dashboard & KPI",
       "uploadCsv": "อัพโหลดข้อมูล (CSV)",

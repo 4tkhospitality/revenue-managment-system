@@ -1250,7 +1250,7 @@
     "feat": {
       "netToBar": "NET → BAR pricing",
       "otaChannels": "5 basic OTA channels",
-      "singleUser": "1 user",
+      "singleUser": "1 user — Demo Hotel",
       "otaOptDemo": "OTA Optimization (Demo)",
       "otaOptDemoHint": "View demo interface, no real data input",
       "dashAnalytics": "Dashboard & Analytics",
@@ -1260,7 +1260,7 @@
       "fullOtaHint": "Scorecard, Checklist, ROI, Review Simulator...",
       "promoStack": "Promo Stacking",
       "exportMatrix": "Export Price Matrix",
-      "threeUsers": "3 users",
+      "threeUsers": "3 users — 1 Private Hotel",
       "allSuperior": "All Superior features",
       "dashKpi": "Dashboard & KPI",
       "uploadCsv": "Upload data (CSV)",

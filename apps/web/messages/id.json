@@ -1250,7 +1250,7 @@
     "feat": {
       "netToBar": "Harga NET → BAR",
       "otaChannels": "5 kanal OTA dasar",
-      "singleUser": "1 pengguna",
+      "singleUser": "1 pengguna — Demo Hotel",
       "otaOptDemo": "Optimasi OTA (Demo)",
       "otaOptDemoHint": "Lihat antarmuka demo, tanpa data nyata",
       "dashAnalytics": "Dashboard & Analytics",
@@ -1260,7 +1260,7 @@
       "fullOtaHint": "Scorecard, Checklist, ROI, Review Simulator...",
       "promoStack": "Promo Stacking",
       "exportMatrix": "Ekspor Price Matrix",
-      "threeUsers": "3 pengguna",
+      "threeUsers": "3 pengguna — 1 Hotel Pribadi",
       "allSuperior": "Semua fitur Superior",
       "dashKpi": "Dashboard & KPI",
       "uploadCsv": "Upload data (CSV)",
