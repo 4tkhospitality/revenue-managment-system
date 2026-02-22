@@ -54,7 +54,7 @@ const TIER_KEYS = [
         descKey: 'tier.superior.desc',
         features: [
             { textKey: 'feat.allFree', included: true },
-            { textKey: 'feat.fullOta', included: true, hintKey: 'feat.fullOtaHint' },
+            { textKey: 'feat.fullOta', included: true },
             { textKey: 'feat.promoStack', included: true },
             { textKey: 'feat.exportMatrix', included: true },
             { textKey: 'feat.threeUsers', included: true },
