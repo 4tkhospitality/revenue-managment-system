@@ -238,12 +238,13 @@ function PromotionGroup({
                                                         type="number"
                                                         min="0"
                                                         max="100"
+                                                        step="0.1"
                                                         value={c.discount_pct}
                                                         onChange={(e) => {
-                                                            const val = Math.min(100, Math.max(0, parseInt(e.target.value) || 0));
+                                                            const val = Math.min(100, Math.max(0, Math.round((parseFloat(e.target.value) || 0) * 10) / 10));
                                                             onUpdateDiscount(c.id, val);
                                                         }}
-                                                        className="w-12 text-right text-sm font-semibold text-[#204183] bg-slate-50 border border-[#DBE1EB] rounded px-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-[#204183]"
+                                                        className="w-14 text-right text-sm font-semibold text-[#204183] bg-slate-50 border border-[#DBE1EB] rounded px-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-[#204183]"
                                                     />
                                                     <span className="text-sm font-semibold text-[#204183] ml-0.5">%</span>
                                                 </div>
@@ -1478,9 +1479,10 @@ export default function PromotionsTab() {
                                                                     type="number"
                                                                     min="0"
                                                                     max="100"
+                                                                    step="0.1"
                                                                     value={c.discount_pct}
                                                                     onChange={(e) => {
-                                                                        const val = Math.min(100, Math.max(0, parseInt(e.target.value) || 0));
+                                                                        const val = Math.min(100, Math.max(0, Math.round((parseFloat(e.target.value) || 0) * 10) / 10));
                                                                         handleUpdateDiscount(c.id, val);
                                                                     }}
                                                                     className="w-14 text-right text-sm font-bold text-[#204183] bg-slate-50 border border-[#DBE1EB] rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#204183]"
