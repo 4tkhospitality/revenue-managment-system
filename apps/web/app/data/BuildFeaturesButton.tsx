@@ -77,7 +77,7 @@ export function BuildFeaturesButton() {
             {result && (
                 <span className={`text-sm font-medium ${result.success ? 'text-emerald-600' : 'text-red-600'}`}>
                     {result.success
-                        ? `✓ ${result.message || t('createdFeatures', { n: result.rowsBuilt })}`
+                        ? `✓ ${result.message || t('createdFeatures', { n: result.rowsBuilt ?? 0 })}`
                         : `✗ ${result.message}`}
                 </span>
             )}

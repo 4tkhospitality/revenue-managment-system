@@ -77,7 +77,7 @@ export function RunForecastButton() {
 
             {result && (
                 <span className={`text-sm font-medium ${result.success ? 'text-emerald-600' : 'text-red-600'}`}>
-                    {result.success ? t('createdForecasts', { n: result.count }) : `✗ ${result.error}`}
+                    {result.success ? t('createdForecasts', { n: result.count ?? 0 }) : `✗ ${result.error}`}
                 </span>
             )}
         </div>

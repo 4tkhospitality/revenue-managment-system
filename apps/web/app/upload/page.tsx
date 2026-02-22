@@ -130,7 +130,7 @@ export default function UploadPage() {
             }
 
             if (result.success) {
-                return { success: true, message: t('reservations', { n: result.count }), count: result.count };
+                return { success: true, message: t('reservations', { n: result.count ?? 0 }), count: result.count };
             } else {
                 return { success: false, message: result.message || t('importFailed') };
             }
