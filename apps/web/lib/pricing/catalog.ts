@@ -426,7 +426,7 @@ export const BOOKING_COM_PROMOTIONS: PromotionCatalogItem[] = [
         vendor: 'booking',
         name: 'Getaway Deal',
         groupType: 'CAMPAIGN',
-        defaultPct: 15,
+        defaultPct: 20,
         allowStack: false,
         maxOneInGroup: true,
         maxOnePerSubcategory: false,
