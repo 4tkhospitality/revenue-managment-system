@@ -16,7 +16,7 @@ export default function NoHotelAccessPage() {
             <div className="min-h-screen flex items-center justify-center bg-gray-50">
                 <div className="text-center">
                     <div className="text-4xl mb-4">⏳</div>
-                    <p className="text-gray-600">Đang kiểm tra quyền truy cập...</p>
+                    <p className="text-gray-600">Checking access permissions...</p>
                 </div>
             </div>
         );
@@ -27,18 +27,18 @@ export default function NoHotelAccessPage() {
             <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center">
                 <div className="mb-4"><Building2 className="w-16 h-16 text-blue-400 mx-auto" /></div>
                 <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                    Chưa được gán khách sạn
+                    Not assigned to any hotel
                 </h1>
                 <p className="text-gray-600 mb-6">
-                    Tài khoản của bạn chưa được gán quyền truy cập khách sạn nào.
-                    Vui lòng thử đăng nhập lại hoặc liên hệ quản trị viên.
+                    Your account has not been assigned access to any hotel.
+                    Please try signing in again or contact admin.
                 </p>
                 <div className="space-y-3">
                     <button
                         onClick={handleLogout}
                         className="block w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
                     >
-                        <RefreshCw className="w-4 h-4 inline mr-1" /> Đăng nhập lại
+                        <RefreshCw className="w-4 h-4 inline mr-1" /> Sign In Again
                     </button>
                     <a
                         href="https://zalo.me/0778602953"
@@ -46,7 +46,7 @@ export default function NoHotelAccessPage() {
                         rel="noopener noreferrer"
                         className="block w-full px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-gray-700"
                     >
-                        <MessageCircle className="w-4 h-4 inline mr-1" /> Liên hệ hỗ trợ qua Zalo
+                        <MessageCircle className="w-4 h-4 inline mr-1" /> Contact Support qua Zalo
                     </a>
                 </div>
             </div>

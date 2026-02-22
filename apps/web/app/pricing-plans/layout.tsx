@@ -1,8 +1,8 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-    title: 'Nâng cấp | 4TK RMS',
-    description: 'Chọn gói phù hợp với khách sạn của bạn',
+    title: 'Upgrade | 4TK RMS',
+    description: 'Choose a plan that fits your hotel',
 };
 
 export default function PricingPlansLayout({ children }: { children: React.ReactNode }) {

@@ -2,8 +2,10 @@
 
 import { ShieldCheck, ShieldAlert, ShieldX, BarChart3, TrendingUp } from 'lucide-react';
 import type { AnalyticsQuality } from './types';
+import { useTranslations } from 'next-intl';
 
 export function DataQualityBadge({ quality }: { quality: AnalyticsQuality }) {
+    const t = useTranslations('analyticsTab');
     const level = quality.completeness >= 80 ? 'high' :
         quality.completeness >= 50 ? 'medium' : 'low';
 
@@ -11,17 +13,17 @@ export function DataQualityBadge({ quality }: { quality: AnalyticsQuality }) {
         high: {
             style: 'text-emerald-600 bg-emerald-50 border-emerald-200',
             icon: ShieldCheck,
-            label: `${quality.completeness}% complete`,
+            label: t('qualityComplete', { pct: quality.completeness }),
         },
         medium: {
             style: 'text-amber-600 bg-amber-50 border-amber-200',
             icon: ShieldAlert,
-            label: `${quality.completeness}% — Partial data`,
+            label: t('qualityPartial', { pct: quality.completeness }),
         },
         low: {
             style: 'text-rose-600 bg-rose-50 border-rose-200',
             icon: ShieldX,
-            label: `Low confidence (${quality.completeness}%)`,
+            label: t('qualityLow', { pct: quality.completeness }),
         },
     };
 
@@ -33,11 +35,11 @@ export function DataQualityBadge({ quality }: { quality: AnalyticsQuality }) {
                 <Icon className="w-3.5 h-3.5" />
                 <span>{label}</span>
                 <span className="text-slate-400">|</span>
-                <span>{quality.totalRows} rows</span>
+                <span>{t('rows', { count: quality.totalRows })}</span>
                 {quality.approxSTLY > 0 && (
                     <>
                         <span className="text-slate-400">|</span>
-                        <span>~{quality.approxSTLY} approx</span>
+                        <span>{t('approx', { count: quality.approxSTLY })}</span>
                     </>
                 )}
             </div>
@@ -47,18 +49,18 @@ export function DataQualityBadge({ quality }: { quality: AnalyticsQuality }) {
                 <div className="space-y-1.5">
                     <div className="flex items-center gap-1.5">
                         <BarChart3 className="w-3 h-3 text-blue-300" />
-                        Pickup data (T-7): {quality.withT7}/{quality.totalRows} rows
+                        {t('pickupDataT7', { with: quality.withT7, total: quality.totalRows })}
                     </div>
                     <div className="flex items-center gap-1.5">
                         <TrendingUp className="w-3 h-3 text-blue-300" />
-                        STLY coverage: {quality.stlyCoverage}%
+                        {t('stlyCoverage', { pct: quality.stlyCoverage })}
                     </div>
                     {quality.approxSTLY > 0 && (
-                        <div className="text-slate-300">~{quality.approxSTLY} STLY dùng nearest DOW</div>
+                        <div className="text-slate-300">{t('stlyNearestDow', { count: quality.approxSTLY })}</div>
                     )}
                     {level === 'low' && (
                         <div className="text-amber-300 mt-1 pt-1 border-t border-slate-600">
-                            Thiếu snapshot nên pace/pickup chưa đầy đủ. Kết quả chỉ mang tính tham khảo.
+                            {t('missingSnapshots')}
                         </div>
                     )}
                 </div>

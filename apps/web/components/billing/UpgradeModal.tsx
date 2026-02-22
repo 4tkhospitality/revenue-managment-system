@@ -6,6 +6,7 @@ import { X, ArrowRight, Check, Lock } from 'lucide-react';
 import { PlanTier } from '@prisma/client';
 import { PlanBadge } from './PlanBadge';
 import { getPlanLabel } from '@/lib/plg/plan-config';
+import { useTranslations } from 'next-intl';
 
 type UpgradeVariant = 'FEATURE_PAYWALL' | 'QUOTA_EXCEEDED' | 'SCENARIO_PERSIST_PAYWALL';
 
@@ -19,21 +20,21 @@ interface UpgradeModalProps {
 }
 
 const REASON_LABELS: Record<string, string> = {
-    feature_hard: 'Tính năng này yêu cầu gói cao hơn',
-    feature_soft: 'Bạn có thể xem nhưng không thể sử dụng đầy đủ',
-    feature_preview: 'Nâng cấp để trải nghiệm đầy đủ',
-    quota_exceeded: 'Bạn đã dùng hết quota trong kỳ này',
-    feature_locked: 'Tính năng bị khóa ở gói hiện tại',
+    feature_hard: 'This feature requires a higher plan',
+    feature_soft: 'View only — full access requires upgrade',
+    feature_preview: 'Upgrade for full experience',
+    quota_exceeded: 'Quota exhausted for this period',
+    feature_locked: 'Feature locked at current plan',
 };
 
 const FEATURE_COMPARISON: Record<string, Record<PlanTier, string>> = {
-    'Import dữ liệu': { STANDARD: '3/tháng', SUPERIOR: '15/tháng', DELUXE: '50/tháng', SUITE: 'Không giới hạn' },
-    'Export bảng giá': { STANDARD: '1/ngày', SUPERIOR: '10/ngày', DELUXE: 'Không giới hạn', SUITE: 'Không giới hạn' },
+    'Data import': { STANDARD: '3/month', SUPERIOR: '15/month', DELUXE: '50/month', SUITE: 'Unlimited' },
+    'Price export': { STANDARD: '1/day', SUPERIOR: '10/day', DELUXE: 'Unlimited', SUITE: 'Unlimited' },
     'Bulk pricing': { STANDARD: '–', SUPERIOR: '✓', DELUXE: '✓', SUITE: '✓' },
-    'Playbook': { STANDARD: 'Xem trước', SUPERIOR: 'Xem trước', DELUXE: '✓', SUITE: '✓' },
-    'Analytics': { STANDARD: 'Xem trước', SUPERIOR: 'Xem trước', DELUXE: '✓', SUITE: '✓' },
+    'Playbook': { STANDARD: 'Preview', SUPERIOR: 'Preview', DELUXE: '✓', SUITE: '✓' },
+    'Analytics': { STANDARD: 'Preview', SUPERIOR: 'Preview', DELUXE: '✓', SUITE: '✓' },
     'Multi-hotel': { STANDARD: '–', SUPERIOR: '–', DELUXE: '–', SUITE: '✓' },
-    'Người dùng': { STANDARD: '1', SUPERIOR: '3', DELUXE: '10', SUITE: 'Không giới hạn' },
+    'Users': { STANDARD: '1', SUPERIOR: '3', DELUXE: '10', SUITE: 'Unlimited' },
 };
 
 export function UpgradeModal({
@@ -57,7 +58,7 @@ export function UpgradeModal({
                 <div className="flex items-center justify-between mb-4">
                     <div>
                         <h2 className="text-lg font-bold text-slate-900">
-                            {variant === 'QUOTA_EXCEEDED' ? 'Đã dùng hết quota' : 'Nâng cấp để mở khóa'}
+                            {variant === 'QUOTA_EXCEEDED' ? 'Quota exhausted' : 'Upgrade to unlock'}
                         </h2>
                         {reasonLabel && (
                             <p className="text-sm text-slate-500 mt-1">{reasonLabel}</p>
@@ -74,7 +75,7 @@ export function UpgradeModal({
                     <ArrowRight size={16} className="text-slate-400" />
                     <PlanBadge plan={recommendedPlan} size="md" />
                     <span className="text-sm text-slate-500 ml-auto">
-                        Khuyên dùng: <strong>{getPlanLabel(recommendedPlan)}</strong>
+                        Recommended: <strong>{getPlanLabel(recommendedPlan)}</strong>
                     </span>
                 </div>
 
@@ -83,7 +84,7 @@ export function UpgradeModal({
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="border-b">
-                                <th className="text-left py-2 px-3 text-slate-500 font-medium">Tính năng</th>
+                                <th className="text-left py-2 px-3 text-slate-500 font-medium">Feature</th>
                                 {plans.map((p) => (
                                     <th
                                         key={p}
@@ -91,7 +92,7 @@ export function UpgradeModal({
                                             } ${p === currentPlan ? 'bg-slate-50' : ''}`}
                                     >
                                         {getPlanLabel(p)}
-                                        {p === currentPlan && <div className="text-[10px] text-slate-400">Hiện tại</div>}
+                                        {p === currentPlan && <div className="text-[10px] text-slate-400">Current</div>}
                                     </th>
                                 ))}
                             </tr>
@@ -127,12 +128,12 @@ export function UpgradeModal({
                         onClick={onClose}
                         className="flex-1 px-4 py-2.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors text-sm font-medium"
                     >
-                        Để sau
+                        Skip for now
                     </button>
                     <button
                         onClick={() => { onClose(); router.push('/pricing-plans'); }}
                         className="flex-1 px-4 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors text-sm font-medium"
-                    >                        Nâng cấp lên {getPlanLabel(recommendedPlan)}
+                    >                        Upgrade to {getPlanLabel(recommendedPlan)}
                     </button>
                 </div>
             </div>

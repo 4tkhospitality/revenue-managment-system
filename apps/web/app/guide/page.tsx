@@ -11,72 +11,72 @@ import { validateOTBData, type ValidationResult } from '../actions/validateOTBDa
 import Link from 'next/link';
 import { useTierAccess } from '@/hooks/useTierAccess';
 import { TierPaywall } from '@/components/paywall/TierPaywall';
+import { useTranslations } from 'next-intl';
 
 /* ═══════════════════════ TYPES & DATA ═══════════════════════ */
 
 type SectionId = 'quickstart' | 'analytics' | 'pricing' | 'data';
 
-const SECTIONS: { id: SectionId; label: string; icon: React.ReactNode; sub?: { id: string; label: string }[] }[] = [
-    {
-        id: 'quickstart', label: 'Bắt đầu nhanh', icon: <Zap className="w-4 h-4" />,
-        sub: [
-            { id: 'morning-routine', label: 'Routine 5 phút mỗi sáng' },
-            { id: 'steps', label: '5 bước bắt đầu' },
-            { id: 'glossary-full', label: 'Thuật ngữ đầy đủ' },
-            { id: 'faq', label: 'Lỗi hay gặp' },
-        ],
-    },
-    {
-        id: 'analytics', label: 'Quản lý Doanh thu', icon: <BarChart3 className="w-4 h-4" />,
-        sub: [
-            { id: 'rm-intro', label: 'Revenue Management là gì?' },
-            { id: 'kpi', label: 'Các thẻ KPI' },
-            { id: 'charts', label: 'Biểu đồ OTB' },
-            { id: 'rec-table', label: 'Bảng khuyến nghị giá' },
-            { id: 'dp-overview', label: 'Giá Linh Hoạt' },
-            { id: 'dp-seasons', label: 'Mùa (Seasons)' },
-            { id: 'dp-occ-tiers', label: 'Bậc OCC' },
-            { id: 'terms', label: 'Thuật ngữ chuyên ngành' },
-        ],
-    },
-    {
-        id: 'pricing', label: 'Tính giá OTA', icon: <Calculator className="w-4 h-4" />,
-        sub: [
-            { id: 'pricing-intro', label: 'Tổng quan' },
-            { id: 'formula', label: '2 công thức tính giá' },
-            { id: 'channels', label: 'Kênh OTA & Hoa hồng' },
-            { id: 'promos', label: 'Khuyến mãi & Stacking' },
-            { id: 'compare', label: 'So sánh giữa các kênh' },
-            { id: 'price-matrix', label: 'Bảng giá tổng hợp' },
-            { id: 'reverse', label: 'Tính ngược (BAR → NET)' },
-            { id: 'dp-export', label: 'Xuất CSV' },
-        ],
-    },
-    {
-        id: 'data', label: 'Quản lý dữ liệu', icon: <Database className="w-4 h-4" />,
-        sub: [
-            { id: 'upload', label: 'Import dữ liệu' },
-            { id: 'build-otb', label: 'Build OTB' },
-            { id: 'build-features', label: 'Build Features' },
-            { id: 'run-forecast', label: 'Run Forecast' },
-        ],
-    },
-];
-
-
-
-const TROUBLESHOOTING = [
-    { symptom: 'Trang trắng, không có dữ liệu', cause: 'Chưa upload file PMS', fix: 'Vào Upload, kéo thả file XML/CSV từ PMS', link: '/upload' },
-    { symptom: 'Upload thất bại', cause: 'Format file không đúng', fix: 'Dùng file XML hoặc CSV xuất từ PMS (Opera, RoomRaccoon, Cloudbeds)', link: '/upload' },
-    { symptom: 'Pickup hiện "N/A"', cause: 'Cần ít nhất 2 lần upload', fix: 'Upload thêm, chờ 7 ngày để có dữ liệu pickup', link: null },
-    { symptom: 'Forecast hiện "Ước lượng"', cause: 'Thiếu dữ liệu pickup', fix: 'Tiếp tục upload hàng ngày, sau 2 tuần sẽ có forecast chính xác', link: null },
-    { symptom: 'Giá quá cao / quá thấp', cause: 'Promotion stacking > 50%', fix: 'Giảm số lượng KM hoặc kiểm tra commission boosters', link: '/pricing' },
-    { symptom: 'Season "auto" chọn sai mùa', cause: 'Khoảng ngày Season chưa đúng', fix: 'Vào Config Season, kiểm tra date ranges', link: '/pricing' },
-];
-
 /* ═══════════════════════ MAIN PAGE ═══════════════════════ */
 
 export default function GuidePage() {
+    const t = useTranslations('guidePage');
+
+    const SECTIONS = useMemo(() => [
+        {
+            id: 'quickstart' as SectionId, label: t('navQuickStart'), icon: <Zap className="w-4 h-4" />,
+            sub: [
+                { id: 'morning-routine', label: t('subMorning') },
+                { id: 'steps', label: t('sub5Steps') },
+                { id: 'glossary-full', label: t('subGlossary') },
+                { id: 'faq', label: t('subFaq') },
+            ],
+        },
+        {
+            id: 'analytics' as SectionId, label: t('navRevenueMgmt'), icon: <BarChart3 className="w-4 h-4" />,
+            sub: [
+                { id: 'rm-intro', label: t('subRmIntro') },
+                { id: 'kpi', label: t('subKpi') },
+                { id: 'charts', label: t('subCharts') },
+                { id: 'rec-table', label: t('subRecTable') },
+                { id: 'dp-overview', label: t('subDynPricing') },
+                { id: 'dp-seasons', label: t('subSeasons') },
+                { id: 'dp-occ-tiers', label: t('subOccTiers') },
+                { id: 'terms', label: t('subTerms') },
+            ],
+        },
+        {
+            id: 'pricing' as SectionId, label: t('navOtaPricing'), icon: <Calculator className="w-4 h-4" />,
+            sub: [
+                { id: 'pricing-intro', label: t('subPricingIntro') },
+                { id: 'formula', label: t('subFormula') },
+                { id: 'channels', label: t('subChannels') },
+                { id: 'promos', label: t('subPromos') },
+                { id: 'compare', label: t('subCompare') },
+                { id: 'price-matrix', label: t('subPriceMatrix') },
+                { id: 'reverse', label: t('subReverse') },
+                { id: 'dp-export', label: t('subExport') },
+            ],
+        },
+        {
+            id: 'data' as SectionId, label: t('navDataMgmt'), icon: <Database className="w-4 h-4" />,
+            sub: [
+                { id: 'upload', label: t('subImport') },
+                { id: 'build-otb', label: t('subBuildOtb') },
+                { id: 'build-features', label: t('subBuildFeatures') },
+                { id: 'run-forecast', label: t('subRunForecast') },
+            ],
+        },
+    ], [t]);
+    const TROUBLESHOOTING = useMemo(() => [
+        { symptom: t('tsBlankPage'), cause: t('tsBlankCause'), fix: t('tsBlankFix'), link: '/upload' },
+        { symptom: t('tsUploadFail'), cause: t('tsUploadCause'), fix: t('tsUploadFix'), link: '/upload' },
+        { symptom: t('tsPickupNa'), cause: t('tsPickupCause'), fix: t('tsPickupFix'), link: null },
+        { symptom: t('tsForecastEst'), cause: t('tsForecastCause'), fix: t('tsForecastFix'), link: null },
+        { symptom: t('tsPriceBad'), cause: t('tsPriceCause'), fix: t('tsPriceFix'), link: '/pricing' },
+        { symptom: t('tsSeasonWrong'), cause: t('tsSeasonCause'), fix: t('tsSeasonFix'), link: '/pricing' },
+    ], [t]);
+
     const [activeSection, setActiveSection] = useState<SectionId>('quickstart');
     const [expandedSections, setExpandedSections] = useState<Set<SectionId>>(new Set(['quickstart']));
     const [searchQuery, setSearchQuery] = useState('');
@@ -132,18 +132,15 @@ export default function GuidePage() {
                     <div>
                         <div className="flex items-center gap-2">
                             <BookOpen className="w-5 h-5" />
-                            <h1 className="text-lg font-semibold">Hướng dẫn sử dụng RMS</h1>
+                            <h1 className="text-lg font-semibold">{t('title')}</h1>
                         </div>
-                        <p className="text-white/70 text-sm mt-1">
-                            Tài liệu hướng dẫn cho General Manager và nhân viên quản lý doanh thu
-                        </p>
+                        <p className="text-white/70 text-sm mt-1">{t('subtitle')}</p>
                     </div>
                     <button
                         onClick={() => setShowTroubleshooting(!showTroubleshooting)}
                         className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-sm transition-colors"
                     >
-                        <AlertTriangle className="w-4 h-4" />
-                        Lỗi & Khắc phục
+                        <AlertTriangle className="w-4 h-4" /> {t('troubleshooting')}
                     </button>
                 </div>
 
@@ -153,7 +150,7 @@ export default function GuidePage() {
                     <input
                         id="guide-search"
                         type="text"
-                        placeholder="Tìm thuật ngữ, hướng dẫn... (Ctrl+K)"
+                        placeholder={t('searchPlaceholder')}
                         value={searchQuery}
                         onChange={e => setSearchQuery(e.target.value)}
                         className="w-full pl-10 pr-4 py-2 bg-white/10 border border-white/20 rounded-lg text-sm text-white placeholder-white/40 outline-none focus:border-white/40 focus:bg-white/15 transition-colors"
@@ -162,9 +159,9 @@ export default function GuidePage() {
 
                 {/* Stats */}
                 <div className="flex flex-wrap gap-4 mt-3 text-xs text-white/60">
-                    <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> 5 phút mỗi sáng</span>
-                    <span className="flex items-center gap-1"><BookOpen className="w-3.5 h-3.5" /> 30+ thuật ngữ</span>
-                    <span className="flex items-center gap-1"><Layers className="w-3.5 h-3.5" /> 4 modules</span>
+                    <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {t('stat5min')}</span>
+                    <span className="flex items-center gap-1"><BookOpen className="w-3.5 h-3.5" /> {t('stat30terms')}</span>
+                    <span className="flex items-center gap-1"><Layers className="w-3.5 h-3.5" /> {t('stat4modules')}</span>
                 </div>
             </header>
 
@@ -173,27 +170,27 @@ export default function GuidePage() {
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 space-y-3">
                     <div className="flex items-center justify-between">
                         <h3 className="text-base font-semibold text-amber-800 flex items-center gap-2">
-                            <AlertTriangle className="w-5 h-5" /> Lỗi & Khắc phục
+                            <AlertTriangle className="w-5 h-5" /> {t('troubleshooting')}
                         </h3>
                         <button onClick={() => setShowTroubleshooting(false)} className="text-amber-400 hover:text-amber-600">
                             <XCircle className="w-5 h-5" />
                         </button>
                     </div>
                     <div className="grid gap-2">
-                        {TROUBLESHOOTING.filter(t =>
-                            !searchQuery || t.symptom.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            t.fix.toLowerCase().includes(searchQuery.toLowerCase())
-                        ).map((t, i) => (
+                        {TROUBLESHOOTING.filter(ts =>
+                            !searchQuery || ts.symptom.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            ts.fix.toLowerCase().includes(searchQuery.toLowerCase())
+                        ).map((ts, i) => (
                             <div key={i} className="bg-white rounded-lg p-3 border border-amber-100 flex items-start gap-3">
                                 <XCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
                                 <div className="flex-1 min-w-0">
-                                    <div className="font-medium text-gray-800 text-sm">{t.symptom}</div>
-                                    <p className="text-xs text-gray-500 mt-0.5">Nguyên nhân: {t.cause}</p>
-                                    <p className="text-xs text-emerald-700 mt-1">Cách sửa: {t.fix}</p>
+                                    <div className="font-medium text-gray-800 text-sm">{ts.symptom}</div>
+                                    <p className="text-xs text-gray-500 mt-0.5">{t('tsCauseLabel')}: {ts.cause}</p>
+                                    <p className="text-xs text-emerald-700 mt-1">{t('tsFixLabel')}: {ts.fix}</p>
                                 </div>
-                                {t.link && (
-                                    <Link href={t.link} className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1 shrink-0">
-                                        Mở <ExternalLink className="w-3 h-3" />
+                                {ts.link && (
+                                    <Link href={ts.link} className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1 shrink-0">
+                                        {t('tsOpenLabel')} <ExternalLink className="w-3 h-3" />
                                     </Link>
                                 )}
                             </div>
@@ -257,25 +254,25 @@ export default function GuidePage() {
 
                 {/* Content */}
                 <div className="flex-1 min-w-0 space-y-6">
-                    {activeSection === 'quickstart' && <QuickStartSection />}
+                    {activeSection === 'quickstart' && <QuickStartSection t={t} />}
                     {activeSection === 'analytics' && (
                         !tierLoading && !hasRevenueAccess ? (
                             <TierPaywall
-                                title="Quan ly Doanh thu"
-                                subtitle="Huong dan phan tich OTB, Pickup, Forecast va Revenue Management"
+                                title={t('paywallTitle')}
+                                subtitle={t('paywallSubtitle')}
                                 tierDisplayName="Superior"
                                 colorScheme="blue"
                                 features={[
-                                    { icon: <BarChart3 className="w-4 h-4" />, label: 'Hieu OTB (On The Books) va Pickup' },
-                                    { icon: <TrendingUp className="w-4 h-4" />, label: 'Phan tich Booking Pace & Remaining Supply' },
-                                    { icon: <DollarSign className="w-4 h-4" />, label: 'Chien luoc dinh gia theo demand' },
-                                    { icon: <CalendarDays className="w-4 h-4" />, label: 'Daily Actions workflow hang ngay' },
+                                    { icon: <BarChart3 className="w-4 h-4" />, label: t('paywallF1') },
+                                    { icon: <TrendingUp className="w-4 h-4" />, label: t('paywallF2') },
+                                    { icon: <DollarSign className="w-4 h-4" />, label: t('paywallF3') },
+                                    { icon: <CalendarDays className="w-4 h-4" />, label: t('paywallF4') },
                                 ]}
                             />
-                        ) : <AnalyticsSection />
+                        ) : <AnalyticsSection t={t} />
                     )}
-                    {activeSection === 'pricing' && <PricingSection />}
-                    {activeSection === 'data' && <DataSection />}
+                    {activeSection === 'pricing' && <PricingSection t={t} />}
+                    {activeSection === 'data' && <DataSection t={t} />}
                 </div>
             </div>
         </div>
@@ -337,7 +334,7 @@ function KPIExplain({ color, name, desc }: { color: string; name: string; desc: 
     return (
         <div className={`bg-${color}-50 p-4 rounded-xl border border-${color}-100`}>
             <div className={`text-${color}-700 font-medium mb-2`}>{name}</div>
-            <p className="text-sm text-gray-700"><strong>Ý nghĩa:</strong> {desc}</p>
+            <p className="text-sm text-gray-700"><strong>Meaning:</strong> {desc}</p>
         </div>
     );
 }
@@ -364,7 +361,7 @@ function Accordion({ title, children, defaultOpen = false }: { title: string; ch
 }
 
 /* ═══════════════════════ SECTION 1: BAT DAU NHANH ═══════════════════════ */
-function QuickStartSection() {
+function QuickStartSection({ t }: { t: ReturnType<typeof useTranslations> }) {
     const [dqStats, setDqStats] = useState<ValidationResult | null>(null);
     useEffect(() => { validateOTBData().then(setDqStats).catch(() => { }); }, []);
     const warningCount = dqStats?.stats.warningCount ?? 0;
@@ -376,16 +373,16 @@ function QuickStartSection() {
     return (
         <>
             {/* Layer 1: Morning Routine */}
-            <Card id="morning-routine" title="Routine 5 phút mỗi sáng" icon={<Clock className="w-5 h-5 text-blue-600" />}>
-                <p className="text-sm text-gray-600">Làm theo 6 bước này mỗi sáng để quản lý doanh thu hiệu quả:</p>
+            <Card id="morning-routine" title={t('morningTitle')} icon={<Clock className="w-5 h-5 text-blue-600" />}>
+                <p className="text-sm text-gray-600">{t('morningDesc')}</p>
                 <div className="flex flex-wrap items-center gap-2 mt-3">
                     {[
-                        { label: 'Export PMS', icon: <Download className="w-3.5 h-3.5" />, link: null },
-                        { label: 'Upload', icon: <Upload className="w-3.5 h-3.5" />, link: '/upload' },
-                        { label: 'Build dữ liệu', icon: <Database className="w-3.5 h-3.5" />, link: '/data' },
-                        { label: 'Xem Dashboard', icon: <BarChart3 className="w-3.5 h-3.5" />, link: '/dashboard' },
-                        { label: 'Accept/Override giá', icon: <CheckCircle2 className="w-3.5 h-3.5" />, link: '/dashboard' },
-                        { label: 'Cập nhật OTA', icon: <ExternalLink className="w-3.5 h-3.5" />, link: null },
+                        { label: t('morningExportPms'), icon: <Download className="w-3.5 h-3.5" />, link: null },
+                        { label: t('morningUpload'), icon: <Upload className="w-3.5 h-3.5" />, link: '/upload' },
+                        { label: t('morningBuildData'), icon: <Database className="w-3.5 h-3.5" />, link: '/data' },
+                        { label: t('morningViewDash'), icon: <BarChart3 className="w-3.5 h-3.5" />, link: '/dashboard' },
+                        { label: t('morningAcceptPrice'), icon: <CheckCircle2 className="w-3.5 h-3.5" />, link: '/dashboard' },
+                        { label: t('morningUpdateOta'), icon: <ExternalLink className="w-3.5 h-3.5" />, link: null },
                     ].map((step, i) => (
                         <span key={i} className="flex items-center gap-1">
                             {step.link ? (
@@ -401,47 +398,47 @@ function QuickStartSection() {
                         </span>
                     ))}
                 </div>
-                <Tip>Tổng thời gian: khoảng 5 phút. Upload xong, hệ thống tự động xử lý dữ liệu.</Tip>
+                <Tip>{t('morningTip')}</Tip>
             </Card>
 
             {/* Layer 2: 5 Steps */}
-            <Card id="steps" title="5 bước bắt đầu">
+            <Card id="steps" title={t('stepsTitle')}>
                 <div className="space-y-5">
-                    <Step n={1} title="Đăng nhập">
-                        <p className="text-sm text-gray-600">Sử dụng tài khoản Google được admin cấp. Sau khi đăng nhập, bạn sẽ thấy khách sạn được gán trong sidebar.</p>
-                        <Tip>Nếu chưa có quyền truy cập, liên hệ admin qua Zalo: 0778602953</Tip>
+                    <Step n={1} title={t('step1Title')}>
+                        <p className="text-sm text-gray-600" dangerouslySetInnerHTML={{ __html: t.raw('step1Desc') }} />
+                        <Tip>{t('step1Tip')}</Tip>
                     </Step>
                     <hr className="border-gray-100" />
-                    <Step n={2} title="Upload dữ liệu từ PMS">
-                        <p className="text-sm text-gray-600">Vào menu <strong>Upload</strong> &rarr; Kéo thả file XML hoặc CSV từ PMS (Opera, RoomRaccoon, Cloudbeds...).</p>
-                        <DeepLink href="/upload">Mở trang Upload</DeepLink>
-                        <Warn>Upload dữ liệu mỗi ngày (sáng) để có số liệu chính xác nhất.</Warn>
+                    <Step n={2} title={t('step2Title')}>
+                        <p className="text-sm text-gray-600" dangerouslySetInnerHTML={{ __html: t.raw('step2Desc') }} />
+                        <DeepLink href="/upload">{t('step2Link')}</DeepLink>
+                        <Warn>{t('step2Warn')}</Warn>
                     </Step>
                     <hr className="border-gray-100" />
-                    <Step n={3} title="Build dữ liệu (tự động)">
-                        <p className="text-sm text-gray-600">Vào menu <strong>Dữ liệu</strong> &rarr; Nhấn các nút theo thứ tự:</p>
-                        <Pipeline steps={['Build OTB', 'Build Features', 'Run Forecast']} />
-                        <DeepLink href="/data">Mở trang Dữ liệu</DeepLink>
+                    <Step n={3} title={t('step3Title')}>
+                        <p className="text-sm text-gray-600" dangerouslySetInnerHTML={{ __html: t.raw('step3Desc') }} />
+                        <Pipeline steps={[t('subBuildOtb'), t('subBuildFeatures'), t('subRunForecast')]} />
+                        <DeepLink href="/data">{t('step3Link')}</DeepLink>
                     </Step>
                     <hr className="border-gray-100" />
-                    <Step n={4} title="Xem Dashboard">
+                    <Step n={4} title={t('step4Title')}>
                         <ul className="space-y-1 text-gray-600 text-sm list-disc list-inside ml-2">
-                            <li><strong>KPI Cards:</strong> Rooms OTB, Remaining Supply, Pickup</li>
-                            <li><strong>Charts:</strong> Biểu đồ OTB theo ngày, so sánh năm trước</li>
-                            <li><strong>Price Table:</strong> Giá khuyến nghị cho từng ngày</li>
+                            <li dangerouslySetInnerHTML={{ __html: t.raw('step4Kpi') }} />
+                            <li dangerouslySetInnerHTML={{ __html: t.raw('step4Charts') }} />
+                            <li dangerouslySetInnerHTML={{ __html: t.raw('step4Price') }} />
                         </ul>
-                        <DeepLink href="/dashboard">Mở Dashboard</DeepLink>
+                        <DeepLink href="/dashboard">{t('step4Link')}</DeepLink>
                     </Step>
                     <hr className="border-gray-100" />
-                    <Step n={5} title="Ra Quyết định Giá">
+                    <Step n={5} title={t('step5Title')}>
                         <div className="grid grid-cols-2 gap-3 mt-2">
                             <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-center">
-                                <div className="font-medium text-emerald-700">Accept</div>
-                                <p className="text-xs text-gray-500 mt-1">Đồng ý với giá hệ thống đề xuất</p>
+                                <div className="font-medium text-emerald-700">{t('step5Accept')}</div>
+                                <p className="text-xs text-gray-500 mt-1">{t('step5AcceptDesc')}</p>
                             </div>
                             <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-center">
-                                <div className="font-medium text-amber-700">Override</div>
-                                <p className="text-xs text-gray-500 mt-1">Nhập giá theo ý mình</p>
+                                <div className="font-medium text-amber-700">{t('step5Override')}</div>
+                                <p className="text-xs text-gray-500 mt-1">{t('step5OverrideDesc')}</p>
                             </div>
                         </div>
                     </Step>
@@ -449,24 +446,24 @@ function QuickStartSection() {
             </Card>
 
             {/* Layer 3a: Full Glossary */}
-            <Card id="glossary-full" title="Thuật ngữ chuyên ngành" icon={<BookOpen className="w-5 h-5 text-blue-600" />}>
+            <Card id="glossary-full" title={t('glossaryTitle')} icon={<BookOpen className="w-5 h-5 text-blue-600" />}>
                 <table className="w-full text-sm">
-                    <thead className="bg-gray-100"><tr><th className="px-3 py-2 text-left text-gray-600">Thuật ngữ</th><th className="px-3 py-2 text-left text-gray-600">Giải thích</th></tr></thead>
+                    <thead className="bg-gray-100"><tr><th className="px-3 py-2 text-left text-gray-600">{t('glossaryTerm')}</th><th className="px-3 py-2 text-left text-gray-600">{t('glossaryDef')}</th></tr></thead>
                     <tbody className="text-gray-700">
                         {[
-                            ['OTB', 'On The Books — Số phòng/doanh thu đã được đặt'],
-                            ['ADR', 'Average Daily Rate — Giá phòng trung bình'],
-                            ['RevPAR', 'Revenue Per Available Room — Doanh thu/phòng khả dụng'],
-                            ['Occupancy (OCC)', 'Tỷ lệ lấp đầy — % phòng được bán'],
-                            ['Pickup', 'Lượng booking mới trong khoảng thời gian'],
-                            ['BAR', 'Best Available Rate — Giá gốc trên OTA (trước KM)'],
-                            ['NET', 'Giá thu về thực tế sau hoa hồng và KM'],
-                            ['Display Price', 'Giá khách thấy trên OTA (sau KM)'],
-                            ['STLY', 'Same Time Last Year — So sánh cùng kỳ năm trước'],
-                            ['Pace', 'Tốc độ bán phòng — so sánh với cùng kỳ'],
-                            ['Remaining Supply', 'Số phòng còn trống có thể bán'],
-                            ['Commission', 'Hoa hồng OTA thu (VD: Agoda 20%, Booking 18%)'],
-                            ['Stacking', 'Kết hợp nhiều KM cùng lúc (cộng dồn / luỹ tiến / chọn 1)'],
+                            ['OTB', t('glossOtb')],
+                            ['ADR', t('glossAdr')],
+                            ['RevPAR', t('glossRevpar')],
+                            ['Occupancy (OCC)', t('glossOcc')],
+                            ['Pickup', t('glossPickup')],
+                            ['BAR', t('glossBar')],
+                            ['NET', t('glossNet')],
+                            ['Display Price', t('glossDisplay')],
+                            ['STLY', t('glossStly')],
+                            ['Pace', t('glossPace')],
+                            ['Remaining Supply', t('glossRemaining')],
+                            ['Commission', t('glossCommission')],
+                            ['Stacking', t('glossStacking')],
                         ].map(([term, desc]) => (
                             <tr key={term} className="border-t border-gray-100"><td className="px-3 py-3 font-mono text-blue-600">{term}</td><td className="px-3 py-3">{desc}</td></tr>
                         ))}
@@ -475,30 +472,30 @@ function QuickStartSection() {
             </Card>
 
             {/* Layer 3b: FAQ / Common Issues */}
-            <Card id="faq" title="Lỗi hay gặp & FAQ" icon={<HelpCircle className="w-5 h-5 text-blue-600" />}>
+            <Card id="faq" title={t('faqTitle')} icon={<HelpCircle className="w-5 h-5 text-blue-600" />}>
                 <div className="space-y-3">
-                    <Accordion title="Data Quality: có cảnh báo không?" defaultOpen={warningCount > 0}>
-                        <p className="text-gray-600">{warningCount > 0 ? <>Phần lớn cảnh báo là <code className="bg-gray-100 px-1 rounded text-xs">PAST_STAY_DATE</code> — dữ liệu có các ngày lưu trú đã qua.</> : 'Tất cả dữ liệu đều hợp lệ.'}</p>
-                        {totalRows > 0 && <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-600 mt-2"><strong>Khách sạn của bạn:</strong> {totalRows.toLocaleString()} dòng OTB{pastCount > 0 && <>, trong đó {pastCount.toLocaleString()} dòng đã qua ({pastPct}%)</>}. Hoàn thiện: <strong>{completeness}%</strong>.</div>}
+                    <Accordion title={t('faqDqTitle')} defaultOpen={warningCount > 0}>
+                        <p className="text-gray-600">{warningCount > 0 ? <span dangerouslySetInnerHTML={{ __html: t.raw('faqDqWarnings') }} /> : t('faqDqClean')}</p>
+                        {totalRows > 0 && <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-600 mt-2"><strong>{t('faqDqStatsLabel')}:</strong> {totalRows.toLocaleString()} OTB rows{pastCount > 0 && <>, {t('faqDqPastOf')} {pastCount.toLocaleString()} ({pastPct}%)</>}. {t('faqDqCompletenessLabel')}: <strong>{completeness}%</strong>.</div>}
                     </Accordion>
-                    <Accordion title={`"Pickup TB: N/A" — Tại sao không hiện số?`}>
-                        <p><strong>Pickup</strong> = So sánh số phòng đặt hôm nay với 7 ngày trước. Cần ít nhất <strong>2 lần upload cách nhau &#8805; 7 ngày</strong>.</p>
+                    <Accordion title={t('faqPickupTitle')}>
+                        <p dangerouslySetInnerHTML={{ __html: t.raw('faqPickupDesc') }} />
                     </Accordion>
-                    <Accordion title={`Dự báo hiện "Ước lượng" — Có chính xác không?`}>
-                        <p>Khi chưa có đủ dữ liệu pickup, hệ thống dùng ước lượng sơ bộ. Sau <strong>&#8805; 2 lần upload cách nhau &#8805; 7 ngày</strong>, dự báo sẽ dựa trên pickup thực tế.</p>
+                    <Accordion title={t('faqForecastTitle')}>
+                        <p dangerouslySetInnerHTML={{ __html: t.raw('faqForecastDesc') }} />
                     </Accordion>
-                    <Accordion title="Upload xong nhưng không thấy data?">
-                        <p>Kiểm tra: (1) File đúng định dạng XML/CSV, (2) Chạy Build OTB &rarr; Build Features &rarr; Run Forecast, (3) Đợi vài giây để hệ thống xử lý.</p>
-                        <DeepLink href="/data">Mở trang Dữ liệu</DeepLink>
+                    <Accordion title={t('faqUploadTitle')}>
+                        <p>{t('faqUploadDesc')}</p>
+                        <DeepLink href="/data">{t('buildOtbLink')}</DeepLink>
                     </Accordion>
                 </div>
             </Card>
 
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 text-center">
-                <p className="text-blue-700 mb-3">Đã sẵn sàng? Bắt đầu ngay!</p>
+                <p className="text-blue-700 mb-3">{t('ctaReady')}</p>
                 <div className="flex flex-wrap justify-center gap-3">
-                    <Link href="/upload" className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"><Upload className="w-4 h-4" /> Upload dữ liệu</Link>
-                    <Link href="/dashboard" className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"><BarChart3 className="w-4 h-4" /> Xem Dashboard</Link>
+                    <Link href="/upload" className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"><Upload className="w-4 h-4" /> {t('ctaUpload')}</Link>
+                    <Link href="/dashboard" className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"><BarChart3 className="w-4 h-4" /> {t('ctaViewDash')}</Link>
                 </div>
             </div>
         </>
@@ -506,136 +503,136 @@ function QuickStartSection() {
 }
 
 /* ═══════════════════════ PLACEHOLDER SECTIONS (to be filled) ═══════════════════════ */
-function AnalyticsSection() {
+function AnalyticsSection({ t }: { t: ReturnType<typeof useTranslations> }) {
     return (
         <>
-            <Card id="rm-intro" title="Revenue Management là gì?" icon={<TrendingUp className="w-5 h-5 text-blue-600" />}>
-                <p className="text-gray-700">Revenue Management (RM) = <strong>bán đúng phòng, đúng giá, đúng thời điểm</strong> để tối ưu doanh thu. Hệ thống giúp bạn:</p>
+            <Card id="rm-intro" title={t('rmTitle')} icon={<TrendingUp className="w-5 h-5 text-blue-600" />}>
+                <p className="text-gray-700">{t.raw('rmDesc')}</p>
                 <div className="grid sm:grid-cols-3 gap-3 mt-3">
                     <div className="bg-blue-50 rounded-xl p-4 border border-blue-100 text-center">
                         <BarChart3 className="w-6 h-6 text-blue-600 mx-auto mb-2" />
-                        <div className="font-medium text-gray-800 text-sm">Theo dõi OTB</div>
-                        <p className="text-xs text-gray-500 mt-1">Bao nhiêu phòng đã đặt, bao nhiêu còn trống</p>
+                        <div className="font-medium text-gray-800 text-sm">{t('rmMonitor')}</div>
+                        <p className="text-xs text-gray-500 mt-1">{t('rmMonitorDesc')}</p>
                     </div>
                     <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100 text-center">
                         <TrendingUp className="w-6 h-6 text-emerald-600 mx-auto mb-2" />
-                        <div className="font-medium text-gray-800 text-sm">Dự báo Demand</div>
-                        <p className="text-xs text-gray-500 mt-1">Predict booking pace cho 30–90 ngày tới</p>
+                        <div className="font-medium text-gray-800 text-sm">{t('rmForecast')}</div>
+                        <p className="text-xs text-gray-500 mt-1">{t('rmForecastDesc')}</p>
                     </div>
                     <div className="bg-amber-50 rounded-xl p-4 border border-amber-100 text-center">
                         <DollarSign className="w-6 h-6 text-amber-600 mx-auto mb-2" />
-                        <div className="font-medium text-gray-800 text-sm">Khuyến nghị giá</div>
-                        <p className="text-xs text-gray-500 mt-1">Accept giá hệ thống hoặc Override theo ý mình</p>
+                        <div className="font-medium text-gray-800 text-sm">{t('rmPrice')}</div>
+                        <p className="text-xs text-gray-500 mt-1">{t('rmPriceDesc')}</p>
                     </div>
                 </div>
             </Card>
 
-            <Card id="kpi" title="Hôm nay đang bán tốt không?" icon={<BarChart3 className="w-5 h-5 text-blue-600" />}>
-                <p className="text-sm text-gray-600 mb-3">Dashboard hiển thị 4 thẻ KPI chính. Đọc theo câu hỏi GM hay hỏi:</p>
+            <Card id="kpi" title={t('kpiTitle')} icon={<BarChart3 className="w-5 h-5 text-blue-600" />}>
+                <p className="text-sm text-gray-600 mb-3">{t('kpiDesc')}</p>
                 <div className="grid sm:grid-cols-2 gap-4">
-                    <KPIExplain color="blue" name="Rooms OTB" desc="Số phòng đã đặt. VD: OTB = 45 nghĩa là bạn đã bán 45 phòng cho ngày đó." />
-                    <KPIExplain color="amber" name="Remaining Supply" desc="Số phòng còn trống. VD: Remaining = 15 nghĩa là còn 15 phòng cần bán." />
-                    <KPIExplain color="emerald" name="Pickup (7d)" desc="Số phòng mới đặt trong 7 ngày qua. Pickup = +8 là tốt (demand tăng)." />
-                    <KPIExplain color="purple" name="ADR" desc="Giá phòng trung bình. VD: ADR = 1.2M nghĩa là trung bình thu 1.2 triệu/phòng/đêm." />
+                    <KPIExplain color="blue" name="Rooms OTB" desc={t('kpiOtbDesc')} />
+                    <KPIExplain color="amber" name="Remaining Supply" desc={t('kpiRemDesc')} />
+                    <KPIExplain color="emerald" name="Pickup (7d)" desc={t('kpiPickupDesc')} />
+                    <KPIExplain color="purple" name="ADR" desc={t('kpiAdrDesc')} />
                 </div>
-                <DeepLink href="/dashboard">Mở Dashboard xem KPI</DeepLink>
+                <DeepLink href="/dashboard">{t('kpiOpenDash')}</DeepLink>
             </Card>
 
-            <Card id="charts" title="So với năm ngoái thì sao?" icon={<TrendingUp className="w-5 h-5 text-blue-600" />}>
-                <p className="text-sm text-gray-600 mb-3">Biểu đồ OTB giúp bạn so sánh hiệu suất với <strong>cùng kỳ năm trước (STLY)</strong>:</p>
+            <Card id="charts" title={t('chartsTitle')} icon={<TrendingUp className="w-5 h-5 text-blue-600" />}>
+                <p className="text-sm text-gray-600 mb-3" dangerouslySetInnerHTML={{ __html: t.raw('chartsDesc') }} />
                 <div className="bg-gray-50 rounded-xl p-4 space-y-3">
                     <div className="flex items-center gap-3">
                         <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                        <span className="text-sm"><strong>OTB năm nay</strong> — Đường xanh: số phòng đặt hiện tại</span>
+                        <span className="text-sm" dangerouslySetInnerHTML={{ __html: t.raw('chartsCurrent') }} />
                     </div>
                     <div className="flex items-center gap-3">
                         <div className="w-3 h-3 rounded-full bg-gray-300"></div>
-                        <span className="text-sm"><strong>STLY</strong> — Đường xám: số phòng cùng kỳ năm trước</span>
+                        <span className="text-sm" dangerouslySetInnerHTML={{ __html: t.raw('chartsStly') }} />
                     </div>
                     <div className="flex items-center gap-3">
                         <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
-                        <span className="text-sm"><strong>Pace</strong> — <span className="text-emerald-600">+5 OTB</span> = bán nhanh hơn năm trước 5 phòng</span>
+                        <span className="text-sm" dangerouslySetInnerHTML={{ __html: t.raw('chartsPace') }} />
                     </div>
                 </div>
-                <Tip>Nếu Pace âm (−), nghĩa là bán chậm hơn năm ngoái &rarr; cần xem xét giảm giá hoặc tăng KM.</Tip>
+                <Tip>{t('chartsTip')}</Tip>
             </Card>
 
-            <Card id="rec-table" title="Cách đọc bảng Giá Đề Xuất" icon={<DollarSign className="w-5 h-5 text-blue-600" />}>
-                <p className="text-sm text-gray-600 mb-4">Dashboard có <strong>2 chế độ xem</strong>: Duyệt nhanh (Quick) và Phân tích chi tiết (Detail).</p>
+            <Card id="rec-table" title={t('recTitle')} icon={<DollarSign className="w-5 h-5 text-blue-600" />}>
+                <p className="text-sm text-gray-600 mb-4" dangerouslySetInnerHTML={{ __html: t.raw('recDesc') }} />
 
                 {/* Quick vs Detail */}
                 <div className="grid sm:grid-cols-2 gap-3 mb-4">
                     <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                        <div className="font-medium text-blue-800 mb-2">⚡ Duyệt nhanh</div>
-                        <p className="text-xs text-gray-600">Xem nhanh giá đề xuất, hành động (Tăng/Giảm/Giữ), và bấm Duyệt.</p>
-                        <p className="text-xs text-gray-500 mt-1">Dành cho: GM duyệt giá hàng ngày (5 phút)</p>
+                        <div className="font-medium text-blue-800 mb-2">{t('recQuickTitle')}</div>
+                        <p className="text-xs text-gray-600">{t('recQuickDesc')}</p>
+                        <p className="text-xs text-gray-500 mt-1">{t('recQuickFor')}</p>
                     </div>
                     <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
-                        <div className="font-medium text-purple-800 mb-2">📊 Phân tích chi tiết</div>
-                        <p className="text-xs text-gray-600">Xem OTB, Còn, Dự báo, Anchor, ADR — hiểu TẠI SAO hệ thống đề xuất.</p>
-                        <p className="text-xs text-gray-500 mt-1">Dành cho: phân tích sâu, override giá</p>
+                        <div className="font-medium text-purple-800 mb-2">{t('recDetailTitle')}</div>
+                        <p className="text-xs text-gray-600">{t('recDetailDesc')}</p>
+                        <p className="text-xs text-gray-500 mt-1">{t('recDetailFor')}</p>
                     </div>
                 </div>
 
                 {/* Column explanation */}
-                <h3 className="text-sm font-semibold text-gray-800 mb-2">Ý nghĩa các cột (Phân tích chi tiết)</h3>
+                <h3 className="text-sm font-semibold text-gray-800 mb-2">{t('recColTitle')}</h3>
                 <table className="w-full text-sm mb-4">
                     <thead className="bg-gray-100">
                         <tr>
-                            <th className="px-3 py-2 text-left text-gray-600">Cột</th>
-                            <th className="px-3 py-2 text-left text-gray-600">Ý nghĩa</th>
-                            <th className="px-3 py-2 text-left text-gray-600">Nguồn</th>
+                            <th className="px-3 py-2 text-left text-gray-600">{t('recColH1')}</th>
+                            <th className="px-3 py-2 text-left text-gray-600">{t('recColH2')}</th>
+                            <th className="px-3 py-2 text-left text-gray-600">{t('recColH3')}</th>
                         </tr>
                     </thead>
                     <tbody className="text-gray-700">
-                        <tr className="border-t"><td className="px-3 py-2 font-medium">Ngày</td><td className="px-3 py-2">Ngày lưu trú (stay_date)</td><td className="px-3 py-2 text-xs text-gray-400">-</td></tr>
-                        <tr className="border-t"><td className="px-3 py-2 font-medium">OTB</td><td className="px-3 py-2">Số phòng đã đặt</td><td className="px-3 py-2 text-xs text-gray-400">daily_otb</td></tr>
-                        <tr className="border-t"><td className="px-3 py-2 font-medium">Còn</td><td className="px-3 py-2">Phòng còn trống (capacity – OTB)</td><td className="px-3 py-2 text-xs text-gray-400">tính toán</td></tr>
-                        <tr className="border-t"><td className="px-3 py-2 font-medium">D.Báo</td><td className="px-3 py-2">Nhu cầu dự báo (remaining demand từ ML)</td><td className="px-3 py-2 text-xs text-gray-400">demand_forecast</td></tr>
-                        <tr className="border-t bg-blue-50"><td className="px-3 py-2 font-medium">Anchor</td><td className="px-3 py-2"><strong>Giá neo</strong> — giá GM đang chọn bán</td><td className="px-3 py-2 text-xs text-gray-400">last accepted hoặc rack</td></tr>
-                        <tr className="border-t bg-blue-50"><td className="px-3 py-2 font-medium text-gray-400 text-xs pl-6">ADR (nhỏ)</td><td className="px-3 py-2 text-xs text-gray-500">Giá bán trung bình thực tế (tham khảo)</td><td className="px-3 py-2 text-xs text-gray-400">revenue / rooms</td></tr>
-                        <tr className="border-t bg-emerald-50"><td className="px-3 py-2 font-medium">Đề Xuất</td><td className="px-3 py-2"><strong>Giá hệ thống khuyến nghị</strong></td><td className="px-3 py-2 text-xs text-gray-400">pricing engine</td></tr>
-                        <tr className="border-t"><td className="px-3 py-2 font-medium">Hành Động</td><td className="px-3 py-2">Tăng / Giảm / Giữ / Ngừng bán</td><td className="px-3 py-2 text-xs text-gray-400">so sánh đề xuất vs anchor</td></tr>
-                        <tr className="border-t"><td className="px-3 py-2 font-medium">Lý Do</td><td className="px-3 py-2">Giải thích: &quot;OTB X%, dự phóng Y%&quot;</td><td className="px-3 py-2 text-xs text-gray-400">pricing engine</td></tr>
+                        <tr className="border-t"><td className="px-3 py-2 font-medium">Date</td><td className="px-3 py-2">{t('recDate')}</td><td className="px-3 py-2 text-xs text-gray-400">-</td></tr>
+                        <tr className="border-t"><td className="px-3 py-2 font-medium">OTB</td><td className="px-3 py-2">{t('recOtb')}</td><td className="px-3 py-2 text-xs text-gray-400">daily_otb</td></tr>
+                        <tr className="border-t"><td className="px-3 py-2 font-medium">Remaining</td><td className="px-3 py-2">{t('recRemaining')}</td><td className="px-3 py-2 text-xs text-gray-400">calculated</td></tr>
+                        <tr className="border-t"><td className="px-3 py-2 font-medium">Forecast</td><td className="px-3 py-2">{t('recForecast')}</td><td className="px-3 py-2 text-xs text-gray-400">demand_forecast</td></tr>
+                        <tr className="border-t bg-blue-50"><td className="px-3 py-2 font-medium">Anchor</td><td className="px-3 py-2" dangerouslySetInnerHTML={{ __html: t.raw('recAnchor') }} /><td className="px-3 py-2 text-xs text-gray-400">{t('recAnchorSrc')}</td></tr>
+                        <tr className="border-t bg-blue-50"><td className="px-3 py-2 font-medium text-gray-400 text-xs pl-6">ADR (small)</td><td className="px-3 py-2 text-xs text-gray-500">{t('recAdrSmall')}</td><td className="px-3 py-2 text-xs text-gray-400">revenue / rooms</td></tr>
+                        <tr className="border-t bg-emerald-50"><td className="px-3 py-2 font-medium">Suggested</td><td className="px-3 py-2" dangerouslySetInnerHTML={{ __html: t.raw('recSuggested') }} /><td className="px-3 py-2 text-xs text-gray-400">pricing engine</td></tr>
+                        <tr className="border-t"><td className="px-3 py-2 font-medium">Action</td><td className="px-3 py-2">{t('recAction')}</td><td className="px-3 py-2 text-xs text-gray-400">compare suggested vs anchor</td></tr>
+                        <tr className="border-t"><td className="px-3 py-2 font-medium">Reason</td><td className="px-3 py-2">{t('recReason')}</td><td className="px-3 py-2 text-xs text-gray-400">pricing engine</td></tr>
                     </tbody>
                 </table>
 
                 {/* OTB% vs Projected OCC */}
-                <Accordion title="OTB% vs Dự phóng% — khác nhau thế nào?" defaultOpen>
+                <Accordion title={t('accOtbTitle')} defaultOpen>
                     <div className="space-y-2">
                         <div className="flex items-start gap-3">
                             <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium shrink-0 mt-0.5">OTB%</span>
-                            <span className="text-sm">Số phòng đã đặt hiện tại / tổng phòng. <strong>Đây là thực tế</strong>, không dự đoán.</span>
+                            <span className="text-sm" dangerouslySetInnerHTML={{ __html: t.raw('accOtbDesc') }} />
                         </div>
                         <div className="flex items-start gap-3">
-                            <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-medium shrink-0 mt-0.5">Dự phóng%</span>
-                            <span className="text-sm">Projected OCC = (OTB – huỷ dự kiến + booking mới dự kiến) / tổng phòng. <strong>Đây là dự đoán</strong> (có thể sai).</span>
+                            <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-medium shrink-0 mt-0.5">Projected%</span>
+                            <span className="text-sm" dangerouslySetInnerHTML={{ __html: t.raw('accProjDesc') }} />
                         </div>
                         <div className="bg-gray-50 rounded-lg p-3 text-xs">
-                            <p className="font-mono">VD: OTB = 162/270 = <strong>60%</strong>, dự phóng = (162 − 49 + 0) / 270 = <strong>42%</strong></p>
-                            <p className="text-gray-500 mt-1">Nghĩa là: hiện tại 60% phòng đã book, nhưng dự kiến cuối cùng chỉ còn 42% (do cancel).</p>
+                            <p className="font-mono" dangerouslySetInnerHTML={{ __html: t.raw('accOtbExample') }} />
+                            <p className="text-gray-500 mt-1">{t('accOtbMeaning')}</p>
                         </div>
                     </div>
                 </Accordion>
 
                 {/* Anchor explanation */}
-                <Accordion title="Anchor là gì? Tại sao không dùng ADR?">
+                <Accordion title={t('accAnchorTitle')}>
                     <div className="space-y-2">
-                        <p><strong>Anchor</strong> = giá GM đang chọn bán (intention signal):</p>
+                        <p dangerouslySetInnerHTML={{ __html: t.raw('accAnchorDesc') }} />
                         <div className="bg-gray-50 rounded-lg p-3 text-xs space-y-1">
-                            <p>1. <strong>Ưu tiên 1:</strong> Giá đã duyệt/override gần nhất cho ngày đó (last accepted)</p>
-                            <p>2. <strong>Ưu tiên 2:</strong> Rack rate = Base Rate × Season (nếu chưa có decision)</p>
+                            <p dangerouslySetInnerHTML={{ __html: t.raw('accAnchorP1') }} />
+                            <p dangerouslySetInnerHTML={{ __html: t.raw('accAnchorP2') }} />
                         </div>
-                        <p className="text-sm"><strong>ADR</strong> (Average Daily Rate) = giá bán trung bình thực tế. Đây là <em>outcome signal</em> — bị nhiễu bởi room type mix, discount, OTA channel. <strong>Không dùng ADR làm gốc quyết định</strong> vì sẽ gây feedback loop (ADR cao → tăng giá → ADR cao hơn → xoắn ốc).</p>
-                        <Tip>ADR hiện dưới Anchor dưới dạng chữ nhỏ để tham khảo. Nếu ADR lệch Anchor {'>'} 30%, banner vàng sẽ cảnh báo.</Tip>
+                        <p className="text-sm" dangerouslySetInnerHTML={{ __html: t.raw('accAdrExplain') }} />
+                        <Tip>{t('accAdrTip')}</Tip>
                     </div>
                 </Accordion>
 
                 {/* How engine decides */}
-                <Accordion title="Hệ thống quyết định tăng/giảm giá thế nào?">
+                <Accordion title={t('accEngineTitle')}>
                     <div className="space-y-3">
-                        <p className="text-sm">Pricing Engine dùng <strong>Anchor + Projected OCC</strong> (không phải ADR):</p>
-                        <Pipeline steps={['Chọn Anchor', 'Tính Projected OCC', 'Xác định Zone', 'Áp multiplier', 'Guardrails']} />
+                        <p className="text-sm" dangerouslySetInnerHTML={{ __html: t.raw('accEngineDesc') }} />
+                        <Pipeline steps={['Select Anchor', 'Calculate Projected OCC', 'Determine Zone', 'Apply Multiplier', 'Guardrails']} />
                         <div className="bg-gray-50 rounded-lg p-3 text-xs font-mono space-y-1">
                             <p>finalOcc = (OTB − expectedCxl + expectedNew) / capacity</p>
                             <p>pressure = finalOcc / 0.40 (breakpoint)</p>
@@ -643,131 +640,131 @@ function AnalyticsSection() {
                             <p>recommended = clamp(recommended, min_rate, max_rate)</p>
                         </div>
 
-                        <h4 className="font-medium text-gray-800 text-sm mt-2">Bảng Zone</h4>
+                        <h4 className="font-medium text-gray-800 text-sm mt-2">{t('accEngineZone')}</h4>
                         <table className="w-full text-xs">
                             <thead className="bg-gray-100">
                                 <tr>
-                                    <th className="px-2 py-1.5 text-left">Projected OCC</th>
+                                    <th className="px-2 py-1.5 text-left">{t('accEngineZoneH1')}</th>
                                     <th className="px-2 py-1.5 text-center">Zone</th>
-                                    <th className="px-2 py-1.5 text-center">Hệ số</th>
-                                    <th className="px-2 py-1.5 text-left">Hành động</th>
+                                    <th className="px-2 py-1.5 text-center">Multiplier</th>
+                                    <th className="px-2 py-1.5 text-left">Action</th>
                                 </tr>
                             </thead>
                             <tbody className="text-gray-700">
-                                <tr className="border-t bg-red-50"><td className="px-2 py-1.5">{'<'} 10%</td><td className="px-2 py-1.5 text-center text-red-600 font-medium">DISTRESS</td><td className="px-2 py-1.5 text-center font-mono">×0.85</td><td className="px-2 py-1.5">Giảm mạnh</td></tr>
-                                <tr className="border-t bg-amber-50"><td className="px-2 py-1.5">10–24%</td><td className="px-2 py-1.5 text-center text-amber-600 font-medium">SOFT</td><td className="px-2 py-1.5 text-center font-mono">×0.90–0.95</td><td className="px-2 py-1.5">Giảm nhẹ</td></tr>
-                                <tr className="border-t"><td className="px-2 py-1.5">24–48%</td><td className="px-2 py-1.5 text-center text-gray-600 font-medium">NORMAL</td><td className="px-2 py-1.5 text-center font-mono">×0.95–1.00</td><td className="px-2 py-1.5">Giữ giá</td></tr>
-                                <tr className="border-t bg-blue-50"><td className="px-2 py-1.5">48–80%</td><td className="px-2 py-1.5 text-center text-blue-600 font-medium">STRONG</td><td className="px-2 py-1.5 text-center font-mono">×1.00–1.15</td><td className="px-2 py-1.5">Tăng</td></tr>
-                                <tr className="border-t bg-purple-50"><td className="px-2 py-1.5">{'>'} 80%</td><td className="px-2 py-1.5 text-center text-purple-600 font-medium">SURGE</td><td className="px-2 py-1.5 text-center font-mono">×1.15–1.25</td><td className="px-2 py-1.5">Tăng mạnh</td></tr>
+                                <tr className="border-t bg-red-50"><td className="px-2 py-1.5">{'<'} 10%</td><td className="px-2 py-1.5 text-center text-red-600 font-medium">DISTRESS</td><td className="px-2 py-1.5 text-center font-mono">×0.85</td><td className="px-2 py-1.5">{t('zoneDistress')}</td></tr>
+                                <tr className="border-t bg-amber-50"><td className="px-2 py-1.5">10–24%</td><td className="px-2 py-1.5 text-center text-amber-600 font-medium">SOFT</td><td className="px-2 py-1.5 text-center font-mono">×0.90–0.95</td><td className="px-2 py-1.5">{t('zoneSoft')}</td></tr>
+                                <tr className="border-t"><td className="px-2 py-1.5">24–48%</td><td className="px-2 py-1.5 text-center text-gray-600 font-medium">NORMAL</td><td className="px-2 py-1.5 text-center font-mono">×0.95–1.00</td><td className="px-2 py-1.5">{t('zoneNormal')}</td></tr>
+                                <tr className="border-t bg-blue-50"><td className="px-2 py-1.5">48–80%</td><td className="px-2 py-1.5 text-center text-blue-600 font-medium">STRONG</td><td className="px-2 py-1.5 text-center font-mono">×1.00–1.15</td><td className="px-2 py-1.5">{t('zoneStrong')}</td></tr>
+                                <tr className="border-t bg-purple-50"><td className="px-2 py-1.5">{'>'} 80%</td><td className="px-2 py-1.5 text-center text-purple-600 font-medium">SURGE</td><td className="px-2 py-1.5 text-center font-mono">×1.15–1.25</td><td className="px-2 py-1.5">{t('zoneSurge')}</td></tr>
                             </tbody>
                         </table>
                     </div>
                 </Accordion>
 
                 {/* ADR sanity banner */}
-                <Accordion title="Banner vàng 'ADR lệch lớn' nghĩa là gì?">
-                    <p className="text-sm">Khi nhiều ngày có ADR lệch {'>'} 30% so với Anchor, hệ thống cảnh báo:</p>
+                <Accordion title={t('accAdrBannerTitle')}>
+                    <p className="text-sm">{t('accAdrBannerDesc')}</p>
                     <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-2 text-xs text-amber-800">
-                        ⚠️ ADR lệch lớn: X ngày có ADR lệch {'>'} 30% so với giá anchor. Kiểm tra giá đã duyệt hoặc cập nhật Base Rate trong Settings.
+                        ⚠️ Large ADR Deviation: X days have ADR deviating {'>'} 30% from anchor price. Check approved prices or update Base Rate in Settings.
                     </div>
-                    <p className="text-sm mt-2"><strong>Nguyên nhân:</strong> Có thể do KM OTA quá nhiều, room type mix, hoặc Base Rate trong Settings chưa cập nhật.</p>
-                    <p className="text-sm"><strong>Hành động:</strong> Kiểm tra Settings → Base Rate, hoặc review các quyết định giá đã duyệt.</p>
+                    <p className="text-sm mt-2" dangerouslySetInnerHTML={{ __html: t.raw('accAdrBannerCause') }} />
+                    <p className="text-sm" dangerouslySetInnerHTML={{ __html: t.raw('accAdrBannerAction') }} />
                 </Accordion>
 
                 {/* When to override */}
-                <Accordion title="Khi nào GM nên Override giá?">
+                <Accordion title={t('accOverrideTitle')}>
                     <div className="space-y-2 text-sm">
-                        <p>Hệ thống đề xuất giá tự động, nhưng GM có quyền Override khi:</p>
+                        <p>{t('accOverrideDesc')}</p>
                         <ul className="list-disc list-inside space-y-1 text-gray-600 ml-2">
-                            <li><strong>Sự kiện đặc biệt</strong> mà hệ thống chưa biết (VIP group, event)</li>
-                            <li><strong>ADR {'>'} Anchor + 30%</strong> → thị trường trả giá cao hơn, cân nhắc tăng Anchor</li>
-                            <li><strong>ADR {'<'} Anchor − 30%</strong> → có thể đang xả discount nhiều quá</li>
-                            <li><strong>Competitor</strong> thay đổi giá đột ngột (chưa có rate shopper tích hợp)</li>
+                            <li dangerouslySetInnerHTML={{ __html: t.raw('accOverride1') }} />
+                            <li dangerouslySetInnerHTML={{ __html: t.raw('accOverride2') }} />
+                            <li dangerouslySetInnerHTML={{ __html: t.raw('accOverride3') }} />
+                            <li dangerouslySetInnerHTML={{ __html: t.raw('accOverride4') }} />
                         </ul>
-                        <Tip>Rule vận hành: GM duyệt theo Anchor-based recommendation; ADR chỉ để xác nhận thị trường chấp nhận mức đó hay không (sanity check).</Tip>
+                        <Tip>{t('accOverrideTip')}</Tip>
                     </div>
                 </Accordion>
 
-                <DeepLink href="/dashboard">Mở Dashboard</DeepLink>
+                <DeepLink href="/dashboard">{t('forecastLink')}</DeepLink>
             </Card>
 
             {/* Dynamic Pricing subsection */}
-            <Card id="dp-overview" title="Giá Linh Hoạt (Dynamic Pricing)" icon={<Layers className="w-5 h-5 text-blue-600" />}>
-                <p className="text-gray-700">Giá Linh Hoạt tự động điều chỉnh giá theo <strong>3 yếu tố</strong>:</p>
+            <Card id="dp-overview" title={t('dpTitle')} icon={<Layers className="w-5 h-5 text-blue-600" />}>
+                <p className="text-gray-700" dangerouslySetInnerHTML={{ __html: t.raw('dpDesc') }} />
                 <div className="flex flex-wrap items-center gap-2 mt-3">
-                    <span className="px-3 py-1.5 bg-purple-50 text-purple-700 rounded-lg text-sm border border-purple-200">Mùa (Season)</span>
+                    <span className="px-3 py-1.5 bg-purple-50 text-purple-700 rounded-lg text-sm border border-purple-200">{t('dpSeason')}</span>
                     <span className="text-gray-400">&times;</span>
-                    <span className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-sm border border-blue-200">OCC% (Bậc công suất)</span>
+                    <span className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-sm border border-blue-200">{t('dpOccTier')}</span>
                     <span className="text-gray-400">=</span>
-                    <span className="px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-sm border border-emerald-200 font-medium">Giá NET</span>
+                    <span className="px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-sm border border-emerald-200 font-medium">{t('dpNetPrice')}</span>
                 </div>
                 <div className="bg-gray-50 rounded-xl p-4 text-sm mt-3">
-                    <p className="font-mono text-center text-lg">NET động = NET cơ sở (season) &times; Multiplier (OCC tier)</p>
-                    <p className="text-gray-600 mt-2 text-center">VD: Normal Season NET = 1.200.000 &times; 1.10 (OCC 50%) = <strong>1.320.000đ</strong></p>
+                    <p className="font-mono text-center text-lg">{t('dpFormula')}</p>
+                    <p className="text-gray-600 mt-2 text-center" dangerouslySetInnerHTML={{ __html: t.raw('dpExample') }} />
                 </div>
-                <DeepLink href="/pricing">Mở tab Giá Linh Hoạt</DeepLink>
+                <DeepLink href="/pricing">{t('dpOpenLink')}</DeepLink>
             </Card>
 
-            <Card id="dp-seasons" title="Mùa (Seasons)" icon={<CalendarDays className="w-5 h-5 text-blue-600" />}>
-                <p className="text-gray-700 mb-3">Season quyết định <strong>giá NET cơ sở</strong>. 3 loại mùa:</p>
+            <Card id="dp-seasons" title={t('seasonsTitle')} icon={<CalendarDays className="w-5 h-5 text-blue-600" />}>
+                <p className="text-gray-700 mb-3" dangerouslySetInnerHTML={{ __html: t.raw('seasonsDesc') }} />
                 <table className="w-full text-sm mb-4">
                     <thead className="bg-gray-100">
                         <tr>
-                            <th className="px-3 py-2 text-left text-gray-600">Season</th>
-                            <th className="px-3 py-2 text-center text-gray-600">Mức giá</th>
-                            <th className="px-3 py-2 text-left text-gray-600">Ví dụ</th>
-                            <th className="px-3 py-2 text-right text-gray-600">NET cơ sở</th>
+                            <th className="px-3 py-2 text-left text-gray-600">{t('seasonH1')}</th>
+                            <th className="px-3 py-2 text-center text-gray-600">{t('seasonH2')}</th>
+                            <th className="px-3 py-2 text-left text-gray-600">{t('seasonH3')}</th>
+                            <th className="px-3 py-2 text-right text-gray-600">Base NET</th>
                         </tr>
                     </thead>
                     <tbody className="text-gray-700">
-                        <tr className="border-t"><td className="px-3 py-3"><span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-xs mr-1">P1</span> Normal</td><td className="px-3 py-3 text-center">Cơ bản</td><td className="px-3 py-3">Ngày thường, mùa thấp</td><td className="px-3 py-3 text-right font-mono">1.200.000đ</td></tr>
-                        <tr className="border-t bg-amber-50"><td className="px-3 py-3"><span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded text-xs mr-1">P2</span> High</td><td className="px-3 py-3 text-center">Cao</td><td className="px-3 py-3">Cuối tuần, hè, sự kiện</td><td className="px-3 py-3 text-right font-mono">1.500.000đ</td></tr>
-                        <tr className="border-t bg-red-50"><td className="px-3 py-3"><span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-xs mr-1">P3</span> Holiday</td><td className="px-3 py-3 text-center">Cao nhất</td><td className="px-3 py-3">Tết, Noel, 30/4, 2/9</td><td className="px-3 py-3 text-right font-mono">2.000.000đ</td></tr>
+                        <tr className="border-t"><td className="px-3 py-3"><span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-xs mr-1">P1</span> {t('seasonNormal')}</td><td className="px-3 py-3 text-center">{t('seasonNormalLvl')}</td><td className="px-3 py-3">{t('seasonNormalEx')}</td><td className="px-3 py-3 text-right font-mono">1.200.000đ</td></tr>
+                        <tr className="border-t bg-amber-50"><td className="px-3 py-3"><span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded text-xs mr-1">P2</span> {t('seasonHigh')}</td><td className="px-3 py-3 text-center">{t('seasonHighLvl')}</td><td className="px-3 py-3">{t('seasonHighEx')}</td><td className="px-3 py-3 text-right font-mono">1.500.000đ</td></tr>
+                        <tr className="border-t bg-red-50"><td className="px-3 py-3"><span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-xs mr-1">P3</span> {t('seasonHoliday')}</td><td className="px-3 py-3 text-center">{t('seasonHolidayLvl')}</td><td className="px-3 py-3">{t('seasonHolidayEx')}</td><td className="px-3 py-3 text-right font-mono">2.000.000đ</td></tr>
                     </tbody>
                 </table>
                 <div className="space-y-2">
-                    <Step n={1} title="Bấm Config trên thanh điều khiển"><p className="text-sm text-gray-600">Panel &quot;Mùa (Seasons)&quot; sẽ hiện ra bên trái.</p></Step>
-                    <Step n={2} title="Tạo Season"><p className="text-sm text-gray-600">Bấm nút <strong>+ NORMAL</strong>, <strong>+ HIGH</strong>, hoặc <strong>+ HOLIDAY</strong> để tạo season mới.</p></Step>
-                    <Step n={3} title="Thêm khoảng ngày"><p className="text-sm text-gray-600">Mở season &rarr; <strong>+ Thêm</strong> khoảng ngày &rarr; chọn ngày bắt đầu và kết thúc.</p></Step>
-                    <Step n={4} title="Thiết lập NET rates"><p className="text-sm text-gray-600">Trong mỗi season, nhập giá NET mong muốn cho từng hạng phòng.</p></Step>
-                    <Step n={5} title="Lưu"><p className="text-sm text-gray-600">Bấm <strong>Lưu</strong> để áp dụng. Bảng giá sẽ tự cập nhật.</p></Step>
+                    <Step n={1} title={t('seasonStep1')}><p className="text-sm text-gray-600">{t('seasonStep1Desc')}</p></Step>
+                    <Step n={2} title={t('seasonStep2')}><p className="text-sm text-gray-600">{t.raw('seasonStep2Desc')}</p></Step>
+                    <Step n={3} title={t('seasonStep3')}><p className="text-sm text-gray-600">{t.raw('seasonStep3Desc')}</p></Step>
+                    <Step n={4} title={t('seasonStep4')}><p className="text-sm text-gray-600">{t('seasonStep4Desc')}</p></Step>
+                    <Step n={5} title={t('seasonStep5')}><p className="text-sm text-gray-600">{t.raw('seasonStep5Desc')}</p></Step>
                 </div>
-                <Warn><strong>Quy tắc ưu tiên (auto-detect):</strong> Nếu 1 ngày thuộc nhiều season, hệ thống chọn season có <strong>priority cao nhất</strong>: Holiday (P3) {'>'} High (P2) {'>'} Normal (P1).</Warn>
+                <Warn><span dangerouslySetInnerHTML={{ __html: t.raw('seasonPriority') }} /></Warn>
             </Card>
 
-            <Card id="dp-occ-tiers" title="Bậc OCC (Occupancy Tiers)" icon={<Percent className="w-5 h-5 text-blue-600" />}>
-                <p className="text-gray-700 mb-3"><strong>OCC Tier</strong> là bậc thang giá theo công suất phòng. Mỗi bậc có <strong>hệ số nhân (multiplier)</strong>.</p>
+            <Card id="dp-occ-tiers" title={t('occTitle')} icon={<Percent className="w-5 h-5 text-blue-600" />}>
+                <p className="text-gray-700 mb-3" dangerouslySetInnerHTML={{ __html: t.raw('occDesc') }} />
                 <table className="w-full text-sm mb-4">
                     <thead className="bg-gray-100">
                         <tr>
-                            <th className="px-3 py-2 text-left text-gray-600">Bậc</th>
+                            <th className="px-3 py-2 text-left text-gray-600">{t('occH1')}</th>
                             <th className="px-3 py-2 text-center text-gray-600">OCC%</th>
-                            <th className="px-3 py-2 text-center text-gray-600">Hệ số</th>
-                            <th className="px-3 py-2 text-left text-gray-600">Ý nghĩa</th>
+                            <th className="px-3 py-2 text-center text-gray-600">Multiplier</th>
+                            <th className="px-3 py-2 text-left text-gray-600">{t('occH4')}</th>
                             <th className="px-3 py-2 text-right text-gray-600">NET (VD)</th>
                         </tr>
                     </thead>
                     <tbody className="text-gray-700">
-                        <tr className="border-t"><td className="px-3 py-3">#0</td><td className="px-3 py-3 text-center">0–35%</td><td className="px-3 py-3 text-center font-mono">&times;1.00</td><td className="px-3 py-3 text-gray-500">Phòng còn nhiều &rarr; giá gốc</td><td className="px-3 py-3 text-right font-mono">1.200.000đ</td></tr>
-                        <tr className="border-t bg-blue-50"><td className="px-3 py-3">#1</td><td className="px-3 py-3 text-center">35–65%</td><td className="px-3 py-3 text-center font-mono">&times;1.10</td><td className="px-3 py-3 text-gray-500">Trung bình &rarr; tăng 10%</td><td className="px-3 py-3 text-right font-mono">1.320.000đ</td></tr>
-                        <tr className="border-t bg-amber-50"><td className="px-3 py-3">#2</td><td className="px-3 py-3 text-center">65–85%</td><td className="px-3 py-3 text-center font-mono">&times;1.20</td><td className="px-3 py-3 text-gray-500">Gần kín &rarr; tăng 20%</td><td className="px-3 py-3 text-right font-mono">1.440.000đ</td></tr>
-                        <tr className="border-t bg-red-50"><td className="px-3 py-3">#3</td><td className="px-3 py-3 text-center">{'>'} 85%</td><td className="px-3 py-3 text-center font-mono">&times;1.30</td><td className="px-3 py-3 text-gray-500">Sắp hết phòng &rarr; tăng 30%</td><td className="px-3 py-3 text-right font-mono">1.560.000đ</td></tr>
+                        <tr className="border-t"><td className="px-3 py-3">#0</td><td className="px-3 py-3 text-center">0–35%</td><td className="px-3 py-3 text-center font-mono">&times;1.00</td><td className="px-3 py-3 text-gray-500">{t('occT0')}</td><td className="px-3 py-3 text-right font-mono">1.200.000đ</td></tr>
+                        <tr className="border-t bg-blue-50"><td className="px-3 py-3">#1</td><td className="px-3 py-3 text-center">35–65%</td><td className="px-3 py-3 text-center font-mono">&times;1.10</td><td className="px-3 py-3 text-gray-500">{t('occT1')}</td><td className="px-3 py-3 text-right font-mono">1.320.000đ</td></tr>
+                        <tr className="border-t bg-amber-50"><td className="px-3 py-3">#2</td><td className="px-3 py-3 text-center">65–85%</td><td className="px-3 py-3 text-center font-mono">&times;1.20</td><td className="px-3 py-3 text-gray-500">{t('occT2')}</td><td className="px-3 py-3 text-right font-mono">1.440.000đ</td></tr>
+                        <tr className="border-t bg-red-50"><td className="px-3 py-3">#3</td><td className="px-3 py-3 text-center">{'>'} 85%</td><td className="px-3 py-3 text-center font-mono">&times;1.30</td><td className="px-3 py-3 text-gray-500">{t('occT3')}</td><td className="px-3 py-3 text-right font-mono">1.560.000đ</td></tr>
                     </tbody>
                 </table>
-                <Tip>OCC% được tính tự động từ dữ liệu OTB: <strong>OCC = Số phòng đã đặt / Tổng phòng khách sạn</strong>. Nếu chưa có dữ liệu, bạn có thể nhập tay.</Tip>
+                <Tip><span dangerouslySetInnerHTML={{ __html: t.raw('occTip') }} /></Tip>
             </Card>
 
-            <Card id="terms" title="Thuật ngữ Revenue Management" icon={<BookOpen className="w-5 h-5 text-blue-600" />}>
+            <Card id="terms" title={t('termsTitle')} icon={<BookOpen className="w-5 h-5 text-blue-600" />}>
                 <div className="grid sm:grid-cols-2 gap-3">
                     {[
-                        { term: 'OTB', desc: 'On The Books — Tổng số phòng/doanh thu đã đặt' },
-                        { term: 'ADR', desc: 'Average Daily Rate — Giá phòng trung bình mỗi đêm' },
-                        { term: 'RevPAR', desc: 'Revenue Per Available Room — Doanh thu trên mỗi phòng khả dụng' },
-                        { term: 'OCC%', desc: 'Occupancy — Tỷ lệ lấp đầy phòng (% phòng đã bán)' },
-                        { term: 'Pickup', desc: 'Số phòng mới đặt thêm so với lần capture trước' },
-                        { term: 'STLY', desc: 'Same Time Last Year — So sánh cùng kỳ năm trước' },
-                        { term: 'Pace', desc: 'Chênh lệch OTB hiện tại vs STLY (nhanh hơn hay chậm hơn)' },
-                        { term: 'Lead Time', desc: 'Số ngày từ lúc đặt đến ngày lưu trú' },
+                        { term: 'OTB', desc: t('termsOtb') },
+                        { term: 'ADR', desc: t('termsAdr') },
+                        { term: 'RevPAR', desc: t('termsRevpar') },
+                        { term: 'OCC%', desc: t('termsOcc') },
+                        { term: 'Pickup', desc: t('termsPickup') },
+                        { term: 'STLY', desc: t('termsStly') },
+                        { term: 'Pace', desc: t('termsPace') },
+                        { term: 'Lead Time', desc: t('termsLeadTime') },
                     ].map(({ term, desc }) => (
                         <div key={term} className="bg-gray-50 rounded-lg p-3 border border-gray-100">
                             <span className="font-mono text-blue-600 font-medium text-sm">{term}</span>
@@ -778,141 +775,141 @@ function AnalyticsSection() {
             </Card>
 
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 text-center">
-                <p className="text-blue-700 mb-3">Sẵn sàng xem dữ liệu khách sạn?</p>
+                <p className="text-blue-700 mb-3">{t('analCta')}</p>
                 <div className="flex flex-wrap justify-center gap-3">
-                    <Link href="/dashboard" className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"><BarChart3 className="w-4 h-4" /> Mở Dashboard</Link>
-                    <Link href="/pricing" className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"><Layers className="w-4 h-4" /> Đi tới Giá Linh Hoạt</Link>
+                    <Link href="/dashboard" className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"><BarChart3 className="w-4 h-4" /> {t('analDashLink')}</Link>
+                    <Link href="/pricing" className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"><Layers className="w-4 h-4" /> {t('analPricingLink')}</Link>
                 </div>
             </div>
         </>
     );
 }
-function PricingSection() {
+function PricingSection({ t }: { t: ReturnType<typeof useTranslations> }) {
     return (
         <>
             {/* Intro with 1 example */}
-            <Card id="pricing-intro" title="Tính giá OTA — Tổng quan" icon={<Calculator className="w-5 h-5 text-blue-600" />}>
-                <p className="text-gray-700">Hệ thống tính 3 loại giá từ <strong>1 giá gốc duy nhất (NET)</strong>:</p>
+            <Card id="pricing-intro" title={t('pricingIntroTitle')} icon={<Calculator className="w-5 h-5 text-blue-600" />}>
+                <p className="text-gray-700" dangerouslySetInnerHTML={{ __html: t.raw('pricingIntroDesc') }} />
                 <div className="bg-gray-50 rounded-xl p-4 mt-3">
                     <div className="flex flex-wrap items-center justify-center gap-3 text-sm">
                         <div className="bg-emerald-100 border border-emerald-300 rounded-lg px-4 py-3 text-center">
                             <div className="font-medium text-emerald-800">NET</div>
-                            <div className="text-lg font-mono font-bold text-emerald-700">1.000.000đ</div>
-                            <div className="text-xs text-emerald-600">Bạn thu về</div>
+                            <div className="text-lg font-mono font-bold text-emerald-700">1,000,000₫</div>
+                            <div className="text-xs text-emerald-600">{t('pricingNetLabel')}</div>
                         </div>
                         <ArrowRight className="w-5 h-5 text-gray-400" />
                         <div className="bg-blue-100 border border-blue-300 rounded-lg px-4 py-3 text-center">
                             <div className="font-medium text-blue-800">BAR</div>
-                            <div className="text-lg font-mono font-bold text-blue-700">1.250.000đ</div>
-                            <div className="text-xs text-blue-600">Giá gốc trên OTA</div>
+                            <div className="text-lg font-mono font-bold text-blue-700">1,250,000₫</div>
+                            <div className="text-xs text-blue-600">{t('pricingBarLabel')}</div>
                         </div>
                         <ArrowRight className="w-5 h-5 text-gray-400" />
                         <div className="bg-purple-100 border border-purple-300 rounded-lg px-4 py-3 text-center">
                             <div className="font-medium text-purple-800">Display</div>
-                            <div className="text-lg font-mono font-bold text-purple-700">1.062.500đ</div>
-                            <div className="text-xs text-purple-600">Khách thấy (sau KM 15%)</div>
+                            <div className="text-lg font-mono font-bold text-purple-700">1,062,500₫</div>
+                            <div className="text-xs text-purple-600">{t('pricingDisplayLabel')}</div>
                         </div>
                     </div>
                 </div>
             </Card>
 
-            <Card id="formula" title="2 Công thức tính giá" icon={<Calculator className="w-5 h-5 text-blue-600" />}>
+            <Card id="formula" title={t('formulaTitle')} icon={<Calculator className="w-5 h-5 text-blue-600" />}>
                 <div className="space-y-4">
                     <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                        <h4 className="font-medium text-blue-800 mb-2">Công thức 1: NET &rarr; BAR (Forward)</h4>
+                        <h4 className="font-medium text-blue-800 mb-2">{t('formula1Title')}</h4>
                         <p className="font-mono text-center text-lg">BAR = NET &divide; (1 - commission%)</p>
-                        <p className="text-sm text-gray-600 mt-2 text-center">VD: 1.000.000 &divide; (1 - 0.20) = <strong>1.250.000đ</strong></p>
+                        <p className="text-sm text-gray-600 mt-2 text-center">VD: 1.000.000 &divide; (1 - 0.20) = <strong>1,250,000₫</strong></p>
                     </div>
                     <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
-                        <h4 className="font-medium text-purple-800 mb-2">Công thức 2: BAR &rarr; Display (sau KM)</h4>
+                        <h4 className="font-medium text-purple-800 mb-2">{t('formula2Title')}</h4>
                         <p className="font-mono text-center text-lg">Display = BAR &times; (1 - total_discount%)</p>
-                        <p className="text-sm text-gray-600 mt-2 text-center">VD: 1.250.000 &times; (1 - 0.15) = <strong>1.062.500đ</strong></p>
+                        <p className="text-sm text-gray-600 mt-2 text-center">VD: 1,250,000 &times; (1 - 0.15) = <strong>1,062,500₫</strong></p>
                     </div>
                 </div>
-                <Tip>Hệ thống tính tự động. Bạn chỉ cần nhập NET — BAR và Display được tính sẵn.</Tip>
+                <Tip>{t('formulaTip')}</Tip>
             </Card>
 
-            <Card id="channels" title="Kênh OTA & Hoa hồng" icon={<Percent className="w-5 h-5 text-blue-600" />}>
-                <p className="text-sm text-gray-600 mb-3">Mỗi OTA có cách tính khác nhau. Bấm vào từng kênh để xem chi tiết:</p>
+            <Card id="channels" title={t('channelsTitle')} icon={<Percent className="w-5 h-5 text-blue-600" />}>
+                <p className="text-sm text-gray-600 mb-3">{t('channelsDesc')}</p>
                 <div className="space-y-3">
                     <Accordion title="Agoda — Commission 15-22% | ADDITIVE stacking" defaultOpen>
-                        <p>Agoda dùng <strong>ADDITIVE</strong> stacking: các KM cộng dồn vào nhau.</p>
+                        <p dangerouslySetInnerHTML={{ __html: t.raw('chAgodaDesc') }} />
                         <p className="mt-2">VD: Mobile 5% + Member Deal 10% + Early Bird 15% = <strong>30% tong discount</strong></p>
                         <div className="bg-gray-50 rounded-lg p-3 mt-2 text-xs space-y-1">
-                            <p>BAR = 1.250.000đ</p>
+                            <p>BAR = 1,250,000₫</p>
                             <p>Total discount = 30%</p>
-                            <p>Display = 1.250.000 &times; 0.70 = <strong>875.000đ</strong></p>
-                            <p className="text-emerald-600">NET = 875.000 &times; (1 - 0.20) = <strong>700.000đ</strong></p>
+                            <p>Display = 1,250,000 &times; 0.70 = <strong>875,000₫</strong></p>
+                            <p className="text-emerald-600">NET = 875.000 &times; (1 - 0.20) = <strong>700,000₫</strong></p>
                         </div>
-                        <Warn><strong>Chú ý:</strong> Nếu stacking quá nhiều KM, NET có thể giảm dưới mức mong muốn!</Warn>
+                        <Warn><span dangerouslySetInnerHTML={{ __html: t.raw('chAgodaWarn') }} /></Warn>
                     </Accordion>
 
                     <Accordion title="Booking.com — Commission 15-18% | PROGRESSIVE stacking">
-                        <p>Booking dùng <strong>PROGRESSIVE</strong> stacking: KM tính luỹ tiến (KM2 áp lên giá sau KM1).</p>
+                        <p dangerouslySetInnerHTML={{ __html: t.raw('chBookingDesc') }} />
                         <p className="mt-2">VD: Genius 20% &rarr; Mobile 10%</p>
                         <div className="bg-gray-50 rounded-lg p-3 mt-2 text-xs space-y-1">
-                            <p>BAR = 1.250.000đ</p>
-                            <p>Sau Genius 20% = 1.000.000đ</p>
-                            <p>Sau Mobile 10% = <strong>900.000đ</strong> (Display)</p>
-                            <p>Tổng giảm thực tế: 28% (không phải 30%)</p>
+                            <p>BAR = 1,250,000₫</p>
+                            <p>After Genius 20% = 1,000,000₫</p>
+                            <p>After Mobile 10% = <strong>900,000₫</strong> (Display)</p>
+                            <p>Total actual discount: 28% (not 30%)</p>
                         </div>
                     </Accordion>
 
                     <Accordion title="Expedia — Commission 18-25% | HIGHEST_WINS stacking">
-                        <p>Expedia dùng <strong>HIGHEST_WINS</strong>: chỉ áp dụng 1 KM có % cao nhất.</p>
-                        <p className="mt-2">VD: Có 3 KM: Package 20%, Member 15%, Flash 25% &rarr; chỉ áp <strong>Flash 25%</strong>.</p>
+                        <p dangerouslySetInnerHTML={{ __html: t.raw('chExpediaDesc') }} />
+                        <p className="mt-2">E.g.: 3 promotions: Package 20%, Member 15%, Flash 25% → only <strong>Flash 25%</strong> applies.</p>
                     </Accordion>
 
                     <Accordion title="Traveloka — Commission 18-22% | SINGLE stacking">
-                        <p>Traveloka dùng <strong>SINGLE</strong> (tương tự HIGHEST_WINS): chỉ 1 KM tại 1 thời điểm.</p>
-                        <p className="mt-2">KM ưu tiên theo thứ tự: Flash Sale &rarr; PayLater &rarr; Coupon.</p>
+                        <p dangerouslySetInnerHTML={{ __html: t.raw('chTravelokaDesc') }} />
+                        <p className="mt-2">{t('chTravelokaPriority')}</p>
                     </Accordion>
 
                     <Accordion title="CTRIP/Trip.com — Commission 20-25% | ONLY_WITH_GENIUS stacking">
-                        <p>CTRIP dùng <strong>ONLY_WITH_GENIUS</strong>: KM bổ sung chỉ áp dụng khi đã có KM chính.</p>
-                        <p className="mt-2">VD: CTrip VIP 15% (chính) + Extra 5% (chỉ khi có VIP) = 20%.</p>
+                        <p dangerouslySetInnerHTML={{ __html: t.raw('chCtripDesc') }} />
+                        <p className="mt-2">E.g.: CTrip VIP 15% (main) + Extra 5% (only with VIP) = 20%.</p>
                     </Accordion>
                 </div>
             </Card>
 
-            <Card id="promos" title="Khuyến mại & Stacking Rules" icon={<Tag className="w-5 h-5 text-blue-600" />}>
+            <Card id="promos" title={t('promosTitle')} icon={<Tag className="w-5 h-5 text-blue-600" />}>
                 <div className="grid sm:grid-cols-2 gap-3">
                     <div className="border border-blue-200 rounded-xl p-4">
                         <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">ADDITIVE</span>
-                        <p className="text-sm text-gray-700 mt-2">Cộng dồn: 10% + 15% = <strong>25%</strong></p>
+                        <p className="text-sm text-gray-700 mt-2" dangerouslySetInnerHTML={{ __html: t.raw('promoAdditive') }} />
                         <p className="text-xs text-gray-500 mt-1">Agoda</p>
                     </div>
                     <div className="border border-purple-200 rounded-xl p-4">
                         <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-medium">PROGRESSIVE</span>
-                        <p className="text-sm text-gray-700 mt-2">Luỹ tiến: áp KM2 lên giá sau KM1</p>
+                        <p className="text-sm text-gray-700 mt-2">{t('promoProgressive')}</p>
                         <p className="text-xs text-gray-500 mt-1">Booking.com</p>
                     </div>
                     <div className="border border-amber-200 rounded-xl p-4">
                         <span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded text-xs font-medium">HIGHEST_WINS</span>
-                        <p className="text-sm text-gray-700 mt-2">Chỉ áp KM có % cao nhất</p>
+                        <p className="text-sm text-gray-700 mt-2">{t('promoHighest')}</p>
                         <p className="text-xs text-gray-500 mt-1">Expedia</p>
                     </div>
                     <div className="border border-emerald-200 rounded-xl p-4">
                         <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded text-xs font-medium">SINGLE / ONLY_WITH</span>
-                        <p className="text-sm text-gray-700 mt-2">Chỉ 1 KM / KM phụ thuộc KM chính</p>
+                        <p className="text-sm text-gray-700 mt-2">{t('promoSingle')}</p>
                         <p className="text-xs text-gray-500 mt-1">Traveloka, CTRIP</p>
                     </div>
                 </div>
             </Card>
 
-            <Card id="compare" title="So sánh giữa các kênh OTA" icon={<ArrowRightLeft className="w-5 h-5 text-blue-600" />}>
+            <Card id="compare" title={t('compareTitle')} icon={<ArrowRightLeft className="w-5 h-5 text-blue-600" />}>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead className="bg-gray-100">
                             <tr>
-                                <th className="px-3 py-2 text-left text-gray-600">Kênh</th>
-                                <th className="px-3 py-2 text-center text-gray-600">Hoa hồng</th>
+                                <th className="px-3 py-2 text-left text-gray-600">{t('compareH1')}</th>
+                                <th className="px-3 py-2 text-center text-gray-600">{t('compareH2')}</th>
                                 <th className="px-3 py-2 text-center text-gray-600">Stacking</th>
                                 <th className="px-3 py-2 text-right text-gray-600">NET (VD)</th>
                             </tr>
                         </thead>
                         <tbody className="text-gray-700">
-                            <tr className="border-t"><td className="px-3 py-2">Agoda</td><td className="px-3 py-2 text-center">15-22%</td><td className="px-3 py-2 text-center"><span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">ADDITIVE</span></td><td className="px-3 py-2 text-right font-mono">700.000đ</td></tr>
+                            <tr className="border-t"><td className="px-3 py-2">Agoda</td><td className="px-3 py-2 text-center">15-22%</td><td className="px-3 py-2 text-center"><span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">ADDITIVE</span></td><td className="px-3 py-2 text-right font-mono">700,000₫</td></tr>
                             <tr className="border-t"><td className="px-3 py-2">Booking</td><td className="px-3 py-2 text-center">15-18%</td><td className="px-3 py-2 text-center"><span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded text-xs">PROGRESSIVE</span></td><td className="px-3 py-2 text-right font-mono">738.000đ</td></tr>
                             <tr className="border-t"><td className="px-3 py-2">Expedia</td><td className="px-3 py-2 text-center">18-25%</td><td className="px-3 py-2 text-center"><span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded text-xs">HIGHEST_WINS</span></td><td className="px-3 py-2 text-right font-mono">750.000đ</td></tr>
                             <tr className="border-t"><td className="px-3 py-2">Traveloka</td><td className="px-3 py-2 text-center">18-22%</td><td className="px-3 py-2 text-center"><span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded text-xs">SINGLE</span></td><td className="px-3 py-2 text-right font-mono">780.000đ</td></tr>
@@ -920,129 +917,129 @@ function PricingSection() {
                         </tbody>
                     </table>
                 </div>
-                <Tip>Cùng 1 giá NET, mỗi kênh sẽ cho khách thấy giá khác nhau do cách tính KM và hoa hồng khác nhau.</Tip>
+                <Tip>{t('compareTip')}</Tip>
             </Card>
 
-            <Card id="price-matrix" title="Bảng giá Ma trận" icon={<Layers className="w-5 h-5 text-blue-600" />}>
-                <p className="text-gray-700 mb-3">Bảng giá hiển thị giá cho <strong>tất cả hạng phòng &times; tất cả bậc OCC</strong> cùng lúc.</p>
+            <Card id="price-matrix" title={t('matrixTitle')} icon={<Layers className="w-5 h-5 text-blue-600" />}>
+                <p className="text-gray-700 mb-3" dangerouslySetInnerHTML={{ __html: t.raw('matrixDesc') }} />
                 <table className="w-full text-sm mb-3">
                     <thead className="bg-gray-100">
-                        <tr><th className="px-3 py-2 text-left text-gray-600">Thành phần</th><th className="px-3 py-2 text-left text-gray-600">Ý nghĩa</th></tr>
+                        <tr><th className="px-3 py-2 text-left text-gray-600">{t('matrixElement')}</th><th className="px-3 py-2 text-left text-gray-600">{t('matrixMeaning')}</th></tr>
                     </thead>
                     <tbody className="text-gray-700">
-                        <tr className="border-t"><td className="px-3 py-2 font-medium">Cột &quot;Hạng phòng&quot;</td><td className="px-3 py-2">Tên hạng phòng (Deluxe, Superior, Suite...)</td></tr>
-                        <tr className="border-t"><td className="px-3 py-2 font-medium">Cột &quot;NET cơ sở&quot;</td><td className="px-3 py-2">Giá NET theo season (chưa nhân OCC)</td></tr>
-                        <tr className="border-t bg-blue-50"><td className="px-3 py-2 font-medium">Cột bậc OCC</td><td className="px-3 py-2">Giá sau khi nhân hệ số OCC (tùy chế độ: NET/BAR/Display)</td></tr>
-                        <tr className="border-t bg-blue-100"><td className="px-3 py-2 font-medium">Cột highlight (xanh đậm)</td><td className="px-3 py-2"><strong>Bậc đang áp dụng</strong> theo OCC% thực tế</td></tr>
-                        <tr className="border-t bg-red-50"><td className="px-3 py-2 font-medium">Ô đỏ</td><td className="px-3 py-2"><strong>Vi phạm guardrail</strong> — giá quá cao hoặc quá thấp</td></tr>
+                        <tr className="border-t"><td className="px-3 py-2 font-medium">Column &quot;Room Type&quot;</td><td className="px-3 py-2">{t('matrixRoomType')}</td></tr>
+                        <tr className="border-t"><td className="px-3 py-2 font-medium">Column &quot;Base NET&quot;</td><td className="px-3 py-2">{t('matrixBaseNet')}</td></tr>
+                        <tr className="border-t bg-blue-50"><td className="px-3 py-2 font-medium">OCC tier columns</td><td className="px-3 py-2">{t('matrixOccCols')}</td></tr>
+                        <tr className="border-t bg-blue-100"><td className="px-3 py-2 font-medium">Highlighted column (dark blue)</td><td className="px-3 py-2" dangerouslySetInnerHTML={{ __html: t.raw('matrixHighlight') }} /></tr>
+                        <tr className="border-t bg-red-50"><td className="px-3 py-2 font-medium">Red cell</td><td className="px-3 py-2" dangerouslySetInnerHTML={{ __html: t.raw('matrixGuardrail') }} /></tr>
                     </tbody>
                 </table>
                 <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                    <p className="font-medium text-blue-700 mb-2">3 chế độ xem:</p>
+                    <p className="font-medium text-blue-700 mb-2">{t('matrixModes')}</p>
                     <div className="grid sm:grid-cols-3 gap-3">
                         <div className="bg-white rounded-lg p-3 border border-blue-100">
-                            <div className="font-medium text-emerald-700 text-sm">Thu về (NET)</div>
-                            <p className="text-xs text-gray-600 mt-1">Tiền khách sạn thực nhận</p>
+                            <div className="font-medium text-emerald-700 text-sm">Revenue (NET)</div>
+                            <p className="text-xs text-gray-600 mt-1">{t('matrixNetDesc')}</p>
                         </div>
                         <div className="bg-white rounded-lg p-3 border border-blue-100">
                             <div className="font-medium text-blue-700 text-sm">BAR</div>
-                            <p className="text-xs text-gray-600 mt-1">Giá gốc trước KM, sau hoa hồng</p>
+                            <p className="text-xs text-gray-600 mt-1">{t('matrixBarDesc')}</p>
                         </div>
                         <div className="bg-white rounded-lg p-3 border border-blue-100">
-                            <div className="font-medium text-purple-700 text-sm">Hiển thị (Display)</div>
-                            <p className="text-xs text-gray-600 mt-1">Giá khách thấy trên OTA</p>
+                            <div className="font-medium text-purple-700 text-sm">Display Price</div>
+                            <p className="text-xs text-gray-600 mt-1">{t('matrixDisplayDesc')}</p>
                         </div>
                     </div>
                 </div>
             </Card>
 
-            <Card id="reverse" title="Tính ngược: BAR &rarr; NET" icon={<ArrowRightLeft className="w-5 h-5 text-blue-600" />}>
-                <p className="text-gray-700 mb-3">Khi bạn biết giá BAR và muốn biết NET thực nhận:</p>
+            <Card id="reverse" title={t('reverseTitle')} icon={<ArrowRightLeft className="w-5 h-5 text-blue-600" />}>
+                <p className="text-gray-700 mb-3">{t('reverseDesc')}</p>
                 <div className="bg-gray-50 rounded-xl p-4 text-center">
                     <p className="font-mono text-lg">NET = BAR &times; (1 - commission%)</p>
                     <p className="text-sm text-gray-600 mt-2">VD: BAR = 1.250.000, Commission Agoda = 20%</p>
-                    <p className="text-sm text-gray-600">NET = 1.250.000 &times; 0.80 = <strong>1.000.000đ</strong></p>
+                    <p className="text-sm text-gray-600">NET = 1,250,000 &times; 0.80 = <strong>1,000,000₫</strong></p>
                 </div>
-                <Tip>Tab &quot;Tính ngược&quot; trên trang Pricing cho phép bạn nhập BAR để tính NET cho từng kênh OTA.</Tip>
+                <Tip>{t('reverseTip')}</Tip>
             </Card>
 
-            <Card id="dp-export" title="Xuất CSV" icon={<Download className="w-5 h-5 text-blue-600" />}>
-                <p className="text-gray-700 mb-3">Bấm nút <strong>Export</strong> để tải bảng giá dưới dạng file CSV.</p>
+            <Card id="dp-export" title={t('exportTitle')} icon={<Download className="w-5 h-5 text-blue-600" />}>
+                <p className="text-gray-700 mb-3" dangerouslySetInnerHTML={{ __html: t.raw('exportDesc') }} />
                 <ul className="list-disc list-inside space-y-1 text-sm text-gray-700 ml-2">
-                    <li>Tất cả hạng phòng</li>
-                    <li>Giá NET cơ sở</li>
-                    <li>Giá NET, BAR, Display cho từng bậc OCC</li>
+                    <li>{t('exportItem1')}</li>
+                    <li>{t('exportItem2')}</li>
+                    <li>{t('exportItem3')}</li>
                 </ul>
-                <Tip>Mở file CSV bằng Excel hoặc Google Sheets &rarr; In ra cho team Front Desk hoặc gửi cho Sales Manager để cập nhật giá lên OTA.</Tip>
+                <Tip>{t('exportTip')}</Tip>
             </Card>
 
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 text-center">
-                <p className="text-blue-700 mb-3">Sẵn sàng tính giá cho các kênh OTA?</p>
+                <p className="text-blue-700 mb-3">{t('pricingCta')}</p>
                 <div className="flex flex-wrap justify-center gap-3">
-                    <Link href="/pricing" className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"><Calculator className="w-4 h-4" /> Mở Tính giá OTA</Link>
+                    <Link href="/pricing" className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"><Calculator className="w-4 h-4" /> {t('pricingCtaLink')}</Link>
                 </div>
             </div>
         </>
     );
 }
-function DataSection() {
+function DataSection({ t }: { t: ReturnType<typeof useTranslations> }) {
     return (
         <>
-            <Card id="upload" title="Import dữ liệu" icon={<Upload className="w-5 h-5 text-blue-600" />}>
-                <p className="text-gray-700 mb-3">Upload file dữ liệu từ PMS (Property Management System) để hệ thống có dữ liệu phân tích.</p>
+            <Card id="upload" title={t('importTitle')} icon={<Upload className="w-5 h-5 text-blue-600" />}>
+                <p className="text-gray-700 mb-3">{t('importDesc')}</p>
                 <div className="space-y-3">
-                    <Step n={1} title="Chuẩn bị file">
-                        <p className="text-sm text-gray-600">Xuất dữ liệu booking từ PMS (Opera, RoomRaccoon, Cloudbeds...) dưới dạng <strong>XML hoặc CSV</strong>.</p>
-                        <Tip>File cần chứa: tên khách, ngày đặt, ngày lưu trú, hạng phòng, giá.</Tip>
+                    <Step n={1} title={t('importStep1')}>
+                        <p className="text-sm text-gray-600" dangerouslySetInnerHTML={{ __html: t.raw('importS1Desc') }} />
+                        <Tip>{t('importS1Tip')}</Tip>
                     </Step>
-                    <Step n={2} title="Upload file">
-                        <p className="text-sm text-gray-600">Kéo thả file vào vùng upload hoặc bấm chọn file.</p>
-                        <DeepLink href="/upload">Mở trang Upload</DeepLink>
+                    <Step n={2} title={t('importStep2')}>
+                        <p className="text-sm text-gray-600">{t('importS2Desc')}</p>
+                        <DeepLink href="/upload">{t('importStep2Link')}</DeepLink>
                     </Step>
-                    <Step n={3} title="Kiểm tra kết quả">
-                        <p className="text-sm text-gray-600">Hệ thống hiển thị số dòng dữ liệu được xử lý và cảnh báo (nếu có).</p>
+                    <Step n={3} title={t('importStep3')}>
+                        <p className="text-sm text-gray-600">{t('importS3Desc')}</p>
                     </Step>
                 </div>
-                <Warn><strong>Upload mỗi ngày (sáng)</strong> để có số liệu chính xác nhất. Hệ thống tự động skip dòng trùng lập.</Warn>
+                <Warn><span dangerouslySetInnerHTML={{ __html: t.raw('importWarn') }} /></Warn>
             </Card>
 
-            <Card id="build-otb" title="Build OTB" icon={<Database className="w-5 h-5 text-blue-600" />}>
-                <p className="text-gray-700 mb-3">Bước này tổng hợp dữ liệu booking thành <strong>OTB (On The Books)</strong> — số phòng đã đặt cho từng ngày.</p>
+            <Card id="build-otb" title={t('buildOtbTitle')} icon={<Database className="w-5 h-5 text-blue-600" />}>
+                <p className="text-gray-700 mb-3" dangerouslySetInnerHTML={{ __html: t.raw('buildOtbDesc') }} />
                 <div className="bg-gray-50 rounded-xl p-4 text-sm space-y-2">
-                    <p><strong>Input:</strong> Dữ liệu booking (từ Upload)</p>
-                    <p><strong>Output:</strong> Bảng OTB: số phòng/doanh thu đã đặt cho mỗi stay_date</p>
-                    <p><strong>Thời gian:</strong> ~10–30 giây</p>
+                    <p dangerouslySetInnerHTML={{ __html: t.raw('buildOtbInput') }} />
+                    <p dangerouslySetInnerHTML={{ __html: t.raw('buildOtbOutput') }} />
+                    <p dangerouslySetInnerHTML={{ __html: t.raw('buildOtbDuration') }} />
                 </div>
-                <DeepLink href="/data">Mở trang Dữ liệu</DeepLink>
+                <DeepLink href="/data">{t('buildOtbLink')}</DeepLink>
             </Card>
 
-            <Card id="build-features" title="Build Features" icon={<Settings className="w-5 h-5 text-blue-600" />}>
-                <p className="text-gray-700 mb-3">Tính các chỉ số phân tích từ dữ liệu OTB:</p>
+            <Card id="build-features" title={t('buildFeatTitle')} icon={<Settings className="w-5 h-5 text-blue-600" />}>
+                <p className="text-gray-700 mb-3">{t('buildFeatDesc')}</p>
                 <ul className="list-disc list-inside space-y-1 text-sm text-gray-700 ml-2">
-                    <li><strong>Pickup:</strong> Số phòng mới đặt (so sánh với 7 ngày trước)</li>
-                    <li><strong>STLY:</strong> Số phòng cùng kỳ năm trước</li>
-                    <li><strong>Pace:</strong> Tốc độ bán phòng so với năm trước</li>
-                    <li><strong>Remaining Supply:</strong> Số phòng còn trống</li>
+                    <li dangerouslySetInnerHTML={{ __html: t.raw('buildFeatPickup') }} />
+                    <li dangerouslySetInnerHTML={{ __html: t.raw('buildFeatStly') }} />
+                    <li dangerouslySetInnerHTML={{ __html: t.raw('buildFeatPace') }} />
+                    <li dangerouslySetInnerHTML={{ __html: t.raw('buildFeatRemaining') }} />
                 </ul>
-                <Warn>Cần ít nhất <strong>2 lần upload cách nhau 7 ngày</strong> để có Pickup thực tế. Trước đó, hệ thống sẽ hiện &quot;N/A&quot;.</Warn>
+                <Warn><span dangerouslySetInnerHTML={{ __html: t.raw('buildFeatWarn') }} /></Warn>
             </Card>
 
-            <Card id="run-forecast" title="Run Forecast" icon={<TrendingUp className="w-5 h-5 text-blue-600" />}>
-                <p className="text-gray-700 mb-3">Dự báo số phòng sẽ đặt thêm trong tương lai dựa trên booking pace:</p>
+            <Card id="run-forecast" title={t('forecastTitle')} icon={<TrendingUp className="w-5 h-5 text-blue-600" />}>
+                <p className="text-gray-700 mb-3">{t('forecastDesc')}</p>
                 <div className="bg-gray-50 rounded-xl p-4 text-sm space-y-2">
-                    <p><strong>Khi có đủ pickup:</strong> Dự báo chính xác dựa trên xu hướng thực tế</p>
-                    <p><strong>Khi chưa có đủ pickup:</strong> Hiện &quot;Ước lượng&quot; bằng sơ bộ (ít chính xác hơn)</p>
+                    <p dangerouslySetInnerHTML={{ __html: t.raw('forecastEnough') }} />
+                    <p dangerouslySetInnerHTML={{ __html: t.raw('forecastNotEnough') }} />
                 </div>
-                <Pipeline steps={['Upload file', 'Build OTB', 'Build Features', 'Run Forecast']} />
-                <Tip>Sau khi hoàn thành 4 bước, quay lại Dashboard để xem KPI và Khuyến nghị giá mới nhất.</Tip>
-                <DeepLink href="/dashboard">Mở Dashboard</DeepLink>
+                <Pipeline steps={[t('morningUpload'), t('subBuildOtb'), t('subBuildFeatures'), t('subRunForecast')]} />
+                <Tip>{t('forecastTip')}</Tip>
+                <DeepLink href="/dashboard">{t('forecastDashLink')}</DeepLink>
             </Card>
 
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 text-center">
-                <p className="text-blue-700 mb-3">Sẵn sàng xử lý dữ liệu?</p>
+                <p className="text-blue-700 mb-3">{t('dataCta')}</p>
                 <div className="flex flex-wrap justify-center gap-3">
-                    <Link href="/upload" className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"><Upload className="w-4 h-4" /> Upload dữ liệu</Link>
-                    <Link href="/data" className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"><Database className="w-4 h-4" /> Mở trang Dữ liệu</Link>
+                    <Link href="/upload" className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"><Upload className="w-4 h-4" /> {t('ctaUpload')}</Link>
+                    <Link href="/data" className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"><Database className="w-4 h-4" /> {t('dataCtaOpen')}</Link>
                 </div>
             </div>
         </>

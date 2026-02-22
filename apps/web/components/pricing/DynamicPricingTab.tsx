@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Loader2, Download, Settings, AlertTriangle, TrendingUp, Calendar, X, ChevronRight } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import OccTierEditor from './OccTierEditor';
 import SeasonConfigPanel from './SeasonConfigPanel';
 
@@ -65,15 +66,17 @@ function todayISO(): string {
     return d.toISOString().split('T')[0];
 }
 
-const VIEW_LABELS: Record<ViewMode, string> = {
-    net: 'Thu về',
-    bar: 'BAR',
-    display: 'Hiển thị',
-};
+// VIEW_LABELS moved inside component for i18n
 
 // ── Main Component ─────────────────────────────────────────────────
 
 export default function DynamicPricingTab() {
+    const t = useTranslations('dynamicTab');
+    const VIEW_LABELS: Record<ViewMode, string> = {
+        net: t('netView'),
+        bar: t('barView'),
+        display: t('displayView'),
+    };
     // State
     const [stayDate, setStayDate] = useState(todayISO());
     const [channels, setChannels] = useState<Channel[]>([]);
@@ -175,7 +178,7 @@ export default function DynamicPricingTab() {
         ];
 
         // Column headers depend on view mode
-        const headers = ['Hạng phòng', 'Giá thu về thấp nhất', ...data.tiers.map(t => `${VIEW_LABELS[viewMode]} ${t.label}`)];
+        const headers = ['Room Type', 'Lowest Net Revenue', ...data.tiers.map(t => `${VIEW_LABELS[viewMode]} ${t.label}`)];
         const rows = data.roomTypes.map(rt => {
             const vals = data.tiers.map(t => {
                 const cell = data.matrix[`${rt.id}:${t.tierIndex}`];
@@ -247,7 +250,7 @@ export default function DynamicPricingTab() {
                     onChange={(e) => setSeasonOverride(e.target.value || null)}
                     className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                 >
-                    <option value="">Season (auto)</option>
+                    <option value="">{t('seasonAuto')}</option>
                     {seasons.map(s => (
                         <option key={s.id} value={s.id}>{s.name}</option>
                     ))}
@@ -284,11 +287,11 @@ export default function DynamicPricingTab() {
                 <button
                     onClick={handleExport}
                     disabled={!data || isDemo}
-                    title={isDemo ? 'Tính năng này không khả dụng cho Demo Hotel' : 'Xuất CSV'}
+                    title={isDemo ? 'This feature is not available for Demo Hotel' : 'Export CSV'}
                     className={`ml-auto flex items-center gap-1.5 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-300 text-white text-sm font-semibold rounded-lg transition-colors ${isDemo ? 'cursor-not-allowed' : ''}`}
                 >
                     <Download className="w-4 h-4" />
-                    Export
+                    {t('export')}
                 </button>
             </div>
 
@@ -298,7 +301,7 @@ export default function DynamicPricingTab() {
                     <div className="flex items-center gap-2 mb-1">
                         <AlertTriangle className="w-4 h-4 text-amber-600" />
                         <span className="text-sm font-semibold text-amber-800">
-                            {data.violations.length} vi phạm guardrail
+                            {t('guardrailViolations', { count: data.violations.length })}
                         </span>
                     </div>
                     <ul className="text-xs text-amber-700 space-y-0.5 ml-6">
@@ -306,7 +309,7 @@ export default function DynamicPricingTab() {
                             <li key={i}>• {v.message}</li>
                         ))}
                         {data.violations.length > 5 && (
-                            <li className="text-amber-500">... và {data.violations.length - 5} vi phạm khác</li>
+                            <li className="text-amber-500">{t('moreViolations', { count: data.violations.length - 5 })}</li>
                         )}
                     </ul>
                 </div>
@@ -316,7 +319,7 @@ export default function DynamicPricingTab() {
             {loading && (
                 <div className="flex items-center justify-center py-12">
                     <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
-                    <span className="ml-2 text-sm text-slate-500">Đang tính giá...</span>
+                    <span className="ml-2 text-sm text-slate-500">{t('calculatingPrices')}</span>
                 </div>
             )}
 
@@ -335,7 +338,7 @@ export default function DynamicPricingTab() {
                         {/* Card Header */}
                         <div className="px-5 py-3.5 border-b border-slate-100">
                             <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                                Tổng quan hiện tại
+                                {t('currentOverview')}
                             </h3>
                         </div>
 
@@ -343,7 +346,7 @@ export default function DynamicPricingTab() {
                             {/* ── OCC Section ── */}
                             <div>
                                 <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                                    Công suất phòng
+                                    {t('roomOccupancy')}
                                 </div>
                                 <div className="flex items-center gap-3">
                                     <span className="text-2xl font-bold text-slate-800">
@@ -357,14 +360,14 @@ export default function DynamicPricingTab() {
                                     </div>
                                 </div>
                                 <div className="text-[11px] text-slate-400 mt-1.5">
-                                    Nguồn: {data.occSource === 'otb' ? 'OTB (tự động)' : data.occSource === 'override' ? 'Override' : 'Không có dữ liệu'}
+                                    {data.occSource === 'otb' ? t('sourceOtb') : data.occSource === 'override' ? t('sourceOverride') : t('sourceNoData')}
                                 </div>
                                 {/* OCC Override inline */}
                                 {data.occSource === 'unavailable' && (
                                     <div className="mt-2 flex items-center gap-2">
                                         <input
                                             type="number"
-                                            placeholder="Nhập OCC %"
+                                            placeholder={t('enterOccPct')}
                                             value={occOverride}
                                             onChange={(e) => setOccOverride(e.target.value)}
                                             className="w-24 px-2 py-1.5 border border-amber-300 rounded-lg text-xs text-center bg-white"
@@ -385,7 +388,7 @@ export default function DynamicPricingTab() {
                                         }}
                                         className="text-[11px] text-indigo-500 hover:text-indigo-700 underline mt-1"
                                     >
-                                        {occOverride !== '' ? 'Reset OCC' : 'Override OCC'}
+                                        {occOverride !== '' ? t('resetOcc') : t('overrideOcc')}
                                     </button>
                                 )}
                                 {occOverride !== '' && data.occSource !== 'unavailable' && (
@@ -408,14 +411,14 @@ export default function DynamicPricingTab() {
                             {/* ── Season Section ── */}
                             <div>
                                 <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                                    Mùa vụ
+                                    {t('seasonSection')}
                                 </div>
                                 <div className="flex items-center gap-2.5">
                                     <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
                                     <div>
                                         <div className="text-sm font-semibold text-slate-700">{data.season.name}</div>
                                         <div className="text-[11px] text-slate-400">
-                                            {data.season.autoDetected && !seasonOverride ? 'Tự động theo cấu hình' : seasonOverride ? 'Override thủ công' : ''}
+                                            {data.season.autoDetected && !seasonOverride ? t('autoFromConfig') : seasonOverride ? t('manualOverride') : ''}
                                         </div>
                                     </div>
                                 </div>
@@ -424,7 +427,7 @@ export default function DynamicPricingTab() {
                                         onClick={() => setSeasonOverride(null)}
                                         className="text-[11px] text-indigo-500 hover:text-indigo-700 underline mt-1"
                                     >
-                                        Reset về auto
+                                        {t('resetToAuto')}
                                     </button>
                                 )}
                             </div>
@@ -434,7 +437,7 @@ export default function DynamicPricingTab() {
                             {/* ── Tier Section ── */}
                             <div>
                                 <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                                    Bậc giá hiện tại
+                                    {t('currentPriceTier')}
                                 </div>
                                 {activeTier ? (
                                     <>
@@ -445,14 +448,14 @@ export default function DynamicPricingTab() {
                                         </div>
                                         <div className="text-xs text-indigo-500 font-medium mt-2">
                                             {activeTier.adjustmentType === 'FIXED'
-                                                ? `Điều chỉnh: +${formatVND(activeTier.fixedAmount)}`
-                                                : `Hệ số nhân: ×${activeTier.multiplier.toFixed(2)}`
+                                                ? `Adjustment: +${formatVND(activeTier.fixedAmount)}`
+                                                : `Multiplier: ×${activeTier.multiplier.toFixed(2)}`
                                             }
-                                            {activeTier.adjustmentType === 'MULTIPLY' && activeTier.multiplier === 1 && ' (giữ nguyên)'}
+                                            {activeTier.adjustmentType === 'MULTIPLY' && activeTier.multiplier === 1 && ' (unchanged)'}
                                         </div>
                                     </>
                                 ) : (
-                                    <div className="text-sm text-slate-400">Không xác định</div>
+                                    <div className="text-sm text-slate-400">{t('unknown')}</div>
                                 )}
                             </div>
 
@@ -461,7 +464,7 @@ export default function DynamicPricingTab() {
                             {/* ── Channel Section ── */}
                             <div>
                                 <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                                    Kênh OTA
+                                    {t('otaChannel')}
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <span className="text-sm font-semibold text-slate-700">{data.channel.name}</span>
@@ -478,7 +481,7 @@ export default function DynamicPricingTab() {
                                 <>
                                     <div>
                                         <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                                            Giảm giá hiệu lực
+                                            {t('effectivePriceDiscount')}
                                         </div>
                                         {(() => {
                                             if (data.activeTierIndex === null) return <span className="text-sm text-slate-400">N/A</span>;
@@ -489,7 +492,7 @@ export default function DynamicPricingTab() {
                                             const avg = discounts.reduce((a, b) => a + b, 0) / discounts.length;
                                             return (
                                                 <span className="text-sm font-semibold text-emerald-600">
-                                                    Trung bình: {(avg * 100).toFixed(0)}%
+                                                    Average: {(avg * 100).toFixed(0)}%
                                                 </span>
                                             );
                                         })()}
@@ -507,7 +510,7 @@ export default function DynamicPricingTab() {
                                     }`}
                             >
                                 <Settings className="w-3.5 h-3.5" />
-                                Cấu hình Mùa & Bậc giá
+                                {t('seasonTierConfig')}
                             </button>
                         </div>
                     </div>
@@ -521,10 +524,10 @@ export default function DynamicPricingTab() {
                                     <thead className="sticky top-0 z-10">
                                         <tr>
                                             <th className="sticky left-0 z-20 bg-slate-50 px-4 py-3.5 text-left font-semibold text-slate-600 border-b-2 border-slate-200 min-w-[150px]">
-                                                Hạng phòng
+                                                {t('thRoomType')}
                                             </th>
                                             <th className="px-3 py-3.5 text-right font-medium text-slate-400 border-b-2 border-slate-200 bg-slate-50 min-w-[120px]">
-                                                Giá thu về thấp nhất
+                                                {t('lowestNetRevenue')}
                                             </th>
                                             {data.tiers.map(tier => {
                                                 const isActive = tier.tierIndex === data.activeTierIndex;
@@ -581,7 +584,7 @@ export default function DynamicPricingTab() {
                                                                 }`}
                                                             title={violation
                                                                 ? `${violation.message}${violation.min !== undefined ? ` (min: ${formatVND(violation.min)})` : ''}${violation.max !== undefined ? ` (max: ${formatVND(violation.max)})` : ''}`
-                                                                : 'Click để xem chi tiết'}
+                                                                : t('clickForDetails')}
                                                         >
                                                             {cellValue(cell)}
                                                             {violation && <AlertTriangle className="w-3 h-3 text-red-500 inline ml-1" />}
@@ -616,7 +619,7 @@ export default function DynamicPricingTab() {
 
                                 {/* Trace */}
                                 <div className="px-4 py-3 space-y-2">
-                                    <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Phân tích giá</h4>
+                                    <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('priceAnalysis')}</h4>
                                     {drilldownCell.trace && drilldownCell.trace.length > 0 ? (
                                         <div className="space-y-1.5">
                                             {drilldownCell.trace.map((t, i) => (
@@ -625,7 +628,7 @@ export default function DynamicPricingTab() {
                                                     <div className="flex-1 min-w-0">
                                                         <div className="text-xs text-slate-600">{t.description}</div>
                                                         <div className="text-sm font-mono font-medium text-slate-800">
-                                                            {formatVND(t.priceAfter)} đ
+                                                            {formatVND(t.priceAfter)} ₫
                                                         </div>
                                                     </div>
                                                 </div>
@@ -638,7 +641,7 @@ export default function DynamicPricingTab() {
                                                 <span className="font-mono">{formatVND(drilldownRoomType.netBase)}</span>
                                             </div>
                                             <div className="flex justify-between text-sm">
-                                                <span className="text-slate-600">{drilldownTier.adjustmentType === 'FIXED' ? `+ Cộng thêm (+${formatVND(drilldownTier.fixedAmount)})` : `× Multiplier (×${drilldownTier.multiplier.toFixed(2)})`}</span>
+                                                <span className="text-slate-600">{drilldownTier.adjustmentType === 'FIXED' ? `+ Add (Fixed) (+${formatVND(drilldownTier.fixedAmount)})` : `× Multiplier (×${drilldownTier.multiplier.toFixed(2)})`}</span>
                                                 <span className="font-mono">{formatVND(drilldownCell.net)}</span>
                                             </div>
                                             <div className="flex justify-between text-sm">
@@ -655,17 +658,17 @@ export default function DynamicPricingTab() {
 
                                 {/* Guardrail Status */}
                                 <div className="px-4 py-3 border-t border-slate-100">
-                                    <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Guardrail</h4>
+                                    <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">{t('guardrail')}</h4>
                                     {drilldownViolation ? (
                                         <div className="flex items-start gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
                                             <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
                                             <div className="text-xs text-red-700">
                                                 {drilldownViolation.message}
                                                 {drilldownViolation.min !== undefined && (
-                                                    <div className="mt-1 text-red-500">Min: {formatVND(drilldownViolation.min)} đ</div>
+                                                    <div className="mt-1 text-red-500">Min: {formatVND(drilldownViolation.min)} ₫</div>
                                                 )}
                                                 {drilldownViolation.max !== undefined && (
-                                                    <div className="mt-0.5 text-red-500">Max: {formatVND(drilldownViolation.max)} đ</div>
+                                                    <div className="mt-0.5 text-red-500">Max: {formatVND(drilldownViolation.max)} ₫</div>
                                                 )}
                                             </div>
                                         </div>
@@ -682,13 +685,13 @@ export default function DynamicPricingTab() {
                                 {/* Effective Discount */}
                                 <div className="px-4 py-3 border-t border-slate-100">
                                     <div className="flex justify-between text-sm">
-                                        <span className="text-slate-600">Effective Discount</span>
+                                        <span className="text-slate-600">{t('effectiveDiscount')}</span>
                                         <span className={`font-medium ${drilldownCell.effectiveDiscount > 0 ? 'text-emerald-600' : 'text-slate-400'}`}>
                                             {(drilldownCell.effectiveDiscount * 100).toFixed(0)}%
                                         </span>
                                     </div>
                                     {drilldownCell.effectiveDiscount === 0 && (
-                                        <p className="text-[10px] text-slate-400 mt-1">BAR = Display (không có khuyến mãi)</p>
+                                        <p className="text-[10px] text-slate-400 mt-1">{t('noPromotions')}</p>
                                     )}
                                 </div>
                             </div>
@@ -714,8 +717,8 @@ export default function DynamicPricingTab() {
                                     <Settings className="w-4 h-4 text-indigo-600" />
                                 </div>
                                 <div>
-                                    <h2 className="text-base font-semibold text-slate-800">Cấu hình Mùa & Bậc giá</h2>
-                                    <p className="text-xs text-slate-400">Thiết lập season và occupancy tiers cho khách sạn</p>
+                                    <h2 className="text-base font-semibold text-slate-800">{t('seasonTierConfig')}</h2>
+                                    <p className="text-xs text-slate-400">{t('seasonTierConfigDesc')}</p>
                                 </div>
                             </div>
                             <button
@@ -741,7 +744,7 @@ export default function DynamicPricingTab() {
                                 onClick={() => setShowConfig(false)}
                                 className="px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-lg transition-colors"
                             >
-                                Đóng
+                                {t('close')}
                             </button>
                         </div>
                     </div>
@@ -752,8 +755,8 @@ export default function DynamicPricingTab() {
             {data && data.tiers.length === 0 && !loading && (
                 <div className="text-center py-12 text-slate-500">
                     <Settings className="w-8 h-8 mx-auto mb-2 text-slate-400" />
-                    <p className="font-medium">Chưa cấu hình OCC Tiers</p>
-                    <p className="text-sm mt-1">Bấm nút Cấu hình ở card bên trái để thiết lập bậc giá theo OCC%</p>
+                    <p className="font-medium">{t('notConfigured')}</p>
+                    <p className="text-sm mt-1">{t('notConfiguredDesc')}</p>
                 </div>
             )}
         </div>

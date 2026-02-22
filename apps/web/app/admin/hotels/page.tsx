@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { TIER_CONFIGS } from '@/lib/tier/tierConfig';
 import { COUNTRIES, getCountryDisplay } from '@/lib/constants/countries';
+import { useTranslations } from 'next-intl';
 
 interface Hotel {
     id: string;
@@ -30,7 +31,7 @@ const STATUS_CONFIG: Record<string, { label: string; dot: string; bg: string; te
     ACTIVE: { label: 'Active', dot: 'bg-emerald-500', bg: 'bg-emerald-50', text: 'text-emerald-700' },
     TRIAL: { label: 'Trial', dot: 'bg-blue-500', bg: 'bg-blue-50', text: 'text-blue-700' },
     PAST_DUE: { label: 'Past Due', dot: 'bg-red-500', bg: 'bg-red-50', text: 'text-red-700' },
-    CANCELLED: { label: 'Hủy', dot: 'bg-gray-400', bg: 'bg-gray-100', text: 'text-gray-600' },
+    CANCELLED: { label: 'Cancelled', dot: 'bg-gray-400', bg: 'bg-gray-100', text: 'text-gray-600' },
 };
 
 const PLAN_ORDER = ['STANDARD', 'SUPERIOR', 'DELUXE', 'SUITE'];
@@ -63,6 +64,7 @@ function hasActiveSub(hotel: Hotel): boolean {
 }
 
 export default function AdminHotelsPage() {
+    const t = useTranslations('admin');
     const { data: session } = useSession();
     const [hotels, setHotels] = useState<Hotel[]>([]);
     const [loading, setLoading] = useState(true);
@@ -91,10 +93,10 @@ export default function AdminHotelsPage() {
 
     const deleteHotel = async (hotel: Hotel) => {
         if (hasActiveSub(hotel)) {
-            alert('⚠️ Không thể xóa hotel đang có gói hoạt động.\nVui lòng hủy gói trước khi xóa.');
+            alert(t('errorOccurred'));
             return;
         }
-        if (!confirm(`⚠️ XÓA VĨNH VIỄN hotel "${hotel.name}"?\n\nHành động này không thể hoàn tác!`)) return;
+        if (!confirm(t('confirmDeleteHotel', { name: hotel.name }))) return;
 
         try {
             const res = await fetch(`/api/admin/hotels/${hotel.id}`, { method: 'DELETE' });
@@ -102,7 +104,7 @@ export default function AdminHotelsPage() {
                 fetchHotels();
             } else {
                 const data = await res.json();
-                alert(data.error || 'Có lỗi xảy ra khi xóa');
+                alert(data.error || t('errorDeleting'));
             }
         } catch (error) {
             console.error('Error deleting hotel:', error);
@@ -166,9 +168,9 @@ export default function AdminHotelsPage() {
         return (
             <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
-                    <h1 className="text-2xl font-bold text-gray-900">Không có quyền truy cập</h1>
+                    <h1 className="text-2xl font-bold text-gray-900">{t('noAccess')}</h1>
                     <Link href="/dashboard" className="text-blue-600 hover:underline mt-4 block">
-                        Quay lại Dashboard
+                        {t('backToDashboard')}
                     </Link>
                 </div>
             </div>
@@ -183,9 +185,9 @@ export default function AdminHotelsPage() {
                 style={{ background: 'linear-gradient(to right, #1E3A8A, #102A4C)' }}
             >
                 <div>
-                    <h1 className="text-lg font-semibold">🏨 Danh sách các khách sạn</h1>
+                    <h1 className="text-lg font-semibold">{t('hotelsTitle')}</h1>
                     <p className="text-white/70 text-sm mt-1">
-                        {hotels.length} khách sạn • {hotels.reduce((s, h) => s + h.userCount, 0)} users
+                        {t('hotelsCount', { total: hotels.length, active: hotels.filter(h => h.subscriptionStatus === 'ACTIVE').length })}
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
@@ -193,13 +195,13 @@ export default function AdminHotelsPage() {
                         href="/admin/users"
                         className="px-4 py-2 bg-white/15 text-white rounded-lg hover:bg-white/25 transition-colors backdrop-blur-sm text-sm"
                     >
-                        👥 Quản lý Users
+                        👥 User Management
                     </Link>
                     <button
                         onClick={() => setShowCreateModal(true)}
                         className="px-4 py-2 bg-white text-blue-900 font-medium rounded-lg hover:bg-blue-50 transition-colors text-sm"
                     >
-                        + Thêm Hotel
+                        + Add Hotel
                     </button>
                 </div>
             </header>
@@ -208,7 +210,7 @@ export default function AdminHotelsPage() {
             <div className="space-y-3">
                 <input
                     type="text"
-                    placeholder="Tìm theo tên hotel hoặc timezone..."
+                    placeholder={t('searchPlaceholder')}
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="w-full max-w-md px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -218,12 +220,12 @@ export default function AdminHotelsPage() {
                 <div className="flex flex-wrap gap-2">
                     {/* Status chips */}
                     {([
-                        { key: 'ALL' as StatusFilter, label: 'Tất cả', count: hotels.length },
+                        { key: 'ALL' as StatusFilter, label: 'All', count: hotels.length },
                         { key: 'ACTIVE' as StatusFilter, label: 'Active', count: stats.byStatus.ACTIVE },
                         { key: 'TRIAL' as StatusFilter, label: 'Trial', count: stats.byStatus.TRIAL },
                         { key: 'PAST_DUE' as StatusFilter, label: 'Past Due', count: stats.byStatus.PAST_DUE },
-                        { key: 'CANCELLED' as StatusFilter, label: 'Đã hủy', count: stats.byStatus.CANCELLED },
-                        { key: 'NO_SUB' as StatusFilter, label: 'Chưa có gói', count: stats.byStatus.NO_SUB },
+                        { key: 'CANCELLED' as StatusFilter, label: t('cancelled'), count: stats.byStatus.CANCELLED },
+                        { key: 'NO_SUB' as StatusFilter, label: 'No plan', count: stats.byStatus.NO_SUB },
                     ]).map(f => (
                         <button
                             key={f.key}
@@ -245,7 +247,7 @@ export default function AdminHotelsPage() {
                         onChange={(e) => setPlanFilter(e.target.value)}
                         className="px-3 py-1.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border-0 focus:ring-2 focus:ring-blue-500"
                     >
-                        <option value="ALL">Tất cả gói</option>
+                        <option value="ALL">All plans</option>
                         {PLAN_ORDER.map(p => (
                             <option key={p} value={p}>{p}</option>
                         ))}
@@ -262,7 +264,7 @@ export default function AdminHotelsPage() {
                                 : 'bg-red-50 text-red-700 hover:bg-red-100'
                                 }`}
                         >
-                            ⚠️ Vượt limit ({stats.overLimit})
+                            {t('overSeatLimit')} ({stats.overLimit})
                         </button>
                     )}
                     {stats.trialEnding > 0 && (
@@ -273,7 +275,7 @@ export default function AdminHotelsPage() {
                                 : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
                                 }`}
                         >
-                            ⏰ Trial sắp hết ({stats.trialEnding})
+                            {t('trialEndingSoon')} ({stats.trialEnding})
                         </button>
                     )}
                 </div>
@@ -285,27 +287,27 @@ export default function AdminHotelsPage() {
                     <thead className="bg-gray-50 border-b border-gray-200">
                         <tr>
                             <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Hotel</th>
-                            <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Gói & Billing</th>
-                            <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">Phòng</th>
+                            <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Plan & Billing</th>
+                            <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">Rooms</th>
                             <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">Users</th>
-                            <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">Tiền tệ</th>
-                            <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">Quốc gia</th>
-                            <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">Thao tác</th>
+                            <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">{t('currency')}</th>
+                            <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">{t('country')}</th>
+                            <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">{t('actionsCol')}</th>
                         </tr>
                     </thead>
                     <tbody>
                         {loading ? (
                             <tr>
                                 <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
-                                    Đang tải...
+                                    Loading...
                                 </td>
                             </tr>
                         ) : filteredHotels.length === 0 ? (
                             <tr>
                                 <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
                                     {search || statusFilter !== 'ALL' || planFilter !== 'ALL' || specialFilter
-                                        ? 'Không tìm thấy hotel phù hợp'
-                                        : 'Chưa có hotel nào'}
+                                        ? t('noHotels')
+                                        : t('noHotels')}
                                 </td>
                             </tr>
                         ) : (
@@ -353,12 +355,12 @@ export default function AdminHotelsPage() {
                                                     )}
                                                     {isTrialEnding(hotel) && (
                                                         <div className="text-xs text-amber-600 font-medium">
-                                                            ⏰ Trial sắp hết
+                                                            ⏰ Trial expiring
                                                         </div>
                                                     )}
                                                 </div>
                                             ) : (
-                                                <span className="text-xs text-gray-400 italic">Chưa có gói</span>
+                                                <span className="text-xs text-gray-400 italic">No plan</span>
                                             )}
                                         </td>
 
@@ -381,7 +383,7 @@ export default function AdminHotelsPage() {
                                                     </span>
                                                     {over && (
                                                         <span className="text-xs text-red-600 font-medium mt-0.5">
-                                                            ⚠️ Vượt
+                                                            ⚠️ Over
                                                         </span>
                                                     )}
                                                     {hotel.pendingInvites > 0 && (
@@ -416,7 +418,7 @@ export default function AdminHotelsPage() {
                                                 onClick={() => setEditingHotel(hotel)}
                                                 className="text-blue-600 hover:text-blue-800 text-sm mr-3"
                                             >
-                                                Sửa
+                                                Edit
                                             </button>
                                             <button
                                                 onClick={() => deleteHotel(hotel)}
@@ -425,9 +427,9 @@ export default function AdminHotelsPage() {
                                                     ? 'text-red-600 hover:text-red-800'
                                                     : 'text-gray-300 cursor-not-allowed'
                                                     }`}
-                                                title={!canDelete ? 'Hủy gói trước khi xóa' : 'Xóa hotel'}
+                                                title={!canDelete ? 'Cancel plan first' : t('deleteHotel')}
                                             >
-                                                Xóa
+                                                Delete
                                             </button>
                                         </td>
                                     </tr>
@@ -442,7 +444,7 @@ export default function AdminHotelsPage() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div className="bg-white rounded-xl border border-gray-200 p-4 text-center">
                     <div className="text-2xl font-bold text-blue-600">{hotels.length}</div>
-                    <div className="text-sm text-gray-500">Tổng Hotels</div>
+                    <div className="text-sm text-gray-500">{t('totalHotels')}</div>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 p-4 text-center">
                     <div className="text-2xl font-bold text-emerald-600">
@@ -454,13 +456,13 @@ export default function AdminHotelsPage() {
                     <div className="text-2xl font-bold text-amber-600">
                         {hotels.reduce((sum, h) => sum + h.userCount, 0)}
                     </div>
-                    <div className="text-sm text-gray-500">Tổng Users</div>
+                    <div className="text-sm text-gray-500">{t('users')}</div>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 p-4 text-center">
                     <div className={`text-2xl font-bold ${stats.overLimit > 0 ? 'text-red-600' : 'text-gray-400'}`}>
                         {stats.overLimit}
                     </div>
-                    <div className="text-sm text-gray-500">Vượt limit</div>
+                    <div className="text-sm text-gray-500">{t('overLimit')}</div>
                 </div>
             </div>
 
@@ -489,6 +491,7 @@ function HotelModal({ hotel, onClose, onSaved }: {
     onClose: () => void;
     onSaved: () => void;
 }) {
+    const t = useTranslations('admin');
     const [name, setName] = useState(hotel?.name || '');
     const [timezone, setTimezone] = useState(hotel?.timezone || 'Asia/Ho_Chi_Minh');
     const [capacity, setCapacity] = useState(hotel?.capacity?.toString() || '100');
@@ -581,11 +584,11 @@ function HotelModal({ hotel, onClose, onSaved }: {
                 onSaved();
             } else {
                 const data = await res.json();
-                alert(data.error || 'Có lỗi xảy ra');
+                alert(data.error || t('errorOccurred'));
             }
         } catch (error) {
             console.error('Error saving hotel:', error);
-            alert('Có lỗi xảy ra');
+            alert(t('errorOccurred'));
         } finally {
             setSaving(false);
         }
@@ -599,19 +602,19 @@ function HotelModal({ hotel, onClose, onSaved }: {
             <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
                 <div className="sticky top-0 bg-white px-6 pt-6 pb-3 border-b border-gray-100 rounded-t-xl">
                     <h2 className="text-xl font-bold">
-                        {hotel ? 'Chỉnh sửa Hotel' : 'Thêm Hotel mới'}
+                        {hotel ? t('editHotelTitle') : t('addHotelTitle')}
                     </h2>
                 </div>
 
                 {loadingDetails ? (
-                    <div className="p-6 text-center text-gray-400">Đang tải thông tin...</div>
+                    <div className="p-6 text-center text-gray-400">{t('loading')}</div>
                 ) : (
                     <form onSubmit={handleSubmit} className="p-6 space-y-5">
                         {/* === Hotel Info === */}
                         <div className="space-y-3">
-                            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Thông tin cơ bản</h3>
+                            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Basic Info</h3>
                             <div>
-                                <label className={labelClass}>Tên Hotel *</label>
+                                <label className={labelClass}>{t('hotelName')} *</label>
                                 <input type="text" value={name} onChange={(e) => setName(e.target.value)} required className={inputClass} />
                             </div>
                             <div>
@@ -624,11 +627,11 @@ function HotelModal({ hotel, onClose, onSaved }: {
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className={labelClass}>Số phòng</label>
+                                    <label className={labelClass}>{t('capacity')}</label>
                                     <input type="number" value={capacity} onChange={(e) => setCapacity(e.target.value)} min="1" className={inputClass} />
                                 </div>
                                 <div>
-                                    <label className={labelClass}>Tiền tệ</label>
+                                    <label className={labelClass}>{t('currency')}</label>
                                     <select value={currency} onChange={(e) => setCurrency(e.target.value)} className={inputClass}>
                                         <option value="VND">VND</option>
                                         <option value="USD">USD</option>
@@ -637,7 +640,7 @@ function HotelModal({ hotel, onClose, onSaved }: {
                                 </div>
                             </div>
                             <div>
-                                <label className={labelClass}>Quốc gia</label>
+                                <label className={labelClass}>{t('country')}</label>
                                 <select value={country} onChange={(e) => setCountry(e.target.value)} className={inputClass}>
                                     {COUNTRIES.map(c => (
                                         <option key={c.code} value={c.code}>{c.flag} {c.name}</option>
@@ -648,9 +651,9 @@ function HotelModal({ hotel, onClose, onSaved }: {
 
                         {/* === Base Rate === */}
                         <div className="space-y-3 border-t border-gray-100 pt-4">
-                            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Giá cơ bản (Base Rate)</h3>
+                            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Base Rate</h3>
                             <div>
-                                <label className={labelClass}>Giá cơ bản mặc định ({currency})</label>
+                                <label className={labelClass}>{t('baseRate')} ({currency})</label>
                                 <input
                                     type="text"
                                     inputMode="numeric"
@@ -659,19 +662,19 @@ function HotelModal({ hotel, onClose, onSaved }: {
                                     placeholder="VD: 1.500.000"
                                     className={inputClass}
                                 />
-                                <p className="text-xs text-gray-400 mt-1">Dùng trong Daily Actions để tính giá đề xuất</p>
+                                <p className="text-xs text-gray-400 mt-1">Used in Daily Actions for price recommendations</p>
                             </div>
                         </div>
 
                         {/* === Subscription (only when editing) === */}
                         {hotel && (
                             <div className="space-y-3 border-t border-gray-100 pt-4">
-                                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Gói dịch vụ</h3>
+                                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Subscription</h3>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className={labelClass}>Gói (Plan)</label>
+                                        <label className={labelClass}>{t('plan')}</label>
                                         <select value={subPlan} onChange={(e) => setSubPlan(e.target.value)} className={inputClass}>
-                                            <option value="">— Chưa có gói —</option>
+                                            <option value="">— No plan —</option>
                                             <option value="STANDARD">STANDARD</option>
                                             <option value="SUPERIOR">SUPERIOR</option>
                                             <option value="DELUXE">DELUXE</option>
@@ -679,18 +682,18 @@ function HotelModal({ hotel, onClose, onSaved }: {
                                         </select>
                                     </div>
                                     <div>
-                                        <label className={labelClass}>Trạng thái</label>
+                                        <label className={labelClass}>{t('statusCol')}</label>
                                         <select value={subStatus} onChange={(e) => setSubStatus(e.target.value)} className={inputClass}>
                                             <option value="ACTIVE">Active</option>
                                             <option value="TRIAL">Trial</option>
                                             <option value="PAST_DUE">Past Due</option>
-                                            <option value="CANCELLED">Đã hủy</option>
+                                            <option value="CANCELLED">Cancelled</option>
                                         </select>
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className={labelClass}>Bắt đầu (From)</label>
+                                        <label className={labelClass}>From</label>
                                         <input
                                             type="date"
                                             value={periodStart}
@@ -699,7 +702,7 @@ function HotelModal({ hotel, onClose, onSaved }: {
                                         />
                                     </div>
                                     <div>
-                                        <label className={labelClass}>Hết hạn (To)</label>
+                                        <label className={labelClass}>To</label>
                                         <input
                                             type="date"
                                             value={periodEnd}
@@ -709,7 +712,7 @@ function HotelModal({ hotel, onClose, onSaved }: {
                                     </div>
                                 </div>
                                 <div>
-                                    <label className={labelClass}>Số users tối đa</label>
+                                    <label className={labelClass}>{t('maxUsers')}</label>
                                     <input
                                         type="number"
                                         value={maxUsers}
@@ -720,7 +723,7 @@ function HotelModal({ hotel, onClose, onSaved }: {
                                 </div>
                                 {!subPlan && (
                                     <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded-lg">
-                                        ⚠️ Chọn gói để kích hoạt subscription cho hotel này
+                                        ⚠️ Select a plan to activate subscription for this hotel
                                     </p>
                                 )}
                             </div>
@@ -729,10 +732,10 @@ function HotelModal({ hotel, onClose, onSaved }: {
                         {/* === Actions === */}
                         <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
                             <button type="button" onClick={onClose} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">
-                                Hủy
+                                Cancel
                             </button>
                             <button type="submit" disabled={saving} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
-                                {saving ? 'Đang lưu...' : (hotel ? 'Lưu' : 'Tạo Hotel')}
+                                {saving ? t('saving') : (hotel ? t('save') : t('createHotel'))}
                             </button>
                         </div>
                     </form>

@@ -31,10 +31,10 @@ const PLAN_LABELS: Record<string, string> = {
 };
 
 const BAND_LABELS: Record<string, string> = {
-    R30: '≤ 30 phòng',
-    R80: '31–80 phòng',
-    R150: '81–150 phòng',
-    R300P: '151–300+ phòng',
+    R30: '≤ 30 rooms',
+    R80: '31–80 rooms',
+    R150: '81–150 rooms',
+    R300P: '151–300+ rooms',
 };
 
 const formatVND = (n: number) => new Intl.NumberFormat('vi-VN').format(n);
@@ -59,7 +59,7 @@ export function SubscriptionBadge({ hotelId }: { hotelId?: string }) {
         return (
             <div className="bg-white border border-gray-200 rounded-xl p-5 animate-pulse flex items-center gap-3">
                 <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
-                <span className="text-sm text-gray-400">Đang tải gói dịch vụ...</span>
+                <span className="text-sm text-gray-400">Loading plan...</span>
             </div>
         );
     }
@@ -75,7 +75,7 @@ export function SubscriptionBadge({ hotelId }: { hotelId?: string }) {
         <div className="bg-white border border-gray-200 rounded-xl p-5">
             <div className="flex items-center gap-2 mb-3">
                 <CreditCard className="w-5 h-5 text-gray-500" />
-                <h3 className="font-semibold text-gray-900">Gói hiện tại</h3>
+                <h3 className="font-semibold text-gray-900">Current Plan</h3>
             </div>
 
             <div className="flex items-center gap-3 mb-2">
@@ -92,21 +92,21 @@ export function SubscriptionBadge({ hotelId }: { hotelId?: string }) {
 
             {data.plan !== 'STANDARD' && (
                 <p className="text-lg font-semibold text-gray-900 mb-1">
-                    {formatVND(data.price)}₫<span className="text-sm font-normal text-gray-500">/tháng</span>
+                    {formatVND(data.price)}₫<span className="text-sm font-normal text-gray-500">/month</span>
                 </p>
             )}
 
             {data.isTrialActive && (
                 <p className="text-sm text-amber-600 font-medium mb-2">
-                    🎁 Trial: còn {data.trialDaysRemaining} ngày
+                    🎁 Trial: {data.trialDaysRemaining} days remaining
                 </p>
             )}
 
             {!isCompliant && (
                 <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700">
                     {isAdmin
-                        ? `ℹ️ Hotel ${data.hotelCapacity} phòng → nên dùng band ${data.derivedBand}. Chỉnh tại PLG Admin.`
-                        : `⚠️ Capacity (${data.hotelCapacity} phòng) vượt band ${data.roomBand}. Liên hệ quản trị viên.`
+                        ? `ℹ️ Hotel ${data.hotelCapacity} rooms → should use band ${data.derivedBand}. Adjust in PLG Admin.`
+                        : `⚠️ Capacity (${data.hotelCapacity} rooms) exceeds band ${data.roomBand}. Contact Admin.`
                     }
                 </div>
             )}
@@ -116,7 +116,7 @@ export function SubscriptionBadge({ hotelId }: { hotelId?: string }) {
                     href="/pricing-plans"
                     className="inline-flex items-center gap-1 mt-3 text-sm text-blue-600 hover:text-blue-800 font-medium"
                 >
-                    Xem bảng giá <ArrowUpRight className="w-3.5 h-3.5" />
+                    View Pricing <ArrowUpRight className="w-3.5 h-3.5" />
                 </Link>
             )}
         </div>

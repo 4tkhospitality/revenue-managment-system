@@ -2,7 +2,7 @@
     "meta": {
         "schema_version": "1.1.0",
         "awf_version": "4.0.2",
-        "last_updated": "2026-02-08T12:39:00+07:00"
+        "last_updated": "2026-02-19T23:51:00+07:00"
     },
     "project": {
         "name": "4T Hospitality Revenue Management System",
@@ -18,6 +18,7 @@
         "database": "PostgreSQL (Supabase, ap-northeast-2)",
         "auth": "NextAuth.js (Google OAuth)",
         "ui": "React + Custom CSS",
+        "i18n": "next-intl (vi, en, th, id, ms)",
         "charts": "Recharts",
         "hosting": "Vercel",
         "rate_shopper": "SerpApi (Google Hotels)",
@@ -205,6 +206,14 @@
         {
             "path": "/api/user/switch-hotel",
             "explained": "Switch active hotel context"
+        },
+        {
+            "path": "/api/user/locale",
+            "explained": "PATCH: persist locale preference to DB + set rms_locale cookie. Cookie-first fallback if DB fails."
+        },
+        {
+            "path": "/api/admin/resellers",
+            "explained": "CRUD resellers (list, create, update, delete)"
         }
     ],
     "business_rules": [
@@ -234,7 +243,10 @@
             "Multi-tenant (hotel switching, role-based access)",
             "Admin Panel (hotels, users, hotel assignments)",
             "Dashboard (overview, monthly comparison)",
-            "Data Management (upload, delete by month)"
+            "Data Management (upload, delete by month)",
+            "i18n Multi-Language UI (vi, en, th, id, ms via next-intl)",
+            "Language Switcher (sidebar, cookie-first with DB persist)",
+            "PLG Admin (Resellers, Promo Codes, Commissions, Pricing)"
         ],
         "planned_p0": [
             "Data Validation Guardrails (Phase 0.5)",
@@ -257,7 +269,9 @@
             "Revenue per night: Math.floor(total/nights) + remainder on last night (VND-safe)",
             "Promo stacking: PROGRESSIVE = multiply, ADDITIVE = sum",
             "Auth pattern: getActiveHotelId() for tenant isolation, auth() for session check, role check via session.user.role",
-            "API auth coverage: scan all route.ts files for auth()/getActiveHotelId()/getServerSession patterns"
+            "API auth coverage: scan all route.ts files for auth()/getActiveHotelId()/getServerSession patterns",
+            "i18n keys: next-intl requires nested objects, NOT flat dot-notation (e.g. tabs: { overview: '...' } not 'tabs.overview': '...')",
+            "Cookie-first locale: LanguageSwitcher sets rms_locale cookie directly, API is best-effort DB persist"
         ],
         "gotchas": [
             "prisma generate fails when query_engine DLL is locked by running dev server — kill Node first",
@@ -267,7 +281,10 @@
             "Raw SQL returns numeric types as strings — must cast with Number()",
             "Never accept hotelId from client in API routes — always derive from getActiveHotelId() for tenant isolation",
             "upsert in settings API could create arbitrary hotels — use update instead",
-            "git commit hangs on Windows when GPG signing is enabled — use --no-gpg-sign"
+            "git commit hangs on Windows when GPG signing is enabled — use --no-gpg-sign",
+            "next-intl flat dot-notation keys (e.g. 'tabs.overview') cause INVALID_MESSAGE errors — must convert to nested objects",
+            "LanguageSwitcher fails silently if API /api/user/locale returns non-200 — use cookie-first approach",
+            "Stale Prisma client causes resellers query to return [] on localhost — run prisma generate after schema changes"
         ],
         "conventions": [
             "Server actions in app/actions/*.ts",
@@ -275,7 +292,10 @@
             "Plans stored in plans/YYMMDD-HHMM-feature-name/",
             "Specs stored in docs/specs/XX_name.md",
             "Test scripts in scripts/*.ts (run with: npx tsx --tsconfig tsconfig.json scripts/xxx.ts)",
-            "Audit reports in docs/reports/audit_YYYY-MM-DD.md"
+            "Audit reports in docs/reports/audit_YYYY-MM-DD.md",
+            "i18n messages in apps/web/messages/{locale}.json (5 locales: en, vi, th, id, ms)",
+            "i18n config single source of truth: lib/i18n/config.ts",
+            "LanguageSwitcher component: components/shared/LanguageSwitcher.tsx (rendered in Sidebar.tsx)"
         ]
     }
 }

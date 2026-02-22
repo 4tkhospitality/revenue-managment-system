@@ -89,7 +89,7 @@ export default function RoomTypesTab() {
 
     // Handle delete
     const handleDelete = async (id: string) => {
-        if (!confirm('Xác nhận xóa hạng phòng này?')) return;
+        if (!confirm('Confirm delete this room type?')) return;
 
         try {
             const res = await fetch(`/api/pricing/room-types/${id}`, { method: 'DELETE' });
@@ -126,7 +126,7 @@ export default function RoomTypesTab() {
         <div className="space-y-4">
             {/* Header */}
             <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-slate-800">Hạng phòng</h2>
+                <h2 className="text-lg font-semibold text-slate-800">Room Type</h2>
                 <button
                     onClick={() => {
                         setEditing(null);
@@ -136,7 +136,7 @@ export default function RoomTypesTab() {
                     className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
                 >
                     <Plus className="w-4 h-4" />
-                    Thêm hạng phòng
+                    Add room type
                 </button>
             </div>
 
@@ -152,11 +152,11 @@ export default function RoomTypesTab() {
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
                     <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md">
                         <h3 className="text-lg font-semibold text-slate-800 mb-4">
-                            {editing ? 'Sửa hạng phòng' : 'Thêm hạng phòng'}
+                            {editing ? 'Edit Room Type' : 'Add Room Type'}
                         </h3>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Tên hạng phòng *</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Room Type Name *</label>
                                 <input
                                     type="text"
                                     value={formData.name}
@@ -166,7 +166,7 @@ export default function RoomTypesTab() {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Mô tả</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
                                 <input
                                     type="text"
                                     value={formData.description}
@@ -175,7 +175,7 @@ export default function RoomTypesTab() {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Giá thu về (VND) *</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Net Revenue (VND) *</label>
                                 <input
                                     type="text"
                                     value={formData.net_price}
@@ -191,7 +191,7 @@ export default function RoomTypesTab() {
                                     onClick={() => { setShowForm(false); setEditing(null); }}
                                     className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50"
                                 >
-                                    Hủy
+                                    Cancel
                                 </button>
                                 <button
                                     type="submit"
@@ -199,7 +199,7 @@ export default function RoomTypesTab() {
                                     className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-50 flex items-center justify-center gap-2"
                                 >
                                     {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                                    {editing ? 'Cập nhật' : 'Thêm'}
+                                    {editing ? 'Update' : 'Add'}
                                 </button>
                             </div>
                         </form>
@@ -210,17 +210,17 @@ export default function RoomTypesTab() {
             {/* Table */}
             {roomTypes.length === 0 ? (
                 <div className="text-center py-12 text-slate-500">
-                    Chưa có hạng phòng nào. Nhấn &quot;Thêm hạng phòng&quot; để bắt đầu.
+                    No room types yet. Click &quot;Add Room Type&quot; to get started.
                 </div>
             ) : (
                 <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
                     <table className="w-full text-sm">
                         <thead className="bg-slate-50">
                             <tr>
-                                <th className="px-4 py-3 text-left text-slate-600 font-medium">Hạng phòng</th>
-                                <th className="px-4 py-3 text-left text-slate-600 font-medium">Mô tả</th>
-                                <th className="px-4 py-3 text-right text-slate-600 font-medium">Giá thu về</th>
-                                <th className="px-4 py-3 text-center text-slate-600 font-medium">Thao tác</th>
+                                <th className="px-4 py-3 text-left text-slate-600 font-medium">Room Type</th>
+                                <th className="px-4 py-3 text-left text-slate-600 font-medium">Description</th>
+                                <th className="px-4 py-3 text-right text-slate-600 font-medium">Net Revenue</th>
+                                <th className="px-4 py-3 text-center text-slate-600 font-medium">Actions</th>
                             </tr>
                         </thead>
                         <tbody>

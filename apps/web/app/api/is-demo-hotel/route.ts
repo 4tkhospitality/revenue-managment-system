@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import { getActiveHotelId, isDemoHotel } from '@/lib/pricing/get-hotel';
 import { auth } from '@/lib/auth';
+import prisma from '@/lib/prisma';
 
 export async function GET() {
     const hotelId = await getActiveHotelId();
@@ -25,9 +26,23 @@ export async function GET() {
     }
 
     if (!hotelId) {
-        return NextResponse.json({ isDemo: false, role, isAdmin, error: 'No hotel selected' });
+        return NextResponse.json({ isDemo: false, role, isAdmin, plan: 'STANDARD', error: 'No hotel selected' });
     }
 
     const isDemo = await isDemoHotel(hotelId);
-    return NextResponse.json({ isDemo, hotelId, role, isAdmin });
+
+    // Fetch plan tier from subscription
+    let plan = 'STANDARD';
+    try {
+        const sub = await prisma.subscription.findFirst({
+            where: { hotel_id: hotelId },
+            select: { plan: true },
+        });
+        if (sub?.plan) plan = sub.plan;
+    } catch {
+        // ignore — default STANDARD
+    }
+
+    return NextResponse.json({ isDemo, hotelId, role, isAdmin, plan });
 }
+

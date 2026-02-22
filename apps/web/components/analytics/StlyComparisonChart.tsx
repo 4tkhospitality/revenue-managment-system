@@ -6,6 +6,7 @@ import {
     Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
 import type { AnalyticsRow, ViewMode } from './types';
+import { useTranslations } from 'next-intl';
 
 export function StlyComparisonChart({
     rows,
@@ -16,6 +17,7 @@ export function StlyComparisonChart({
     capacity: number;
     viewMode: ViewMode;
 }) {
+    const t = useTranslations('analyticsTab');
     const chartData = rows.slice(0, 60).map(r => {
         const currentVal = viewMode === 'rooms'
             ? r.rooms_otb
@@ -34,12 +36,14 @@ export function StlyComparisonChart({
         };
     });
 
+    const modeLabel = viewMode === 'rooms' ? t('stlyRooms') : t('stlyRevenue');
+
     return (
         <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
             <div className="flex items-center gap-2 mb-3">
                 <TrendingUp className="w-4 h-4 text-slate-500" />
                 <h3 className="text-sm font-semibold text-slate-700">
-                    OTB vs STLY (60d) — {viewMode === 'rooms' ? 'Rooms' : 'Revenue (M)'}
+                    {t('stlyTitle', { mode: modeLabel })}
                 </h3>
             </div>
             <ResponsiveContainer width="100%" height={280}>
@@ -70,7 +74,7 @@ export function StlyComparisonChart({
                         stroke="#3b82f6"
                         strokeWidth={2}
                         dot={false}
-                        name="This Year"
+                        name={t('thisYear')}
                         activeDot={{ r: 4, fill: '#3b82f6' }}
                     />
                     <Line
@@ -80,7 +84,7 @@ export function StlyComparisonChart({
                         strokeWidth={1.5}
                         strokeDasharray="5 3"
                         dot={false}
-                        name="Last Year"
+                        name={t('lastYear')}
                         connectNulls={false}
                     />
                 </LineChart>

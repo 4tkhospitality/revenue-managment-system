@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Plus, Pencil, Trash2, Loader2, BedDouble, Globe } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 // ─── Types ───────────────────────────────────────────────────
 
@@ -37,9 +38,10 @@ const parseInputVND = (formatted: string): string => {
 
 const formatVND = (n: number) => new Intl.NumberFormat('vi-VN').format(n);
 
-// ─── Sub-section: "Hạng phòng" ──────────────────────────────
+// ─── Sub-section: "Room Types" ──────────────────────────────
 
 function RoomTypesSection({ isDemo }: { isDemo: boolean }) {
+    const t = useTranslations('setupTab');
     const [roomTypes, setRoomTypes] = useState<RoomType[]>([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
@@ -98,7 +100,7 @@ function RoomTypesSection({ isDemo }: { isDemo: boolean }) {
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm('Xác nhận xóa hạng phòng này?')) return;
+        if (!confirm(t('delete') + '?')) return;
         try {
             const res = await fetch(`/api/pricing/room-types/${id}`, { method: 'DELETE' });
             if (!res.ok) throw new Error('Failed to delete');
@@ -125,7 +127,7 @@ function RoomTypesSection({ isDemo }: { isDemo: boolean }) {
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <BedDouble className="w-5 h-5 text-[#204183]" />
-                    <h3 className="text-base font-bold text-slate-800">Hạng phòng</h3>
+                    <h3 className="text-base font-bold text-slate-800">{t('roomTypesTitle')}</h3>
                     <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[#EFF1F8] text-[#204183]">{roomTypes.length}</span>
                 </div>
                 {!isDemo && (
@@ -138,7 +140,7 @@ function RoomTypesSection({ isDemo }: { isDemo: boolean }) {
                         className="flex items-center gap-2 px-3 py-1.5 bg-[#204183] hover:bg-[#1a3469] text-white text-sm font-semibold rounded-lg transition-colors"
                     >
                         <Plus className="w-4 h-4" />
-                        Thêm
+                        {t('addRoomType')}
                     </button>
                 )}
             </div>
@@ -155,17 +157,17 @@ function RoomTypesSection({ isDemo }: { isDemo: boolean }) {
                 </div>
             ) : roomTypes.length === 0 ? (
                 <div className="text-center py-8 text-slate-400 text-sm">
-                    Chưa có hạng phòng nào. Nhấn &quot;Thêm&quot; để bắt đầu.
+                    {t('noRoomTypes')}
                 </div>
             ) : (
                 <div className="bg-white border border-[#DBE1EB] rounded-xl overflow-hidden">
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="bg-[#F2F4F8]">
-                                <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Hạng phòng</th>
-                                <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Mô tả</th>
-                                <th className="text-right px-4 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Giá thu về</th>
-                                {!isDemo && <th className="text-center px-3 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Thao tác</th>}
+                                <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{t('roomTypesTitle')}</th>
+                                <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{t('description')}</th>
+                                <th className="text-right px-4 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{t('netPrice')}</th>
+                                {!isDemo && <th className="text-center px-3 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{t('edit')}</th>}
                             </tr>
                         </thead>
                         <tbody>
@@ -204,11 +206,11 @@ function RoomTypesSection({ isDemo }: { isDemo: boolean }) {
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
                     <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md">
                         <h3 className="text-lg font-semibold text-slate-800 mb-4">
-                            {editing ? 'Sửa hạng phòng' : 'Thêm hạng phòng'}
+                            {editing ? t('editRoomType') : t('addRoomType')}
                         </h3>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Tên hạng phòng *</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">{t('roomName')} *</label>
                                 <input
                                     type="text"
                                     value={formData.name}
@@ -218,7 +220,7 @@ function RoomTypesSection({ isDemo }: { isDemo: boolean }) {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Mô tả</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">{t('description')}</label>
                                 <input
                                     type="text"
                                     value={formData.description}
@@ -227,7 +229,7 @@ function RoomTypesSection({ isDemo }: { isDemo: boolean }) {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Giá thu về (VND) *</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">{t('netPrice')} *</label>
                                 <input
                                     type="text"
                                     value={formData.net_price}
@@ -239,11 +241,11 @@ function RoomTypesSection({ isDemo }: { isDemo: boolean }) {
                             </div>
                             <div className="flex gap-3 pt-2">
                                 <button type="button" onClick={() => { setShowForm(false); setEditing(null); }}
-                                    className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50">Hủy</button>
+                                    className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50">{t('cancel')}</button>
                                 <button type="submit" disabled={saving}
                                     className="flex-1 px-4 py-2 bg-[#204183] hover:bg-[#1a3469] text-white rounded-lg disabled:opacity-50 flex items-center justify-center gap-2">
                                     {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                                    {editing ? 'Cập nhật' : 'Thêm'}
+                                    {editing ? t('save') : t('addRoomType')}
                                 </button>
                             </div>
                         </form>
@@ -254,9 +256,10 @@ function RoomTypesSection({ isDemo }: { isDemo: boolean }) {
     );
 }
 
-// ─── Sub-section: "Kênh OTA" ─────────────────────────────────
+// ─── Sub-section: "OTA Channels" ─────────────────────────────────
 
 function OTAChannelsSection({ isDemo }: { isDemo: boolean }) {
+    const t = useTranslations('setupTab');
     const [channels, setChannels] = useState<OTAChannel[]>([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
@@ -342,7 +345,7 @@ function OTAChannelsSection({ isDemo }: { isDemo: boolean }) {
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm('Xác nhận xóa kênh OTA này?')) return;
+        if (!confirm(t('delete') + '?')) return;
         try {
             const res = await fetch(`/api/pricing/ota-channels/${id}`, { method: 'DELETE' });
             if (!res.ok) throw new Error('Failed to delete');
@@ -368,7 +371,7 @@ function OTAChannelsSection({ isDemo }: { isDemo: boolean }) {
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <Globe className="w-5 h-5 text-[#204183]" />
-                    <h3 className="text-base font-bold text-slate-800">Kênh OTA</h3>
+                    <h3 className="text-base font-bold text-slate-800">{t('otaChannelsTitle')}</h3>
                     <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[#EFF1F8] text-[#204183]">{channels.length}</span>
                 </div>
                 {!isDemo && (
@@ -381,7 +384,7 @@ function OTAChannelsSection({ isDemo }: { isDemo: boolean }) {
                         className="flex items-center gap-2 px-3 py-1.5 bg-[#204183] hover:bg-[#1a3469] text-white text-sm font-semibold rounded-lg transition-colors"
                     >
                         <Plus className="w-4 h-4" />
-                        Thêm
+                        {t('addChannel')}
                     </button>
                 )}
             </div>
@@ -398,19 +401,19 @@ function OTAChannelsSection({ isDemo }: { isDemo: boolean }) {
                 </div>
             ) : channels.length === 0 ? (
                 <div className="text-center py-8 text-slate-400 text-sm">
-                    Chưa có kênh OTA nào. Nhấn &quot;Thêm&quot; để bắt đầu.
+                    {t('noChannels')}
                 </div>
             ) : (
                 <div className="bg-white border border-[#DBE1EB] rounded-xl overflow-hidden">
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="bg-[#F2F4F8]">
-                                <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Kênh OTA</th>
-                                <th className="text-left px-3 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Mã</th>
-                                <th className="text-center px-3 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Hoa hồng</th>
-                                <th className="text-center px-3 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Chế độ</th>
-                                <th className="text-center px-3 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Trạng thái</th>
-                                {!isDemo && <th className="text-center px-3 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Thao tác</th>}
+                                <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{t('otaChannelsTitle')}</th>
+                                <th className="text-left px-3 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{t('channelCode')}</th>
+                                <th className="text-center px-3 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{t('commission')}</th>
+                                <th className="text-center px-3 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{t('calcType')}</th>
+                                <th className="text-center px-3 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{t('active')}</th>
+                                {!isDemo && <th className="text-center px-3 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{t('edit')}</th>}
                             </tr>
                         </thead>
                         <tbody>
@@ -431,7 +434,7 @@ function OTAChannelsSection({ isDemo }: { isDemo: boolean }) {
                                                 ? 'bg-blue-50 text-blue-700'
                                                 : 'bg-purple-50 text-purple-700'
                                                 }`}>
-                                                {ch.calc_type === 'PROGRESSIVE' ? 'Lũy tiến' : 'Cộng dồn'}
+                                                {ch.calc_type === 'PROGRESSIVE' ? t('progressive') : t('additive')}
                                             </span>
                                         </td>
                                         <td className="px-3 py-3">
@@ -474,11 +477,11 @@ function OTAChannelsSection({ isDemo }: { isDemo: boolean }) {
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
                     <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md">
                         <h3 className="text-lg font-semibold text-slate-800 mb-4">
-                            {editing ? 'Sửa kênh OTA' : 'Thêm kênh OTA'}
+                            {editing ? t('editChannel') : t('addChannel')}
                         </h3>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Tên kênh *</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">{t('channelName')} *</label>
                                 <input
                                     type="text"
                                     value={formData.name}
@@ -489,7 +492,7 @@ function OTAChannelsSection({ isDemo }: { isDemo: boolean }) {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Mã kênh *</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">{t('channelCode')} *</label>
                                 <input
                                     type="text"
                                     value={formData.code}
@@ -500,7 +503,7 @@ function OTAChannelsSection({ isDemo }: { isDemo: boolean }) {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Hoa hồng (%) *</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">{t('commission')} *</label>
                                 <input
                                     type="number"
                                     value={formData.commission}
@@ -511,14 +514,14 @@ function OTAChannelsSection({ isDemo }: { isDemo: boolean }) {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Chế độ tính</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">{t('calcType')}</label>
                                 <select
                                     value={formData.calc_type}
                                     onChange={(e) => setFormData({ ...formData, calc_type: e.target.value as CalcTypeValue })}
                                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 >
-                                    <option value="PROGRESSIVE">Lũy tiến — Progressive</option>
-                                    <option value="ADDITIVE">Cộng dồn — Additive</option>
+                                    <option value="PROGRESSIVE">{t('progressive')}</option>
+                                    <option value="ADDITIVE">{t('additive')}</option>
                                 </select>
                             </div>
                             <div className="flex items-center gap-2">
@@ -529,15 +532,15 @@ function OTAChannelsSection({ isDemo }: { isDemo: boolean }) {
                                     onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
                                     className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                                 />
-                                <label htmlFor="ota_is_active" className="text-sm text-slate-700">Đang hoạt động</label>
+                                <label htmlFor="ota_is_active" className="text-sm text-slate-700">{t('active')}</label>
                             </div>
                             <div className="flex gap-3 pt-2">
                                 <button type="button" onClick={() => { setShowForm(false); setEditing(null); }}
-                                    className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50">Hủy</button>
+                                    className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50">{t('cancel')}</button>
                                 <button type="submit" disabled={saving}
                                     className="flex-1 px-4 py-2 bg-[#204183] hover:bg-[#1a3469] text-white rounded-lg disabled:opacity-50 flex items-center justify-center gap-2">
                                     {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                                    {editing ? 'Cập nhật' : 'Thêm'}
+                                    {editing ? t('save') : t('addChannel')}
                                 </button>
                             </div>
                         </form>

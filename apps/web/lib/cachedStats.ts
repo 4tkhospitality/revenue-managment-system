@@ -84,7 +84,7 @@ export async function getReservationStats30(hotelId?: string): Promise<Reservati
         rooms: agg._sum.rooms || 0,
         revenue: Number(agg._sum.revenue || 0),
         topAgents: topAgentsRaw.map(a => ({
-            company_name: a.company_name || 'Khác',
+            company_name: a.company_name || 'Other',
             revenue: Number(a._sum.revenue || 0),
         })),
     };
@@ -152,7 +152,7 @@ export async function getCancellationStats30Days(hotelId?: string): Promise<Canc
         nights: Number(nightsResult[0]?.total_nights || 0),
         revenue: Number(agg._sum.revenue || 0),
         topChannels: topChannelsRaw.map(c => ({
-            channel: c.company_name || 'Khác',
+            channel: c.company_name || 'Other',
             revenue: Number(c._sum.revenue || 0),
         })),
     };

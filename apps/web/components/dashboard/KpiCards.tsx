@@ -1,6 +1,7 @@
 'use client';
 
 import { ArrowUpRight, ArrowDownRight, Minus, XCircle } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 // Number formatters for Vietnamese style
 const nf0 = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 });
@@ -71,6 +72,7 @@ interface KpiCardsProps {
 }
 
 export function KpiCards({ data, hotelCapacity }: KpiCardsProps) {
+    const t = useTranslations('kpi');
     const days = 30;
     const hasCancellation = data.cancelledRooms !== undefined || data.lostRevenue !== undefined;
     const totalCapacity = hotelCapacity * days;
@@ -79,45 +81,45 @@ export function KpiCards({ data, hotelCapacity }: KpiCardsProps) {
     return (
         <div className={`grid gap-4 ${hasCancellation ? 'grid-cols-2 lg:grid-cols-5' : 'grid-cols-2 lg:grid-cols-4'}`}>
             <KpiCard
-                title="Phòng đã đặt (OTB)"
+                title={t('roomsOtb')}
                 value={nf0.format(data.roomsOtb)}
                 trend={5}
                 trendLabel="+5% MoM"
-                formula={`SUM(rooms_otb) trong ${days} ngày tới`}
+                formula={t('roomsOtbFormula', { days })}
             />
             <KpiCard
-                title="Còn trống"
+                title={t('remaining')}
                 value={nf0.format(Math.max(0, data.remainingSupply))}
                 trend={data.remainingSupply <= 0 ? -1 : soldPct > 80 ? 1 : 0}
-                trendLabel={data.remainingSupply <= 0 ? 'Full / Vượt' : `${nf1.format(soldPct)}% đã bán`}
+                trendLabel={data.remainingSupply <= 0 ? t('fullOverbooked') : t('percentSold', { pct: nf1.format(soldPct) })}
                 formula={data.remainingSupply < 0
-                    ? `⚠️ OTB vượt capacity (${hotelCapacity} × ${days} = ${nf0.format(totalCapacity)})`
+                    ? t('overbookedFormula', { capacity: hotelCapacity, days, total: nf0.format(totalCapacity) })
                     : `(${hotelCapacity} × ${days}) − ${nf0.format(data.roomsOtb)}`}
             />
             <KpiCard
-                title="Pickup TB (7 ngày)"
+                title={t('avgPickup7d')}
                 value={data.pickupHistoryCount >= 2 && data.avgPickupT7 != null
                     ? `+${nf1.format(data.avgPickupT7)}`
                     : 'N/A'}
                 trend={data.avgPickupT7 ?? undefined}
                 trendLabel={data.pickupHistoryCount >= 2 && data.avgPickupT7 != null && data.roomsOtb > 0
                     ? `+${nf1.format((data.avgPickupT7 / data.roomsOtb) * 100)}%`
-                    : 'Chưa đủ dữ liệu'}
+                    : t('notEnoughData')}
                 formula={data.pickupHistoryCount < 2
-                    ? 'Cần ≥2 snapshots để tính'
-                    : 'AVG pickup 30 ngày gần nhất'}
+                    ? t('needSnapshots')
+                    : t('avgPickupFormula')}
             />
             <KpiCard
-                title="Dự báo nhu cầu"
+                title={t('forecastDemand')}
                 value={data.forecastSource === 'no_supply' || data.forecastSource === 'none'
                     ? '—'
                     : `+${nf0.format(data.forecastDemand)}`}
                 trend={data.forecastDemand > 0 ? data.forecastDemand : undefined}
                 trendLabel={data.forecastSource === 'fallback'
-                    ? 'Ước lượng'
+                    ? t('estimated')
                     : data.forecastSource === 'single'
-                        ? '1 điểm'
-                        : 'phòng'}
+                        ? t('singlePoint')
+                        : t('rooms')}
                 formula={`SUM(remaining_demand) — ${data.forecastSource}`}
             />
 
@@ -127,7 +129,7 @@ export function KpiCards({ data, hotelCapacity }: KpiCardsProps) {
                     <div className="flex items-center gap-2">
                         <XCircle className="w-4 h-4 text-rose-500 flex-shrink-0" aria-hidden="true" />
                         <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                            Hủy / Mất (30d)
+                            {t('cancelledLost')}
                         </p>
                     </div>
                     <div className="flex items-end gap-3 min-w-0">
@@ -135,13 +137,13 @@ export function KpiCards({ data, hotelCapacity }: KpiCardsProps) {
                             <p className="text-2xl font-bold text-rose-600">
                                 {nf0.format(data.cancelledRooms || 0)}
                             </p>
-                            <p className="text-[10px] text-slate-400">RN hủy</p>
+                            <p className="text-[10px] text-slate-400">{t('cancelledRooms')}</p>
                         </div>
                         <div className="border-l border-slate-200 pl-3 min-w-0">
                             <p className="text-sm font-bold text-slate-700 truncate" title={nfCurrency.format(data.lostRevenue || 0)}>
                                 {nfCurrency.format(data.lostRevenue || 0)}
                             </p>
-                            <p className="text-[10px] text-slate-400">doanh thu mất</p>
+                            <p className="text-[10px] text-slate-400">{t('lostRevenue')}</p>
                         </div>
                     </div>
                 </div>

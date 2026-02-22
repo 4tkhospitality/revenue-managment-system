@@ -100,12 +100,12 @@ export async function parseExcelToRows(buffer: Buffer | ArrayBuffer): Promise<Ex
     if (!sheet) {
         sheet = workbook.worksheets[0];
     }
-    if (!sheet) throw new Error('Không tìm thấy sheet dữ liệu');
+    if (!sheet) throw new Error('Data sheet not found');
 
     // Get header row (first row)
     const headerRow = sheet.getRow(1);
     if (!headerRow || headerRow.cellCount === 0) {
-        throw new Error('File Excel trống, không có dữ liệu');
+        throw new Error('Excel file is empty, no data found');
     }
 
     // Build column index → field name mapping
@@ -124,7 +124,7 @@ export async function parseExcelToRows(buffer: Buffer | ArrayBuffer): Promise<Ex
     const missingFields = requiredFields.filter(f => !mappedFields.has(f));
 
     if (missingFields.length > 0) {
-        throw new Error(`Thiếu cột bắt buộc: ${missingFields.join(', ')}. Hãy tải file mẫu để xem định dạng đúng.`);
+        throw new Error(`Missing required columns: ${missingFields.join(', ')}. Download the sample file for correct format.`);
     }
 
     // Read data rows (skip header)
@@ -145,7 +145,7 @@ export async function parseExcelToRows(buffer: Buffer | ArrayBuffer): Promise<Ex
         rows.push(rowData as unknown as ExcelRow);
     });
 
-    if (rows.length === 0) throw new Error('File Excel trống, không có dữ liệu');
+    if (rows.length === 0) throw new Error('Excel file is empty, no data found');
 
     return rows;
 }

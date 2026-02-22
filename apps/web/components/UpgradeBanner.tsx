@@ -16,19 +16,19 @@ interface UpgradeBannerProps {
 }
 
 const FEATURE_DESCRIPTIONS: Record<FeatureKey, string> = {
-    pricing_calc: 'Tính giá NET → BAR',
-    promo_stacking: 'Ghép nhiều khuyến mãi',
-    daily_actions: 'Gợi ý giá hàng ngày + 1 click Accept',
-    rate_calendar: 'Lịch giá 30 ngày',
-    export_excel: 'Xuất Excel để upload OTA',
-    pickup_pace_simple: 'Xem tốc độ bán phòng',
-    guardrails: 'Cảnh báo giá quá cao/thấp',
-    decision_log: 'Lịch sử quyết định giá',
-    basic_analytics: 'Báo cáo doanh thu cơ bản',
-    advanced_analytics: 'Phân tích nâng cao',
-    multi_property: 'Quản lý nhiều khách sạn',
-    api_import: 'Nhập dữ liệu tự động qua API',
-    rate_shopper_addon: 'Theo dõi giá đối thủ',
+    pricing_calc: 'NET → BAR price calculation',
+    promo_stacking: 'Stack multiple promotions',
+    daily_actions: 'Daily price suggestions + 1-click Accept',
+    rate_calendar: '30-day rate calendar',
+    export_excel: 'Excel export for OTA upload',
+    pickup_pace_simple: 'View booking pace',
+    guardrails: 'High/low price alerts',
+    decision_log: 'Price decision history',
+    basic_analytics: 'Basic revenue reports',
+    advanced_analytics: 'Advanced analytics',
+    multi_property: 'Multi-property management',
+    api_import: 'Automated API data import',
+    rate_shopper_addon: 'Competitor rate tracking',
 };
 
 export function UpgradeBanner({ feature, currentTier = 'STANDARD', className = '' }: UpgradeBannerProps) {
@@ -64,37 +64,37 @@ export function UpgradeBanner({ feature, currentTier = 'STANDARD', className = '
                 {/* Content */}
                 <div className="flex-1">
                     <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                        <Lock className="w-4 h-4 inline mr-1" /> Tính năng dành cho {requiredTier}
+                        <Lock className="w-4 h-4 inline mr-1" /> Feature available on {requiredTier}
                     </h3>
                     <p className="text-gray-600 mb-4">
-                        <strong>{featureDesc}</strong> — Nâng cấp để mở khóa tính năng này và tiết kiệm thời gian mỗi ngày.
+                        <strong>{featureDesc}</strong> — Upgrade to unlock this feature and save time every day.
                     </p>
 
                     {/* Benefits */}
                     <div className="bg-white/60 rounded-lg p-3 mb-4">
                         <p className="text-sm text-gray-700 font-medium mb-2">
-                            Với gói {requiredTier}, bạn sẽ có:
+                            With {requiredTier} plan, you get:
                         </p>
                         <ul className="text-sm text-gray-600 space-y-1">
                             {requiredTier === 'Assistant' && (
                                 <>
-                                    <li>✓ Gợi ý giá hàng ngày (Daily Actions)</li>
-                                    <li>✓ Xuất Excel để upload OTA</li>
-                                    <li>✓ Lịch giá 30 ngày</li>
+                                    <li>✓ Daily price suggestions (Daily Actions)</li>
+                                    <li>✓ Excel export for OTA upload</li>
+                                    <li>✓ 30-day rate calendar</li>
                                 </>
                             )}
                             {requiredTier === 'RMS Lite' && (
                                 <>
-                                    <li>✓ Tất cả tính năng Assistant</li>
-                                    <li>✓ Cảnh báo giá (Guardrails)</li>
-                                    <li>✓ Báo cáo phân tích</li>
+                                    <li>✓ All Assistant features</li>
+                                    <li>✓ Price alerts (Guardrails)</li>
+                                    <li>✓ Analytics reports</li>
                                 </>
                             )}
                             {requiredTier === 'Professional' && (
                                 <>
-                                    <li>✓ Tất cả tính năng RMS Lite</li>
-                                    <li>✓ Quản lý nhiều khách sạn</li>
-                                    <li>✓ Theo dõi giá đối thủ</li>
+                                    <li>✓ All RMS Lite features</li>
+                                    <li>✓ Multi-property management</li>
+                                    <li>✓ Competitor rate tracking</li>
                                 </>
                             )}
                         </ul>
@@ -106,7 +106,7 @@ export function UpgradeBanner({ feature, currentTier = 'STANDARD', className = '
                             href="/pricing-plans"
                             className="inline-flex items-center px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-lg transition-colors"
                         >
-                            Xem bảng giá
+                            View pricing
                             <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                             </svg>
@@ -117,7 +117,7 @@ export function UpgradeBanner({ feature, currentTier = 'STANDARD', className = '
                             rel="noopener noreferrer"
                             className="inline-flex items-center px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-lg transition-colors"
                         >
-                            Liên hệ Zalo
+                            Contact via Zalo
                         </a>
                     </div>
                 </div>
@@ -133,7 +133,7 @@ export function UpgradeTooltip({ feature }: { feature: FeatureKey }) {
     const requiredTier = getUpgradeTierName(feature);
     return (
         <span className="text-xs text-amber-600 font-medium">
-            <Lock className="w-3 h-3 inline mr-0.5" /> Cần gói {requiredTier}
+            <Lock className="w-3 h-3 inline mr-0.5" /> Requires {requiredTier} plan
         </span>
     );
 }

@@ -171,14 +171,14 @@ export async function runPricingEngine(hotelId: string, asOfDate: Date) {
             action = 'KEEP';
             deltaPctDecimal = null;
             reasonCode = 'MISSING_PRICE';
-            reasonTextVi = 'Thiếu giá hiện tại — không đề xuất thay đổi';
+            reasonTextVi = 'Missing current rate — no adjustment suggested';
         }
         // G2: STOP_SELL override — remaining_supply ≤ 0
         else if (remainingSupply <= 0) {
             action = 'STOP_SELL';
             deltaPctDecimal = new Prisma.Decimal('0.00');
             reasonCode = 'STOP_SELL';
-            reasonTextVi = 'Hết phòng — ngừng bán';
+            reasonTextVi = 'Sold out — stop selling';
             finalRecommendedPrice = currentPrice; // keep same so UI doesn't show NaN
         }
         else {
@@ -191,15 +191,15 @@ export async function runPricingEngine(hotelId: string, asOfDate: Date) {
             if (Math.abs(rawDelta) < 1.0) {
                 action = 'KEEP';
                 reasonCode = 'STABLE';
-                reasonTextVi = 'Bán đúng nhịp, giữ giá';
+                reasonTextVi = 'On pace, hold rate';
             } else if (rawDelta > 0) {
                 action = 'INCREASE';
                 reasonCode = mapToReasonCode(result, remainingSupply, capacity);
-                reasonTextVi = generateViReason(reasonCode, rawDelta, result);
+                reasonTextVi = generateReason(reasonCode, rawDelta, result);
             } else {
                 action = 'DECREASE';
                 reasonCode = mapToReasonCode(result, remainingSupply, capacity);
-                reasonTextVi = generateViReason(reasonCode, rawDelta, result);
+                reasonTextVi = generateReason(reasonCode, rawDelta, result);
             }
         }
 
@@ -322,10 +322,10 @@ function mapToReasonCode(
 }
 
 /**
- * Generate Vietnamese reason text for GM display.
+ * Generate reason text for GM display.
  * Shows OTB% (current) + Projected OCC% (after cxl + forecast) separately.
  */
-function generateViReason(
+function generateReason(
     code: ReasonCode,
     deltaPct: number,
     result: PriceOptimizerResult,
@@ -337,20 +337,20 @@ function generateViReason(
 
     switch (code) {
         case 'HIGH_OCC':
-            return `OTB ${otbStr}, dự phóng ${projStr} cao → tăng giá ${deltaStr}`;
+            return `OTB ${otbStr}, projected ${projStr} high → raise rate ${deltaStr}`;
         case 'STRONG_DEMAND':
-            return `Nhu cầu mạnh (${result.zone}), OTB ${otbStr} → điều chỉnh ${deltaStr}`;
+            return `Strong demand (${result.zone}), OTB ${otbStr} → adjust ${deltaStr}`;
         case 'LOW_PICKUP':
-            return `Pickup thấp, OTB ${otbStr}, dự phóng ${projStr} → giảm giá ${deltaStr}`;
+            return `Low pickup, OTB ${otbStr}, projected ${projStr} → lower rate ${deltaStr}`;
         case 'LOW_SUPPLY':
-            return `Còn ít phòng, OTB ${otbStr} → điều chỉnh ${deltaStr}`;
+            return `Few rooms left, OTB ${otbStr} → adjust ${deltaStr}`;
         case 'STABLE':
-            return 'Bán đúng nhịp, giữ giá';
+            return 'On pace, hold rate';
         case 'STOP_SELL':
-            return 'Hết phòng — ngừng bán';
+            return 'Sold out — stop selling';
         case 'MISSING_PRICE':
-            return 'Thiếu giá hiện tại — không đề xuất thay đổi';
+            return 'Missing current rate — no adjustment suggested';
         default:
-            return `Điều chỉnh ${deltaStr}`;
+            return `Adjust ${deltaStr}`;
     }
 }

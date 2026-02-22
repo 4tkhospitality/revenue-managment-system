@@ -35,7 +35,7 @@ export default function SelectHotelPage() {
             if (res.ok) {
                 router.push('/dashboard');
             } else {
-                alert('Không thể chọn khách sạn. Vui lòng thử lại.');
+                alert('Cannot select hotel. Please try again.');
                 setSelecting(null);
             }
         } catch (error) {
@@ -63,11 +63,11 @@ export default function SelectHotelPage() {
                 <div className="text-center mb-6">
                     <div className="text-4xl mb-3"><Building2 className="w-10 h-10 text-blue-500 mx-auto" /></div>
                     <h1 className="text-2xl font-bold text-gray-900">
-                        Chọn khách sạn
+                        Select Hotel
                     </h1>
                     <p className="text-gray-600 mt-2">
-                        Bạn có quyền truy cập {accessibleHotels.length} khách sạn.
-                        Chọn một khách sạn để tiếp tục.
+                        You have access to {accessibleHotels.length} hotels.
+                        Select a hotel to continue.
                     </p>
                 </div>
 
@@ -110,7 +110,7 @@ export default function SelectHotelPage() {
 
                 {accessibleHotels.length === 0 && (
                     <div className="text-center text-gray-500 py-8">
-                        Không tìm thấy khách sạn nào.
+                        No hotels found.
                     </div>
                 )}
             </div>

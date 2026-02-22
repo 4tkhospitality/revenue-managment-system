@@ -50,10 +50,10 @@ export default function WelcomePage() {
                 window.location.href = '/dashboard'
                 return
             } else {
-                setError(data.error || 'Có lỗi xảy ra')
+                setError(data.error || 'An error occurred')
             }
         } catch (err) {
-            setError('Không thể kết nối server')
+            setError('Cannot connect to server')
         } finally {
             setLoading(null)
         }
@@ -75,14 +75,14 @@ export default function WelcomePage() {
             if (res.ok) {
                 window.location.href = '/dashboard'
                 return
-            } else if (data.error?.includes('thành viên')) {
+            } else if (data.error?.includes('member')) {
                 window.location.href = '/dashboard'
                 return
             } else {
-                setError(data.error || 'Mã mời không hợp lệ')
+                setError(data.error || 'Invalid invite code')
             }
         } catch (err) {
-            setError('Không thể kết nối server')
+            setError('Cannot connect to server')
         } finally {
             setLoading(null)
         }
@@ -125,10 +125,10 @@ export default function WelcomePage() {
                             className="text-2xl font-semibold mb-2"
                             style={{ color: 'var(--foreground)' }}
                         >
-                            Chào mừng đến với RMS
+                            Welcome to RMS
                         </h1>
                         <p style={{ color: 'var(--muted)' }}>
-                            Hệ thống quản lý doanh thu khách sạn
+                            Revenue Management System hotels
                         </p>
                     </div>
 
@@ -168,10 +168,10 @@ export default function WelcomePage() {
                                 </div>
                                 <div className="flex-1">
                                     <div className="font-medium" style={{ color: 'var(--foreground)' }}>
-                                        {loading === 'demo' ? 'Đang tải...' : 'Xem Demo'}
+                                        {loading === 'demo' ? 'Loading...' : 'View Demo'}
                                     </div>
                                     <div className="text-sm" style={{ color: 'var(--muted)' }}>
-                                        Dành cho người muốn tìm hiểu hệ thống trước
+                                        For those who want to explore the system first
                                     </div>
                                 </div>
                                 <svg
@@ -207,10 +207,10 @@ export default function WelcomePage() {
                                     </div>
                                     <div className="flex-1">
                                         <div className="font-medium" style={{ color: 'var(--foreground)' }}>
-                                            Nhập mã mời
+                                            Enter invite code
                                         </div>
                                         <div className="text-sm" style={{ color: 'var(--muted)' }}>
-                                            Dành cho nhân viên được mời tham gia
+                                            For staff members invited to join
                                         </div>
                                     </div>
                                     <svg
@@ -267,7 +267,7 @@ export default function WelcomePage() {
                                     className="w-full mt-2 text-sm text-center"
                                     style={{ color: 'var(--muted)' }}
                                 >
-                                    Hủy
+                                    Cancel
                                 </button>
                             </div>
                         )}

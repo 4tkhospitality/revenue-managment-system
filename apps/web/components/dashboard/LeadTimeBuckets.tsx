@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { CalendarDays } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { DataStatusBadge } from '@/components/shared/DataStatusBadge';
+import { useTranslations } from 'next-intl';
 
 interface BucketItem {
     bucket: string;
@@ -36,6 +37,7 @@ const BUCKET_COLORS: Record<string, string> = {
 };
 
 export function LeadTimeBuckets({ hotelId, asOfDate, days = 90, isPdfMode = false }: LeadTimeBucketsProps) {
+    const t = useTranslations('analytics');
     const [data, setData] = useState<LeadTimeData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -49,7 +51,7 @@ export function LeadTimeBuckets({ hotelId, asOfDate, days = 90, isPdfMode = fals
                 if (!res.ok) throw new Error('Failed to fetch');
                 setData(await res.json());
             } catch {
-                setError('Không tải được dữ liệu');
+                setError(t('errorLoadingData'));
             } finally {
                 setLoading(false);
             }
@@ -69,7 +71,7 @@ export function LeadTimeBuckets({ hotelId, asOfDate, days = 90, isPdfMode = fals
     if (error || !data) {
         return (
             <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-                <p className="text-gray-500 text-sm">{error || 'Không có dữ liệu'}</p>
+                <p className="text-gray-500 text-sm">{error || t('noData')}</p>
             </div>
         );
     }
@@ -78,10 +80,10 @@ export function LeadTimeBuckets({ hotelId, asOfDate, days = 90, isPdfMode = fals
         return (
             <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
                 <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-sm font-semibold text-gray-800"><CalendarDays className="w-4 h-4 inline text-slate-500" aria-hidden="true" /> Lead-time</h3>
+                    <h3 className="text-sm font-semibold text-gray-800"><CalendarDays className="w-4 h-4 inline text-slate-500" aria-hidden="true" /> {t('leadTimeTitle')}</h3>
                     <DataStatusBadge status="missing_booktime" />
                 </div>
-                <p className="text-gray-500 text-sm">Thiếu dữ liệu book_time để phân tích lead-time.</p>
+                <p className="text-gray-500 text-sm">{t('missingBookTime')}</p>
             </div>
         );
     }
@@ -99,7 +101,7 @@ export function LeadTimeBuckets({ hotelId, asOfDate, days = 90, isPdfMode = fals
             {/* Header */}
             <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                    <CalendarDays className="w-4 h-4 inline text-slate-500" aria-hidden="true" /> Lead-time (Booking Window)
+                    <CalendarDays className="w-4 h-4 inline text-slate-500" aria-hidden="true" /> {t('leadTimeTitle')}
                 </h3>
                 <DataStatusBadge status="ok" />
             </div>
@@ -117,7 +119,7 @@ export function LeadTimeBuckets({ hotelId, asOfDate, days = 90, isPdfMode = fals
                                     `${nf.format(Number(value))} bookings`,
                                     'Count',
                                 ]}
-                                labelFormatter={(label) => `Lead-time: ${label}`}
+                                labelFormatter={(label) => `${t('leadTimeTooltip', { label })}`}
                             />
                             <Bar
                                 dataKey="count"
@@ -141,8 +143,8 @@ export function LeadTimeBuckets({ hotelId, asOfDate, days = 90, isPdfMode = fals
                 {data.avgLeadTime != null && (
                     <div className="mt-3 flex items-center gap-2">
                         <div className="px-3 py-1.5 bg-blue-50 rounded-lg inline-flex items-center gap-1.5">
-                            <span className="text-xs text-blue-600">Avg lead-time:</span>
-                            <span className="text-sm font-bold text-blue-900">{data.avgLeadTime} ngày</span>
+                            <span className="text-xs text-blue-600">{t('avgLeadTimeLabel')}</span>
+                            <span className="text-sm font-bold text-blue-900">{t('daysUnit', { n: data.avgLeadTime })}</span>
                         </div>
                     </div>
                 )}

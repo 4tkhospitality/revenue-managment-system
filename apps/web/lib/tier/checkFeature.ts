@@ -54,7 +54,7 @@ export class FeatureGateError extends Error {
  * Get hotel subscription, returns FREE defaults if no subscription exists
  */
 export async function getHotelSubscription(hotelId: string): Promise<SubscriptionInfo> {
-    // Resolve via org_id first (Cách 2), fallback to hotel_id
+    // Resolve via org_id first (method 2), fallback to hotel_id
     const hotel = await prisma.hotel.findUnique({
         where: { hotel_id: hotelId },
         select: { org_id: true },

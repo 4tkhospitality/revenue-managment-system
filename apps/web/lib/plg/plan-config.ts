@@ -205,10 +205,10 @@ const BASE_PRICE: Record<PlanTier, number> = {
 };
 
 const BAND_LABEL: Record<RoomBand, string> = {
-    R30: '≤ 30 phòng',
-    R80: '31–80 phòng',
-    R150: '81–150 phòng',
-    R300P: '151–300+ phòng',
+    R30: '≤ 30 rooms',
+    R80: '31–80 rooms',
+    R150: '81–150 rooms',
+    R300P: '151–300+ rooms',
 };
 
 /** Scale quota limits by room band multiplier. Non-scalable limits (maxUsers, maxProperties, maxScenarios) stay unchanged. */

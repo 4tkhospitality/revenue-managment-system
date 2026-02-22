@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
         if (!hotel) {
             console.error('[RateShopper][API] Hotel not found:', hotelId);
             return NextResponse.json(
-                { error: `Hotel không tồn tại (ID: ${hotelId}). Vui lòng chuyển sang khách sạn hợp lệ.` },
+                { error: `Hotel not found (ID: ${hotelId}). Please switch to a valid hotel.` },
                 { status: 400 },
             );
         }

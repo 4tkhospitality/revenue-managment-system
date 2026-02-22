@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Edit2, TrendingUp, AlertTriangle, ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
 import { calculateBookingScore, calculateAgodaScore, type OTAMetrics, type Scoreresult } from '@/lib/ota-score-calculator';
 import { ScorecardInputModal } from './ScorecardInputModal';
+import { useTranslations } from 'next-intl';
 
 const STORAGE_KEY = 'rms_ota_health_metrics';
 
@@ -31,6 +32,7 @@ const DEFAULT_METRICS: OTAMetrics = {
 };
 
 export function OTAHealthScorecard() {
+    const t = useTranslations('guidePlaybook');
     const [metrics, setMetrics] = useState<OTAMetrics>(DEFAULT_METRICS);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [bookingScore, setBookingScore] = useState<Scoreresult | null>(null);
@@ -95,15 +97,15 @@ export function OTAHealthScorecard() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h3 className="text-lg font-semibold text-gray-900">Tình trạng thứ hạng tốt/xấu</h3>
-                    <p className="text-sm text-gray-500">Các chỉ số quan trọng của kênh là thông tin để đánh giá TỐT/XẤU</p>
+                    <h3 className="text-lg font-semibold text-gray-900">{t('scorecardTitle')}</h3>
+                    <p className="text-sm text-gray-500">{t('scorecardSubtitle')}</p>
                 </div>
                 <button
                     onClick={() => setIsModalOpen(true)}
                     className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
                 >
                     <Edit2 className="w-4 h-4" />
-                    Cập nhật chỉ số
+                    {t('updateMetrics')}
                 </button>
             </div>
 
@@ -134,7 +136,7 @@ export function OTAHealthScorecard() {
                         { label: 'Content Score', value: `${metrics.agoda.contentScore}%` },
                         { label: 'Review Score', value: `${metrics.agoda.reviewScore}` },
                         { label: 'Price Comp.', value: `${metrics.agoda.priceCompetitiveness}/10` },
-                        { label: 'Program', value: metrics.agoda.programParticipation ? 'Yes' : 'No' },
+                        { label: 'Program', value: metrics.agoda.programParticipation ? t('programYes') : t('programNo') },
                     ]}
                 />
             </div>

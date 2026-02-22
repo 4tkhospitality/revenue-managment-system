@@ -208,6 +208,6 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         return NextResponse.json({ success: true, deletedHotel: hotel.name })
     } catch (error) {
         console.error('Error deleting hotel:', error)
-        return NextResponse.json({ error: 'Lỗi khi xóa hotel. Vui lòng thử lại.' }, { status: 500 })
+        return NextResponse.json({ error: 'Error deleting hotel. Please try again.' }, { status: 500 })
     }
 }

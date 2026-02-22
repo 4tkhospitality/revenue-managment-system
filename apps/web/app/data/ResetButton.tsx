@@ -4,8 +4,10 @@ import { useState } from 'react';
 import { resetDerivedData } from '../actions/resetDerivedData';
 import { getActiveHotelData } from '../actions/getActiveHotelData';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 
 export function ResetButton() {
+    const t = useTranslations('dataPage');
     const [isResetting, setIsResetting] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
     const [result, setResult] = useState<{ success: boolean; message?: string; deleted?: Record<string, number> } | null>(null);
@@ -17,7 +19,7 @@ export function ResetButton() {
         try {
             const { hotelId } = await getActiveHotelData();
             if (!hotelId) {
-                setResult({ success: false, message: 'Chưa có dữ liệu reservation' });
+                setResult({ success: false, message: t('noReservationData') });
                 return;
             }
 
@@ -44,7 +46,7 @@ export function ResetButton() {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
-                Reset & Rebuild
+                {t('resetAndRebuild')}
             </button>
 
             {result && (
@@ -64,12 +66,12 @@ export function ResetButton() {
                                 </svg>
                             </div>
                             <h3 className="text-lg font-semibold text-gray-900">
-                                Xác nhận Reset?
+                                {t('confirmReset')}
                             </h3>
                         </div>
 
                         <p className="text-gray-600 mb-4">
-                            Hành động này sẽ <strong className="text-red-600">xóa toàn bộ</strong> dữ liệu đã tính toán:
+                            {t.rich('resetDesc', { b: (c) => <strong className="text-red-600">{c}</strong> })}
                         </p>
 
                         <ul className="text-sm text-gray-500 mb-4 space-y-1 pl-4">
@@ -82,7 +84,7 @@ export function ResetButton() {
 
                         <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 mb-6">
                             <p className="text-sm text-emerald-700">
-                                ✓ <strong>Raw reservations</strong> sẽ được giữ lại an toàn.
+                                ✓ <strong>Raw reservations</strong> {t('rawKept').replace('✓ ', '')}
                             </p>
                         </div>
 
@@ -92,7 +94,7 @@ export function ResetButton() {
                                 disabled={isResetting}
                                 className="px-4 py-2 rounded-lg text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
                             >
-                                Hủy
+                                {t('cancel')}
                             </button>
                             <button
                                 onClick={handleReset}
@@ -105,10 +107,10 @@ export function ResetButton() {
                                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                                         </svg>
-                                        Đang xóa...
+                                        {t('deleting')}
                                     </span>
                                 ) : (
-                                    'Xóa và Reset'
+                                    t('deleteAndReset')
                                 )}
                             </button>
                         </div>

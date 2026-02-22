@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import {
     Lightbulb,
     ChevronDown,
@@ -33,7 +34,7 @@ function ConfidenceDot({ level }: { level: ConfidenceLevel }) {
     return (
         <span
             className={`inline-block w-1.5 h-1.5 rounded-full ${confDotColor[level]} shrink-0`}
-            title={`Confidence: ${level}`}
+            title={level}
         />
     );
 }
@@ -105,7 +106,8 @@ function getTypeIcon(type: InsightCard['type']) {
 }
 
 // ── Single Card ───────────────────────────────────────────────────
-function CardItem({ card }: { card: InsightCard }) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function CardItem({ card, t }: { card: InsightCard; t: any }) {
     const [open, setOpen] = useState(false);
     const cfg = getConfig(card);
     const Icon = card.type === 'top3' ? getTypeIcon(card.severity === 'danger' ? 'compression_danger' : 'compression_hot') : getTypeIcon(card.type);
@@ -139,26 +141,26 @@ function CardItem({ card }: { card: InsightCard }) {
             {/* Expanded */}
             {open && (
                 <div className="px-3 pb-3 space-y-2 border-t border-slate-100/80 mx-2 pt-2">
-                    {/* What — Tình hình */}
+                    {/* What — Situation */}
                     <div>
-                        <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 mb-0.5">Tình hình</p>
+                        <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 mb-0.5">{t('situation')}</p>
                         <p className="text-[11px] text-slate-600 leading-snug">{card.what}</p>
                     </div>
-                    {/* So What — Ý nghĩa */}
+                    {/* So What — So What */}
                     <div>
-                        <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 mb-0.5">Ý nghĩa</p>
+                        <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 mb-0.5">{t('soWhat')}</p>
                         <p className="text-[11px] text-slate-700 leading-snug font-medium">{card.soWhat}</p>
                     </div>
-                    {/* Do This — Nên làm */}
+                    {/* Do This — Do This */}
                     <div className="bg-slate-50 rounded px-2.5 py-2">
-                        <p className="text-[9px] font-semibold uppercase tracking-wider text-blue-500 mb-0.5">Nên làm</p>
+                        <p className="text-[9px] font-semibold uppercase tracking-wider text-blue-500 mb-0.5">{t('doThis')}</p>
                         <p className="text-[11px] text-slate-700 font-medium leading-snug">{card.doThis}</p>
                     </div>
-                    {/* Impact — Tác động */}
+                    {/* Impact — Impact */}
                     <div className="flex items-start gap-1.5">
                         <TrendingUp className="w-3 h-3 text-slate-400 shrink-0 mt-0.5" />
                         <div>
-                            <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 mb-0.5">Tác động ước tính</p>
+                            <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 mb-0.5">{t('estimatedImpact')}</p>
                             <p className="text-[10px] text-slate-500 leading-snug">{card.impact}</p>
                         </div>
                     </div>
@@ -182,6 +184,7 @@ export interface InsightsPanelV2Props {
 }
 
 export function InsightsPanel({ top3, compression, otherInsights }: InsightsPanelV2Props) {
+    const t = useTranslations('insights');
     const [activeTab, setActiveTab] = useState<'actions' | 'dates'>('actions');
     const [showMore, setShowMore] = useState(false);
 
@@ -199,10 +202,10 @@ export function InsightsPanel({ top3, compression, otherInsights }: InsightsPane
             <div className={`${surface} p-4 h-full`}>
                 <div className="flex items-center gap-2 mb-3">
                     <Lightbulb className="w-4 h-4 text-amber-500" />
-                    <h3 className="text-sm font-semibold text-slate-700">Phân tích & Gợi ý</h3>
+                    <h3 className="text-sm font-semibold text-slate-700">{t('title')}</h3>
                 </div>
                 <p className="text-xs text-slate-400 text-center py-8">
-                    Chưa đủ dữ liệu. Upload thêm reservations.
+                    {t('notEnoughData')}
                 </p>
             </div>
         );
@@ -218,7 +221,7 @@ export function InsightsPanel({ top3, compression, otherInsights }: InsightsPane
             <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                     <Target className="w-4 h-4 text-slate-500" />
-                    <h3 className="text-sm font-semibold text-slate-700">Phân tích & Gợi ý</h3>
+                    <h3 className="text-sm font-semibold text-slate-700">{t('title')}</h3>
                 </div>
                 <span className="text-[10px] text-slate-400">{total}</span>
             </div>
@@ -234,7 +237,7 @@ export function InsightsPanel({ top3, compression, otherInsights }: InsightsPane
                             : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                             }`}
                     >
-                        Top actions
+                        {t('topActions')}
                         <span className={`text-[9px] px-1 py-0.5 rounded-full min-w-[16px] text-center leading-none ${activeTab === 'actions' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-500'
                             }`}>
                             {actionsCount}
@@ -248,7 +251,7 @@ export function InsightsPanel({ top3, compression, otherInsights }: InsightsPane
                             : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                             }`}
                     >
-                        Ngày chú ý khác
+                        {t('otherDays')}
                         <span className={`text-[9px] px-1 py-0.5 rounded-full min-w-[16px] text-center leading-none ${activeTab === 'dates' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-500'
                             }`}>
                             {datesCount}
@@ -267,10 +270,10 @@ export function InsightsPanel({ top3, compression, otherInsights }: InsightsPane
                         {top3.length > 0 && (
                             <>
                                 <p className="text-[10px] font-medium uppercase tracking-widest text-slate-400 mb-1">
-                                    Top actions — 7 ngày tới
+                                    {t('topActionsNext7')}
                                 </p>
                                 {top3.map((card, i) => (
-                                    <CardItem key={`t-${i}`} card={card} />
+                                    <CardItem key={`t-${i}`} card={card} t={t} />
                                 ))}
                                 {otherInsights.length > 0 && (
                                     <div className="border-t border-dashed border-slate-100 my-2" />
@@ -280,7 +283,7 @@ export function InsightsPanel({ top3, compression, otherInsights }: InsightsPane
 
                         {/* Other insights */}
                         {visibleOther.map((card, i) => (
-                            <CardItem key={`o-${i}`} card={card} />
+                            <CardItem key={`o-${i}`} card={card} t={t} />
                         ))}
 
                         {/* Show more toggle for other insights */}
@@ -293,24 +296,24 @@ export function InsightsPanel({ top3, compression, otherInsights }: InsightsPane
                                 }}
                                 className="w-full text-center text-[11px] text-blue-500 hover:text-blue-700 py-1 rounded hover:bg-blue-50/50 transition-colors duration-200"
                             >
-                                {showMore ? 'Thu gọn' : `+${hiddenOtherCount} phân tích khác`}
+                                {showMore ? t('collapse') : t('moreInsights', { count: hiddenOtherCount })}
                             </button>
                         )}
                     </>
                 )}
 
-                {/* ── TAB 2: Ngày cần chú ý khác ── */}
+                {/* ── TAB 2: Other days to watch ── */}
                 {activeTab === 'dates' && (
                     <>
                         <p className="text-[10px] font-medium uppercase tracking-widest text-slate-400 mb-1">
-                            Các ngày cần chú ý (ngoài top 3)
+                            {t('daysToWatch')}
                         </p>
                         {compressionExtra.map((card, i) => (
-                            <CardItem key={`c-${i}`} card={card} />
+                            <CardItem key={`c-${i}`} card={card} t={t} />
                         ))}
                         {compressionExtra.length === 0 && (
                             <p className="text-xs text-slate-400 text-center py-4">
-                                Không có ngày nào đặc biệt ngoài Top 3
+                                {t('noNotableDays')}
                             </p>
                         )}
                     </>

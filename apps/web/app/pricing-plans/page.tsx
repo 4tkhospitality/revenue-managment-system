@@ -16,6 +16,7 @@ import { Sidebar } from '@/components/dashboard/Sidebar';
 import { getPrice, getBandLabel, BAND_MULTIPLIER, BASE_PRICE } from '@/lib/plg/plan-config';
 import { PlanTier, RoomBand } from '@prisma/client';
 import { PaymentMethodModal } from '@/components/payments/PaymentMethodModal';
+import { useTranslations } from 'next-intl';
 
 // ═══════════════════════════════════════════════════════════════════
 // Data & Constants
@@ -23,76 +24,76 @@ import { PaymentMethodModal } from '@/components/payments/PaymentMethodModal';
 
 type BillingCycle = 'monthly' | '3-months';
 
-const ROOM_BANDS: Array<{ id: RoomBand; label: string; max: number }> = [
-    { id: 'R30', label: '≤ 30 phòng', max: 30 },
-    { id: 'R80', label: '31 - 80 phòng', max: 80 },
-    { id: 'R150', label: '81 - 150 phòng', max: 150 },
-    { id: 'R300P', label: '151 - 300+ phòng', max: 300 },
+const ROOM_BANDS_KEYS: Array<{ id: RoomBand; labelKey: string; max: number }> = [
+    { id: 'R30', labelKey: 'band.r30', max: 30 },
+    { id: 'R80', labelKey: 'band.r80', max: 80 },
+    { id: 'R150', labelKey: 'band.r150', max: 150 },
+    { id: 'R300P', labelKey: 'band.r300p', max: 300 },
 ];
 
-const TIERS = [
+const TIER_KEYS = [
     {
         id: 'STANDARD',
-        name: 'Tiêu chuẩn',
-        description: 'Tính giá OTA nhanh chóng',
+        nameKey: 'tier.standard.name',
+        descKey: 'tier.standard.desc',
         features: [
-            { text: 'Tính giá NET → BAR', included: true },
-            { text: '5 kênh OTA cơ bản', included: true },
-            { text: '1 người dùng', included: true },
-            { text: 'Tối ưu OTA (Demo)', included: true, hint: 'Xem giao diện demo, không nhập dữ liệu thật' },
-            { text: 'Dashboard & Analytics', included: false },
-            { text: 'Quản lý nhiều KS', included: false },
+            { textKey: 'feat.netToBar', included: true },
+            { textKey: 'feat.otaChannels', included: true },
+            { textKey: 'feat.singleUser', included: true },
+            { textKey: 'feat.otaOptDemo', included: true, hintKey: 'feat.otaOptDemoHint' },
+            { textKey: 'feat.dashAnalytics', included: false },
+            { textKey: 'feat.multiHotel', included: false },
         ],
-        cta: 'Dùng miễn phí',
+        ctaKey: 'cta.free',
         ctaLink: '/auth/login',
         highlight: false,
     },
     {
         id: 'SUPERIOR',
-        name: 'Superior',
-        description: 'Tối ưu Ranking OTA',
+        nameKey: 'tier.superior.name',
+        descKey: 'tier.superior.desc',
         features: [
-            { text: 'Tất cả tính năng Free', included: true },
-            { text: 'Full Tối ưu OTA (6 tools)', included: true, hint: 'Scorecard, Checklist, ROI, Review Simulator...' },
-            { text: 'Khuyến mãi Stacking', included: true },
-            { text: 'Export Price Matrix', included: true },
-            { text: '3 người dùng', included: true },
-            { text: 'Dashboard & Analytics', included: false },
+            { textKey: 'feat.allFree', included: true },
+            { textKey: 'feat.fullOta', included: true, hintKey: 'feat.fullOtaHint' },
+            { textKey: 'feat.promoStack', included: true },
+            { textKey: 'feat.exportMatrix', included: true },
+            { textKey: 'feat.threeUsers', included: true },
+            { textKey: 'feat.dashAnalytics', included: false },
         ],
-        cta: 'Liên hệ Ngay',
+        ctaKey: 'cta.contactNow',
         ctaLink: 'https://zalo.me/0778602953',
         highlight: true,
-        badge: 'BÁN CHẠY',
+        badgeKey: 'badge.bestSeller',
     },
     {
         id: 'DELUXE',
-        name: 'Deluxe',
-        description: 'Analytics & Dữ liệu',
+        nameKey: 'tier.deluxe.name',
+        descKey: 'tier.deluxe.desc',
         features: [
-            { text: 'Tất cả tính năng Superior', included: true },
-            { text: 'Dashboard & KPI', included: true },
-            { text: 'OTB Analytics', included: true },
-            { text: 'Daily Actions', included: true },
-            { text: 'Upload dữ liệu (CSV)', included: true },
-            { text: '10 người dùng', included: true },
+            { textKey: 'feat.allSuperior', included: true },
+            { textKey: 'feat.dashKpi', included: true },
+            { textKey: 'feat.otbAnalytics', included: true },
+            { textKey: 'feat.dailyActions', included: true },
+            { textKey: 'feat.uploadCsv', included: true },
+            { textKey: 'feat.tenUsers', included: true },
         ],
-        cta: 'Liên hệ Zalo',
+        ctaKey: 'cta.contactZalo',
         ctaLink: 'https://zalo.me/0778602953',
         highlight: false,
     },
     {
         id: 'SUITE',
-        name: 'Suite',
-        description: 'Enterprise & Chuỗi',
+        nameKey: 'tier.suite.name',
+        descKey: 'tier.suite.desc',
         features: [
-            { text: 'Tất cả tính năng Deluxe', included: true },
-            { text: 'Quản lý nhiều khách sạn', included: true },
-            { text: 'Không giới hạn Users', included: true },
-            { text: 'Phân quyền (RBAC)', included: true },
-            { text: 'Hỗ trợ 1-1 ưu tiên', included: true },
-            { text: 'Setup tận nơi', included: true },
+            { textKey: 'feat.allDeluxe', included: true },
+            { textKey: 'feat.multiHotels', included: true },
+            { textKey: 'feat.unlimitedUsers', included: true },
+            { textKey: 'feat.rbac', included: true },
+            { textKey: 'feat.prioritySupport', included: true },
+            { textKey: 'feat.onsiteSetup', included: true },
         ],
-        cta: 'Liên hệ Zalo',
+        ctaKey: 'cta.contactZalo',
         ctaLink: 'https://zalo.me/0778602953',
         highlight: false,
     },
@@ -105,6 +106,7 @@ const formatVND = (n: number) => new Intl.NumberFormat('vi-VN').format(n);
 // ═══════════════════════════════════════════════════════════════════
 
 export default function PricingPlansPage() {
+    const t = useTranslations('pricingPlans');
     const { data: session, status } = useSession();
     const [currentTier, setCurrentTier] = useState<string | null>(null);
 
@@ -196,11 +198,11 @@ export default function PricingPlansPage() {
             {/* Header Section */}
             <div className="text-center mb-12">
                 <h1 className="text-3xl md:text-5xl font-bold text-gray-900 mb-6">
-                    Bảng giá linh hoạt cho mọi quy mô
+                    {t('title')}
                 </h1>
                 <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-                    Chọn gói phù hợp với số lượng phòng của bạn.<br />
-                    <span className="text-blue-600 font-semibold">Tiết kiệm 50%</span> khi thanh toán 3 tháng ngay hôm nay!
+                    {t('subtitle')}<br />
+                    <span className="text-blue-600 font-semibold">{t('save50')}</span> {t('subtitle2')}
                 </p>
             </div>
 
@@ -210,10 +212,10 @@ export default function PricingPlansPage() {
                     {/* 1. Room Band Slider / Selector */}
                     <div>
                         <label className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 block">
-                            Khách sạn của bạn có:
+                            {t('yourHotelHas')}
                         </label>
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                            {ROOM_BANDS.map((band) => (
+                            {ROOM_BANDS_KEYS.map((band) => (
                                 <button
                                     key={band.id}
                                     onClick={() => setRoomBand(band.id)}
@@ -222,7 +224,7 @@ export default function PricingPlansPage() {
                                         : 'border-transparent bg-gray-100 text-gray-600 hover:bg-gray-200'
                                         }`}
                                 >
-                                    {band.label}
+                                    {t(band.labelKey)}
                                 </button>
                             ))}
                         </div>
@@ -231,7 +233,7 @@ export default function PricingPlansPage() {
                     {/* 2. Billing Cycle Toggle */}
                     <div className="flex flex-col items-center md:items-start">
                         <label className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 block">
-                            Chu kỳ thanh toán
+                            {t('billingCycle')}
                         </label>
                         <div className="flex items-center bg-gray-100 p-1 rounded-xl relative">
                             <button
@@ -241,7 +243,7 @@ export default function PricingPlansPage() {
                                     : 'text-gray-500 hover:text-gray-900'
                                     }`}
                             >
-                                Tháng
+                                {t('monthly')}
                             </button>
                             <button
                                 onClick={() => setCycle('3-months')}
@@ -250,7 +252,7 @@ export default function PricingPlansPage() {
                                     : 'text-gray-500 hover:text-gray-900'
                                     }`}
                             >
-                                3 Tháng
+                                {t('quarterly')}
                                 <span className="bg-red-100 text-red-600 text-[10px] font-bold px-2 py-0.5 rounded-full">
                                     -50%
                                 </span>
@@ -258,8 +260,8 @@ export default function PricingPlansPage() {
                         </div>
                         <p className="text-xs text-gray-500 mt-3">
                             {cycle === '3-months'
-                                ? '🔥 Khuyên dùng: Giảm giá 50% giai đoạn ra mắt!'
-                                : 'Thanh toán linh hoạt từng tháng.'}
+                                ? t('quarterlyRec')
+                                : t('monthlyNote')}
                         </p>
                     </div>
                 </div>
@@ -267,7 +269,7 @@ export default function PricingPlansPage() {
 
             {/* Pricing Cards */}
             <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-6 mb-16">
-                {TIERS.map((tier) => {
+                {TIER_KEYS.map((tier) => {
                     const monthlyPrice = calcPrice(tier.id);
                     const isCurrentTier = currentTier === tier.id;
 
@@ -284,19 +286,19 @@ export default function PricingPlansPage() {
                             {/* Badge */}
                             {isCurrentTier && (
                                 <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-green-600 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg flex items-center gap-1">
-                                    <Check className="w-3 h-3" /> GÓI HIỆN TẠI
+                                    <Check className="w-3 h-3" /> {t('currentPlan')}
                                 </div>
                             )}
-                            {!isCurrentTier && tier.badge && (
+                            {!isCurrentTier && tier.badgeKey && (
                                 <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg">
-                                    {tier.badge}
+                                    {t(tier.badgeKey)}
                                 </div>
                             )}
 
                             {/* Header */}
                             <div className="mb-6">
-                                <h3 className="text-xl font-bold text-gray-900">{tier.name}</h3>
-                                <p className="text-sm text-gray-500 mt-2 min-h-[40px]">{tier.description}</p>
+                                <h3 className="text-xl font-bold text-gray-900">{t(tier.nameKey)}</h3>
+                                <p className="text-sm text-gray-500 mt-2 min-h-[40px]">{t(tier.descKey)}</p>
                             </div>
 
                             {/* Price */}
@@ -309,11 +311,11 @@ export default function PricingPlansPage() {
                                             <span className="text-4xl font-bold text-gray-900">
                                                 {formatVND(monthlyPrice)}
                                             </span>
-                                            <span className="text-gray-500 text-sm mb-1">/tháng</span>
+                                            <span className="text-gray-500 text-sm mb-1">/{t('month')}</span>
                                         </div>
                                         {cycle === '3-months' && (
                                             <div className="text-xs text-gray-400 line-through">
-                                                {formatVND(getOriginalPrice(tier.id))}/tháng
+                                                {formatVND(getOriginalPrice(tier.id))}/{t('month')}
                                             </div>
                                         )}
                                     </>
@@ -331,10 +333,10 @@ export default function PricingPlansPage() {
                                         )}
                                         <div className="flex items-center">
                                             <span className={feature.included ? 'text-gray-700' : 'text-gray-400'}>
-                                                {feature.text}
+                                                {t(feature.textKey)}
                                             </span>
-                                            {feature.hint && (
-                                                <div title={feature.hint} className="ml-1 inline-flex cursor-help text-gray-400 hover:text-gray-600">
+                                            {feature.hintKey && (
+                                                <div title={t(feature.hintKey)} className="ml-1 inline-flex cursor-help text-gray-400 hover:text-gray-600">
                                                     <HelpCircle className="w-3 h-3" />
                                                 </div>
                                             )}
@@ -355,7 +357,7 @@ export default function PricingPlansPage() {
                                             : 'bg-gray-50 text-gray-900 hover:bg-gray-100 border border-gray-200'
                                         }`}
                                 >
-                                    {isCurrentTier ? '✓ Gói hiện tại' : `Nâng cấp ${tier.name}`}
+                                    {isCurrentTier ? t('currentPlanBtn') : t('upgradeTo', { name: t(tier.nameKey) })}
                                 </button>
                             ) : (
                                 <a
@@ -365,7 +367,7 @@ export default function PricingPlansPage() {
                                         : 'bg-gray-50 text-gray-900 hover:bg-gray-100 border border-gray-200'
                                         }`}
                                 >
-                                    {tier.cta}
+                                    {t(tier.ctaKey)}
                                 </a>
                             )}
                         </div>
@@ -379,22 +381,22 @@ export default function PricingPlansPage() {
                     <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-600">
                         <Zap className="w-6 h-6" />
                     </div>
-                    <h4 className="font-semibold text-gray-900 mb-2">Setup trong 5 phút</h4>
-                    <p className="text-sm text-gray-600">Không cần cài đặt phức tạp. Đăng nhập và bắt đầu sử dụng ngay lập tức.</p>
+                    <h4 className="font-semibold text-gray-900 mb-2">{t('trust.setup')}</h4>
+                    <p className="text-sm text-gray-600">{t('trust.setupDesc')}</p>
                 </div>
                 <div className="text-center">
                     <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4 text-green-600">
                         <Check className="w-6 h-6" />
                     </div>
-                    <h4 className="font-semibold text-gray-900 mb-2">Hỗ trợ 24/7</h4>
-                    <p className="text-sm text-gray-600">Đội ngũ hỗ trợ qua Zalo luôn sẵn sàng giải đáp mọi thắc mắc của bạn.</p>
+                    <h4 className="font-semibold text-gray-900 mb-2">{t('trust.support')}</h4>
+                    <p className="text-sm text-gray-600">{t('trust.supportDesc')}</p>
                 </div>
                 <div className="text-center">
                     <div className="w-12 h-12 bg-purple-50 rounded-full flex items-center justify-center mx-auto mb-4 text-purple-600">
                         <AlertCircle className="w-6 h-6" />
                     </div>
-                    <h4 className="font-semibold text-gray-900 mb-2">Hoàn tiền 30 ngày</h4>
-                    <p className="text-sm text-gray-600">Nếu bạn không hài lòng, chúng tôi hoàn tiền 100% trong 30 ngày đầu.</p>
+                    <h4 className="font-semibold text-gray-900 mb-2">{t('trust.refund')}</h4>
+                    <p className="text-sm text-gray-600">{t('trust.refundDesc')}</p>
                 </div>
             </div>
         </div>
@@ -444,7 +446,7 @@ export default function PricingPlansPage() {
                         href="/auth/login"
                         className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors text-sm"
                     >
-                        Đăng nhập
+                        Sign In
                     </Link>
                 </div>
             </header>
@@ -457,7 +459,7 @@ export default function PricingPlansPage() {
                 <div className="max-w-7xl mx-auto px-4 text-center">
                     <p className="text-gray-400 text-sm">© 2026 4TK Hospitality. All rights reserved.</p>
                     <p className="text-gray-500 text-xs mt-2">
-                        Liên hệ Zalo: <a href="https://zalo.me/0778602953" className="text-blue-400 hover:underline">0778602953</a>
+                        {t('contactZalo')}: <a href="https://zalo.me/0778602953" className="text-blue-400 hover:underline">0778602953</a>
                     </p>
                 </div>
             </footer>

@@ -6,6 +6,7 @@ import { QuickModePanel, type QuickModeRecommendation } from './QuickModePanel';
 import { Zap, Table2, ChevronDown, ChevronUp, DollarSign, TrendingUp, BarChart3, ShieldCheck } from 'lucide-react';
 import { TierPaywall } from '@/components/paywall/TierPaywall';
 import { useTierAccess } from '@/hooks/useTierAccess';
+import { useTranslations } from 'next-intl';
 
 // ─── UUPM Surface ───────────────────────────────────────────────
 const surface = "rounded-[var(--card-radius)] bg-white border border-slate-200/80 shadow-[var(--shadow-card)]";
@@ -25,6 +26,7 @@ export function QuickModePricingWrapper({
     onAcceptOne,
     detailedContent,
 }: QuickModePricingWrapperProps) {
+    const t = useTranslations('quickMode');
     const { hasAccess, isDemo, loading: tierLoading } = useTierAccess('SUPERIOR');
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -53,15 +55,15 @@ export function QuickModePricingWrapper({
     if (!hasAccess || isDemo) {
         return (
             <TierPaywall
-                title="Giá đề xuất thông minh"
-                subtitle="Hệ thống tự động phân tích demand & supply để đề xuất giá tối ưu"
+                title={t('paywallTitle')}
+                subtitle={t('paywallSubtitle')}
                 tierDisplayName="Superior"
                 colorScheme="blue"
                 features={[
-                    { icon: <DollarSign className="w-4 h-4" />, label: 'Đề xuất giá hàng ngày dựa trên OTB & Forecast' },
-                    { icon: <TrendingUp className="w-4 h-4" />, label: 'Phân tích Demand vs Supply theo từng ngày' },
-                    { icon: <Zap className="w-4 h-4" />, label: 'Chế độ Duyệt nhanh — quyết định giá trong 30 giây' },
-                    { icon: <ShieldCheck className="w-4 h-4" />, label: 'Guardrails tự động — không bao giờ đặt giá ngoài biên' },
+                    { icon: <DollarSign className="w-4 h-4" />, label: t('paywallFeature1') },
+                    { icon: <TrendingUp className="w-4 h-4" />, label: t('paywallFeature2') },
+                    { icon: <Zap className="w-4 h-4" />, label: t('paywallFeature3') },
+                    { icon: <ShieldCheck className="w-4 h-4" />, label: t('paywallFeature4') },
                 ]}
             />
         );
@@ -84,7 +86,7 @@ export function QuickModePricingWrapper({
                                     }`}
                                 style={{ backgroundColor: isQuickMode ? '#1E3A8A' : '#f8fafc' }}
                             >
-                                <Zap className="w-3.5 h-3.5" /> Duyệt nhanh
+                                <Zap className="w-3.5 h-3.5" /> {t('quickReview')}
                             </button>
                             <button
                                 onClick={!isQuickMode ? undefined : toggleMode}
@@ -94,16 +96,13 @@ export function QuickModePricingWrapper({
                                     }`}
                                 style={{ backgroundColor: !isQuickMode ? '#1E3A8A' : '#f8fafc' }}
                             >
-                                <Table2 className="w-3.5 h-3.5" /> Phân tích chi tiết
+                                <Table2 className="w-3.5 h-3.5" /> {t('detailedAnalysis')}
                             </button>
                         </div>
 
                         {/* Current mode label */}
                         <span className="text-xs text-slate-400 hidden sm:inline">
-                            {isQuickMode
-                                ? 'Duyệt giá hàng ngày — quyết định nhanh'
-                                : 'Xem dữ liệu OTB + dự báo để hiểu TẠI SAO'
-                            }
+                            {isQuickMode ? t('quickDesc') : t('detailedDesc')}
                         </span>
                     </div>
 
@@ -112,7 +111,7 @@ export function QuickModePricingWrapper({
                         onClick={() => setShowGuide(!showGuide)}
                         className="text-xs text-slate-400 hover:text-slate-600 inline-flex items-center gap-1 transition-colors cursor-pointer"
                     >
-                        Hướng dẫn {showGuide ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                        {t('guide')} {showGuide ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                     </button>
                 </div>
 
@@ -124,30 +123,18 @@ export function QuickModePricingWrapper({
                             <div className={`${isQuickMode ? 'ring-2 ring-blue-200' : ''} bg-white rounded-xl p-4 border border-slate-200`}>
                                 <div className="flex items-center gap-2 mb-2">
                                     <Zap className="w-4 h-4 text-amber-500" />
-                                    <h4 className="text-sm font-semibold text-slate-900">Duyệt nhanh</h4>
+                                    <h4 className="text-sm font-semibold text-slate-900">{t('quickReview')}</h4>
                                     {isQuickMode && (
                                         <span className="text-[10px] px-2 py-0.5 rounded text-white font-medium" style={{ backgroundColor: '#1E3A8A' }}>
-                                            Đang dùng
+                                            {t('currentlyUsing')}
                                         </span>
                                     )}
                                 </div>
                                 <ul className="space-y-1.5 text-xs text-slate-600 leading-relaxed">
-                                    <li className="flex items-start gap-2">
-                                        <span className="text-emerald-500 mt-0.5">●</span>
-                                        <span><b>Dùng khi nào?</b> Mỗi sáng, mở Dashboard → tab Giá đề xuất → bấm Duyệt</span>
-                                    </li>
-                                    <li className="flex items-start gap-2">
-                                        <span className="text-emerald-500 mt-0.5">●</span>
-                                        <span><b>Hiển thị gì?</b> Hành động (Tăng/Giữ/Giảm) + % thay đổi + lý do tiếng Việt</span>
-                                    </li>
-                                    <li className="flex items-start gap-2">
-                                        <span className="text-emerald-500 mt-0.5">●</span>
-                                        <span><b>Quyết định:</b> Duyệt từng ngày hoặc "Duyệt tất cả" (Ngừng bán không duyệt được)</span>
-                                    </li>
-                                    <li className="flex items-start gap-2">
-                                        <span className="text-blue-500 mt-0.5">●</span>
-                                        <span><b>Source:</b> bảng <code className="text-[10px] bg-slate-100 px-1 rounded">price_recommendations</code> — Pricing Engine tính tự động</span>
-                                    </li>
+                                    <li className="flex items-start gap-2"><span className="text-emerald-500 mt-0.5">●</span><span><b>{t('guideQuickWhen')}</b></span></li>
+                                    <li className="flex items-start gap-2"><span className="text-emerald-500 mt-0.5">●</span><span><b>{t('guideQuickWhat')}</b></span></li>
+                                    <li className="flex items-start gap-2"><span className="text-emerald-500 mt-0.5">●</span><span><b>{t('guideQuickDecision')}</b></span></li>
+                                    <li className="flex items-start gap-2"><span className="text-blue-500 mt-0.5">●</span><span><b>{t('guideQuickSource')}</b></span></li>
                                 </ul>
                             </div>
 
@@ -155,39 +142,25 @@ export function QuickModePricingWrapper({
                             <div className={`${!isQuickMode ? 'ring-2 ring-blue-200' : ''} bg-white rounded-xl p-4 border border-slate-200`}>
                                 <div className="flex items-center gap-2 mb-2">
                                     <Table2 className="w-4 h-4 text-blue-500" />
-                                    <h4 className="text-sm font-semibold text-slate-900">Phân tích chi tiết</h4>
+                                    <h4 className="text-sm font-semibold text-slate-900">{t('detailedAnalysis')}</h4>
                                     {!isQuickMode && (
                                         <span className="text-[10px] px-2 py-0.5 rounded text-white font-medium" style={{ backgroundColor: '#1E3A8A' }}>
-                                            Đang dùng
+                                            {t('currentlyUsing')}
                                         </span>
                                     )}
                                 </div>
                                 <ul className="space-y-1.5 text-xs text-slate-600 leading-relaxed">
-                                    <li className="flex items-start gap-2">
-                                        <span className="text-blue-500 mt-0.5">●</span>
-                                        <span><b>Dùng khi nào?</b> Muốn hiểu TẠI SAO hệ thống đề xuất mức giá này</span>
-                                    </li>
-                                    <li className="flex items-start gap-2">
-                                        <span className="text-blue-500 mt-0.5">●</span>
-                                        <span><b>Hiển thị gì?</b> OTB, phòng còn, dự báo, giá hiện tại vs đề xuất, % thay đổi</span>
-                                    </li>
-                                    <li className="flex items-start gap-2">
-                                        <span className="text-blue-500 mt-0.5">●</span>
-                                        <span><b>Quyết định:</b> Chấp nhận hoặc từ chối đề xuất cho từng ngày</span>
-                                    </li>
-                                    <li className="flex items-start gap-2">
-                                        <span className="text-amber-500 mt-0.5">●</span>
-                                        <span><b>Source:</b> tính từ OTB + Forecast + Pricing Engine — dữ liệu tổng hợp</span>
-                                    </li>
+                                    <li className="flex items-start gap-2"><span className="text-blue-500 mt-0.5">●</span><span><b>{t('guideDetailedWhen')}</b></span></li>
+                                    <li className="flex items-start gap-2"><span className="text-blue-500 mt-0.5">●</span><span><b>{t('guideDetailedWhat')}</b></span></li>
+                                    <li className="flex items-start gap-2"><span className="text-blue-500 mt-0.5">●</span><span><b>{t('guideDetailedDecision')}</b></span></li>
+                                    <li className="flex items-start gap-2"><span className="text-amber-500 mt-0.5">●</span><span><b>{t('guideDetailedSource')}</b></span></li>
                                 </ul>
                             </div>
                         </div>
 
                         {/* Source of Truth */}
                         <div className="mt-3 pt-3 border-t border-slate-200 text-xs text-slate-500">
-                            <b className="text-slate-700">Source of Truth:</b> Cả hai chế độ cùng đọc từ <b>Pricing Engine</b> (chạy Pipeline).
-                            "Duyệt nhanh" hiện kết quả đã xử lý, "Chi tiết" hiện dữ liệu thô.
-                            Khi duyệt giá ở chế độ nào cũng lưu vào cùng bảng <code className="bg-slate-100 px-1 rounded">pricing_decisions</code>.
+                            <b className="text-slate-700">Source of Truth:</b> {t('sourceOfTruth')}
                         </div>
                     </div>
                 )}

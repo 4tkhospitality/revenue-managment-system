@@ -1,12 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
 
 /**
  * Shows a banner when the current hotel's subscription has expired.
  * Appears at the bottom of the sidebar.
  */
 export function SubscriptionBanner() {
+    const t = useTranslations('subscription');
+    const locale = useLocale();
     const [isExpired, setIsExpired] = useState(false);
     const [periodEnd, setPeriodEnd] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
@@ -27,7 +30,7 @@ export function SubscriptionBanner() {
     if (loading || !isExpired) return null;
 
     const expiredDate = periodEnd
-        ? new Date(periodEnd).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+        ? new Date(periodEnd).toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' })
         : '';
 
     return (
@@ -35,14 +38,14 @@ export function SubscriptionBanner() {
             <div className="flex items-start gap-2">
                 <span className="text-lg flex-shrink-0">⚠️</span>
                 <div className="min-w-0">
-                    <p className="text-white text-sm font-semibold">Gói đã hết hạn</p>
+                    <p className="text-white text-sm font-semibold">{t('expired')}</p>
                     {expiredDate && (
                         <p className="text-white/60 text-xs mt-0.5">
-                            Hết hạn: {expiredDate}
+                            {t('expiredDate', { date: expiredDate })}
                         </p>
                     )}
                     <p className="text-white/70 text-xs mt-1">
-                        Các tính năng nâng cao đã bị khóa. Liên hệ admin để gia hạn.
+                        {t('lockedFeatures')}
                     </p>
                 </div>
             </div>

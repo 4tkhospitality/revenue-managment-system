@@ -4,6 +4,7 @@ import { CalendarDays, ToggleLeft, ToggleRight, BedDouble, DollarSign } from 'lu
 import type { ViewMode } from './types';
 import { DataQualityBadge } from './DataQualityBadge';
 import type { AnalyticsQuality } from './types';
+import { useTranslations } from 'next-intl';
 
 interface AnalyticsControlsProps {
     selectedAsOf: string;
@@ -24,12 +25,13 @@ export function AnalyticsControls({
     quality,
     loading,
 }: AnalyticsControlsProps) {
+    const t = useTranslations('analyticsTab');
     return (
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             {/* As-Of Selector */}
             <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 shadow-sm">
                 <CalendarDays className="w-3.5 h-3.5 text-slate-400" />
-                <span className="text-xs text-slate-500 font-medium">As-of:</span>
+                <span className="text-xs text-slate-500 font-medium">{t('asOf')}</span>
                 <select
                     value={selectedAsOf}
                     onChange={(e) => onAsOfChange(e.target.value)}
@@ -46,22 +48,22 @@ export function AnalyticsControls({
                 <button
                     onClick={() => onViewModeChange('rooms')}
                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-all ${viewMode === 'rooms'
-                            ? 'bg-blue-600 text-white shadow-sm'
-                            : 'text-slate-600 hover:bg-slate-100'
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'text-slate-600 hover:bg-slate-100'
                         }`}
                 >
                     <BedDouble className="w-3 h-3" />
-                    Rooms
+                    {t('rooms')}
                 </button>
                 <button
                     onClick={() => onViewModeChange('revenue')}
                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-all ${viewMode === 'revenue'
-                            ? 'bg-blue-600 text-white shadow-sm'
-                            : 'text-slate-600 hover:bg-slate-100'
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'text-slate-600 hover:bg-slate-100'
                         }`}
                 >
                     <DollarSign className="w-3 h-3" />
-                    Revenue
+                    {t('revenue')}
                 </button>
             </div>
 

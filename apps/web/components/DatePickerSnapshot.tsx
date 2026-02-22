@@ -13,7 +13,7 @@ interface DatePickerSnapshotProps {
 }
 
 /**
- * Get relative label for a date (Hôm nay, Hôm qua, 3 ngày trước, 1 tuần trước...)
+ * Get relative label for a date (Today, Yesterday, 3 days ago, 1 week ago...)
  */
 function getRelativeLabel(dateStr: string): string {
     const d = new Date(dateStr);
@@ -22,14 +22,14 @@ function getRelativeLabel(dateStr: string): string {
     d.setHours(0, 0, 0, 0);
     const diffDays = Math.round((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
 
-    if (diffDays === 0) return 'Hôm nay';
-    if (diffDays === 1) return 'Hôm qua';
-    if (diffDays <= 6) return `${diffDays} ngày trước`;
-    if (diffDays <= 13) return '1 tuần trước';
-    if (diffDays <= 20) return '2 tuần trước';
-    if (diffDays <= 34) return '1 tháng trước';
-    if (diffDays <= 64) return '2 tháng trước';
-    return `${Math.round(diffDays / 30)} tháng trước`;
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays <= 6) return `${diffDays} days ago`;
+    if (diffDays <= 13) return '1 week ago';
+    if (diffDays <= 20) return '2 weeks ago';
+    if (diffDays <= 34) return '1 month ago';
+    if (diffDays <= 64) return '2 months ago';
+    return `${Math.round(diffDays / 30)} months ago`;
 }
 
 export function DatePickerSnapshot({ onDateChange, defaultDate }: DatePickerSnapshotProps) {
@@ -54,7 +54,7 @@ export function DatePickerSnapshot({ onDateChange, defaultDate }: DatePickerSnap
                     onDateChange(latest);
                 }
             } catch {
-                setError('Không thể tải danh sách snapshot');
+                setError('Cannot load snapshot list');
             } finally {
                 setLoading(false);
             }
@@ -124,7 +124,7 @@ export function DatePickerSnapshot({ onDateChange, defaultDate }: DatePickerSnap
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                 </svg>
-                <span className="text-sm">Đang tải snapshot...</span>
+                <span className="text-sm">Loading snapshot...</span>
             </div>
         );
     }
@@ -143,7 +143,7 @@ export function DatePickerSnapshot({ onDateChange, defaultDate }: DatePickerSnap
                 >
                     {snapshots.map((s) => (
                         <option key={s.as_of_date} value={s.as_of_date}>
-                            {formatDate(s.as_of_date)} — {getRelativeLabel(s.as_of_date)} ({s.row_count} ngày dữ liệu)
+                            {formatDate(s.as_of_date)} — {getRelativeLabel(s.as_of_date)} ({s.row_count} days of data)
                         </option>
                     ))}
                 </select>
@@ -160,9 +160,9 @@ export function DatePickerSnapshot({ onDateChange, defaultDate }: DatePickerSnap
                                     ? 'bg-gray-50 text-gray-300 cursor-not-allowed'
                                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                 }`}
-                            title="Snapshot mới nhất"
+                            title="Latest snapshot"
                         >
-                            Mới nhất
+                            Latest
                         </button>
                     )}
                     {[
@@ -187,7 +187,7 @@ export function DatePickerSnapshot({ onDateChange, defaultDate }: DatePickerSnap
                                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                     : 'bg-gray-50 text-gray-300 cursor-not-allowed'
                                     }`}
-                                title={hasTarget ? `Gần ngày ${formatDate(target)}` : `Chưa có snapshot ${days} ngày trước`}
+                                title={hasTarget ? `Near ${formatDate(target)}` : `No snapshot ${days} days ago`}
                             >
                                 {label}
                             </button>
@@ -199,20 +199,20 @@ export function DatePickerSnapshot({ onDateChange, defaultDate }: DatePickerSnap
             {/* Single snapshot hint */}
             {isSingle && (
                 <p className="text-xs text-slate-400">
-                    Chỉ có 1 snapshot. Upload thêm dữ liệu để có lịch sử so sánh.
+                    Only 1 snapshot. Upload more data for comparison history.
                 </p>
             )}
 
             {/* Missing snapshot warning */}
             {selected && !hasSnapshot && (
                 <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-sm text-amber-700 flex items-center gap-2">
-                    Chưa có snapshot cho ngày này.
+                    No snapshot for this date.
                     <button
                         onClick={handleBuildSnapshot}
                         disabled={building}
                         className="px-2 py-1 text-xs bg-amber-600 text-white rounded hover:bg-amber-700 disabled:opacity-50"
                     >
-                        {building ? 'Đang tạo...' : 'Tạo snapshot'}
+                        {building ? 'Building...' : 'Build snapshot'}
                     </button>
                 </div>
             )}

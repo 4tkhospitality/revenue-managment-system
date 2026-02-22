@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { Check, X, Calendar, ArrowUp, ArrowDown, Minus, Ban, Info, AlertTriangle } from 'lucide-react';
+import { useTranslations, useLocale } from 'next-intl';
 
 interface Recommendation {
     id: string;
@@ -16,6 +17,9 @@ interface Recommendation {
     action: 'INCREASE' | 'KEEP' | 'DECREASE' | 'STOP_SELL' | null;
     deltaPct: number | null;
     reasonTextVi: string | null;
+    reasonCode: string | null;
+    currentOcc: number | null;
+    zone: string | null;
     source?: 'PIPELINE' | 'FALLBACK';
 }
 
@@ -32,17 +36,17 @@ const surface = "rounded-[var(--card-radius)] bg-white border border-slate-200/8
 
 // ─── Helpers ────────────────────────────────────────────────────
 
-function getActionBadge(action: string | null) {
+function getActionBadge(action: string | null, t: (key: string) => string) {
     const base = "inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap";
     switch (action) {
         case 'INCREASE':
-            return <span className={`${base} bg-emerald-50 text-emerald-700 border border-emerald-200`}><ArrowUp className="w-3 h-3" /> Tăng</span>;
+            return <span className={`${base} bg-emerald-50 text-emerald-700 border border-emerald-200`}><ArrowUp className="w-3 h-3" /> {t('increase')}</span>;
         case 'DECREASE':
-            return <span className={`${base} bg-amber-50 text-amber-700 border border-amber-200`}><ArrowDown className="w-3 h-3" /> Giảm</span>;
+            return <span className={`${base} bg-amber-50 text-amber-700 border border-amber-200`}><ArrowDown className="w-3 h-3" /> {t('decrease')}</span>;
         case 'KEEP':
-            return <span className={`${base} bg-slate-50 text-slate-600 border border-slate-200`}><Minus className="w-3 h-3" /> Giữ</span>;
+            return <span className={`${base} bg-slate-50 text-slate-600 border border-slate-200`}><Minus className="w-3 h-3" /> {t('hold')}</span>;
         case 'STOP_SELL':
-            return <span className={`${base} bg-rose-50 text-rose-700 border border-rose-200`}><Ban className="w-3 h-3" /> Ngừng bán</span>;
+            return <span className={`${base} bg-rose-50 text-rose-700 border border-rose-200`}><Ban className="w-3 h-3" /> {t('stopSelling')}</span>;
         default:
             return <span className={`${base} bg-slate-50 text-slate-400 border border-slate-200`}><Info className="w-3 h-3" /> —</span>;
     }
@@ -53,20 +57,51 @@ export function RecommendationTable({
     onAccept,
     onOverride,
 }: RecommendationTableProps) {
+    const t = useTranslations('dashboard');
+    const locale = useLocale();
     const [quickFilter, setQuickFilter] = useState<QuickFilter>('14days');
     const [customStartDate, setCustomStartDate] = useState<string>('');
     const [customEndDate, setCustomEndDate] = useState<string>('');
+
+    function getLocalizedReason(row: Recommendation): string {
+        const code = row.reasonCode;
+        if (!code) return row.reasonTextVi || '—';
+        const otb = row.currentOcc != null ? `${(row.currentOcc * 100).toFixed(0)}%` : '—';
+        const proj = row.forecast > 0 ? `${Math.round(row.forecast)}` : '—';
+        const sign = (row.deltaPct ?? 0) > 0 ? '+' : '';
+        const delta = row.deltaPct != null ? `${sign}${row.deltaPct.toFixed(1)}%` : '—';
+        const zone = row.zone ?? '';
+
+        switch (code) {
+            case 'HIGH_OCC':
+                return t('reasonHighOcc', { otb, proj, delta });
+            case 'STRONG_DEMAND':
+                return t('reasonStrongDemand', { zone, otb, delta });
+            case 'LOW_PICKUP':
+                return t('reasonLowPickup', { otb, proj, delta });
+            case 'LOW_SUPPLY':
+                return t('reasonLowSupply', { otb, delta });
+            case 'STABLE':
+                return t('reasonStable');
+            case 'STOP_SELL':
+                return t('reasonStopSell');
+            case 'MISSING_PRICE':
+                return t('reasonMissingPrice');
+            default:
+                return row.reasonTextVi || '—';
+        }
+    }
 
     const formatCurrency = (value: number) =>
         new Intl.NumberFormat('vi-VN', {
             style: 'decimal',
             minimumFractionDigits: 0,
-        }).format(value) + ' đ';
+        }).format(value) + ' ₫';
 
     const formatDate = (dateStr: string) => {
         const date = new Date(dateStr);
-        const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'short' });
-        const formatted = date.toLocaleDateString('vi-VN', {
+        const dayOfWeek = date.toLocaleDateString(locale, { weekday: 'short' });
+        const formatted = date.toLocaleDateString(locale, {
             day: '2-digit',
             month: '2-digit',
         });
@@ -120,11 +155,11 @@ export function RecommendationTable({
     }, [data, quickFilter, customStartDate, customEndDate]);
 
     const quickFilterButtons: { key: QuickFilter; label: string }[] = [
-        { key: 'today', label: 'Hôm nay' },
-        { key: '7days', label: '7 ngày' },
-        { key: '14days', label: '14 ngày' },
-        { key: '30days', label: '30 ngày' },
-        { key: 'custom', label: 'Tuỳ chọn' },
+        { key: 'today', label: t('today') },
+        { key: '7days', label: t('days7') },
+        { key: '14days', label: t('days14') },
+        { key: '30days', label: t('days30') },
+        { key: 'custom', label: t('custom') },
     ];
 
     return (
@@ -134,9 +169,8 @@ export function RecommendationTable({
                 <div className="mx-5 mt-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
                     <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                     <div>
-                        <span className="font-medium">Ước tính tạm: </span>
-                        {filteredData.filter(r => r.source === 'FALLBACK').length} ngày chưa có dữ liệu pipeline,
-                        đang dùng công thức ước tính. Chạy lại Pipeline để có giá chính xác.
+                        <span className="font-medium">{t('fallbackEstimate')}</span>
+                        {t('fallbackDays', { n: filteredData.filter(r => r.source === 'FALLBACK').length })}
                     </div>
                 </div>
             )}
@@ -152,9 +186,8 @@ export function RecommendationTable({
                     <div className="mx-5 mt-3 flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
                         <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
                         <div>
-                            <span className="font-medium">ADR lệch lớn: </span>
-                            {divergentRows.length} ngày có ADR (tham khảo) lệch {'>'} 30% so với giá anchor.
-                            Kiểm tra giá đã duyệt hoặc cập nhật Base Rate trong Settings.
+                            <span className="font-medium">{t('adrDivergence')}</span>
+                            {t('adrDivergenceDetail', { n: divergentRows.length })}
                         </div>
                     </div>
                 );
@@ -163,7 +196,7 @@ export function RecommendationTable({
             <div className="px-5 py-4 border-b border-slate-100">
                 <div className="flex items-center justify-between flex-wrap gap-4">
                     <h2 className="text-lg font-semibold text-gray-900">
-                        Hiệu suất & Đề xuất giá
+                        {t('perfAndSuggestions')}
                     </h2>
 
                     {/* Quick Filters */}
@@ -193,7 +226,7 @@ export function RecommendationTable({
                     <div className="flex items-center gap-3 mt-3 pt-3 border-t" style={{ borderColor: '#e2e8f0' }}>
                         <Calendar className="w-4 h-4 text-gray-400" />
                         <div className="flex items-center gap-2">
-                            <label className="text-xs text-gray-500">Từ:</label>
+                            <label className="text-xs text-gray-500">{t('fromLabel')}</label>
                             <input
                                 type="date"
                                 value={customStartDate}
@@ -202,7 +235,7 @@ export function RecommendationTable({
                             />
                         </div>
                         <div className="flex items-center gap-2">
-                            <label className="text-xs text-gray-500">Đến:</label>
+                            <label className="text-xs text-gray-500">{t('toLabel')}</label>
                             <input
                                 type="date"
                                 value={customEndDate}
@@ -211,14 +244,14 @@ export function RecommendationTable({
                             />
                         </div>
                         <span className="text-xs text-gray-400">
-                            ({filteredData.length} ngày)
+                            {t('daysCount', { n: filteredData.length })}
                         </span>
                     </div>
                 )}
 
                 {/* Result count */}
                 <div className="text-xs text-gray-400 mt-2">
-                    Hiển thị {filteredData.length} / {data.length} ngày
+                    {t('showingDays', { shown: filteredData.length, total: data.length })}
                 </div>
             </div>
 
@@ -228,31 +261,31 @@ export function RecommendationTable({
                     <thead className="sticky top-0 z-10">
                         <tr style={{ backgroundColor: '#f8fafc' }} className="text-left">
                             <th className="px-4 py-3 font-semibold text-slate-500 text-xs uppercase tracking-wider sticky left-0" style={{ backgroundColor: '#f8fafc' }}>
-                                Ngày
+                                {t('colDate')}
                             </th>
                             <th className="px-3 py-3 font-semibold text-slate-500 text-xs uppercase tracking-wider text-right">
-                                OTB
+                                {t('colOtb')}
                             </th>
                             <th className="px-3 py-3 font-semibold text-slate-500 text-xs uppercase tracking-wider text-right">
-                                Còn
+                                {t('colRemaining')}
                             </th>
                             <th className="px-3 py-3 font-semibold text-slate-500 text-xs uppercase tracking-wider text-right">
-                                D.Báo
+                                {t('colForecast')}
                             </th>
-                            <th className="px-3 py-3 font-semibold text-slate-500 text-xs uppercase tracking-wider text-right" title="Anchor = giá đã duyệt hoặc rack rate (base × season)">
-                                Anchor
+                            <th className="px-3 py-3 font-semibold text-slate-500 text-xs uppercase tracking-wider text-right" title={t('calcAnchor')}>
+                                {t('colAnchor')}
                             </th>
                             <th className="px-3 py-3 font-semibold text-slate-500 text-xs uppercase tracking-wider text-right">
-                                Đề xuất
+                                {t('colSuggested')}
                             </th>
                             <th className="px-3 py-3 font-semibold text-slate-500 text-xs uppercase tracking-wider text-center">
-                                Hành động
+                                {t('colAction')}
                             </th>
                             <th className="px-3 py-3 font-semibold text-slate-500 text-xs uppercase tracking-wider text-left">
-                                Lý do
+                                {t('colReason')}
                             </th>
                             <th className="px-3 py-3 font-semibold text-slate-500 text-xs uppercase tracking-wider text-center">
-                                Thao tác
+                                {t('colActions')}
                             </th>
                         </tr>
                     </thead>
@@ -260,7 +293,7 @@ export function RecommendationTable({
                         {filteredData.length === 0 ? (
                             <tr>
                                 <td colSpan={9} className="px-4 py-8 text-center text-gray-400">
-                                    Không có dữ liệu cho khoảng thời gian đã chọn
+                                    {t('noDataForRange')}
                                 </td>
                             </tr>
                         ) : (
@@ -301,7 +334,7 @@ export function RecommendationTable({
                                         <td className="px-3 py-3 text-right font-[family-name:var(--font-mono)] tabular-nums">
                                             <div className="text-gray-700">{formatCurrency(row.currentPrice)}</div>
                                             {row.adr != null && row.adr > 0 && row.adr !== row.currentPrice && (
-                                                <div className="text-[10px] text-gray-400" title="ADR = Revenue / Rooms (tham khảo)">
+                                                <div className="text-[10px] text-gray-400" title="ADR = Revenue / Rooms (reference)">
                                                     ADR {formatCurrency(row.adr)}
                                                 </div>
                                             )}
@@ -309,7 +342,7 @@ export function RecommendationTable({
                                         <td className="px-3 py-3 text-right font-[family-name:var(--font-mono)] tabular-nums">
                                             {row.isStopSell ? (
                                                 <span className="text-rose-600 font-semibold">
-                                                    NGỪNG BÁN
+                                                    {t('stopSelling')}
                                                 </span>
                                             ) : (
                                                 <span style={{ color: '#2D4A8C' }} className="font-semibold">
@@ -317,14 +350,14 @@ export function RecommendationTable({
                                                 </span>
                                             )}
                                         </td>
-                                        {/* Hành động badge */}
+                                        {/* Action badge */}
                                         <td className="px-3 py-3 text-center">
-                                            {getActionBadge(row.action)}
+                                            {getActionBadge(row.action, t)}
                                         </td>
-                                        {/* Lý do */}
+                                        {/* Reason */}
                                         <td className="px-3 py-3 text-xs text-slate-500 max-w-[180px]">
-                                            <span className="line-clamp-2" title={row.reasonTextVi || ''}>
-                                                {row.reasonTextVi || '—'}
+                                            <span className="line-clamp-2" title={getLocalizedReason(row)}>
+                                                {getLocalizedReason(row)}
                                             </span>
                                         </td>
                                         <td className="px-3 py-3 text-center">
@@ -335,14 +368,14 @@ export function RecommendationTable({
                                                     <button
                                                         onClick={() => onAccept(row.id)}
                                                         className="p-1.5 rounded bg-emerald-100 text-emerald-600 hover:bg-emerald-200 transition-colors cursor-pointer"
-                                                        title="Chấp nhận"
+                                                        title={t('accept')}
                                                     >
                                                         <Check className="w-4 h-4" />
                                                     </button>
                                                     <button
                                                         onClick={() => onOverride(row.id)}
                                                         className="p-1.5 rounded bg-rose-100 text-rose-600 hover:bg-rose-200 transition-colors cursor-pointer"
-                                                        title="Bỏ qua"
+                                                        title={t('dismiss')}
                                                     >
                                                         <X className="w-4 h-4" />
                                                     </button>
@@ -359,18 +392,18 @@ export function RecommendationTable({
 
             {/* Footer with formula explanations */}
             <div className="px-4 py-3 border-t bg-gray-50 space-y-1" style={{ borderColor: '#e2e8f0' }}>
-                <p className="text-[10px] text-gray-500 font-medium mb-2">📐 Cách tính các cột:</p>
+                <p className="text-[10px] text-gray-500 font-medium mb-2">{t('calcExplain')}</p>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1 text-[10px] font-mono text-gray-400">
-                    <div><span className="text-gray-500">Ngày:</span> Ngày ở (stay_date)</div>
-                    <div><span className="text-gray-500">OTB:</span> SUM(rooms) từ reservations</div>
-                    <div><span className="text-gray-500">Còn:</span> Capacity − OTB</div>
-                    <div><span className="text-gray-500">D.Báo:</span> remaining_demand từ ML</div>
-                    <div><span className="text-gray-500">Hiện tại:</span> ADR = Revenue ÷ Rooms</div>
-                    <div><span className="text-gray-500">Đề xuất:</span> Pricing Engine tối ưu Rev</div>
-                    <div><span className="text-gray-500">Lý do:</span> Giải thích từ supply/demand</div>
+                    <div>{t('calcDate')}</div>
+                    <div>{t('calcOtb')}</div>
+                    <div>{t('calcRemaining')}</div>
+                    <div>{t('calcForecast')}</div>
+                    <div>{t('calcAnchor')}</div>
+                    <div>{t('calcSuggested')}</div>
+                    <div>{t('calcReason')}</div>
                 </div>
                 <div className="text-[10px] text-gray-400 mt-2 pt-2 border-t" style={{ borderColor: '#e2e8f0' }}>
-                    🟡 Cuối tuần (T7/CN) | 🔴 Ngừng bán (Còn ≤ 0)
+                    {t('weekendLegend')}
                 </div>
             </div>
         </div>

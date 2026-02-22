@@ -70,7 +70,7 @@ export async function checkExportQuota(userId: string, hotelId: string): Promise
         tier,
         message: allowed
             ? undefined
-            : `Bạn đã sử dụng hết ${limits.exportsPerWeek} lượt xuất dữ liệu tuần này`,
+            : `You have used all ${limits.exportsPerWeek} data exports this week`,
     }
 }
 
@@ -109,7 +109,7 @@ export async function checkTeamSeatQuota(hotelId: string): Promise<QuotaStatus> 
         tier,
         message: allowed
             ? undefined
-            : `Gói ${tier} chỉ cho phép ${limits.teamSeats} thành viên`,
+            : `Plan ${tier} allows up to ${limits.teamSeats} team members`,
     }
 }
 

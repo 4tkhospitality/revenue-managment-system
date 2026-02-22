@@ -1,20 +1,37 @@
 {
-    "updated_at": "2026-02-09T01:29:00+07:00",
+    "updated_at": "2026-02-19T23:51:00+07:00",
     "working_on": {
-        "feature": "Analytics Layer + Dashboard Debug",
-        "task": "Debugging Dashboard Data Display Issues",
-        "status": "debug_complete",
-        "plan_folder": "plans/260207-2346-analytics-layer/",
+        "feature": "i18n Fixes + Console Error Cleanup",
+        "task": "Fix i18n dot-notation keys, locale API, language switcher, React key warning",
+        "status": "fixes_complete",
         "files": [
-            "app/dashboard/page.tsx",
-            "app/api/analytics/features/route.ts",
-            "app/actions/submitDecision.ts",
-            "app/api/debug/otb-dates/route.ts"
+            "messages/en.json",
+            "messages/vi.json",
+            "messages/th.json",
+            "messages/ms.json",
+            "messages/id.json",
+            "components/shared/LanguageSwitcher.tsx",
+            "components/dashboard/Sidebar.tsx",
+            "components/dashboard/DashboardTabs.tsx",
+            "app/api/user/locale/route.ts",
+            "app/dashboard/page.tsx"
         ],
-        "blockers": [],
-        "notes": "Fixed 3 bugs: Dashboard showing Sep 2025 dates, UUID validation error on Accept button, Analytics Dashboard showing 0 rows due to date mismatch"
+        "blockers": [
+            "Prisma client stale — need to run 'prisma generate' after stopping dev server to fix resellers query + locale DB persist"
+        ],
+        "notes": "All console errors fixed. Resellers empty on localhost is due to stale Prisma client, NOT missing data."
     },
     "pending_tasks": [
+        {
+            "task": "Run prisma generate (stop dev server first) to sync Prisma client",
+            "priority": "high",
+            "notes": "Fixes both reseller query AND locale DB persist on localhost. Live unaffected."
+        },
+        {
+            "task": "Commit and push i18n + debug fixes",
+            "priority": "high",
+            "notes": "User requested NO push until explicitly approved. Files changed: LanguageSwitcher, Sidebar, locale API, DashboardTabs, page.tsx, 5 message files"
+        },
         {
             "task": "Delete debug endpoints before production deploy",
             "priority": "high",
@@ -23,100 +40,86 @@
         {
             "task": "Phase 04: Golden dataset + edge case tests",
             "priority": "medium"
-        },
-        {
-            "task": "Production deploy with all Analytics Layer fixes",
-            "priority": "medium"
         }
     ],
     "recent_changes": [
         {
-            "timestamp": "2026-02-09T01:27:00+07:00",
+            "timestamp": "2026-02-19T23:50:00+07:00",
             "type": "bugfix",
-            "description": "Fixed Analytics Dashboard showing 0 rows: API was querying as_of_date from dailyOTB (02-07) but features were built for 02-06. Changed to query from featuresDaily table.",
-            "files": [
-                "app/api/analytics/features/route.ts"
-            ]
-        },
-        {
-            "timestamp": "2026-02-09T01:21:00+07:00",
-            "type": "bugfix",
-            "description": "Fixed UUID validation error when clicking Accept button: user_id was 'system_user' string but DB expects UUID format. Changed to '00000000-0000-0000-0000-000000000000' placeholder.",
-            "files": [
-                "app/actions/submitDecision.ts"
-            ]
-        },
-        {
-            "timestamp": "2026-02-09T01:17:00+07:00",
-            "type": "bugfix",
-            "description": "Fixed Dashboard showing Sep 2025 dates instead of Feb 2026: OTB query was missing stay_date >= today filter, so it fetched oldest dates first. Added filter to only show future dates.",
+            "description": "Fixed React missing key warning in DashboardTabs: added key props to overviewContent (wrapped in div), analyticsContent, and pricingContent",
             "files": [
                 "app/dashboard/page.tsx"
             ]
         },
         {
-            "timestamp": "2026-02-08T12:35:00+07:00",
-            "type": "security",
-            "description": "Security audit + auth hardening: deleted debug-fix-user & fix-users endpoints, added manager+ role to rate-shopper writes, added auth+tenant isolation to settings & import-jobs, test suite (79/79 pass)",
+            "timestamp": "2026-02-19T23:48:00+07:00",
+            "type": "bugfix",
+            "description": "Fixed LanguageSwitcher 'Failed to update locale' error: switched to cookie-first approach (set rms_locale cookie directly, API is best-effort background call)",
             "files": [
-                "app/api/debug-fix-user/route.ts (DELETED)",
-                "app/api/fix-users/route.ts (DELETED)",
-                "middleware.ts",
-                "docs/reports/audit_2026-02-08.md"
-            ],
-            "commit": "9843392 security: audit fixes + auth hardening + test suite"
+                "components/shared/LanguageSwitcher.tsx",
+                "app/api/user/locale/route.ts"
+            ]
+        },
+        {
+            "timestamp": "2026-02-19T23:42:00+07:00",
+            "type": "feature",
+            "description": "Language switcher always visible: removed NEXT_PUBLIC_I18N_ENABLED feature flag from Sidebar",
+            "files": [
+                "components/dashboard/Sidebar.tsx"
+            ]
+        },
+        {
+            "timestamp": "2026-02-19T23:30:00+07:00",
+            "type": "bugfix",
+            "description": "Fixed 250 i18n dot-notation keys across 5 locale files: converted flat keys (e.g. 'tabs.overview') to nested objects as required by next-intl",
+            "files": [
+                "messages/en.json",
+                "messages/vi.json",
+                "messages/th.json",
+                "messages/ms.json",
+                "messages/id.json",
+                "scripts/fix-i18n-dot-keys.js"
+            ]
         }
     ],
     "errors_encountered": [
         {
-            "error": "Dashboard chart showing Sep 2025 dates when OTB as_of_date is Feb 2026",
-            "solution": "OTB query was missing stay_date >= today filter. Fixed by adding { stay_date: { gte: today } } to the Prisma query in dashboard page.tsx",
+            "error": "next-intl INVALID_MESSAGE: flat dot-notation keys (e.g. 'tabs.overview') treated as nesting",
+            "solution": "Created script fix-i18n-dot-keys.js to convert 250 flat keys to nested objects in all 5 locale files",
+            "resolved": true,
+            "file": "messages/*.json"
+        },
+        {
+            "error": "Failed to update locale — API /api/user/locale returns non-200",
+            "solution": "Root cause: Prisma client stale (no 'locale' column in types). Fix: LanguageSwitcher now sets cookie directly, API wrapped in try-catch",
+            "resolved": true,
+            "file": "components/shared/LanguageSwitcher.tsx"
+        },
+        {
+            "error": "Resellers empty on localhost but visible on live (rms.pakhos.com)",
+            "solution": "Same root cause: stale Prisma client. New org_id unique constraint not in generated types. Query fails silently → returns []. Fix: run prisma generate after stopping dev server.",
+            "resolved": false,
+            "file": "app/api/admin/resellers/route.ts"
+        },
+        {
+            "error": "React key warning: Each child in a list should have unique key prop in DashboardTabs",
+            "solution": "Added key props to overviewContent (div wrapper), analyticsContent, pricingContent passed to DashboardTabs",
             "resolved": true,
             "file": "app/dashboard/page.tsx"
-        },
-        {
-            "error": "PrismaClientKnownRequestError: Invalid UUID when clicking Accept button",
-            "solution": "user_id was set to 'system_user' string but DB column expects UUID. Changed to placeholder UUID '00000000-0000-0000-0000-000000000000'",
-            "resolved": true,
-            "file": "app/actions/submitDecision.ts"
-        },
-        {
-            "error": "Analytics Dashboard showing 0% complete and 0 rows despite features being built",
-            "solution": "API was querying as_of_date from dailyOTB (02-07) but features were built for 02-06. Fixed by querying as_of_date from featuresDaily table instead.",
-            "resolved": true,
-            "file": "app/api/analytics/features/route.ts"
-        },
-        {
-            "error": "prisma migrate dev wants to RESET database (all data lost) due to drift",
-            "solution": "Use 'prisma db push' instead — applies schema changes without data loss",
-            "resolved": true
-        },
-        {
-            "error": "prisma generate DLL lock: query_engine-windows.dll.node locked by running process",
-            "solution": "Kill all Node.js processes first, then retry prisma generate",
-            "resolved": true
         }
     ],
     "decisions_made": [
         {
-            "decision": "Dashboard OTB query filters stay_date >= today",
-            "reason": "Without this filter, query returns oldest dates first (Sep 2025) instead of future dates user cares about"
+            "decision": "Remove NEXT_PUBLIC_I18N_ENABLED feature flag — language switcher always visible",
+            "reason": "i18n is fully implemented with 5 locales, no need for feature flag anymore"
         },
         {
-            "decision": "Analytics API queries as_of_date from featuresDaily, not dailyOTB",
-            "reason": "Features may be built for different as_of_date than OTB. Using featuresDaily ensures consistency between query and available data."
+            "decision": "Cookie-first locale switching (LanguageSwitcher sets cookie directly)",
+            "reason": "Cookie (rms_locale) is what middleware reads. API persist to DB is nice-to-have but not required for language switching to work"
         },
         {
-            "decision": "Use placeholder UUID for system actions (V01 - no auth)",
-            "reason": "user_id column requires UUID format. Using '00000000...' as placeholder until real auth is implemented."
-        },
-        {
-            "decision": "Created debug endpoint /api/debug/otb-dates for data investigation",
-            "reason": "Useful for diagnosing date range issues in reservations, OTB, and features_daily tables. Should be removed before production."
-        },
-        {
-            "decision": "Server-side hotel resolution for all API routes (never trust client hotelId)",
-            "reason": "Client-supplied hotelId enables tenant boundary bypass — always use getActiveHotelId()"
+            "decision": "No git commit/push until user explicitly approves",
+            "reason": "User requested all fixes be verified before any push"
         }
     ]
 }

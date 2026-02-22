@@ -58,7 +58,7 @@ export function ExportPdfButton({
 
             await exportToPdf(targetId, filename, options);
         } catch (err) {
-            const message = err instanceof Error ? err.message : 'Lỗi xuất PDF. Thử lại sau.';
+            const message = err instanceof Error ? err.message : 'PDF export error. Try again later.';
             setError(message);
             console.error('[PDF Export]', err);
         } finally {
@@ -80,17 +80,17 @@ export function ExportPdfButton({
                 onClick={handleExport}
                 disabled={isExporting}
                 className={`${baseStyles} ${variantStyles[variant]} ${className}`}
-                title="Xuất báo cáo PDF"
+                title="Export PDF Report"
             >
                 {isExporting ? (
                     <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Đang xuất...</span>
+                        <span>Exporting...</span>
                     </>
                 ) : (
                     <>
                         <FileDown className="w-4 h-4" />
-                        <span>Xuất PDF</span>
+                        <span>Export PDF</span>
                     </>
                 )}
             </button>
@@ -117,12 +117,12 @@ export function ExportPdfButton({
 function getDefaultTitle(pageType: PageType): string {
     switch (pageType) {
         case 'dashboard':
-            return 'Báo cáo Dashboard';
+            return 'Dashboard Report';
         case 'analytics':
-            return 'Báo cáo Pace & Pickup';
+            return 'Pace & Pickup Report';
         case 'daily':
-            return 'Báo cáo Daily Actions';
+            return 'Daily Actions Report';
         default:
-            return 'Báo cáo RMS';
+            return 'RMS Report';
     }
 }

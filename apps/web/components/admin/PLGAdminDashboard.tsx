@@ -12,6 +12,7 @@ import {
     Pencil, Trash2, BookOpen, ChevronRight, AlertTriangle, Save, CreditCard
 } from 'lucide-react';
 import PricingTab from './PricingTab';
+import { useTranslations } from 'next-intl';
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -84,6 +85,7 @@ function StatBadge({ icon: Icon, label, value, color }: {
 function ConfirmDialog({ message, onConfirm, onCancel }: {
     message: string; onConfirm: () => void; onCancel: () => void;
 }) {
+    const t = useTranslations('plgAdmin');
     return (
         <div style={{
             position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
@@ -93,8 +95,8 @@ function ConfirmDialog({ message, onConfirm, onCancel }: {
                 <AlertTriangle size={40} color="#f59e0b" style={{ marginBottom: 12 }} />
                 <p style={{ fontSize: 15, marginBottom: 20, color: '#374151' }}>{message}</p>
                 <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-                    <button onClick={onCancel} style={{ ...btnPrimary, background: '#f3f4f6', color: '#374151' }}>Hủy</button>
-                    <button onClick={onConfirm} style={btnDanger}>Xác nhận</button>
+                    <button onClick={onCancel} style={{ ...btnPrimary, background: '#f3f4f6', color: '#374151' }}>{t('cancel')}</button>
+                    <button onClick={onConfirm} style={btnDanger}>{t('confirm')}</button>
                 </div>
             </div>
         </div>
@@ -104,6 +106,7 @@ function ConfirmDialog({ message, onConfirm, onCancel }: {
 // ── Resellers Tab ──────────────────────────────────────────────
 
 function ResellersTab() {
+    const t = useTranslations('plgAdmin');
     const [resellers, setResellers] = useState<Reseller[]>([]);
     const [loading, setLoading] = useState(true);
     const [showCreate, setShowCreate] = useState(false);
@@ -168,7 +171,7 @@ function ResellersTab() {
         <div>
             {deleteConfirm && (
                 <ConfirmDialog
-                    message="Bạn có chắc muốn vô hiệu hóa reseller này? (Soft delete — có thể kích hoạt lại)"
+                    message={t('confirmDeactivateReseller')}
                     onConfirm={() => handleDelete(deleteConfirm)}
                     onCancel={() => setDeleteConfirm(null)}
                 />
@@ -176,7 +179,7 @@ function ResellersTab() {
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                 <div style={{ display: 'flex', gap: 12 }}>
-                    <StatBadge icon={Users} label="Tổng" value={resellers.length} color="#2563eb" />
+                    <StatBadge icon={Users} label={t('total')} value={resellers.length} color="#2563eb" />
                     <StatBadge icon={Check} label="Active" value={resellers.filter(r => r.is_active).length} color="#16a34a" />
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
@@ -184,7 +187,7 @@ function ResellersTab() {
                         <RefreshCw size={14} /> Refresh
                     </button>
                     <button onClick={() => setShowCreate(!showCreate)} style={btnPrimary}>
-                        <Plus size={14} /> Thêm Reseller
+                        <Plus size={14} /> {t('addReseller')}
                     </button>
                 </div>
             </div>
@@ -192,7 +195,7 @@ function ResellersTab() {
             {showCreate && (
                 <form onSubmit={handleCreate} style={{ ...cardStyle, marginBottom: 16, display: 'flex', gap: 12, alignItems: 'end' }}>
                     <div style={{ flex: 1 }}>
-                        <label style={{ fontSize: 12, fontWeight: 500, color: '#6b7280' }}>Tên</label>
+                        <label style={{ fontSize: 12, fontWeight: 500, color: '#6b7280' }}>{t('name')}</label>
                         <input style={inputStyle} required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Reseller name" />
                     </div>
                     <div style={{ flex: 1 }}>
@@ -200,10 +203,10 @@ function ResellersTab() {
                         <input style={inputStyle} type="email" required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="email@example.com" />
                     </div>
                     <div style={{ flex: 1 }}>
-                        <label style={{ fontSize: 12, fontWeight: 500, color: '#6b7280' }}>SĐT</label>
+                        <label style={{ fontSize: 12, fontWeight: 500, color: '#6b7280' }}>{t('phone')}</label>
                         <input style={inputStyle} value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="Optional" />
                     </div>
-                    <button type="submit" style={btnPrimary}>Tạo</button>
+                    <button type="submit" style={btnPrimary}>{t('create')}</button>
                 </form>
             )}
 
@@ -211,20 +214,20 @@ function ResellersTab() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
                     <thead>
                         <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-                            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 500 }}>Tên</th>
+                            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 500 }}>{t('name')}</th>
                             <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 500 }}>Ref Code</th>
                             <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 500 }}>Email</th>
                             <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 500 }}>Hotels</th>
                             <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 500 }}>Promos</th>
                             <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 500 }}>Status</th>
-                            <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 500 }}>Thao tác</th>
+                            <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 500 }}>{t('actions')}</th>
                         </tr>
                     </thead>
                     <tbody>
                         {loading ? (
                             <tr><td colSpan={7} style={{ padding: 24, textAlign: 'center', color: '#9ca3af' }}>Loading...</td></tr>
                         ) : resellers.length === 0 ? (
-                            <tr><td colSpan={7} style={{ padding: 24, textAlign: 'center', color: '#9ca3af' }}>Chưa có reseller nào</td></tr>
+                            <tr><td colSpan={7} style={{ padding: 24, textAlign: 'center', color: '#9ca3af' }}>{t('noResellers')}</td></tr>
                         ) : resellers.map(r => (
                             <tr key={r.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
                                 <td style={{ padding: '12px 16px' }}>
@@ -261,19 +264,19 @@ function ResellersTab() {
                                     <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
                                         {editingId === r.id ? (
                                             <>
-                                                <button onClick={handleSaveEdit} style={{ ...btnGhost, color: '#16a34a' }} title="Lưu">
-                                                    <Save size={14} /> Lưu
+                                                <button onClick={handleSaveEdit} style={{ ...btnGhost, color: '#16a34a' }} title={t('save')}>
+                                                    <Save size={14} /> {t('save')}
                                                 </button>
-                                                <button onClick={() => setEditingId(null)} style={btnGhost} title="Hủy">
+                                                <button onClick={() => setEditingId(null)} style={btnGhost} title={t('cancel')}>
                                                     <X size={14} />
                                                 </button>
                                             </>
                                         ) : (
                                             <>
-                                                <button onClick={() => startEdit(r)} style={btnGhost} title="Sửa">
+                                                <button onClick={() => startEdit(r)} style={btnGhost} title={t('edit')}>
                                                     <Pencil size={14} />
                                                 </button>
-                                                <button onClick={() => setDeleteConfirm(r.id)} style={{ ...btnGhost, color: '#ef4444' }} title="Xóa">
+                                                <button onClick={() => setDeleteConfirm(r.id)} style={{ ...btnGhost, color: '#ef4444' }} title={t('delete')}>
                                                     <Trash2 size={14} />
                                                 </button>
                                             </>
@@ -292,6 +295,7 @@ function ResellersTab() {
 // ── Promos Tab ─────────────────────────────────────────────────
 
 function PromosTab() {
+    const t = useTranslations('plgAdmin');
     const [promos, setPromos] = useState<PromoCode[]>([]);
     const [loading, setLoading] = useState(true);
     const [showCreate, setShowCreate] = useState(false);
@@ -346,7 +350,7 @@ function PromosTab() {
         <div>
             {deleteConfirm && (
                 <ConfirmDialog
-                    message="Bạn có chắc muốn vô hiệu hóa mã khuyến mãi này?"
+                    message={t('confirmDeactivatePromo')}
                     onConfirm={() => handleDelete(deleteConfirm)}
                     onCancel={() => setDeleteConfirm(null)}
                 />
@@ -354,7 +358,7 @@ function PromosTab() {
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                 <div style={{ display: 'flex', gap: 12 }}>
-                    <StatBadge icon={Tag} label="Tổng mã" value={promos.length} color="#7c3aed" />
+                    <StatBadge icon={Tag} label={t('totalCodes')} value={promos.length} color="#7c3aed" />
                     <StatBadge icon={Check} label="Active" value={promos.filter(p => p.is_active).length} color="#16a34a" />
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
@@ -362,7 +366,7 @@ function PromosTab() {
                         <RefreshCw size={14} /> Refresh
                     </button>
                     <button onClick={() => setShowCreate(!showCreate)} style={btnPrimary}>
-                        <Plus size={14} /> Tạo Mã
+                        <Plus size={14} /> {t('createCode')}
                     </button>
                 </div>
             </div>
@@ -371,11 +375,11 @@ function PromosTab() {
                 <form onSubmit={handleCreate} style={{ ...cardStyle, marginBottom: 16 }}>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
                         <div>
-                            <label style={{ fontSize: 12, fontWeight: 500, color: '#6b7280' }}>Mã Code</label>
+                            <label style={{ fontSize: 12, fontWeight: 500, color: '#6b7280' }}>{t('codeLabel')}</label>
                             <input style={inputStyle} required value={form.code} onChange={e => setForm({ ...form, code: e.target.value })} placeholder="VD: WELCOME20" />
                         </div>
                         <div>
-                            <label style={{ fontSize: 12, fontWeight: 500, color: '#6b7280' }}>Loại</label>
+                            <label style={{ fontSize: 12, fontWeight: 500, color: '#6b7280' }}>{t('type')}</label>
                             <select style={inputStyle} value={form.templateType} onChange={e => setForm({ ...form, templateType: e.target.value })}>
                                 <option value="GLOBAL">Global</option>
                                 <option value="RESELLER">Reseller</option>
@@ -383,24 +387,24 @@ function PromosTab() {
                             </select>
                         </div>
                         <div>
-                            <label style={{ fontSize: 12, fontWeight: 500, color: '#6b7280' }}>Giảm %</label>
+                            <label style={{ fontSize: 12, fontWeight: 500, color: '#6b7280' }}>{t('discountPercent')}</label>
                             <input style={inputStyle} type="number" min={1} max={100} required value={form.percentOff} onChange={e => setForm({ ...form, percentOff: Number(e.target.value) })} />
                         </div>
                         <div>
-                            <label style={{ fontSize: 12, fontWeight: 500, color: '#6b7280' }}>Mô tả</label>
+                            <label style={{ fontSize: 12, fontWeight: 500, color: '#6b7280' }}>{t('description')}</label>
                             <input style={inputStyle} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Optional" />
                         </div>
                         <div>
-                            <label style={{ fontSize: 12, fontWeight: 500, color: '#6b7280' }}>Giới hạn sử dụng</label>
+                            <label style={{ fontSize: 12, fontWeight: 500, color: '#6b7280' }}>{t('usageLimit')}</label>
                             <input style={inputStyle} type="number" value={form.maxRedemptions} onChange={e => setForm({ ...form, maxRedemptions: e.target.value })} placeholder="Unlimited" />
                         </div>
                         <div>
-                            <label style={{ fontSize: 12, fontWeight: 500, color: '#6b7280' }}>Hết hạn</label>
+                            <label style={{ fontSize: 12, fontWeight: 500, color: '#6b7280' }}>{t('expiresAt')}</label>
                             <input style={inputStyle} type="date" value={form.expiresAt} onChange={e => setForm({ ...form, expiresAt: e.target.value })} />
                         </div>
                     </div>
                     <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end' }}>
-                        <button type="submit" style={btnPrimary}>Tạo Mã</button>
+                        <button type="submit" style={btnPrimary}>{t('createCode')}</button>
                     </div>
                 </form>
             )}
@@ -409,21 +413,21 @@ function PromosTab() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
                     <thead>
                         <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-                            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 500 }}>Mã</th>
-                            <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 500 }}>Loại</th>
-                            <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 500 }}>Giảm</th>
-                            <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 500 }}>Đã dùng</th>
+                            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 500 }}>{t('code')}</th>
+                            <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 500 }}>{t('type')}</th>
+                            <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 500 }}>{t('discount')}</th>
+                            <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 500 }}>{t('used')}</th>
                             <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 500 }}>Reseller</th>
-                            <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 500 }}>Hết hạn</th>
+                            <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 500 }}>{t('expiresAt')}</th>
                             <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 500 }}>Status</th>
-                            <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 500 }}>Thao tác</th>
+                            <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 500 }}>{t('actions')}</th>
                         </tr>
                     </thead>
                     <tbody>
                         {loading ? (
                             <tr><td colSpan={8} style={{ padding: 24, textAlign: 'center', color: '#9ca3af' }}>Loading...</td></tr>
                         ) : promos.length === 0 ? (
-                            <tr><td colSpan={8} style={{ padding: 24, textAlign: 'center', color: '#9ca3af' }}>Chưa có mã nào</td></tr>
+                            <tr><td colSpan={8} style={{ padding: 24, textAlign: 'center', color: '#9ca3af' }}>{t('noCodes')}</td></tr>
                         ) : promos.map(p => (
                             <tr key={p.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
                                 <td style={{ padding: '12px 16px' }}>
@@ -455,7 +459,7 @@ function PromosTab() {
                                     </button>
                                 </td>
                                 <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                                    <button onClick={() => setDeleteConfirm(p.id)} style={{ ...btnGhost, color: '#ef4444' }} title="Vô hiệu hóa">
+                                    <button onClick={() => setDeleteConfirm(p.id)} style={{ ...btnGhost, color: '#ef4444' }} title={t('deactivate')}>
                                         <Trash2 size={14} />
                                     </button>
                                 </td>
@@ -471,6 +475,7 @@ function PromosTab() {
 // ── Commissions Tab ────────────────────────────────────────────
 
 function CommissionsTab() {
+    const t = useTranslations('plgAdmin');
     const [commissions, setCommissions] = useState<CommissionEntry[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -489,7 +494,7 @@ function CommissionsTab() {
     return (
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                <StatBadge icon={DollarSign} label="Tổng giao dịch" value={commissions.length} color="#059669" />
+                <StatBadge icon={DollarSign} label={t('totalTransactions')} value={commissions.length} color="#059669" />
                 <button onClick={fetchCommissions} style={{ ...btnPrimary, background: '#f3f4f6', color: '#374151' }}>
                     <RefreshCw size={14} /> Refresh
                 </button>
@@ -499,18 +504,18 @@ function CommissionsTab() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
                     <thead>
                         <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-                            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 500 }}>Loại</th>
-                            <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 500 }}>Tỉ lệ</th>
-                            <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 500 }}>Số tiền</th>
-                            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 500 }}>Mô tả</th>
-                            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 500 }}>Ngày</th>
+                            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 500 }}>{t('type')}</th>
+                            <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 500 }}>{t('rate')}</th>
+                            <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 500 }}>{t('amount')}</th>
+                            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 500 }}>Description</th>
+                            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 500 }}>{t('date')}</th>
                         </tr>
                     </thead>
                     <tbody>
                         {loading ? (
                             <tr><td colSpan={5} style={{ padding: 24, textAlign: 'center', color: '#9ca3af' }}>Loading...</td></tr>
                         ) : commissions.length === 0 ? (
-                            <tr><td colSpan={5} style={{ padding: 24, textAlign: 'center', color: '#9ca3af' }}>Chưa có giao dịch hoa hồng nào</td></tr>
+                            <tr><td colSpan={5} style={{ padding: 24, textAlign: 'center', color: '#9ca3af' }}>{t('noCommissions')}</td></tr>
                         ) : commissions.map(c => (
                             <tr key={c.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
                                 <td style={{ padding: '12px 16px' }}>
@@ -583,130 +588,131 @@ function StepItem({ number, title, children }: { number: number; title: string; 
 }
 
 function GuideTab() {
+    const t = useTranslations('plgAdmin');
     return (
         <div>
             <div style={{ ...cardStyle, marginBottom: 20, background: 'linear-gradient(135deg, #2563eb08, #7c3aed08)', border: '1px solid #e0e7ff' }}>
                 <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 8px', color: '#1e40af' }}>
-                    📖 Hướng dẫn sử dụng PLG Admin
+                    {t('guideTitle')}
                 </h2>
                 <p style={{ color: '#6b7280', margin: 0, fontSize: 14, lineHeight: 1.6 }}>
-                    PLG (Product-Led Growth) là hệ thống quản lý đại lý (Resellers), mã khuyến mãi (Promo Codes),
-                    và hoa hồng (Commissions). Dưới đây là hướng dẫn chi tiết từng bước.
+                    PLG (Product-Led Growth) is the system for managing Resellers, Promo Codes,
+                    and Commissions. Below is a detailed step-by-step guide.
                 </p>
             </div>
 
-            <GuideSection title="1. Quản lý Resellers (Đại Lý)" icon={Users} color="#2563eb">
+            <GuideSection title={t('guideResellersTitle')} icon={Users} color="#2563eb">
                 <div style={{ padding: '12px 0' }}>
                     <p style={{ fontSize: 14, color: '#374151', marginTop: 12 }}>
-                        <strong>Reseller là ai?</strong> Là đối tác giới thiệu khách hàng (hotels) sử dụng hệ thống RMS.
-                        Mỗi reseller được cấp một <strong>Ref Code</strong> (mã giới thiệu) tự động, dùng để tracking attribution.
+                        <strong>Who is a Reseller?</strong> A partner who refers hotels to use the RMS system.
+                        Each reseller is assigned a <strong>Ref Code</strong> (referral code) automatically, used for tracking attribution.
                     </p>
 
-                    <StepItem number={1} title="Tạo Reseller mới">
-                        Bấm nút <strong style={{ color: '#2563eb' }}>+ Thêm Reseller</strong> → Điền tên, email, SĐT → Bấm <strong>Tạo</strong>.
-                        <br />Hệ thống tự sinh mã Ref Code (VD: <code style={{ background: '#f3f4f6', padding: '1px 6px', borderRadius: 4 }}>RESEZH</code>).
+                    <StepItem number={1} title="Create new Reseller">
+                        Click the button <strong style={{ color: '#2563eb' }}>+ Add Reseller</strong> → Enter name, email, phone → Click <strong>Create</strong>.
+                        <br />System auto-generates Ref Code (e.g.: <code style={{ background: '#f3f4f6', padding: '1px 6px', borderRadius: 4 }}>RESEZH</code>).
                     </StepItem>
 
-                    <StepItem number={2} title="Sửa thông tin Reseller">
-                        Bấm icon <strong>✏️ bút chì</strong> trên dòng reseller cần sửa → Thay đổi tên hoặc email → Bấm <strong style={{ color: '#16a34a' }}>💾 Lưu</strong>.
+                    <StepItem number={2} title="Edit Reseller info">
+                        Click icon <strong>✏️ pencil</strong> on the reseller row to edit → Change name or email → Click <strong style={{ color: '#16a34a' }}>💾 Save</strong>.
                     </StepItem>
 
-                    <StepItem number={3} title="Bật/Tắt trạng thái Active">
-                        Bấm vào badge <strong style={{ color: '#166534', background: '#dcfce7', padding: '1px 8px', borderRadius: 8, fontSize: 12 }}>Active</strong> hoặc <strong style={{ color: '#991b1b', background: '#fee2e2', padding: '1px 8px', borderRadius: 8, fontSize: 12 }}>Inactive</strong> để toggle.
-                        Reseller inactive sẽ không còn hoạt động nhưng dữ liệu vẫn được giữ.
+                    <StepItem number={3} title="Toggle Active status">
+                        Click the badge <strong style={{ color: '#166534', background: '#dcfce7', padding: '1px 8px', borderRadius: 8, fontSize: 12 }}>Active</strong> or <strong style={{ color: '#991b1b', background: '#fee2e2', padding: '1px 8px', borderRadius: 8, fontSize: 12 }}>Inactive</strong> to toggle.
+                        Inactive resellers stop working but data is preserved.
                     </StepItem>
 
-                    <StepItem number={4} title="Xóa Reseller (Soft Delete)">
-                        Bấm icon <strong style={{ color: '#ef4444' }}>🗑️ thùng rác</strong> → Xác nhận → Reseller chuyển thành Inactive.
-                        <br /><em>Lưu ý: Không xóa hẳn khỏi DB để bảo toàn lịch sử attribution và commissions.</em>
+                    <StepItem number={4} title="Delete Reseller (Soft Delete)">
+                        Click icon <strong style={{ color: '#ef4444' }}>🗑️ trash</strong> → Confirm → Reseller changes to Inactive.
+                        <br /><em>Note: Not fully deleted from DB to preserve attribution and commission history.</em>
                     </StepItem>
 
                     <div style={{ marginTop: 16, padding: '12px 16px', background: '#eff6ff', borderRadius: 8, border: '1px solid #bfdbfe' }}>
-                        <strong style={{ color: '#1d4ed8', fontSize: 13 }}>💡 Mẹo:</strong>
-                        <span style={{ fontSize: 13, color: '#1e40af' }}> Cột <strong>Hotels</strong> cho biết reseller đang quản lý bao nhiêu hotel. Cột <strong>Promos</strong> cho biết số mã khuyến mãi liên kết.</span>
+                        <strong style={{ color: '#1d4ed8', fontSize: 13 }}>💡 Tip:</strong>
+                        <span style={{ fontSize: 13, color: '#1e40af' }}> The <strong>Hotels</strong> column shows how many hotels a reseller manages. The <strong>Promos</strong> column shows linked promo codes.</span>
                     </div>
                 </div>
             </GuideSection>
 
-            <GuideSection title="2. Quản lý Promo Codes (Mã Khuyến Mãi)" icon={Tag} color="#7c3aed">
+            <GuideSection title={t('guidePromosTitle')} icon={Tag} color="#7c3aed">
                 <div style={{ padding: '12px 0' }}>
                     <p style={{ fontSize: 14, color: '#374151', marginTop: 12 }}>
-                        <strong>Promo Code là gì?</strong> Là mã giảm giá cho khách hàng khi đăng ký/nâng cấp gói dịch vụ.
-                        Có 3 loại mã:
+                        <strong>What is a Promo Code?</strong> A discount code for customers when signing up or upgrading plans.
+                        There are 3 types:
                     </p>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 12 }}>
                         <div style={{ padding: 12, background: '#dbeafe', borderRadius: 8, textAlign: 'center' }}>
                             <div style={{ fontWeight: 600, color: '#1d4ed8', fontSize: 13 }}>GLOBAL</div>
-                            <div style={{ fontSize: 12, color: '#3b82f6', marginTop: 4 }}>Dùng chung cho tất cả</div>
+                            <div style={{ fontSize: 12, color: '#3b82f6', marginTop: 4 }}>Shared for all users</div>
                         </div>
                         <div style={{ padding: 12, background: '#fef3c7', borderRadius: 8, textAlign: 'center' }}>
                             <div style={{ fontWeight: 600, color: '#92400e', fontSize: 13 }}>RESELLER</div>
-                            <div style={{ fontSize: 12, color: '#d97706', marginTop: 4 }}>Gắn với reseller cụ thể</div>
+                            <div style={{ fontSize: 12, color: '#d97706', marginTop: 4 }}>Linked to specific reseller</div>
                         </div>
                         <div style={{ padding: 12, background: '#ede9fe', borderRadius: 8, textAlign: 'center' }}>
                             <div style={{ fontWeight: 600, color: '#5b21b6', fontSize: 13 }}>CAMPAIGN</div>
-                            <div style={{ fontSize: 12, color: '#7c3aed', marginTop: 4 }}>Chiến dịch marketing</div>
+                            <div style={{ fontSize: 12, color: '#7c3aed', marginTop: 4 }}>Marketing campaign</div>
                         </div>
                     </div>
 
-                    <StepItem number={1} title="Tạo mã mới">
-                        Bấm <strong style={{ color: '#2563eb' }}>+ Tạo Mã</strong> → Điền:
-                        <br />• <strong>Mã Code</strong>: VD <code style={{ background: '#f3f4f6', padding: '1px 6px', borderRadius: 4 }}>WELCOME20</code> (tự động viết hoa)
-                        <br />• <strong>Loại</strong>: Global / Reseller / Campaign
-                        <br />• <strong>Giảm %</strong>: Phần trăm giảm giá (1-100)
-                        <br />• <strong>Giới hạn sử dụng</strong>: Tối đa bao nhiêu lần dùng (bỏ trống = không giới hạn)
-                        <br />• <strong>Hết hạn</strong>: Ngày hết hạn (bỏ trống = không hết hạn)
+                    <StepItem number={1} title="Create new code">
+                        Click <strong style={{ color: '#2563eb' }}>+ Create Code</strong> → Fill in:
+                        <br />• <strong>Code</strong>: e.g. <code style={{ background: '#f3f4f6', padding: '1px 6px', borderRadius: 4 }}>WELCOME20</code> (auto-uppercased)
+                        <br />• <strong>Type</strong>: Global / Reseller / Campaign
+                        <br />• <strong>Discount %</strong>: Discount percentage (1-100)
+                        <br />• <strong>Usage Limit</strong>: Max number of uses (empty = unlimited)
+                        <br />• <strong>Expiry</strong>: Expiry date (empty = no expiry)
                     </StepItem>
 
-                    <StepItem number={2} title="Bật/Tắt mã">
-                        Bấm vào badge <strong>Active/Inactive</strong> để toggle. Mã inactive không thể sử dụng nhưng vẫn được giữ lại.
+                    <StepItem number={2} title="Toggle code status">
+                        Click the badge <strong>Active/Inactive</strong> to toggle. Inactive codes cannot be used but are still retained.
                     </StepItem>
 
-                    <StepItem number={3} title="Vô hiệu hóa mã">
-                        Bấm icon <strong style={{ color: '#ef4444' }}>🗑️</strong> → Xác nhận → Mã chuyển thành Inactive.
+                    <StepItem number={3} title="Deactivate code">
+                        Click icon <strong style={{ color: '#ef4444' }}>🗑️</strong> → Confirm → Code changes to Inactive.
                     </StepItem>
 
                     <div style={{ marginTop: 16, padding: '12px 16px', background: '#faf5ff', borderRadius: 8, border: '1px solid #e9d5ff' }}>
-                        <strong style={{ color: '#7c3aed', fontSize: 13 }}>💡 Quy tắc &quot;Best Discount Wins&quot;:</strong>
-                        <span style={{ fontSize: 13, color: '#6d28d9' }}> Khi hotel có nhiều mã giảm giá, hệ thống tự chọn mã có giảm giá CAO NHẤT. Ưu tiên: Campaign &gt; Global &gt; Reseller.</span>
+                        <strong style={{ color: '#7c3aed', fontSize: 13 }}>💡 Rule of &quot;Best Discount Wins&quot;:</strong>
+                        <span style={{ fontSize: 13, color: '#6d28d9' }}> When a hotel has multiple discount codes, the system picks the HIGHEST discount. Priority: Campaign &gt; Global &gt; Reseller.</span>
                     </div>
                 </div>
             </GuideSection>
 
-            <GuideSection title="3. Hoa hồng (Commissions)" icon={DollarSign} color="#059669">
+            <GuideSection title={t('guideCommissionsTitle')} icon={DollarSign} color="#059669">
                 <div style={{ padding: '12px 0' }}>
                     <p style={{ fontSize: 14, color: '#374151', marginTop: 12 }}>
-                        <strong>Commission là gì?</strong> Là hoa hồng trả cho reseller khi hotel họ giới thiệu thanh toán phí dịch vụ.
-                        Hoa hồng được tính tự động theo <strong>tỉ lệ %</strong> (commission rate) trong hợp đồng reseller.
+                        <strong>What is Commission?</strong> Commission paid to resellers when referred hotels pay service fees.
+                        Commission is auto-calculated based on <strong>% rate</strong> (commission rate) in the reseller agreement.
                     </p>
 
                     <div style={{ marginTop: 16 }}>
-                        <div style={{ fontWeight: 600, fontSize: 14, color: '#1f2937', marginBottom: 8 }}>Cách tính:</div>
+                        <div style={{ fontWeight: 600, fontSize: 14, color: '#1f2937', marginBottom: 8 }}>How it's calculated:</div>
                         <div style={{ background: '#f0fdf4', padding: 16, borderRadius: 8, border: '1px solid #bbf7d0', fontFamily: 'monospace', fontSize: 13 }}>
-                            Commission = Doanh thu × Commission Rate (%)
+                            Commission = Revenue × Commission Rate (%)
                             <br /><br />
-                            VD: Hotel trả 5.000.000₫/tháng, rate = 15%
+                            E.g.: Hotel pays 5.000.000₫/month, rate = 15%
                             <br />
-                            → Reseller nhận: 750.000₫
+                            → Reseller receives: 750.000₫
                         </div>
                     </div>
 
                     <div style={{ marginTop: 16, padding: '12px 16px', background: '#ecfdf5', borderRadius: 8, border: '1px solid #a7f3d0' }}>
-                        <strong style={{ color: '#059669', fontSize: 13 }}>📊 Tab này hiện tại:</strong>
-                        <span style={{ fontSize: 13, color: '#065f46' }}> Hiển thị lịch sử tất cả giao dịch hoa hồng. Bao gồm loại, tỉ lệ, số tiền, mô tả, và ngày tạo.</span>
+                        <strong style={{ color: '#059669', fontSize: 13 }}>📊 This tab currently:</strong>
+                        <span style={{ fontSize: 13, color: '#065f46' }}> Shows history of all commission transactions. Including type, rate, amount, description, and creation date.</span>
                     </div>
                 </div>
             </GuideSection>
 
-            <GuideSection title="4. Quy trình hoàn chỉnh (Full PLG Flow)" icon={ChevronRight} color="#f59e0b">
+            <GuideSection title={t('guideFlowTitle')} icon={ChevronRight} color="#f59e0b">
                 <div style={{ padding: '12px 0' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
                         {[
-                            { step: '1', text: 'Tạo Reseller (Tab Resellers)', color: '#2563eb', desc: 'Cung cấp tên, email → Nhận Ref Code tự động' },
-                            { step: '2', text: 'Tạo Promo Code cho Reseller (Tab Promo Codes)', color: '#7c3aed', desc: 'Loại RESELLER, gắn vào reseller vừa tạo' },
-                            { step: '3', text: 'Reseller chia sẻ mã cho khách hàng', color: '#f59e0b', desc: 'Hotel nhập mã khi đăng ký → Tự động attribution' },
-                            { step: '4', text: 'Hotel áp dụng mã → Nhận giảm giá', color: '#16a34a', desc: 'Hệ thống ghi nhận redemption, tính discount' },
-                            { step: '5', text: 'Hoa hồng tự động tính (Tab Commissions)', color: '#059669', desc: 'Khi hotel thanh toán → Commission cho reseller' },
+                            { step: '1', text: 'Create Reseller (Tab Resellers)', color: '#2563eb', desc: 'Provide name, email → Get auto-generated Ref Code' },
+                            { step: '2', text: 'Create Promo Code for Reseller (Tab Promo Codes)', color: '#7c3aed', desc: 'Type RESELLER, link to the reseller just created' },
+                            { step: '3', text: 'Reseller shares code with customers', color: '#f59e0b', desc: 'Hotel enters code at signup → Auto attribution' },
+                            { step: '4', text: 'Hotel applies code → Receives discount', color: '#16a34a', desc: 'System records redemption, calculates discount' },
+                            { step: '5', text: 'Commission auto-calculated (Tab Commissions)', color: '#059669', desc: 'When hotel pays → Commission for reseller' },
                         ].map(item => (
                             <div key={item.step} style={{
                                 display: 'flex', alignItems: 'flex-start', gap: 12,
@@ -728,20 +734,20 @@ function GuideTab() {
                 </div>
             </GuideSection>
 
-            <GuideSection title="5. Lưu ý quan trọng" icon={AlertTriangle} color="#ef4444">
+            <GuideSection title={t('guideNotesTitle')} icon={AlertTriangle} color="#ef4444">
                 <div style={{ padding: '12px 0' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
                         <div style={{ padding: '10px 14px', background: '#fef2f2', borderRadius: 8, fontSize: 13, color: '#991b1b' }}>
-                            ⚠️ <strong>Xóa = Soft Delete:</strong> Reseller và Promo chỉ bị deactivate, không xóa khỏi database. Điều này bảo toàn lịch sử và dữ liệu attribution.
+                            ⚠️ <strong>Delete = Soft Delete:</strong> Reseller and Promo are only deactivated, not deleted from database. This preserves history and attribution data.
                         </div>
                         <div style={{ padding: '10px 14px', background: '#fffbeb', borderRadius: 8, fontSize: 13, color: '#92400e' }}>
-                            ⚠️ <strong>Ref Code không đổi:</strong> Mỗi reseller có 1 mã ref code cố định, không thể thay đổi sau khi tạo.
+                            ⚠️ <strong>Ref Code is permanent:</strong> Each reseller has a fixed ref code that cannot be changed after creation.
                         </div>
                         <div style={{ padding: '10px 14px', background: '#eff6ff', borderRadius: 8, fontSize: 13, color: '#1e40af' }}>
-                            ℹ️ <strong>Audit logging:</strong> Mọi thao tác (tạo, sửa, xóa) đều được ghi nhận vào audit log để truy vết.
+                            ℹ️ <strong>Audit logging:</strong> All actions (create, edit, delete) are recorded in the audit log for traceability.
                         </div>
                         <div style={{ padding: '10px 14px', background: '#ecfdf5', borderRadius: 8, fontSize: 13, color: '#065f46' }}>
-                            ✅ <strong>Quyền Admin:</strong> Chỉ user đã đăng nhập với quyền admin mới truy cập được trang này.
+                            ✅ <strong>Admin Access:</strong> Only logged-in admin users can access this page.
                         </div>
                     </div>
                 </div>
@@ -757,10 +763,11 @@ const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
     { key: 'promos', label: 'Promo Codes', icon: Tag },
     { key: 'commissions', label: 'Commissions', icon: DollarSign },
     { key: 'pricing', label: 'Pricing', icon: CreditCard },
-    { key: 'guide', label: 'Hướng dẫn', icon: BookOpen },
+    { key: 'guide', label: 'Guide', icon: BookOpen },
 ];
 
 export default function PLGAdminDashboard() {
+    const t = useTranslations('plgAdmin');
     const [activeTab, setActiveTab] = useState<TabKey>('resellers');
 
     return (
@@ -771,7 +778,7 @@ export default function PLGAdminDashboard() {
                     PLG Admin
                 </h1>
                 <p style={{ color: '#6b7280', marginTop: 4, fontSize: 14 }}>
-                    Quản lý Resellers, Mã khuyến mãi, và Hoa hồng
+                    {t('subtitle')}
                 </p>
             </div>
 

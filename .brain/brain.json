@@ -2,19 +2,19 @@
   "meta": {
     "schema_version": "2.0.0",
     "awf_version": "4.1.2",
-    "last_updated": "2026-02-17T23:27:00+07:00"
+    "last_updated": "2026-02-21T21:30:00+07:00"
   },
   "project": {
     "name": "revenue-management-system",
     "type": "SaaS Web App",
     "status": "Production - Deployed to Vercel (icn1 region)",
-    "description": "RMS Version 02.1 - Revenue Management System with Room Band Pricing + Organization-based Multi-Hotel + OTB Time-Travel + OTA Pricing + Dynamic Pricing by OCC + Unified Pricing Logic + InsightsPanel V2 + Payment Gateway (SePay/PayPal/Zalo) + Analytics Layer (Cancel Forecast, Demand Model, Price Optimizer) + GM Dashboard V2 (Top Accounts, Room/LOS Mix, Lead-time Buckets) + Pricing Unification (Quick Mode + Detailed Mode with reason column) + Season Multiplier from DB (per-hotel) + Full Pipeline with OTB D-1/D. Full-stack TypeScript.",
+    "description": "RMS Version 02.2 - Revenue Management System with Room Band Pricing + Organization-based Multi-Hotel + OTB Time-Travel + OTA Pricing + Dynamic Pricing by OCC + Unified Pricing Logic + InsightsPanel V2 + Payment Gateway (SePay/PayPal/Zalo) + Analytics Layer (Cancel Forecast, Demand Model, Price Optimizer) + GM Dashboard V2 (Top Accounts, Room/LOS Mix, Lead-time Buckets) + Pricing Unification (Quick Mode + Detailed Mode with reason column) + Season Multiplier from DB (per-hotel) + Full Pipeline with OTB D-1/D + Multi-Language i18n (next-intl, 5 locales: en/vi/id/ms/th) + Traveloka TERA catalog + Trip.com Row-Column stacking fix + Expedia B2B net revenue. Full-stack TypeScript.",
     "github": "https://github.com/4tkhospitality/revenue-managment-system",
     "landing_page": {
       "path": "apps/landing",
       "framework": "Next.js 16.1.6 (App Router)",
       "domain": "pakhos.com / www.pakhos.com",
-      "status": "V3 - Professional Visual Overhaul pushed to GitHub, pending Vercel deployment",
+      "status": "PAUSED — vercel.json redirect to rms.pakhos.com (commit fc16c25, 2026-02-19)",
       "design": {
         "palette": "Navy #204184 (from logo) + Emerald #10b981 + Gold #d4a24e",
         "typography": "Inter (Google Fonts)",
@@ -33,6 +33,7 @@
       "styling": "Tailwind CSS",
       "components": "Custom + Lucide Icons",
       "charts": "Recharts",
+      "i18n": "next-intl (5 locales: en, vi, id, ms, th)",
       "theme": "Light SaaS Pro (lavender gray #F5F7FB, white surfaces, subtle shadows)"
     },
     "backend": {
@@ -150,7 +151,7 @@
       },
       {
         "name": "promotion_catalog",
-        "description": "V01.2: Global promotion templates for 5 OTAs. 61 promotions total (Agoda:17, Booking:15, Traveloka:10, Trip.com:11, Expedia:8). Includes allow_stack, description fields.",
+        "description": "V01.2: Global promotion templates for 5 OTAs. 70 promotions total (Agoda:17, Booking:15, Traveloka:9, Trip.com:13, Expedia:8 + 8 boosters). Includes allow_stack, description, tripBox, priceImpact fields.",
         "v012_new": true
       },
       {
@@ -807,7 +808,24 @@
     "V02.1: QuickModePanel UUPM Redesign — White surface cards, slate text hierarchy, navy #1E3A8A CTA buttons, semantic badges (emerald Tăng, amber Giảm, rose Ngừng bán, slate Giữ), left-accent summary cards, sticky header, legend footer",
     "V02.1: QuickModePricingWrapper Mode Guide — Collapsible 4-point explainer per mode (Dùng khi nào, Hiển thị gì, Quyết định, Source). Navy tab toggle. Source of Truth section explains both modes read from Pricing Engine",
     "V02.1: RecommendationTable Reason Column — Added 'Hành động' badge column + 'Lý do' column to Detailed Mode. OCC-based Vietnamese explanations (e.g. 'OCC 85% cao — tăng giá tối ưu doanh thu')",
-    "V02.1: Detailed Mode Action/Reason Computation — dashboard/page.tsx computes action/deltaPct/reasonTextVi from PricingLogic output + supply/demand context. Same deadband (|delta| < 1% = KEEP) as pipeline"
+    "V02.1: Detailed Mode Action/Reason Computation — dashboard/page.tsx computes action/deltaPct/reasonTextVi from PricingLogic output + supply/demand context. Same deadband (|delta| < 1% = KEEP) as pipeline",
+    "V01.9.1: Telegram Login Notifications — notifyUserLogin() in lib/telegram.ts fires on both new (🆕) and returning (🔑) user logins. Fire-and-forget, includes email/name/hotels",
+    "V01.9.1: Onboarding Race-Condition Fix — Atomic Prisma transaction in /api/onboarding/complete: links orphan payments, activates subscription, removes demo hotel, updates user hotel IDs all in one $transaction",
+    "V01.9.1: DB-based Hotel Resolution — getActiveHotelId validates cookie against HotelUser DB table, not stale JWT accessibleHotels",
+    "V01.9.1: UI Role from DB (Sidebar + Team page) — Both Sidebar and Team page fetch real role from /api/user/switch-hotel instead of stale JWT. Ensures hotel_admin users see Settings/Team/Invite immediately",
+    "V01.9.1: Diagnostic APIs — GET /api/debug/user-state + POST /api/debug/repair-user for diagnosing/repairing user-hotel data inconsistencies",
+    "V01.9.1: Hotel Dropdown Overflow Fix — Removed overflow-hidden from Sidebar hotel card container so HotelSwitcher dropdown can expand (Super Admin with 6+ hotels)",
+    "V01.9.1: Landing Page Redirect — apps/landing/vercel.json redirects all pakhos.com traffic to rms.pakhos.com (temporary pause while focusing on RMS product)",
+    "V01.9.1: Docs Updated to v01.9.1 — FSD, PRD_FRD, SRS, TECHNICAL_SPEC updated with Telegram notifications, onboarding fix, UI role from DB, diagnostic APIs",
+    "V02.2: UI Internationalization (VN→EN) — Complete translation of ~1,760+ Vietnamese strings to English across all UI components. Covers button labels, tooltips, headings, warning messages, calculation steps, descriptions, data arrays, and inline text. Intentionally kept: VND currency symbols (₫), vi-VN locale formatters, reasonTextVi DB column name, mathematical symbols (×, Σ)",
+    "V02.2: next-intl i18n System — 5 locales (en/vi/id/ms/th) with useTranslations hook. 15+ namespaces: setupTab, seasonConfigPanel, occTierEditor, seasonRateEditor, otaConfigTab, overviewTab, dynamicTab, promotionsTab, analyticsTab, insightsEngine, dataStatus, guidePage, dashboard, etc. Patch scripts for bulk locale updates. ~1,200+ translation keys total across all locales",
+    "V02.2: i18n Pricing Components — SeasonConfigPanel, OccTierEditor, SeasonRateEditor, OTAConfigTab, OverviewTab, DynamicPricingTab fully internationalized with next-intl useTranslations. 104 keys × 5 locales = 520 translations",
+    "V02.2: i18n Patch Scripts — i18n-patch-pricing-components.js (add keys to en/vi), i18n-patch-pricing-locales.js (add id/ms/th for pricing), i18n-patch-remaining-locales.js (add id/ms/th for insightsEngine/analyticsTab/dataStatus). Audit script i18n-audit-locales.js for verification",
+    "V02.2: i18n Guide/Dashboard/Analytics — Guide page, Dashboard, AnalyticsPanel, FAQ, Glossary pages internationalized. guidePage namespace has 241+ keys",
+    "V02.2: Traveloka TERA Catalog — Added TRAVELOKA_PROMOTIONS (9 items: Epic Sale, Special Sale, Payday Sale as Campaign EXCLUSIVE; Early Bird, Last Minute, Customized Deal, Extra Benefit as Basic STACKABLE; Mobile Exclusive, Silver Priority User as Rate Channel). Wired into getPromotionsByVendor, _catalogMap, getPromotionsByGroup, getTargetedSubcategories, VENDOR_GROUP_LABELS",
+    "V02.2: Traveloka TERA Stacking Rules — resolveVendorStacking in engine.ts: ADDITIVE mode, pick 1 Campaign (highest), all Basics stack, Rate Channels pick 1 per subcategory. All groups stack with each other",
+    "V02.2: Trip.com Row-Column Stacking Fix — Rewrote 7-box stacking from 'all boxes stack' to scenario-based Row-Column model. Non-stackable row (Box 1/3/4 pick 1 group), stackable column (Box 2/5/6/7 add on top). Campaign (Box 4) only stacks with CoinPlus (Box 7). Engine builds all valid scenarios and picks highest total discount",
+    "V02.2: Expedia B2B Net Revenue Row — Added B2B net revenue calculation in OverviewTab. Shows NET after Expedia commission deduction for B2B merchant model channels"
   ],
   "cancellation_bridge_v011": {
     "status": "Implemented",
@@ -931,7 +949,7 @@
     "V02.0: Seat counting changed from OrgMembers to HotelUsers — team page displayed 2 but count showed 3 due to OrgMember including org-level user not assigned to hotel",
     "V02.0: Auto-sync room_band uses $executeRaw instead of Prisma updateMany — bypasses stale Prisma client types during dev (DLL lock prevents regeneration)",
     "V02.0: Sidebar isActive: exact match for /settings, /dashboard; startsWith for all other routes",
-    "V02.1: Trip.com Campaign = EXCLUSIVE in engine — BA confirmed: Campaign blocks Regular, Targeted, Package, Trip.plus. Only highest Campaign applied. If no Campaign → Portfolio max + Targeted max + additive others",
+    "V02.1: Trip.com Campaign = EXCLUSIVE in engine — BA confirmed: Campaign blocks Regular, Targeted, Package, Trip.plus. Only highest Campaign applied. If no Campaign → Portfolio max + Targeted max + additive others (SUPERSEDED by V02.2 Row-Column model)",
     "V02.1: PricingExplanation must NOT compute local math — was iterating all is_active campaigns (ignoring server dedup). Fixed: use previewData.trace[] which only includes server-resolved promos",
     "V02.1: Booking.com catalog.ts IDs must match seed-pricing.ts — Mismatch caused getCatalogItem() to return undefined → stackBehavior lost → wrong branch in resolveVendorStacking",
     "V02.1: Trip.com Campaign badge override — isTripCampaign check added to both card view (PromotionGroup) and table view badge logic in PromotionsTab.tsx",
@@ -939,7 +957,14 @@
     "V02.1: Trip.com seed-pricing had group_type SEASONAL (should be CAMPAIGN) + allow_stack true (should be false) — root cause of 95% stacking bug. Engine checked d.group==='CAMPAIGN' but DB returned 'SEASONAL' so exclusive logic never fired",
     "V02.1: Trip.com missing from static catalog.ts — getCatalogItem() returned undefined → stackBehavior undefined → engine couldn't determine stacking rules. Fixed by adding CTRIP_PROMOTIONS array",
     "V02.1: Pricing Unification architecture — 1 Engine (PricingLogic / price_recommendations), 2 Display Modes (Quick: action+reason, Detailed: OTB+forecast+prices+reason). Both read same data, different depth",
-    "V02.1: UUPM SaaS Pro Light applied to all pricing components — QuickModePanel, QuickModePricingWrapper, RecommendationTable. Consistent navy CTA, slate text, semantic badges"
+    "V02.1: UUPM SaaS Pro Light applied to all pricing components — QuickModePanel, QuickModePricingWrapper, RecommendationTable. Consistent navy CTA, slate text, semantic badges",
+    "V01.9.1: JWT role is stale after onboarding — Sidebar and Team page must fetch role from DB via /api/user/switch-hotel, not rely on JWT accessibleHotels",
+    "V01.9.1: Team page isAdmin gated the entire invite section — users with hotel_admin in DB but viewer in JWT could not see invite/manage team",
+    "V01.9.1: Landing page paused via vercel.json redirect — all pakhos.com traffic redirected to rms.pakhos.com. Remove vercel.json to restore landing page",
+    "V02.2: UI text in English for international readiness — Vietnamese strings only in reasonTextVi (DB column), VND formatters (intentional), vi-VN date locale (team/settings page)",
+    "V02.2: Trip.com stacking = Row-Column scenario model — Box 1/3/4 NON-STACKABLE horizontally (pick best scenario). Box 2 stacks with Box 1 only. Box 5/6 stack with Box 1/3 (not Box 4). Box 7 (CoinPlus) stacks with everything. Engine builds Scenario A (deal-box), B (package), C (campaign), picks highest total",
+    "V02.2: Traveloka TERA stacking = ADDITIVE (pick 1 Campaign + all Basics + 1 Rate Channel per subcategory). Derived from Traveloka Extra Revenue Accelerator documentation",
+    "V02.2: Expedia B2B model — merchant channels show net revenue after commission deduction. Different from agency model where commission is paid separately"
   ],
   "ui_design": {
     "theme": "SaaS Pro Light",
@@ -1031,7 +1056,17 @@
       "V02.1: datetime-local input sends value WITHOUT timezone (e.g. '2026-02-16T16:20'). new Date() parses as UTC → 7h ahead in Vietnam → config becomes 'Scheduled' instead of 'Active'. Fix: append '+07:00'",
       "V02.1: unstable_cache + revalidateTag incompatible with Next.js 16 (revalidateTag requires 2 args). Removed both — pricing functions now read fresh from DB on every call",
       "V02.1: PricingTab form 'Thêm mới' (Add New) creates NEW config but doesn't deactivate old one → two Active configs for same tier. User must Edit existing config or Delete old one first",
-      "V02.1: getAllDynamicPrices quarterly value is already per-month discounted price — do NOT divide by 3 again in UI (was causing 990000/2/3=165000 instead of 990000/2=495000)"
+      "V02.1: getAllDynamicPrices quarterly value is already per-month discounted price — do NOT divide by 3 again in UI (was causing 990000/2/3=165000 instead of 990000/2=495000)",
+      "V01.9.1: Team page isAdmin check used JWT accessibleHotels.some(role=hotel_admin) which is stale after onboarding — must fetch from /api/user/switch-hotel like Sidebar",
+      "V01.9.1: Sidebar div.overflow-hidden clips HotelSwitcher dropdown — Super Admin with 6 hotels cannot see full list. Remove overflow-hidden from container",
+      "V01.9.1: SePay bank account change requires updating SEPAY_BANK_ACCOUNT + SEPAY_BANK_NAME in both .env (local) and Vercel env vars (production). Verify SEPAY_API_KEY still valid after bank change",
+      "V02.2: OccTierEditor variable shadowing — 'const t = tiers[idx]' shadows useTranslations hook 't' function. Renamed to 'const tier = tiers[idx]' in getRowErrors() and validate()",
+      "V02.2: i18n namespace per component — Each pricing component uses its own namespace (e.g. useTranslations('seasonConfigPanel')). Keys scoped to avoid collision across 15+ namespaces",
+      "V02.2: i18n id/ms/th must be proper translations — English fallback is NOT acceptable. Patch scripts generate proper Indonesian/Malay/Thai translations for all keys",
+      "V02.2: i18n guidePage namespace very large (~241 keys) — Still has English fallback for id/ms/th. Needs dedicated patch script for proper translation",
+      "V02.2: Trip.com old stacking (all 7 boxes stack) was critically wrong — Box 1/3/4 should NOT stack horizontally. Fixed with scenario-based stacking matrix",
+      "V02.2: Trip.com Campaign was EXCLUSIVE blocking everything — should only block everything except CoinPlus (Box 7). User clarification: 'Campaign không stack với ai trừ CoinPlus'",
+      "V02.2: git commit can appear stuck in Antigravity terminal — command actually succeeds silently. Check git log to verify before retrying"
     ],
     "formulas": {
       "rooms_otb": "SUM(num_rooms) from reservations for that stay_date",

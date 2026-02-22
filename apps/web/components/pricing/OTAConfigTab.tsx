@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 type CalcTypeValue = 'PROGRESSIVE' | 'ADDITIVE';
 
@@ -15,6 +16,7 @@ interface OTAChannel {
 }
 
 export default function OTAConfigTab() {
+    const t = useTranslations('otaConfigTab');
     const [channels, setChannels] = useState<OTAChannel[]>([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
@@ -103,7 +105,7 @@ export default function OTAConfigTab() {
 
     // Handle delete
     const handleDelete = async (id: string) => {
-        if (!confirm('Xác nhận xóa kênh OTA này?')) return;
+        if (!confirm(t('confirmDelete'))) return;
 
         try {
             const res = await fetch(`/api/pricing/ota-channels/${id}`, { method: 'DELETE' });
@@ -139,7 +141,7 @@ export default function OTAConfigTab() {
         <div className="space-y-4">
             {/* Header */}
             <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-slate-800">Kênh OTA</h2>
+                <h2 className="text-lg font-semibold text-slate-800">{t('title')}</h2>
                 <button
                     onClick={() => {
                         setEditing(null);
@@ -149,7 +151,7 @@ export default function OTAConfigTab() {
                     className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
                 >
                     <Plus className="w-4 h-4" />
-                    Thêm kênh OTA
+                    {t('addChannel')}
                 </button>
             </div>
 
@@ -165,11 +167,11 @@ export default function OTAConfigTab() {
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
                     <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md">
                         <h3 className="text-lg font-semibold text-slate-800 mb-4">
-                            {editing ? 'Sửa kênh OTA' : 'Thêm kênh OTA'}
+                            {editing ? t('editChannel') : t('addChannel')}
                         </h3>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Tên kênh *</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">{t('channelName')}</label>
                                 <input
                                     type="text"
                                     value={formData.name}
@@ -180,7 +182,7 @@ export default function OTAConfigTab() {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Mã kênh *</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">{t('channelCode')}</label>
                                 <input
                                     type="text"
                                     value={formData.code}
@@ -191,7 +193,7 @@ export default function OTAConfigTab() {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Hoa hồng (%) *</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">{t('commission')}</label>
                                 <input
                                     type="number"
                                     value={formData.commission}
@@ -204,14 +206,14 @@ export default function OTAConfigTab() {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Chế độ tính</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">{t('calcMode')}</label>
                                 <select
                                     value={formData.calc_type}
                                     onChange={(e) => setFormData({ ...formData, calc_type: e.target.value as any })}
                                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 >
-                                    <option value="PROGRESSIVE">Lũy tiến — Progressive</option>
-                                    <option value="ADDITIVE">Cộng dồn — Additive</option>
+                                    <option value="PROGRESSIVE">{t('progressive')}</option>
+                                    <option value="ADDITIVE">{t('additive')}</option>
                                 </select>
                             </div>
                             <div className="flex items-center gap-2">
@@ -222,7 +224,7 @@ export default function OTAConfigTab() {
                                     onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
                                     className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                                 />
-                                <label htmlFor="is_active" className="text-sm text-slate-700">Đang hoạt động</label>
+                                <label htmlFor="is_active" className="text-sm text-slate-700">{t('active')}</label>
                             </div>
                             <div className="flex gap-3 pt-2">
                                 <button
@@ -230,7 +232,7 @@ export default function OTAConfigTab() {
                                     onClick={() => { setShowForm(false); setEditing(null); }}
                                     className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50"
                                 >
-                                    Hủy
+                                    {t('cancel')}
                                 </button>
                                 <button
                                     type="submit"
@@ -238,7 +240,7 @@ export default function OTAConfigTab() {
                                     className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-50 flex items-center justify-center gap-2"
                                 >
                                     {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                                    {editing ? 'Cập nhật' : 'Thêm'}
+                                    {editing ? t('update') : t('add')}
                                 </button>
                             </div>
                         </form>
@@ -249,19 +251,19 @@ export default function OTAConfigTab() {
             {/* Table */}
             {channels.length === 0 ? (
                 <div className="text-center py-12 text-slate-500">
-                    Chưa có kênh OTA nào. Nhấn &quot;Thêm kênh OTA&quot; để bắt đầu.
+                    {t('noChannels')}
                 </div>
             ) : (
                 <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
                     <table className="w-full text-sm">
                         <thead className="bg-slate-50">
                             <tr>
-                                <th className="px-4 py-3 text-left text-slate-600 font-medium">Kênh OTA</th>
-                                <th className="px-4 py-3 text-left text-slate-600 font-medium">Mã</th>
-                                <th className="px-4 py-3 text-center text-slate-600 font-medium">Hoa hồng</th>
-                                <th className="px-4 py-3 text-center text-slate-600 font-medium">Chế độ tính</th>
-                                <th className="px-4 py-3 text-center text-slate-600 font-medium">Trạng thái</th>
-                                <th className="px-4 py-3 text-center text-slate-600 font-medium">Thao tác</th>
+                                <th className="px-4 py-3 text-left text-slate-600 font-medium">{t('thOtaChannel')}</th>
+                                <th className="px-4 py-3 text-left text-slate-600 font-medium">{t('thCode')}</th>
+                                <th className="px-4 py-3 text-center text-slate-600 font-medium">{t('thCommission')}</th>
+                                <th className="px-4 py-3 text-center text-slate-600 font-medium">{t('thCalcMode')}</th>
+                                <th className="px-4 py-3 text-center text-slate-600 font-medium">{t('thStatus')}</th>
+                                <th className="px-4 py-3 text-center text-slate-600 font-medium">{t('thActions')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -275,7 +277,7 @@ export default function OTAConfigTab() {
                                             ? 'bg-blue-100 text-blue-700'
                                             : 'bg-purple-100 text-purple-700'
                                             }`}>
-                                            {ch.calc_type === 'PROGRESSIVE' ? 'Lũy tiến' : 'Cộng dồn'}
+                                            {ch.calc_type === 'PROGRESSIVE' ? t('progressiveLabel') : t('additiveLabel')}
                                         </span>
                                     </td>
                                     <td className="px-4 py-3 text-center">

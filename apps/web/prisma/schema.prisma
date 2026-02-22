@@ -8,6 +8,22 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+// ════════════════════════════════════════════════════════════════════
+// i18n — Enums
+// ════════════════════════════════════════════════════════════════════
+
+enum ResellerType {
+  INDIVIDUAL
+  GSA
+  AGENCY
+  AFFILIATE
+}
+
+enum OrgKind {
+  CUSTOMER
+  PARTNER
+}
+
 model Hotel {
   hotel_id              String                 @id @default(uuid()) @db.Uuid
   name                  String
@@ -24,6 +40,9 @@ model Hotel {
   fiscal_start_day      Int                    @default(1)
   ladder_steps          String?
   company_email         String?
+
+  // i18n — locale override (takes priority over Org.default_locale)
+  default_locale        String?
 
   // Demo Hotel System
   is_demo               Boolean                @default(false)
@@ -94,6 +113,13 @@ model User {
   is_active         Boolean           @default(true)
   role              UserRole          @default(viewer)
   phone             String?
+
+  // i18n — user locale preference (BCP-47: "vi", "en")
+  locale            String?
+
+  // Geo — auto-detected on first request, editable by user/admin
+  country           String?    // ISO 3166-1 alpha-2 (e.g. "VN", "TH")
+
   accounts          Account[]
   hotel_users       HotelUser[]
   org_members       OrgMember[]
@@ -721,16 +747,29 @@ enum OrgRole {
 }
 
 model Organization {
-  id           String        @id @default(uuid()) @db.Uuid
-  name         String
-  slug         String?
-  created_at   DateTime      @default(now())
-  updated_at   DateTime      @updatedAt
+  id                   String        @id @default(uuid()) @db.Uuid
+  name                 String
+  slug                 String?
+  created_at           DateTime      @default(now())
+  updated_at           DateTime      @updatedAt
 
-  hotels       Hotel[]
-  members      OrgMember[]
-  subscription Subscription?
+  // i18n — tenant defaults
+  kind                 OrgKind       @default(CUSTOMER)
+  default_locale       String        @default("vi")
+  billing_currency     String?
 
+  // Partner attribution — which reseller/GSA brought this org?
+  primary_reseller_id  String?       @db.Uuid
+  primary_reseller     Reseller?     @relation("OrgReseller", fields: [primary_reseller_id], references: [id], onDelete: SetNull)
+
+  hotels               Hotel[]
+  members              OrgMember[]
+  subscription         Subscription?
+
+  // Reverse relations for Reseller dual-link
+  home_reseller        Reseller?     @relation("ResellerHomeOrg")   // GSA whose home org this is
+
+  @@index([primary_reseller_id])
   @@map("organizations")
 }
 
@@ -806,17 +845,25 @@ enum RedemptionStatus {
 }
 
 model Reseller {
-  id             String               @id @default(uuid()) @db.Uuid
-  name           String
-  email          String               @unique
-  phone          String?
-  ref_code       String               @unique // e.g. RES123
-  is_active      Boolean              @default(true)
-  created_at     DateTime             @default(now())
-  updated_at     DateTime             @updatedAt
-  attributions   ResellerAttribution[]
-  contracts      ResellerContract[]
-  promo_codes    PromoCode[]
+  id               String               @id @default(uuid()) @db.Uuid
+  name             String
+  email            String               @unique
+  phone            String?
+  ref_code         String               @unique // e.g. RES123
+  is_active        Boolean              @default(true)
+  created_at       DateTime             @default(now())
+  updated_at       DateTime             @updatedAt
+
+  // i18n — reseller type + partner org
+  type             ResellerType         @default(INDIVIDUAL)
+  billing_currency String?
+  org_id           String?              @unique @db.Uuid
+  organization     Organization?        @relation("ResellerHomeOrg", fields: [org_id], references: [id])
+  managed_orgs     Organization[]       @relation("OrgReseller")
+
+  attributions     ResellerAttribution[]
+  contracts        ResellerContract[]
+  promo_codes      PromoCode[]
 
   @@map("resellers")
 }

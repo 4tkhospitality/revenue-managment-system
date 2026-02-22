@@ -47,7 +47,7 @@ export async function ingestCSV(formData: FormData) {
     if (!limitCheck.allowed) {
         return {
             success: false,
-            message: `Đã đạt giới hạn import (${limitCheck.limit}/tháng). Nâng cấp gói để import thêm.`,
+            message: `Import limit reached (${limitCheck.limit}/month). Upgrade your plan to import more.`,
             error: 'LIMIT_EXCEEDED',
         };
     }
@@ -95,7 +95,7 @@ export async function ingestCSV(formData: FormData) {
         console.error(`[UPLOAD CSV] ❌ Hotel NOT FOUND — hotelId: "${hotelId}" (full ID)`);
         return {
             success: false,
-            message: `Hotel không tồn tại (ID: ${hotelId.slice(0, 8)}...). Vui lòng tải lại trang và thử lại.`,
+            message: `Hotel not found (ID: ${hotelId.slice(0, 8)}...). Please refresh the page and try again.`,
             error: 'HOTEL_NOT_FOUND',
         };
     }
@@ -268,11 +268,11 @@ export async function ingestCSV(formData: FormData) {
         // Translate known errors to friendly messages
         let friendlyMessage = errorMessage;
         if (errorMessage.includes('Foreign key constraint failed')) {
-            friendlyMessage = 'Hotel không hợp lệ. Vui lòng tải lại trang và thử lại.';
+            friendlyMessage = 'Invalid hotel. Please refresh the page and try again.';
         } else if (errorMessage.includes('Unique constraint failed')) {
-            friendlyMessage = 'Dữ liệu bị trùng. Vui lòng kiểm tra file không chứa bản ghi đã import trước đó.';
+            friendlyMessage = 'Duplicate data. Please check that the file does not contain previously imported records.';
         } else if (errorMessage.includes('Connection')) {
-            friendlyMessage = 'Mất kết nối database. Vui lòng thử lại sau giây lát.';
+            friendlyMessage = 'Database connection lost. Please try again shortly.';
         }
 
         console.error(`[UPLOAD CSV] ❌ FAILED: ${errorMessage}`);

@@ -2,10 +2,12 @@
 
 import { useState, useMemo } from 'react';
 import { Calculator, Target, ArrowRight, TrendingUp, AlertTriangle, Star } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 type Mode = 'simulator' | 'target';
 
 export function ReviewCalculator() {
+    const t = useTranslations('reviewCalc');
     const [mode, setMode] = useState<Mode>('simulator');
 
     // Shared inputs
@@ -38,11 +40,11 @@ export function ReviewCalculator() {
     }, [currentScore, currentCount, targetScore, futureReviewScore]);
 
     const feasibility = useMemo(() => {
-        if (requiredReviews === Infinity) return { label: 'Không thể', color: 'text-red-600', bg: 'bg-red-50 border-red-200' };
-        if (requiredReviews <= 10) return { label: 'Dễ đạt', color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-200' };
-        if (requiredReviews <= 50) return { label: 'Khả thi', color: 'text-blue-600', bg: 'bg-blue-50 border-blue-200' };
-        if (requiredReviews <= 200) return { label: 'Khó', color: 'text-amber-600', bg: 'bg-amber-50 border-amber-200' };
-        return { label: 'Rất khó', color: 'text-red-600', bg: 'bg-red-50 border-red-200' };
+        if (requiredReviews === Infinity) return { labelKey: 'feasImpossible' as const, color: 'text-red-600', bg: 'bg-red-50 border-red-200' };
+        if (requiredReviews <= 10) return { labelKey: 'feasEasy' as const, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-200' };
+        if (requiredReviews <= 50) return { labelKey: 'feasPossible' as const, color: 'text-blue-600', bg: 'bg-blue-50 border-blue-200' };
+        if (requiredReviews <= 200) return { labelKey: 'feasHard' as const, color: 'text-amber-600', bg: 'bg-amber-50 border-amber-200' };
+        return { labelKey: 'feasVeryHard' as const, color: 'text-red-600', bg: 'bg-red-50 border-red-200' };
     }, [requiredReviews]);
 
     return (
@@ -51,12 +53,12 @@ export function ReviewCalculator() {
                 <div className="mb-6">
                     <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                         <Star className="w-5 h-5 text-blue-600" />
-                        Cách tính điểm đánh giá
+                        {t('title')}
                     </h3>
                     <p className="text-sm text-gray-500 mt-1">
-                        <strong>Mô phỏng tác động</strong>: Xem thêm review mới sẽ ảnh hưởng điểm số như thế nào (cần biết để chủ động xin review tốt).
+                        {t.rich('simDesc', { strong: (c) => <strong>{c}</strong> })}
                         <br />
-                        <strong>Mục tiêu điểm số</strong>: Tính cần bao nhiêu review tốt để đạt điểm mong muốn (lên kế hoạch cải thiện).
+                        {t.rich('targetDesc', { strong: (c) => <strong>{c}</strong> })}
                     </p>
                 </div>
 
@@ -67,42 +69,42 @@ export function ReviewCalculator() {
                         className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-all ${mode === 'simulator' ? 'bg-white shadow text-yellow-700' : 'text-gray-500 hover:text-gray-700'}`}
                     >
                         <Calculator className="w-4 h-4" />
-                        Mô phỏng tác động
+                        {t('simulator')}
                     </button>
                     <button
                         onClick={() => setMode('target')}
                         className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-all ${mode === 'target' ? 'bg-white shadow text-yellow-700' : 'text-gray-500 hover:text-gray-700'}`}
                     >
                         <Target className="w-4 h-4" />
-                        Mục tiêu điểm số
+                        {t('targetMode')}
                     </button>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* Inputs */}
                     <div className="space-y-5">
-                        <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Dữ liệu hiện tại</h4>
+                        <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">{t('currentData')}</h4>
                         <div className="grid grid-cols-2 gap-4">
-                            <NumberInput label="Điểm hiện tại" value={currentScore} onChange={setCurrentScore} step={0.1} max={10} />
-                            <NumberInput label="Số lượng review" value={currentCount} onChange={setCurrentCount} step={1} />
+                            <NumberInput label={t('currentScoreLabel')} value={currentScore} onChange={setCurrentScore} step={0.1} max={10} />
+                            <NumberInput label={t('reviewCount')} value={currentCount} onChange={setCurrentCount} step={1} />
                         </div>
 
                         {mode === 'simulator' && (
                             <>
-                                <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wider pt-2">Mô phỏng review mới</h4>
+                                <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wider pt-2">{t('simNewReviews')}</h4>
                                 <div className="grid grid-cols-2 gap-4">
-                                    <NumberInput label="Số review mới" value={newReviewCount} onChange={setNewReviewCount} step={1} min={1} />
-                                    <NumberInput label="Điểm review mới" value={newReviewScore} onChange={setNewReviewScore} step={0.5} max={10} />
+                                    <NumberInput label={t('newReviewCount')} value={newReviewCount} onChange={setNewReviewCount} step={1} min={1} />
+                                    <NumberInput label={t('newReviewScore')} value={newReviewScore} onChange={setNewReviewScore} step={0.5} max={10} />
                                 </div>
                             </>
                         )}
 
                         {mode === 'target' && (
                             <>
-                                <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wider pt-2">Mục tiêu</h4>
+                                <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wider pt-2">{t('targetSection')}</h4>
                                 <div className="grid grid-cols-2 gap-4">
-                                    <NumberInput label="Điểm mục tiêu" value={targetScore} onChange={setTargetScore} step={0.1} max={10} />
-                                    <NumberInput label="Điểm kỳ vọng/review" value={futureReviewScore} onChange={setFutureReviewScore} step={0.5} max={10} />
+                                    <NumberInput label={t('targetScoreLabel')} value={targetScore} onChange={setTargetScore} step={0.1} max={10} />
+                                    <NumberInput label={t('expectedPerReview')} value={futureReviewScore} onChange={setFutureReviewScore} step={0.5} max={10} />
                                 </div>
                             </>
                         )}
@@ -111,8 +113,7 @@ export function ReviewCalculator() {
                         <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-700">
                             <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                             <span>
-                                Booking.com dùng hệ thống có <strong>trọng số</strong> (review mới nặng hơn review cũ).
-                                Công thức này dùng trung bình cộng — kết quả là <strong>ước tính</strong>, không chính xác 100%.
+                                {t.rich('disclaimer', { strong: (c) => <strong>{c}</strong> })}
                             </span>
                         </div>
                     </div>
@@ -123,9 +124,9 @@ export function ReviewCalculator() {
                             <>
                                 {/* Score Visualization */}
                                 <div className="flex items-center justify-center gap-6 py-6">
-                                    <ScoreCircle label="Hiện tại" score={currentScore} color="text-gray-600" />
+                                    <ScoreCircle label={t('current')} score={currentScore} color="text-gray-600" />
                                     <ArrowRight className="w-6 h-6 text-gray-400" />
-                                    <ScoreCircle label="Dự kiến" score={simulatedScore} color={scoreDiff > 0 ? 'text-emerald-600' : scoreDiff < 0 ? 'text-red-600' : 'text-gray-600'} />
+                                    <ScoreCircle label={t('projected')} score={simulatedScore} color={scoreDiff > 0 ? 'text-emerald-600' : scoreDiff < 0 ? 'text-red-600' : 'text-gray-600'} />
                                 </div>
 
                                 {/* Delta */}
@@ -134,23 +135,23 @@ export function ReviewCalculator() {
                                         {scoreDiff > 0 ? '+' : ''}{scoreDiff.toFixed(2)}
                                     </span>
                                     <p className="text-sm text-gray-500 mt-1">
-                                        Thay đổi sau {newReviewCount} review mới ({newReviewScore}/10)
+                                        {t('changeAfter', { count: newReviewCount, score: newReviewScore })}
                                     </p>
                                 </div>
 
                                 {/* Breakdown */}
                                 <div className="p-4 bg-gray-50 rounded-lg text-sm space-y-2">
                                     <div className="flex justify-between">
-                                        <span className="text-gray-600">Tổng điểm cũ:</span>
+                                        <span className="text-gray-600">{t('oldTotalScore')}</span>
                                         <span className="font-medium">{currentScore} × {currentCount} = {(currentScore * currentCount).toFixed(0)}</span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-gray-600">Điểm mới thêm:</span>
+                                        <span className="text-gray-600">{t('newlyAdded')}</span>
                                         <span className="font-medium">{newReviewScore} × {newReviewCount} = {(newReviewScore * newReviewCount).toFixed(0)}</span>
                                     </div>
                                     <hr />
                                     <div className="flex justify-between font-semibold">
-                                        <span className="text-gray-700">Điểm mới:</span>
+                                        <span className="text-gray-700">{t('newScoreLabel')}</span>
                                         <span>{(currentScore * currentCount + newReviewScore * newReviewCount).toFixed(0)} / {currentCount + newReviewCount} = <strong>{simulatedScore.toFixed(2)}</strong></span>
                                     </div>
                                 </div>
@@ -162,12 +163,12 @@ export function ReviewCalculator() {
                                 {/* Result */}
                                 <div className={`text-center p-6 rounded-xl border ${feasibility.bg}`}>
                                     {requiredReviews === Infinity ? (
-                                        <p className="text-red-600 font-bold text-lg">Không khả thi!</p>
+                                        <p className="text-red-600 font-bold text-lg">{t('infeasible')}</p>
                                     ) : (
                                         <>
                                             <span className="text-5xl font-bold text-gray-900">{requiredReviews}</span>
                                             <p className="text-sm text-gray-600 mt-2">
-                                                reviews cần thiết (mỗi review {futureReviewScore}/10)
+                                                {t('reviewsNeeded', { score: futureReviewScore })}
                                             </p>
                                         </>
                                     )}
@@ -177,11 +178,10 @@ export function ReviewCalculator() {
                                 <div className={`p-4 rounded-lg border ${feasibility.bg}`}>
                                     <div className="flex items-center gap-2">
                                         <TrendingUp className={`w-5 h-5 ${feasibility.color}`} />
-                                        <span className={`font-bold ${feasibility.color}`}>Mức khả thi: {feasibility.label}</span>
+                                        <span className={`font-bold ${feasibility.color}`}>{t('feasibility', { label: t(feasibility.labelKey) })}</span>
                                     </div>
                                     <p className="text-sm text-gray-600 mt-1">
-                                        Để đạt <strong>{targetScore}/10</strong> từ <strong>{currentScore}/10</strong> (hiện có {currentCount} reviews),
-                                        bạn cần <strong>{requiredReviews === Infinity ? '∞' : requiredReviews}</strong> reviews mới với điểm trung bình <strong>{futureReviewScore}/10</strong>.
+                                        {t('targetExplanation', { target: targetScore, current: currentScore, count: currentCount, needed: requiredReviews === Infinity ? '∞' : requiredReviews, score: futureReviewScore })}
                                     </p>
                                 </div>
 

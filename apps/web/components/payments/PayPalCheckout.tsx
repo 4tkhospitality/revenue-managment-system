@@ -62,10 +62,10 @@ export function PayPalCheckout({
             if (data.approvalUrl) {
                 window.location.href = data.approvalUrl;
             } else {
-                throw new Error('Không nhận được link thanh toán từ PayPal');
+                throw new Error('Did not receive payment link from PayPal');
             }
         } catch (err) {
-            const msg = err instanceof Error ? err.message : 'Có lỗi xảy ra';
+            const msg = err instanceof Error ? err.message : 'An error occurred';
             setError(msg);
             onError(msg);
             setLoading(false);
@@ -78,7 +78,7 @@ export function PayPalCheckout({
         setError(null);
         try {
             if (!planId) {
-                throw new Error('PayPal Plan ID chưa được cấu hình. Vui lòng liên hệ admin.');
+                throw new Error('PayPal Plan ID not configured. Please contact admin.');
             }
 
             trackEventClient({
@@ -89,12 +89,12 @@ export function PayPalCheckout({
             // For subscription: redirect to PayPal with plan_id
             // This would normally use the PayPal JS SDK, but for now we show instructions
             setError(
-                'PayPal subscription integration đang được hoàn thiện. ' +
-                'Vui lòng liên hệ admin hoặc sử dụng chế độ thanh toán 1 lần.'
+                'PayPal subscription integration is being finalized. ' +
+                'Please contact admin or use one-time payment mode.'
             );
             setLoading(false);
         } catch (err) {
-            const msg = err instanceof Error ? err.message : 'Có lỗi xảy ra';
+            const msg = err instanceof Error ? err.message : 'An error occurred';
             setError(msg);
             onError(msg);
             setLoading(false);
@@ -108,7 +108,7 @@ export function PayPalCheckout({
             <div className="flex items-center justify-center py-8">
                 <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
                 <span className="ml-2 text-sm text-gray-600">
-                    {mode === 'one-time' ? 'Đang tạo đơn PayPal...' : 'Đang kết nối PayPal...'}
+                    {mode === 'one-time' ? 'Creating PayPal order...' : 'Connecting to PayPal...'}
                 </span>
             </div>
         );
@@ -124,8 +124,8 @@ export function PayPalCheckout({
 
             <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm text-blue-700">
                 {mode === 'one-time'
-                    ? '💳 Thanh toán 1 lần qua PayPal. Bạn sẽ được chuyển đến PayPal để xác nhận.'
-                    : '🔄 Đăng ký thanh toán tự động hàng tháng qua PayPal.'}
+                    ? '💳 One-time payment via PayPal. You will be redirected to PayPal for confirmation.'
+                    : '🔄 Subscribe to monthly auto-payment via PayPal.'}
             </div>
 
             <button
@@ -135,14 +135,14 @@ export function PayPalCheckout({
                 <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
                     <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944 2.7a.773.773 0 0 1 .764-.65h6.674c2.258 0 3.833.607 4.68 1.807.393.555.623 1.174.693 1.88.073.74-.013 1.586-.257 2.555l-.008.028v.396l.309.174c.261.14.47.292.635.464.29.303.477.678.556 1.116.082.45.056.99-.073 1.596-.15.695-.397 1.3-.736 1.794-.312.459-.712.84-1.19 1.132a4.718 4.718 0 0 1-1.513.618 7.58 7.58 0 0 1-1.813.2h-.431c-.307 0-.607.114-.836.318a1.236 1.236 0 0 0-.42.777l-.033.173-.553 3.503-.025.125a.303.303 0 0 1-.086.196.284.284 0 0 1-.182.067z" />
                 </svg>
-                {mode === 'one-time' ? 'Thanh toán qua PayPal' : 'Đăng ký PayPal'}
+                {mode === 'one-time' ? 'Pay via PayPal' : 'Subscribe via PayPal'}
                 <ExternalLink className="w-4 h-4" />
             </button>
 
             <p className="text-xs text-gray-500 text-center">
                 {mode === 'one-time'
-                    ? 'Thanh toán 1 lần. Bạn sẽ được chuyển đến trang PayPal.'
-                    : 'Thanh toán định kỳ hàng tháng qua PayPal. Có thể hủy bất cứ lúc nào.'}
+                    ? 'One-time payment. You will be redirected to PayPal.'
+                    : 'Monthly recurring payment via PayPal. Cancel anytime.'}
             </p>
         </div>
     );

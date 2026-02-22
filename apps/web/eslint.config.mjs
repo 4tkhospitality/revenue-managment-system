@@ -13,6 +13,20 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  // i18n: Warn on hardcoded Vietnamese strings in TSX files
+  {
+    files: ["**/*.tsx"],
+    rules: {
+      "no-restricted-syntax": [
+        "warn",
+        {
+          selector: "JSXText",
+          message:
+            "[i18n] Hardcoded text detected in JSX. Use t() from next-intl instead. See BRIEF-i18n.md §3.1",
+        },
+      ],
+    },
+  },
 ]);
 
 export default eslintConfig;

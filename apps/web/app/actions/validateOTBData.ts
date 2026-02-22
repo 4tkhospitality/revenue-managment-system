@@ -57,7 +57,7 @@ export async function basicValidation(
             valid: false,
             totalRows: 0,
             errorCount: 1,
-            issues: [{ severity: 'FAIL', code: 'NO_HOTEL', message: 'Không tìm thấy khách sạn' }],
+            issues: [{ severity: 'FAIL', code: 'NO_HOTEL', message: 'Hotel not found' }],
         };
     }
 
@@ -71,7 +71,7 @@ export async function basicValidation(
             valid: true,
             totalRows: 0,
             errorCount: 0,
-            issues: [{ severity: 'INFO', code: 'NO_DATA', message: 'Chưa có dữ liệu OTB' }],
+            issues: [{ severity: 'INFO', code: 'NO_DATA', message: 'No OTB data available' }],
         };
     }
 
@@ -91,7 +91,7 @@ export async function basicValidation(
         issues.push({
             severity: 'FAIL',
             code: 'NEGATIVE_ROOMS',
-            message: `Có ${negativeRooms} dòng có rooms_otb âm`,
+            message: `${negativeRooms} rows have negative rooms_otb`,
         });
     }
 
@@ -99,7 +99,7 @@ export async function basicValidation(
         issues.push({
             severity: 'FAIL',
             code: 'NEGATIVE_REVENUE',
-            message: `Có ${negativeRevenue} dòng có revenue_otb âm`,
+            message: `${negativeRevenue} rows have negative revenue_otb`,
         });
     }
 
@@ -166,7 +166,7 @@ export async function auditReport(
             valid: true,
             issues: [{ severity: 'INFO', code: 'NO_DATA', message: 'No OTB data found' }],
             stats: { totalRows: 0, failCount: 0, warningCount: 0, infoCount: 1, completeness: 0, dateRange: null, anomalyCount: 0, pickupPatterns: 0 },
-            recommendations: ['Nhập dữ liệu đặt phòng để bắt đầu phân tích'],
+            recommendations: ['Import reservation data to start analysis'],
         };
     }
 
@@ -179,7 +179,7 @@ export async function auditReport(
             issues.push({
                 severity: 'FAIL',
                 code: 'NEGATIVE_ROOMS',
-                message: `rooms_otb = ${row.rooms_otb} (âm — lỗi dữ liệu)`,
+                message: `rooms_otb = ${row.rooms_otb} (negative — data error)`,
                 stay_date: stayStr,
                 as_of_date: asOfStr,
                 value: row.rooms_otb,
@@ -192,7 +192,7 @@ export async function auditReport(
             issues.push({
                 severity: 'FAIL',
                 code: 'NEGATIVE_REVENUE',
-                message: `revenue_otb = ${revenue.toLocaleString()} (âm — lỗi dữ liệu)`,
+                message: `revenue_otb = ${revenue.toLocaleString()} (negative — data error)`,
                 stay_date: stayStr,
                 as_of_date: asOfStr,
                 value: revenue,
@@ -204,7 +204,7 @@ export async function auditReport(
             issues.push({
                 severity: 'WARNING',
                 code: 'PAST_STAY_DATE',
-                message: `stay_date ${stayStr} < as_of_date ${asOfStr} (dữ liệu lịch sử)`,
+                message: `stay_date ${stayStr} < as_of_date ${asOfStr} (historical data)`,
                 stay_date: stayStr,
                 as_of_date: asOfStr,
             });
@@ -258,7 +258,7 @@ export async function auditReport(
                 issues.push({
                     severity: 'WARNING',
                     code: 'MASS_JUMP',
-                    message: `${Math.round(changedCount / totalComparable * 100)}% stay_dates thay đổi >±20% (nghi re-import/reset data)`,
+                    message: `${Math.round(changedCount / totalComparable * 100)}% stay_dates changed >±20% (possible re-import/reset)`,
                 });
                 anomalyCount++;
             }
@@ -272,7 +272,7 @@ export async function auditReport(
                     issues.push({
                         severity: 'WARNING',
                         code: 'TOTAL_OTB_JUMP',
-                        message: `Tổng OTB thay đổi ${Math.round(totalChangePct * 100)}% so với snapshot trước`,
+                        message: `Total OTB changed ${Math.round(totalChangePct * 100)}% vs previous snapshot`,
                     });
                     anomalyCount++;
                 }
@@ -287,7 +287,7 @@ export async function auditReport(
                         issues.push({
                             severity: 'WARNING',
                             code: 'UNUSUAL_PICKUP',
-                            message: `Pickup bất thường |${pickup}| > 30% capacity ngày ${stayStr}`,
+                            message: `Abnormal pickup |${pickup}| > 30% capacity on ${stayStr}`,
                             stay_date: stayStr,
                             as_of_date: latest,
                             value: pickup,
@@ -322,7 +322,7 @@ export async function auditReport(
         issues.push({
             severity: 'WARNING',
             code: 'LOW_COMPLETENESS',
-            message: `Chỉ ${completeness}% stay_dates có dữ liệu (${foundDays}/${expectedDays})`,
+            message: `Only ${completeness}% stay_dates have data (${foundDays}/${expectedDays})`,
         });
     }
 
@@ -340,16 +340,16 @@ export async function auditReport(
     // Recommendations
     const recommendations: string[] = [];
     if (failCount > 0) {
-        recommendations.push('Sửa lỗi dữ liệu âm trước khi sử dụng phân tích');
+        recommendations.push('Fix negative data errors before using analysis');
     }
     if (completeness < 80) {
-        recommendations.push('Bổ sung thêm dữ liệu cho các ngày còn thiếu');
+        recommendations.push('Add more data for missing dates');
     }
     if (pickupPatterns > 3) {
-        recommendations.push('Kiểm tra lại các ngày có pickup bất thường');
+        recommendations.push('Review dates with abnormal pickup');
     }
     if (anomalyCount === 0 && completeness >= 80) {
-        recommendations.push('Dữ liệu đạt chuẩn! Sẵn sàng cho phân tích và dự báo');
+        recommendations.push('Data quality is good! Ready for analysis and forecasting');
     }
 
     return {

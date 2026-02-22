@@ -79,7 +79,7 @@ function PaymentSuccessContent() {
                 }
             } catch (err) {
                 console.error('[PayPal Success Page] Capture error:', err);
-                setErrorMsg(err instanceof Error ? err.message : 'Có lỗi xảy ra khi xác nhận thanh toán');
+                setErrorMsg(err instanceof Error ? err.message : 'Error confirming payment');
                 setStatus('error');
             }
         };
@@ -93,10 +93,10 @@ function PaymentSuccessContent() {
                 <div className="text-center max-w-md mx-4">
                     <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-6" />
                     <h1 className="text-xl font-bold text-gray-900 mb-3">
-                        Đang xác nhận thanh toán PayPal...
+                        Confirming PayPal payment...
                     </h1>
                     <p className="text-gray-500">
-                        Vui lòng chờ trong giây lát. Không đóng trang này.
+                        Please wait a moment. Don't close this page.
                     </p>
                 </div>
             </div>
@@ -109,24 +109,24 @@ function PaymentSuccessContent() {
                 <div className="text-center max-w-md mx-4">
                     <XCircle className="w-16 h-16 text-red-500 mx-auto mb-6" />
                     <h1 className="text-2xl font-bold text-gray-900 mb-3">
-                        Lỗi xác nhận thanh toán
+                        Payment confirmation error
                     </h1>
                     <p className="text-red-600 mb-4">{errorMsg}</p>
                     <p className="text-gray-500 mb-8 text-sm">
-                        Thanh toán có thể đã thành công trên PayPal. Vui lòng liên hệ admin nếu gói chưa được kích hoạt.
+                        Payment may have succeeded on PayPal. Please contact admin if plan is not activated.
                     </p>
                     <div className="flex gap-3 justify-center">
                         <Link
                             href="/pricing-plans"
                             className="inline-flex items-center gap-2 px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors"
                         >
-                            Quay lại
+                            Go Back
                         </Link>
                         <Link
                             href="/dashboard"
                             className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors"
                         >
-                            Vào Dashboard
+                            Go to Dashboard
                         </Link>
                     </div>
                 </div>
@@ -139,20 +139,20 @@ function PaymentSuccessContent() {
             <div className="text-center max-w-md mx-4">
                 <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-6" />
                 <h1 className="text-2xl font-bold text-gray-900 mb-3">
-                    Thanh toán thành công! 🎉
+                    Payment Successful! 🎉
                 </h1>
                 <p className="text-gray-600 mb-8">
                     {needsOnboarding
-                        ? `Gói ${plan || ''} đã được kích hoạt! Hãy tạo khách sạn của bạn để bắt đầu.`
+                        ? `${plan || ''} plan activated! Create your hotels to get started.`
                         : plan
-                            ? `Gói ${plan} đã được kích hoạt. Bạn có thể bắt đầu sử dụng ngay bây giờ.`
-                            : 'Gói của bạn đã được kích hoạt. Bạn có thể bắt đầu sử dụng ngay bây giờ.'}
+                            ? `${plan} plan activated. You can start using it now.`
+                            : 'Your plan plan activated. You can start using it now.'}
                 </p>
                 <Link
                     href={needsOnboarding ? '/onboarding' : '/dashboard'}
                     className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-medium transition-colors"
                 >
-                    {needsOnboarding ? 'Tạo khách sạn' : 'Vào Dashboard'} <ArrowRight className="w-4 h-4" />
+                    {needsOnboarding ? 'Create hotels' : 'Go to Dashboard'} <ArrowRight className="w-4 h-4" />
                 </Link>
             </div>
         </div>

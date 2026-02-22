@@ -5,14 +5,15 @@ import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import Image from "next/image"
 import { COUNTRIES } from "@/lib/constants/countries"
+import { useTranslations } from 'next-intl'
 
 // Step indicator component
-function StepIndicator({ currentStep, totalSteps }: { currentStep: number, totalSteps: number }) {
+function StepIndicator({ currentStep, totalSteps, labels }: { currentStep: number, totalSteps: number, labels: string[] }) {
     const steps = [
-        { num: 1, label: "Thông tin" },
-        { num: 2, label: "Giá cả" },
-        { num: 3, label: "Dữ liệu" },
-        { num: 4, label: "Hoàn tất" },
+        { num: 1, label: labels[0] },
+        { num: 2, label: labels[1] },
+        { num: 3, label: labels[2] },
+        { num: 4, label: labels[3] },
     ]
 
     return (
@@ -43,6 +44,7 @@ function StepIndicator({ currentStep, totalSteps }: { currentStep: number, total
 }
 
 export default function OnboardingPage() {
+    const t = useTranslations('onboarding')
     const router = useRouter()
     const { update: updateSession } = useSession()
     const [loading, setLoading] = useState(false)
@@ -132,10 +134,10 @@ export default function OnboardingPage() {
                 setCurrentStep(3)
             } else {
                 const data = await res.json()
-                alert(data.error || "Có lỗi xảy ra")
+                alert(data.error || t('errorGeneric'))
             }
         } catch (error) {
-            alert("Có lỗi xảy ra. Vui lòng thử lại.")
+            alert(t('errorRetry'))
         } finally {
             setLoading(false)
         }
@@ -199,7 +201,7 @@ export default function OnboardingPage() {
 
             if (!completeRes.ok) {
                 console.error('[Onboarding] ❌ Complete failed:', completeData.error)
-                alert(`Có lỗi khi hoàn tất: ${completeData.error || 'Unknown error'}. Vui lòng thử lại.`)
+                alert(t('errorComplete', { error: completeData.error || 'Unknown error' }))
                 setLoading(false)
                 return // STOP! Don't navigate to dashboard with broken state
             }
@@ -220,7 +222,7 @@ export default function OnboardingPage() {
         } catch (error) {
             console.error('[Onboarding] ❌ Error during completion:', error)
             // DO NOT navigate to dashboard on error — user would see Demo Hotel with wrong plan
-            alert('Có lỗi khi hoàn tất đăng ký. Vui lòng thử lại hoặc liên hệ hỗ trợ.')
+            alert(t('errorCompleteGeneric'))
         } finally {
             setLoading(false)
         }
@@ -278,7 +280,7 @@ export default function OnboardingPage() {
                 </div>
 
                 {/* Step Indicator */}
-                <StepIndicator currentStep={currentStep} totalSteps={4} />
+                <StepIndicator currentStep={currentStep} totalSteps={4} labels={[t('stepInfo'), t('stepPricing'), t('stepData'), t('stepComplete')]} />
 
                 {/* Glass Card */}
                 <div
@@ -295,28 +297,28 @@ export default function OnboardingPage() {
                     {currentStep === 1 && (
                         <>
                             <h1 className="text-2xl font-semibold text-white mb-2">
-                                Thông tin khách sạn
+                                {t('step1Title')}
                             </h1>
                             <p className="text-white/70 mb-6 text-[15px]">
-                                Bước 1/4: Nhập thông tin cơ bản
+                                {t('step1Subtitle')}
                             </p>
 
                             <div className="space-y-4">
                                 <div>
-                                    <label className={labelStyles}>Tên khách sạn / Resort *</label>
+                                    <label className={labelStyles}>{t('hotelName')}</label>
                                     <input
                                         type="text"
                                         required
                                         value={formData.name}
                                         onChange={(e) => updateFormData('name', e.target.value)}
                                         className={inputStyles}
-                                        placeholder="VD: Sunrise Beach Resort"
+                                        placeholder={t('hotelNamePlaceholder')}
                                     />
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className={labelStyles}>Số phòng *</label>
+                                        <label className={labelStyles}>{t('roomCount')}</label>
                                         <input
                                             type="number"
                                             required
@@ -329,15 +331,15 @@ export default function OnboardingPage() {
                                                 updateFormData('capacity', val);
                                             }}
                                             className={inputStyles}
-                                            placeholder={maxRooms ? `Tối đa ${maxRooms} phòng` : 'VD: 120'}
+                                            placeholder={maxRooms ? t('roomCountMax', { max: maxRooms }) : 'E.g: 120'}
                                         />
                                         {maxRooms && (
-                                            <p className="text-xs text-blue-400 mt-1">Gói của bạn hỗ trợ tối đa {maxRooms} phòng</p>
+                                            <p className="text-xs text-blue-400 mt-1">{t('roomBandNote', { max: maxRooms })}</p>
                                         )}
                                     </div>
 
                                     <div>
-                                        <label className={labelStyles}>Quốc gia *</label>
+                                        <label className={labelStyles}>{t('country')}</label>
                                         <select
                                             value={formData.country}
                                             onChange={(e) => updateFormData('country', e.target.value)}
@@ -354,47 +356,47 @@ export default function OnboardingPage() {
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className={labelStyles}>Tiền tệ *</label>
+                                        <label className={labelStyles}>{t('currency')}</label>
                                         <select
                                             value={formData.currency}
                                             onChange={(e) => updateFormData('currency', e.target.value)}
                                             className={inputStyles}
                                         >
-                                            <option value="VND" className="bg-slate-800">VND - Việt Nam Đồng</option>
+                                            <option value="VND" className="bg-slate-800">VND - Vietnamese Dong</option>
                                             <option value="USD" className="bg-slate-800">USD - US Dollar</option>
                                             <option value="EUR" className="bg-slate-800">EUR - Euro</option>
                                         </select>
                                     </div>
 
                                     <div>
-                                        <label className={labelStyles}>Múi giờ *</label>
+                                        <label className={labelStyles}>{t('timezone')}</label>
                                         <select
                                             value={formData.timezone}
                                             onChange={(e) => updateFormData('timezone', e.target.value)}
                                             className={inputStyles}
                                         >
-                                            <option value="Asia/Ho_Chi_Minh" className="bg-slate-800">Việt Nam (GMT+7)</option>
-                                            <option value="Asia/Bangkok" className="bg-slate-800">Thái Lan (GMT+7)</option>
+                                            <option value="Asia/Ho_Chi_Minh" className="bg-slate-800">Vietnam (GMT+7)</option>
+                                            <option value="Asia/Bangkok" className="bg-slate-800">Thailand (GMT+7)</option>
                                             <option value="Asia/Singapore" className="bg-slate-800">Singapore (GMT+8)</option>
-                                            <option value="Asia/Tokyo" className="bg-slate-800">Nhật Bản (GMT+9)</option>
+                                            <option value="Asia/Tokyo" className="bg-slate-800">Japan (GMT+9)</option>
                                         </select>
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className={labelStyles}>Số điện thoại di động *</label>
+                                    <label className={labelStyles}>{t('phone')}</label>
                                     <input
                                         type="tel"
                                         required
                                         value={formData.phone}
                                         onChange={(e) => updateFormData('phone', e.target.value)}
                                         className={inputStyles}
-                                        placeholder="VD: 0901234567"
+                                        placeholder={t('phonePlaceholder')}
                                     />
                                 </div>
 
                                 <div>
-                                    <label className={labelStyles}>Email của Khách sạn / Resort (tùy chọn)</label>
+                                    <label className={labelStyles}>{t('hotelEmail')}</label>
                                     <input
                                         type="email"
                                         value={formData.companyEmail}
@@ -412,7 +414,7 @@ export default function OnboardingPage() {
                                 className="w-full mt-6 py-3 px-6 bg-white text-blue-600 font-medium rounded-xl 
                                     hover:bg-white/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                Tiếp theo →
+                                {t('next')}
                             </button>
                         </>
                     )}
@@ -421,53 +423,53 @@ export default function OnboardingPage() {
                     {currentStep === 2 && (
                         <>
                             <h1 className="text-2xl font-semibold text-white mb-2">
-                                Cấu hình giá
+                                {t('step2Title')}
                             </h1>
                             <p className="text-white/70 mb-6 text-[15px]">
-                                Bước 2/4: Thiết lập giá phòng (tùy chọn, có thể bỏ qua)
+                                {t('step2Subtitle')}
                             </p>
 
                             <div className="space-y-4">
                                 <div>
-                                    <label className={labelStyles}>Giá cơ sở / đêm</label>
+                                    <label className={labelStyles}>{t('basePrice')}</label>
                                     <input
                                         type="text"
                                         inputMode="numeric"
                                         value={formData.basePrice}
                                         onChange={(e) => updatePriceField('basePrice', e.target.value)}
                                         className={inputStyles}
-                                        placeholder="VD: 1.500.000"
+                                        placeholder={t('basePricePlaceholder')}
                                     />
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className={labelStyles}>Giá sàn (tối thiểu)</label>
+                                        <label className={labelStyles}>{t('priceFloor')}</label>
                                         <input
                                             type="text"
                                             inputMode="numeric"
                                             value={formatNumber(formData.priceFloor)}
                                             onChange={(e) => updatePriceField('priceFloor', e.target.value)}
                                             className={inputStyles}
-                                            placeholder="VD: 800.000"
+                                            placeholder={t('priceFloorPlaceholder')}
                                         />
                                     </div>
 
                                     <div>
-                                        <label className={labelStyles}>Giá trần (tối đa)</label>
+                                        <label className={labelStyles}>{t('priceCeiling')}</label>
                                         <input
                                             type="text"
                                             inputMode="numeric"
                                             value={formatNumber(formData.priceCeiling)}
                                             onChange={(e) => updatePriceField('priceCeiling', e.target.value)}
                                             className={inputStyles}
-                                            placeholder="VD: 3.000.000"
+                                            placeholder={t('priceCeilingPlaceholder')}
                                         />
                                     </div>
                                 </div>
 
                                 <p className="text-white/50 text-sm">
-                                    Bạn có thể thiết lập sau trong phần Cài đặt
+                                    {t('priceSkipNote')}
                                 </p>
                             </div>
 
@@ -478,7 +480,7 @@ export default function OnboardingPage() {
                                     className="flex-1 py-3 px-6 bg-white/20 text-white font-medium rounded-xl 
                                         hover:bg-white/30 transition-all"
                                 >
-                                    ← Quay lại
+                                    {t('back')}
                                 </button>
                                 <button
                                     type="button"
@@ -487,7 +489,7 @@ export default function OnboardingPage() {
                                     className="flex-1 py-3 px-6 bg-white text-blue-600 font-medium rounded-xl 
                                         hover:bg-white/90 transition-all disabled:opacity-50"
                                 >
-                                    {loading ? "Đang tạo..." : "Tiếp theo →"}
+                                    {loading ? t('creating') : t('next')}
                                 </button>
                             </div>
                         </>
@@ -497,10 +499,10 @@ export default function OnboardingPage() {
                     {currentStep === 3 && (
                         <>
                             <h1 className="text-2xl font-semibold text-white mb-2">
-                                Nhập dữ liệu
+                                {t('step3Title')}
                             </h1>
                             <p className="text-white/70 mb-6 text-[15px]">
-                                Bước 3/4: Upload dữ liệu đặt phòng để bắt đầu phân tích
+                                {t('step3Subtitle')}
                             </p>
 
                             <div className="space-y-4">
@@ -511,8 +513,8 @@ export default function OnboardingPage() {
                                                 <svg className="w-12 h-12 mx-auto mb-4 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                                                 </svg>
-                                                <p className="text-white/80 font-medium mb-1">Kéo thả file hoặc click để chọn</p>
-                                                <p className="text-white/50 text-sm">Excel (.xlsx, .xls) hoặc CSV</p>
+                                                <p className="text-white/80 font-medium mb-1">{t('dropzone')}</p>
+                                                <p className="text-white/50 text-sm">{t('fileTypes')}</p>
                                             </div>
                                             <input
                                                 type="file"
@@ -524,15 +526,15 @@ export default function OnboardingPage() {
 
                                         {/* Sample file download */}
                                         <div className="mt-4 p-4 bg-white/5 rounded-xl border border-white/10">
-                                            <p className="text-white/70 text-sm mb-2"><strong>Các trường bắt buộc:</strong></p>
+                                            <p className="text-white/70 text-sm mb-2"><strong>{t('requiredFields')}</strong></p>
                                             <ul className="text-white/50 text-xs space-y-1 mb-3">
-                                                <li>• <code className="bg-white/10 px-1 rounded">reservation_id</code> - Mã đặt phòng</li>
-                                                <li>• <code className="bg-white/10 px-1 rounded">booking_date</code> - Ngày đặt (YYYY-MM-DD)</li>
-                                                <li>• <code className="bg-white/10 px-1 rounded">arrival_date</code> - Ngày nhận phòng (YYYY-MM-DD)</li>
-                                                <li>• <code className="bg-white/10 px-1 rounded">departure_date</code> - Ngày trả phòng (YYYY-MM-DD)</li>
-                                                <li>• <code className="bg-white/10 px-1 rounded">rooms</code> - Số phòng đặt</li>
-                                                <li>• <code className="bg-white/10 px-1 rounded">revenue</code> - Doanh thu</li>
-                                                <li>• <code className="bg-white/10 px-1 rounded">status</code> - Trạng thái (booked / cancelled)</li>
+                                                <li>• <code className="bg-white/10 px-1 rounded">reservation_id</code> - {t('fieldReservationId')}</li>
+                                                <li>• <code className="bg-white/10 px-1 rounded">booking_date</code> - {t('fieldBookingDate')}</li>
+                                                <li>• <code className="bg-white/10 px-1 rounded">arrival_date</code> - {t('fieldArrivalDate')}</li>
+                                                <li>• <code className="bg-white/10 px-1 rounded">departure_date</code> - {t('fieldDepartureDate')}</li>
+                                                <li>• <code className="bg-white/10 px-1 rounded">rooms</code> - {t('fieldRooms')}</li>
+                                                <li>• <code className="bg-white/10 px-1 rounded">revenue</code> - {t('fieldRevenue')}</li>
+                                                <li>• <code className="bg-white/10 px-1 rounded">status</code> - {t('fieldStatus')}</li>
                                             </ul>
                                             <a
                                                 href="/sample-reservations.csv"
@@ -542,7 +544,7 @@ export default function OnboardingPage() {
                                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                                                 </svg>
-                                                Tải file mẫu (CSV)
+                                                {t('downloadSample')}
                                             </a>
                                         </div>
                                     </>
@@ -551,7 +553,7 @@ export default function OnboardingPage() {
                                 {uploadStatus === 'uploading' && (
                                     <div className="text-center py-8">
                                         <div className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin mx-auto mb-4" />
-                                        <p className="text-white/80">Đang xử lý dữ liệu...</p>
+                                        <p className="text-white/80">{t('uploading')}</p>
                                     </div>
                                 )}
 
@@ -560,14 +562,14 @@ export default function OnboardingPage() {
                                         <svg className="w-12 h-12 mx-auto mb-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                         </svg>
-                                        <p className="text-white font-medium mb-1">Đã nhập {importResult.count} bản ghi</p>
+                                        <p className="text-white font-medium mb-1">{t('importSuccess', { count: importResult.count })}</p>
                                         {importResult.valid ? (
                                             <p className="text-green-300 text-sm">
-                                                Đủ điều kiện nhận 7 ngày dùng thử Pro!
+                                                {t('trialEligible')}
                                             </p>
                                         ) : (
                                             <p className="text-yellow-300 text-sm">
-                                                Cần tối thiểu 10 đặt phòng để kích hoạt dùng thử
+                                                {t('trialMinimum')}
                                             </p>
                                         )}
                                     </div>
@@ -575,12 +577,12 @@ export default function OnboardingPage() {
 
                                 {uploadStatus === 'error' && (
                                     <div className="bg-red-500/20 border border-red-500/30 rounded-2xl p-6 text-center">
-                                        <p className="text-white mb-2">Có lỗi khi xử lý file</p>
+                                        <p className="text-white mb-2">{t('uploadError')}</p>
                                         <button
                                             onClick={() => setUploadStatus('idle')}
                                             className="text-red-300 underline text-sm"
                                         >
-                                            Thử lại
+                                            {t('retry')}
                                         </button>
                                     </div>
                                 )}
@@ -593,7 +595,7 @@ export default function OnboardingPage() {
                                     className="w-full py-3 px-6 bg-white text-blue-600 font-medium rounded-xl 
                                         hover:bg-white/90 transition-all"
                                 >
-                                    {uploadStatus === 'success' ? 'Tiếp theo →' : 'Bỏ qua, làm sau'}
+                                    {uploadStatus === 'success' ? t('nextStep') : t('skipStep')}
                                 </button>
                             </div>
                         </>
@@ -603,29 +605,29 @@ export default function OnboardingPage() {
                     {currentStep === 4 && (
                         <>
                             <h1 className="text-2xl font-semibold text-white mb-2">
-                                Hoàn tất!
+                                {t('step4Title')}
                             </h1>
                             <p className="text-white/70 mb-6 text-[15px]">
-                                Bước 4/4: Xác nhận và bắt đầu sử dụng
+                                {t('step4Subtitle')}
                             </p>
 
                             <div className="space-y-4">
                                 <div className="bg-white/10 rounded-2xl p-6">
-                                    <h3 className="text-white font-medium mb-3">Tổng kết thiết lập:</h3>
+                                    <h3 className="text-white font-medium mb-3">{t('setupSummary')}</h3>
                                     <div className="space-y-2 text-white/80 text-sm">
                                         <p><strong>{formData.name}</strong></p>
-                                        <p>{formData.capacity} phòng</p>
+                                        <p>{t('roomsCount', { count: formData.capacity })}</p>
                                         <p>{formData.currency}</p>
                                         {importResult?.count && (
-                                            <p>{importResult.count} đặt phòng đã nhập</p>
+                                            <p>{t('importedBookings', { count: importResult.count })}</p>
                                         )}
                                     </div>
                                 </div>
 
                                 {importResult?.valid && (
                                     <div className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 rounded-2xl p-6 text-center">
-                                        <p className="text-white font-medium mb-1">Bạn đã được tặng 7 ngày Pro Trial!</p>
-                                        <p className="text-white/60 text-sm">Trải nghiệm đầy đủ tính năng phân tích & báo cáo</p>
+                                        <p className="text-white font-medium mb-1">{t('proTrialGranted')}</p>
+                                        <p className="text-white/60 text-sm">{t('proTrialDesc')}</p>
                                     </div>
                                 )}
                             </div>
@@ -637,7 +639,7 @@ export default function OnboardingPage() {
                                 className="w-full mt-6 py-3 px-6 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-medium rounded-xl 
                                     hover:from-green-600 hover:to-emerald-600 transition-all disabled:opacity-50"
                             >
-                                {loading ? "Đang hoàn tất..." : "Vào Dashboard →"}
+                                {loading ? t('completing') : t('goToDashboard')}
                             </button>
                         </>
                     )}
@@ -645,7 +647,7 @@ export default function OnboardingPage() {
 
                 {/* Footer */}
                 <p className="text-center text-white/40 text-sm mt-6">
-                    Cần hỗ trợ? Liên hệ Zalo: <a href="https://zalo.me/0778602953" className="text-white/60 hover:text-white underline" target="_blank" rel="noopener noreferrer">0778.602.953</a>
+                    {t('support')} <a href="https://zalo.me/0778602953" className="text-white/60 hover:text-white underline" target="_blank" rel="noopener noreferrer">0778.602.953</a>
                 </p>
             </div>
         </div >

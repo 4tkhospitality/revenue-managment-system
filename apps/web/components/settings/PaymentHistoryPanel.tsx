@@ -22,11 +22,11 @@ interface PaymentRecord {
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: typeof CheckCircle }> = {
-    COMPLETED: { label: 'Thành công', color: 'text-emerald-600 bg-emerald-50', icon: CheckCircle },
-    PENDING: { label: 'Đang xử lý', color: 'text-amber-600 bg-amber-50', icon: Clock },
-    FAILED: { label: 'Thất bại', color: 'text-red-600 bg-red-50', icon: XCircle },
-    EXPIRED: { label: 'Hết hạn', color: 'text-gray-600 bg-gray-50', icon: AlertTriangle },
-    REFUNDED: { label: 'Hoàn tiền', color: 'text-blue-600 bg-blue-50', icon: Receipt },
+    COMPLETED: { label: 'Completed', color: 'text-emerald-600 bg-emerald-50', icon: CheckCircle },
+    PENDING: { label: 'Processing', color: 'text-amber-600 bg-amber-50', icon: Clock },
+    FAILED: { label: 'Failed', color: 'text-red-600 bg-red-50', icon: XCircle },
+    EXPIRED: { label: 'Expired', color: 'text-gray-600 bg-gray-50', icon: AlertTriangle },
+    REFUNDED: { label: 'Refunded', color: 'text-blue-600 bg-blue-50', icon: Receipt },
 };
 
 const TIER_LABELS: Record<string, string> = {
@@ -39,13 +39,13 @@ const TIER_LABELS: Record<string, string> = {
 const GATEWAY_LABELS: Record<string, string> = {
     SEPAY: 'SePay',
     PAYPAL: 'PayPal',
-    ZALO_MANUAL: 'Zalo (Thủ công)',
+    ZALO_MANUAL: 'Zalo (Manual)',
     ADMIN_MANUAL: 'Admin',
 };
 
 function formatAmount(amount: number, currency: string): string {
     if (currency === 'VND') {
-        return amount.toLocaleString('vi-VN') + 'đ';
+        return amount.toLocaleString('vi-VN') + '₫';
     }
     return '$' + amount.toLocaleString('en-US', { minimumFractionDigits: 2 });
 }
@@ -85,7 +85,7 @@ export function PaymentHistoryPanel() {
         return (
             <div className="flex items-center justify-center py-8 text-gray-400">
                 <div className="w-5 h-5 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin mr-2" />
-                Đang tải lịch sử thanh toán...
+                Loading payment history...
             </div>
         );
     }
@@ -94,7 +94,7 @@ export function PaymentHistoryPanel() {
         return (
             <div className="text-center py-8 text-gray-400">
                 <AlertTriangle className="w-8 h-8 mx-auto mb-2 text-amber-400" />
-                <p className="text-sm">Không thể tải lịch sử thanh toán</p>
+                <p className="text-sm">Cannot load payment history</p>
             </div>
         );
     }
@@ -103,7 +103,7 @@ export function PaymentHistoryPanel() {
         return (
             <div className="text-center py-8 text-gray-400">
                 <Receipt className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">Chưa có giao dịch thanh toán nào</p>
+                <p className="text-sm">No payment transactions yet</p>
             </div>
         );
     }
@@ -113,12 +113,12 @@ export function PaymentHistoryPanel() {
             <table className="w-full text-sm">
                 <thead>
                     <tr className="border-b border-gray-200">
-                        <th className="text-left py-3 px-3 font-medium text-gray-500 text-xs uppercase">Ngày</th>
-                        <th className="text-left py-3 px-3 font-medium text-gray-500 text-xs uppercase">Mã đơn</th>
-                        <th className="text-left py-3 px-3 font-medium text-gray-500 text-xs uppercase">Gói</th>
-                        <th className="text-left py-3 px-3 font-medium text-gray-500 text-xs uppercase">Hình thức</th>
-                        <th className="text-right py-3 px-3 font-medium text-gray-500 text-xs uppercase">Số tiền</th>
-                        <th className="text-center py-3 px-3 font-medium text-gray-500 text-xs uppercase">Trạng thái</th>
+                        <th className="text-left py-3 px-3 font-medium text-gray-500 text-xs uppercase">Date</th>
+                        <th className="text-left py-3 px-3 font-medium text-gray-500 text-xs uppercase">Order ID</th>
+                        <th className="text-left py-3 px-3 font-medium text-gray-500 text-xs uppercase">Plan</th>
+                        <th className="text-left py-3 px-3 font-medium text-gray-500 text-xs uppercase">Method</th>
+                        <th className="text-right py-3 px-3 font-medium text-gray-500 text-xs uppercase">Amount</th>
+                        <th className="text-center py-3 px-3 font-medium text-gray-500 text-xs uppercase">Status</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -139,7 +139,7 @@ export function PaymentHistoryPanel() {
                                     </div>
                                     {p.termMonths && (
                                         <div className="text-xs text-gray-400">
-                                            {p.termMonths === 1 ? '1 tháng' : `${p.termMonths} tháng`}
+                                            {p.termMonths === 1 ? '1 month' : `${p.termMonths} months`}
                                         </div>
                                     )}
                                 </td>

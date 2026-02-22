@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { TrendingDown, Flame, Eye, Target } from 'lucide-react';
 import type { DateToWatch, ViewMode } from './types';
+import { useTranslations } from 'next-intl';
 
 const categoryStyles = {
     under_pace: { bg: 'bg-rose-50 border-rose-200 text-rose-700', icon: TrendingDown },
@@ -19,6 +20,7 @@ export function DatesToWatchPanel({
     viewMode: ViewMode;
     maxItems?: number;
 }) {
+    const t = useTranslations('analyticsTab');
     if (dates.length === 0) return null;
 
     const visibleDates = dates.slice(0, maxItems);
@@ -28,7 +30,7 @@ export function DatesToWatchPanel({
             {/* Header inline */}
             <div className="px-4 py-2 flex items-center gap-2">
                 <Target className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                <span className="text-xs font-semibold text-slate-600 shrink-0">Dates to Watch</span>
+                <span className="text-xs font-semibold text-slate-600 shrink-0">{t('datesToWatch')}</span>
 
                 {/* Horizontal scrollable chip strip */}
                 <div className="flex-1 overflow-x-auto scrollbar-thin">

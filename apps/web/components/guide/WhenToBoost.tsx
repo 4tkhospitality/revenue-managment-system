@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { Zap, Calendar, TrendingDown, TrendingUp, Plus, Trash2, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 interface BoostDecision {
     id: string;
@@ -16,52 +17,8 @@ interface BoostDecision {
 
 const STORAGE_KEY = 'rms_boost_decisions';
 
-const SCENARIOS = [
-    {
-        id: 'low_occ',
-        icon: <TrendingDown className="w-4 h-4 text-red-500" />,
-        title: 'Occupancy thấp (< 50%) trong 7-14 ngày tới',
-        recommendation: 'Bật Visibility Booster (Booking) hoặc AGP (Agoda) cho các ngày gap.',
-        urgency: 'high' as const,
-    },
-    {
-        id: 'competitor_price',
-        icon: <AlertTriangle className="w-4 h-4 text-amber-500" />,
-        title: 'Đối thủ giảm giá mạnh (Rate Shopper alert)',
-        recommendation: 'Cân nhắc Mobile Rate hoặc Last-Minute Deal thay vì giảm giá trực tiếp.',
-        urgency: 'medium' as const,
-    },
-    {
-        id: 'low_season',
-        icon: <Calendar className="w-4 h-4 text-blue-500" />,
-        title: 'Mùa thấp điểm sắp tới',
-        recommendation: 'Tham gia Genius Program (Booking) để tiếp cận segment "Genius travelers" có sẵn demand.',
-        urgency: 'medium' as const,
-    },
-    {
-        id: 'new_property',
-        icon: <Zap className="w-4 h-4 text-purple-500" />,
-        title: 'Property mới / Review Score thấp',
-        recommendation: 'Ưu tiên Preferred Partner (badge uy tín) + trả lời 100% reviews + push giá cạnh tranh.',
-        urgency: 'high' as const,
-    },
-    {
-        id: 'high_cancel',
-        icon: <TrendingDown className="w-4 h-4 text-red-500" />,
-        title: 'Cancellation rate cao (> 30%)',
-        recommendation: 'Thêm Non-Refundable rate plan với giá thấp hơn 10-15% để giữ Net Bookings.',
-        urgency: 'high' as const,
-    },
-    {
-        id: 'good_perf',
-        icon: <TrendingUp className="w-4 h-4 text-emerald-500" />,
-        title: 'Hiệu suất tốt, muốn đẩy thêm',
-        recommendation: 'Double-down: tăng Visibility Booster commission hoặc join thêm campaign Agoda.',
-        urgency: 'low' as const,
-    },
-];
-
 export function WhenToBoost() {
+    const t = useTranslations('otaGuide.boost');
     const [decisions, setDecisions] = useState<BoostDecision[]>([]);
     const [showAddForm, setShowAddForm] = useState(false);
 
@@ -70,6 +27,51 @@ export function WhenToBoost() {
     const [formProgram, setFormProgram] = useState('');
     const [formReason, setFormReason] = useState('');
     const [formUplift, setFormUplift] = useState(10);
+
+    const SCENARIOS = useMemo(() => [
+        {
+            id: 'low_occ',
+            icon: <TrendingDown className="w-4 h-4 text-red-500" />,
+            title: t('lowOccTitle'),
+            recommendation: t('lowOccRec'),
+            urgency: 'high' as const,
+        },
+        {
+            id: 'competitor_price',
+            icon: <AlertTriangle className="w-4 h-4 text-amber-500" />,
+            title: t('competitorTitle'),
+            recommendation: t('competitorRec'),
+            urgency: 'medium' as const,
+        },
+        {
+            id: 'low_season',
+            icon: <Calendar className="w-4 h-4 text-blue-500" />,
+            title: t('lowSeasonTitle'),
+            recommendation: t('lowSeasonRec'),
+            urgency: 'medium' as const,
+        },
+        {
+            id: 'new_property',
+            icon: <Zap className="w-4 h-4 text-purple-500" />,
+            title: t('newPropertyTitle'),
+            recommendation: t('newPropertyRec'),
+            urgency: 'high' as const,
+        },
+        {
+            id: 'high_cancel',
+            icon: <TrendingDown className="w-4 h-4 text-red-500" />,
+            title: t('highCancelTitle'),
+            recommendation: t('highCancelRec'),
+            urgency: 'high' as const,
+        },
+        {
+            id: 'good_perf',
+            icon: <TrendingUp className="w-4 h-4 text-emerald-500" />,
+            title: t('goodPerfTitle'),
+            recommendation: t('goodPerfRec'),
+            urgency: 'low' as const,
+        },
+    ], [t]);
 
     useEffect(() => {
         try {
@@ -119,9 +121,9 @@ export function WhenToBoost() {
                 <div className="mb-5">
                     <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                         <Zap className="w-5 h-5 text-blue-600" />
-                        Khi nào nên Đẩy mạnh Tăng Ranking?
+                        {t('title')}
                     </h3>
-                    <p className="text-sm text-gray-500 mt-1">Nguyên tắc tăng Ranking hiệu quả dựa trên tình huống thực tế</p>
+                    <p className="text-sm text-gray-500 mt-1">{t('subtitle')}</p>
                 </div>
 
                 <div className="space-y-3">
@@ -139,7 +141,7 @@ export function WhenToBoost() {
                                 s.urgency === 'medium' ? 'bg-amber-100 text-amber-600' :
                                     'bg-gray-100 text-gray-500'
                                 }`}>
-                                {s.urgency === 'high' ? 'Urgent' : s.urgency === 'medium' ? 'Medium' : 'Low'}
+                                {s.urgency === 'high' ? t('urgentHigh') : s.urgency === 'medium' ? t('urgentMedium') : t('urgentLow')}
                             </span>
                         </div>
                     ))}
@@ -150,15 +152,15 @@ export function WhenToBoost() {
             <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
                 <div className="flex items-center justify-between mb-5">
                     <div>
-                        <h3 className="text-base font-semibold text-gray-900">📋 Decision Log</h3>
-                        <p className="text-xs text-gray-500">Ghi lại quyết định Boost để theo dõi & rút kinh nghiệm</p>
+                        <h3 className="text-base font-semibold text-gray-900">{t('decisionLog')}</h3>
+                        <p className="text-xs text-gray-500">{t('decisionLogDesc')}</p>
                     </div>
                     <button
                         onClick={() => setShowAddForm(true)}
                         className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
                     >
                         <Plus className="w-4 h-4" />
-                        Ghi nhận
+                        {t('record')}
                     </button>
                 </div>
 
@@ -167,7 +169,7 @@ export function WhenToBoost() {
                     <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200 space-y-3">
                         <div className="grid grid-cols-2 gap-3">
                             <div>
-                                <label className="text-xs font-semibold text-gray-600">Kênh</label>
+                                <label className="text-xs font-semibold text-gray-600">{t('channel')}</label>
                                 <select value={formChannel} onChange={(e) => setFormChannel(e.target.value as 'booking' | 'agoda')}
                                     className="w-full mt-1 px-3 py-2 border rounded-lg text-sm">
                                     <option value="booking">Booking.com</option>
@@ -175,29 +177,29 @@ export function WhenToBoost() {
                                 </select>
                             </div>
                             <div>
-                                <label className="text-xs font-semibold text-gray-600">Chương trình</label>
+                                <label className="text-xs font-semibold text-gray-600">{t('program')}</label>
                                 <input value={formProgram} onChange={(e) => setFormProgram(e.target.value)}
-                                    placeholder="Genius, Preferred, VB..."
+                                    placeholder={t('programPlaceholder')}
                                     className="w-full mt-1 px-3 py-2 border rounded-lg text-sm" />
                             </div>
                         </div>
                         <div>
-                            <label className="text-xs font-semibold text-gray-600">Lý do quyết định</label>
+                            <label className="text-xs font-semibold text-gray-600">{t('reasonDecision')}</label>
                             <input value={formReason} onChange={(e) => setFormReason(e.target.value)}
-                                placeholder="Occupancy thấp tháng 3, gap dates..."
+                                placeholder={t('reasonPlaceholder')}
                                 className="w-full mt-1 px-3 py-2 border rounded-lg text-sm" />
                         </div>
                         <div className="flex gap-3 items-end">
                             <div className="flex-1">
-                                <label className="text-xs font-semibold text-gray-600">Uplift kỳ vọng (%)</label>
+                                <label className="text-xs font-semibold text-gray-600">{t('expectedUplift')}</label>
                                 <input type="number" value={formUplift} onChange={(e) => setFormUplift(Number(e.target.value))}
                                     className="w-full mt-1 px-3 py-2 border rounded-lg text-sm" />
                             </div>
                             <button onClick={addDecision} className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">
-                                Lưu
+                                {t('save')}
                             </button>
                             <button onClick={() => setShowAddForm(false)} className="px-4 py-2 bg-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-300">
-                                Hủy
+                                {t('cancelBtn')}
                             </button>
                         </div>
                     </div>
@@ -206,7 +208,7 @@ export function WhenToBoost() {
                 {/* Decision List */}
                 {decisions.length === 0 ? (
                     <div className="text-center py-8 text-gray-400 text-sm">
-                        Chưa có quyết định nào. Nhấn &quot;Ghi nhận&quot; để bắt đầu.
+                        {t('noDecisions')}
                     </div>
                 ) : (
                     <div className="space-y-2">
@@ -229,7 +231,7 @@ export function WhenToBoost() {
                                         </span>
                                         <span className="text-xs text-gray-400">{d.date}</span>
                                     </div>
-                                    <p className="text-xs text-gray-500 mt-0.5">{d.reason} • Kỳ vọng +{d.expectedUplift}%</p>
+                                    <p className="text-xs text-gray-500 mt-0.5">{d.reason} • {t('expected')} +{d.expectedUplift}%</p>
                                 </div>
                                 <button onClick={() => removeDecision(d.id)} className="text-gray-300 hover:text-red-500 transition-colors">
                                     <Trash2 className="w-4 h-4" />
@@ -241,7 +243,7 @@ export function WhenToBoost() {
 
                 {activeCount > 0 && (
                     <div className="mt-3 text-xs text-gray-400 text-right">
-                        {activeCount} quyết định đang active
+                        {t('activeDecisions', { count: activeCount })}
                     </div>
                 )}
             </div>

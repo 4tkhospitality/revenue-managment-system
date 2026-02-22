@@ -67,7 +67,7 @@ export async function POST(req: Request) {
                 }
             }
             return NextResponse.json(
-                { error: 'Không tìm thấy giao dịch đang chờ. Có thể đã hết hạn.' },
+                { error: 'Pending transaction not found. It may have expired.' },
                 { status: 404 }
             );
         }
@@ -96,7 +96,7 @@ export async function POST(req: Request) {
 
         // 5. Calculate period based on term
         console.log(`${TAG} Step 5: Calculating period...`);
-        const termMonths = pendingTx.description?.includes('3 tháng') ? 3 : 1;
+        const termMonths = pendingTx.description?.includes('3 months') ? 3 : 1;
         const periodEnd = new Date();
         periodEnd.setMonth(periodEnd.getMonth() + termMonths);
         console.log(`${TAG}   termMonths=${termMonths}, periodEnd=${periodEnd.toISOString()}`);

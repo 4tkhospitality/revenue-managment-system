@@ -74,7 +74,7 @@ export function parsePropertyDetailsResponse(
  * Parse a single SerpApi price entry with 4-level representative price priority.
  *
  * Priority:
- * 1. total_rate_before_tax (nếu có)
+ * 1. total_rate_before_tax (if available)
  * 2. total_rate_lowest
  * 3. rate_per_night_before_tax × LOS
  * 4. rate_per_night_lowest × LOS

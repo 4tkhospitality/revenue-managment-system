@@ -56,7 +56,7 @@ export function QuotaUsagePanel({ hotelId }: { hotelId?: string }) {
         return (
             <div className="bg-white border border-gray-200 rounded-xl p-5 animate-pulse flex items-center gap-3">
                 <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
-                <span className="text-sm text-gray-400">Đang tải hạn mức...</span>
+                <span className="text-sm text-gray-400">Loading quotas...</span>
             </div>
         );
     }
@@ -67,29 +67,29 @@ export function QuotaUsagePanel({ hotelId }: { hotelId?: string }) {
         <div className="bg-white border border-gray-200 rounded-xl p-5">
             <div className="flex items-center gap-2 mb-4">
                 <BarChart3 className="w-5 h-5 text-gray-500" />
-                <h3 className="font-semibold text-gray-900">Hạn mức sử dụng</h3>
+                <h3 className="font-semibold text-gray-900">Usage Quotas</h3>
             </div>
             <div className="space-y-3">
                 <ProgressBar
-                    label="Imports (tháng)"
+                    label="Imports (monthly)"
                     used={data.usage.importsThisMonth}
                     limit={data.limits.maxImportsMonth}
                 />
                 <ProgressBar
-                    label="Exports (ngày)"
+                    label="Exports (daily)"
                     used={data.usage.exportsToday}
                     limit={data.limits.maxExportsDay}
                     unit="per day"
                 />
                 <ProgressBar
-                    label="Rate Shops (tháng)"
+                    label="Rate Shops (monthly)"
                     used={0}
                     limit={data.limits.includedRateShopsMonth}
                 />
                 <div className="flex justify-between text-sm pt-2 border-t border-gray-100">
-                    <span className="text-gray-500">Lưu trữ dữ liệu</span>
+                    <span className="text-gray-500">Data Retention</span>
                     <span className="font-medium text-gray-700">
-                        {data.limits.dataRetentionMonths === 0 ? '∞' : `${data.limits.dataRetentionMonths} tháng`}
+                        {data.limits.dataRetentionMonths === 0 ? '∞' : `${data.limits.dataRetentionMonths} months`}
                     </span>
                 </div>
             </div>

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { DateUtils } from '../../lib/date';
+import { useTranslations } from 'next-intl';
 
 interface ImportJob {
     job_id: string;
@@ -23,6 +24,7 @@ const PAGE_SIZE = 10;
 const surface = "rounded-[var(--card-radius)] bg-white border border-slate-200/80 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-card-hover)] transition-shadow duration-200";
 
 export function PaginatedImportJobs({ initialJobs, totalCount }: PaginatedImportJobsProps) {
+    const t = useTranslations('dataPage');
     const [jobs, setJobs] = useState<ImportJob[]>(initialJobs);
     const [page, setPage] = useState(1);
     const [loading, setLoading] = useState(false);
@@ -61,7 +63,7 @@ export function PaginatedImportJobs({ initialJobs, totalCount }: PaginatedImport
             <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <h2 className="text-lg font-semibold text-gray-900">📁 Import Jobs</h2>
-                    <span className="text-sm text-gray-500">Tổng: {totalCount}</span>
+                    <span className="text-sm text-gray-500">{t('total', { n: totalCount })}</span>
                 </div>
                 <button
                     onClick={() => setIsExpanded(!isExpanded)}
@@ -70,12 +72,12 @@ export function PaginatedImportJobs({ initialJobs, totalCount }: PaginatedImport
                     {isExpanded ? (
                         <>
                             <span>▲</span>
-                            <span>Thu gọn</span>
+                            <span>{t('collapse')}</span>
                         </>
                     ) : (
                         <>
                             <span>▼</span>
-                            <span>Mở rộng</span>
+                            <span>{t('expand')}</span>
                         </>
                     )}
                 </button>
@@ -126,7 +128,7 @@ export function PaginatedImportJobs({ initialJobs, totalCount }: PaginatedImport
                                 {jobs.length === 0 && (
                                     <tr>
                                         <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
-                                            Chưa có import job nào
+                                            {t('noImportJobs')}
                                         </td>
                                     </tr>
                                 )}
@@ -142,17 +144,17 @@ export function PaginatedImportJobs({ initialJobs, totalCount }: PaginatedImport
                                 disabled={page <= 1 || loading}
                                 className="px-3 py-1.5 text-sm bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             >
-                                ← Trước
+                                ← {t('prev').replace('← ', '')}
                             </button>
                             <span className="text-sm text-gray-500">
-                                Trang {page} / {totalPages}
+                                {t('pageOf', { p: page, t: totalPages })}
                             </span>
                             <button
                                 onClick={handleNext}
                                 disabled={page >= totalPages || loading}
                                 className="px-3 py-1.5 text-sm bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             >
-                                Sau →
+                                {t('next')}
                             </button>
                         </div>
                     )}

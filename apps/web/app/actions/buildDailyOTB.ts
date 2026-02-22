@@ -82,7 +82,7 @@ function calculateRevenuePerNight(totalRevenue: number, nights: number, nightInd
 export async function buildDailyOTB(params?: BuildOTBParams): Promise<BuildOTBResult> {
     const hotelId = params?.hotelId || process.env.DEFAULT_HOTEL_ID;
     if (!hotelId) {
-        throw new Error('DEFAULT_HOTEL_ID chưa được cấu hình trong .env');
+        throw new Error('DEFAULT_HOTEL_ID not configured in .env');
     }
 
     // V01.1: Use asOfTs (timestamp) for time-travel
@@ -252,7 +252,7 @@ export async function rebuildAllOTB() {
     const hotelId = await getActiveHotelId();
 
     if (!hotelId) {
-        throw new Error('Không tìm thấy hotel đang active. Vui lòng chọn hotel trước.');
+        throw new Error('No active hotel found. Please select a hotel first.');
     }
 
     // Find date ranges for this specific hotel

@@ -8,6 +8,7 @@ import { ingestXML } from '../actions/ingestXML';
 import { ingestCancellationXml } from '../actions/ingestCancellationXml';
 import { TierPaywall } from '@/components/paywall/TierPaywall';
 import { useTierAccess } from '@/hooks/useTierAccess';
+import { useTranslations } from 'next-intl';
 
 type ReportType = 'booked' | 'cancelled';
 type FileType = 'csv' | 'xml' | 'xlsx';
@@ -21,6 +22,7 @@ interface FileResult {
 
 export default function UploadPage() {
     const { hasAccess, loading: tierLoading } = useTierAccess('DELUXE');
+    const t = useTranslations('uploadPage');
     const { data: session } = useSession();
     const [activeTab, setActiveTab] = useState<ReportType>('booked');
     const [isProcessing, setIsProcessing] = useState(false);
@@ -65,15 +67,15 @@ export default function UploadPage() {
     if (!tierLoading && !hasAccess) {
         return (
             <TierPaywall
-                title="Tải lên Reservations"
-                subtitle="Import báo cáo đặt phòng từ PMS"
+                title={t('title')}
+                subtitle={t('paywallSubtitle')}
                 tierDisplayName="Deluxe"
                 colorScheme="blue"
                 features={[
-                    { icon: <Upload className="w-4 h-4" />, label: 'Upload nhiều file CSV/XML cùng lúc' },
-                    { icon: <FileSpreadsheet className="w-4 h-4" />, label: 'Import báo cáo đặt phòng & huỷ phòng' },
-                    { icon: <FileCode className="w-4 h-4" />, label: 'Hỗ trợ Crystal Reports XML' },
-                    { icon: <CheckCircle className="w-4 h-4" />, label: 'Tự động xử lý & validate dữ liệu' },
+                    { icon: <Upload className="w-4 h-4" />, label: t('feat1') },
+                    { icon: <FileSpreadsheet className="w-4 h-4" />, label: t('feat2') },
+                    { icon: <FileCode className="w-4 h-4" />, label: t('feat3') },
+                    { icon: <CheckCircle className="w-4 h-4" />, label: t('feat4') },
                 ]}
             />
         );
@@ -90,7 +92,7 @@ export default function UploadPage() {
         const fileType = detectFileType(file);
 
         if (fileType !== 'csv' && fileType !== 'xml' && fileType !== 'xlsx') {
-            return { success: false, message: 'Chỉ hỗ trợ file CSV, XML hoặc Excel (.xlsx)' };
+            return { success: false, message: t('unsupported') };
         }
 
         try {
@@ -109,9 +111,9 @@ export default function UploadPage() {
                 result = await response.json();
 
                 if (result.success) {
-                    return { success: true, message: `${result.recordCount} cancellations`, count: result.recordCount };
+                    return { success: true, message: t('cancellations', { n: result.recordCount }), count: result.recordCount };
                 } else {
-                    return { success: false, message: result.error || 'Import thất bại' };
+                    return { success: false, message: result.error || t('importFailed') };
                 }
             }
 
@@ -128,12 +130,12 @@ export default function UploadPage() {
             }
 
             if (result.success) {
-                return { success: true, message: `${result.count} reservations`, count: result.count };
+                return { success: true, message: t('reservations', { n: result.count }), count: result.count };
             } else {
-                return { success: false, message: result.message || 'Import thất bại' };
+                return { success: false, message: result.message || t('importFailed') };
             }
         } catch (err: any) {
-            return { success: false, message: err.message || 'Lỗi không xác định' };
+            return { success: false, message: err.message || 'Unknown error' };
         }
     };
 
@@ -149,7 +151,7 @@ export default function UploadPage() {
             resolved: hotelId,
         });
         if (!hotelId) {
-            setFileResults([{ fileName: 'ERROR', status: 'error', message: 'Không tìm thấy Hotel ID' }]);
+            setFileResults([{ fileName: 'ERROR', status: 'error', message: t('hotelNotFound') }]);
             return;
         }
 
@@ -251,9 +253,9 @@ export default function UploadPage() {
                 className="rounded-2xl px-6 py-4 text-white shadow-sm"
                 style={{ background: 'linear-gradient(to right, #1E3A8A, #102A4C)' }}
             >
-                <h1 className="text-lg font-semibold">Tải lên Reservations</h1>
+                <h1 className="text-lg font-semibold">{t('title')}</h1>
                 <p className="text-white/70 text-sm mt-1">
-                    Import báo cáo đặt phòng từ PMS — hỗ trợ upload <strong>nhiều file cùng lúc</strong> (tối đa 31 file)
+                    <span dangerouslySetInnerHTML={{ __html: t.raw('subtitle') }} />
                 </p>
             </header>
 
@@ -263,7 +265,7 @@ export default function UploadPage() {
                     <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 flex items-center gap-2">
                         <Package className="w-4 h-4 text-blue-500" />
                         <span className="text-sm text-blue-800">
-                            Đang upload dữ liệu cho: <strong>{activeHotelName}</strong>
+                            {t('uploadingFor')} <strong>{activeHotelName}</strong>
                         </span>
                         <span className="text-xs text-blue-400 ml-auto font-mono">{activeHotelId?.slice(0, 8)}</span>
                     </div>
@@ -273,10 +275,10 @@ export default function UploadPage() {
                     <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
                         <Lock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
                         <div>
-                            <p className="text-amber-800 font-medium">Demo Hotel - Chế độ xem</p>
+                            <p className="text-amber-800 font-medium">{t('demoTitle')}</p>
                             <p className="text-amber-700 text-sm">
-                                Bạn đang sử dụng Demo Hotel. Upload file bị tắt.
-                                Vui lòng liên hệ admin để được gán khách sạn thực.
+                                You are using Demo Hotel. File upload is disabled.
+                                Please contact admin to be assigned a real hotel.
                             </p>
                         </div>
                     </div>
@@ -293,7 +295,7 @@ export default function UploadPage() {
                             } ${(isDemo && !isAdmin) || isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                         <CheckCircle className="w-4 h-4" />
-                        Báo cáo Đặt phòng
+                        {t('tabBooked')}
                     </button>
                     <button
                         onClick={() => handleTabChange('cancelled')}
@@ -304,7 +306,7 @@ export default function UploadPage() {
                             } ${(isDemo && !isAdmin) || isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                         <XCircle className="w-4 h-4" />
-                        Báo cáo Huỷ phòng
+                        {t('tabCancelled')}
                     </button>
                 </div>
 
@@ -316,8 +318,8 @@ export default function UploadPage() {
                         }`}>
                         <p className={`text-sm ${activeTab === 'booked' ? 'text-blue-700' : 'text-rose-700'}`}>
                             {activeTab === 'booked'
-                                ? 'Upload báo cáo "Reservation Booked On Date" từ PMS. Chọn nhiều file cùng lúc (Ctrl+Click hoặc kéo thả).'
-                                : 'Upload báo cáo "Reservation Cancelled" từ PMS. Chọn nhiều file cùng lúc.'}
+                                ? t('tabBookedDesc')
+                                : t('tabCancelledDesc')}
                         </p>
                     </div>
                 )}
@@ -350,8 +352,8 @@ export default function UploadPage() {
                     {(isDemo && !isAdmin) ? (
                         <>
                             <Lock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                            <p className="text-gray-500 text-lg mb-2">Upload bị tắt cho Demo Hotel</p>
-                            <p className="text-gray-400 text-sm">Liên hệ admin để được gán khách sạn</p>
+                            <p className="text-gray-500 text-lg mb-2">{t('demoDragTitle')}</p>
+                            <p className="text-gray-400 text-sm">{t('demoDragSub')}</p>
                         </>
                     ) : isIdle ? (
                         <>
@@ -359,10 +361,10 @@ export default function UploadPage() {
                                 <Files className="w-10 h-10 text-blue-500" />
                             </div>
                             <p className="text-gray-700 text-lg mb-2">
-                                Kéo thả file CSV, XML hoặc Excel vào đây
+                                {t('dragTitle')}
                             </p>
                             <p className="text-gray-500 text-sm mb-4">
-                                Hỗ trợ chọn <strong>nhiều file</strong> cùng lúc (tối đa 31 file/lần)
+                                <span dangerouslySetInnerHTML={{ __html: t.raw('dragSub') }} />
                             </p>
                             <button
                                 onClick={handleButtonClick}
@@ -371,7 +373,7 @@ export default function UploadPage() {
                                     : 'bg-rose-600 hover:bg-rose-700'
                                     }`}
                             >
-                                Chọn file (có thể chọn nhiều)
+                                {t('selectBtn')}
                             </button>
                             <div className="mt-4 pt-3 border-t border-gray-100">
                                 <a
@@ -380,12 +382,12 @@ export default function UploadPage() {
                                     className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 transition-colors"
                                 >
                                     <Download className="w-4 h-4" />
-                                    Tải file mẫu Excel {activeTab === 'booked' ? '(Đặt phòng)' : '(Huỷ phòng)'}
+                                    {activeTab === 'booked' ? t('downloadBooking') : t('downloadCancel')}
                                 </a>
                                 <p className="text-xs text-gray-400 mt-1">
                                     {activeTab === 'booked'
-                                        ? 'File mẫu có 7 cột: Mã, Ngày đặt, Check-in, Check-out, Phòng, Doanh thu, Trạng thái'
-                                        : 'File mẫu có 8 cột: bao gồm cột Ngày huỷ (bắt buộc)'}
+                                        ? 'Sample has 7 columns: Code, Booking Date, Check-in, Check-out, Room, Revenue, Status'
+                                        : 'Sample has 8 columns: includes Cancel Date column (required)'}
                                 </p>
                             </div>
                         </>
@@ -401,22 +403,22 @@ export default function UploadPage() {
                                 <Files className="w-4 h-4 text-gray-500" />
                                 <h3 className="text-sm font-semibold text-gray-700">
                                     {isProcessing
-                                        ? `Đang xử lý... (${successCount + errorCount}/${fileResults.length})`
-                                        : `Hoàn tất ${successCount}/${fileResults.length} file`}
+                                        ? `Processing... (${successCount + errorCount}/${fileResults.length})`
+                                        : `Completed ${successCount}/${fileResults.length} file`}
                                 </h3>
                             </div>
                             {isDone && (
                                 <div className="flex items-center gap-3">
                                     <span className="text-xs text-emerald-600 font-medium">
-                                        ✓ {successCount} thành công
+                                        {t('successful', { n: successCount })}
                                     </span>
                                     {errorCount > 0 && (
                                         <span className="text-xs text-rose-600 font-medium">
-                                            ✗ {errorCount} lỗi
+                                            {t('errors', { n: errorCount })}
                                         </span>
                                     )}
                                     <span className="text-xs text-gray-500">
-                                        Tổng: {totalRecords} records
+                                        {t('totalRecords', { n: totalRecords })}
                                     </span>
                                 </div>
                             )}
@@ -461,10 +463,10 @@ export default function UploadPage() {
                                     {/* Result message */}
                                     <div className="text-xs shrink-0">
                                         {result.status === 'pending' && (
-                                            <span className="text-gray-400">Chờ...</span>
+                                            <span className="text-gray-400">{t('wait')}</span>
                                         )}
                                         {result.status === 'processing' && (
-                                            <span className="text-blue-500">Đang xử lý...</span>
+                                            <span className="text-blue-500">{t('processingFile')}</span>
                                         )}
                                         {result.status === 'success' && (
                                             <span className="text-emerald-600 font-medium">
@@ -489,13 +491,13 @@ export default function UploadPage() {
                                         : 'bg-rose-600 hover:bg-rose-700'
                                         }`}
                                 >
-                                    Upload thêm file
+                                    {t('uploadMore')}
                                 </button>
                                 <a
                                     href="/data"
                                     className="px-5 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg font-medium text-sm hover:bg-gray-50 transition-colors"
                                 >
-                                    Xem dữ liệu →
+                                    {t('viewData')}
                                 </a>
                             </div>
                         )}
@@ -509,10 +511,10 @@ export default function UploadPage() {
                             <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
                                 <div className="flex items-center gap-2 mb-3">
                                     <FileCode className="w-5 h-5 text-blue-500" />
-                                    <h2 className="text-base font-semibold text-gray-900">XML Format (Crystal Reports)</h2>
+                                    <h2 className="text-base font-semibold text-gray-900">{t('xmlTitle')}</h2>
                                 </div>
                                 <p className="text-sm text-gray-600 mb-3">
-                                    Export từ PMS với format Crystal Reports XML.
+                                    {t('xmlDesc')}
                                 </p>
                                 <div className="text-xs text-gray-500 space-y-1">
                                     <div>• ConfirmNum → Reservation ID</div>
@@ -526,10 +528,10 @@ export default function UploadPage() {
                             <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
                                 <div className="flex items-center gap-2 mb-3">
                                     <FileSpreadsheet className="w-5 h-5 text-emerald-500" />
-                                    <h2 className="text-base font-semibold text-gray-900">CSV Format</h2>
+                                    <h2 className="text-base font-semibold text-gray-900">{t('csvTitle')}</h2>
                                 </div>
                                 <p className="text-sm text-gray-600 mb-3">
-                                    File CSV với các cột:
+                                    {t('csvDesc')}
                                 </p>
                                 <div className="bg-gray-50 rounded p-2 overflow-x-auto">
                                     <code className="text-xs text-gray-700">
@@ -543,8 +545,8 @@ export default function UploadPage() {
 
                         <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
                             <p className="text-sm text-amber-700">
-                                <strong><Lightbulb className="w-4 h-4 inline mr-0.5" />Mẹo:</strong> Dùng Ctrl+A (chọn tất cả) hoặc Ctrl+Click để chọn nhiều file cùng lúc.
-                                Hệ thống sẽ tự động import từng file theo thứ tự.
+                                <strong><Lightbulb className="w-4 h-4 inline mr-0.5" />Tip:</strong> Use Ctrl+A (select all) or Ctrl+Click to select multiple files at once.
+                                System will automatically import each file in order.
                             </p>
                         </div>
                     </>

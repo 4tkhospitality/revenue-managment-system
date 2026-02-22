@@ -4,8 +4,10 @@ import { useState } from 'react';
 import { buildFeaturesDaily, backfillFeatures, BuildFeaturesResult, BackfillResult } from '../actions/buildFeaturesDaily';
 import { getLatestOtbDate } from '../actions/getActiveHotelData';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 
 export function BuildFeaturesButton() {
+    const t = useTranslations('dataPage');
     const [isBuilding, setIsBuilding] = useState(false);
     const [result, setResult] = useState<BuildFeaturesResult | null>(null);
     const router = useRouter();
@@ -17,11 +19,11 @@ export function BuildFeaturesButton() {
             // v2: Use MAX(as_of_date) from daily_otb — not booking_date!
             const { hotelId, latestAsOfDate } = await getLatestOtbDate();
             if (!hotelId) {
-                setResult({ success: false, message: 'Chưa chọn hotel' });
+                setResult({ success: false, message: t('noHotel') });
                 return;
             }
             if (!latestAsOfDate) {
-                setResult({ success: false, message: '⚠️ Chưa có OTB snapshot. Vui lòng Build OTB trước!' });
+                setResult({ success: false, message: t('noOtbSnapshot') });
                 return;
             }
 
@@ -75,7 +77,7 @@ export function BuildFeaturesButton() {
             {result && (
                 <span className={`text-sm font-medium ${result.success ? 'text-emerald-600' : 'text-red-600'}`}>
                     {result.success
-                        ? `✓ ${result.message || `Đã tạo ${result.rowsBuilt} features`}`
+                        ? `✓ ${result.message || t('createdFeatures', { n: result.rowsBuilt })}`
                         : `✗ ${result.message}`}
                 </span>
             )}
@@ -94,12 +96,13 @@ export function BuildFeaturesButton() {
  * Backfill button for historical data
  */
 export function BackfillFeaturesButton() {
+    const t = useTranslations('dataPage');
     const [isRunning, setIsRunning] = useState(false);
     const [result, setResult] = useState<BackfillResult | null>(null);
     const router = useRouter();
 
     const handleBackfill = async () => {
-        if (!confirm('Backfill sẽ xử lý tất cả as_of_dates. Có thể mất vài phút. Tiếp tục?')) {
+        if (!confirm(t('backfillConfirm'))) {
             return;
         }
 
@@ -108,7 +111,7 @@ export function BackfillFeaturesButton() {
         try {
             const { hotelId } = await getLatestOtbDate();
             if (!hotelId) {
-                setResult({ success: false, totalProcessed: 0, totalChunks: 0, message: 'Không tìm thấy hotel' });
+                setResult({ success: false, totalProcessed: 0, totalChunks: 0, message: t('noHotelFound') });
                 return;
             }
 

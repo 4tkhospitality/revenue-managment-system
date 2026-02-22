@@ -91,7 +91,7 @@ export async function checkTrialBonus(hotelId: string): Promise<TrialProgress> {
     const conditions: TrialCondition[] = [
         {
             name: 'import_success',
-            label: 'Import dữ liệu',
+            label: 'Import data',
             met: importCount >= 1,
             current: Math.min(importCount, 1),
             target: 1,

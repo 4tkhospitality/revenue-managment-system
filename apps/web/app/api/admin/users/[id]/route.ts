@@ -39,6 +39,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
                 name: user.name,
                 image: user.image,
                 role: user.role,
+                country: user.country,
                 isActive: user.is_active,
                 createdAt: user.created_at,
                 hotels: user.hotel_users.map(hu => ({
@@ -65,13 +66,19 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
         const { id } = await params
         const body = await request.json()
-        const { name, phone, role, isActive } = body
+        const { name, phone, role, isActive, country } = body
 
         const updateData: Record<string, unknown> = {}
         if (name !== undefined) updateData.name = name
         if (phone !== undefined) updateData.phone = phone
         if (role !== undefined) updateData.role = role
         if (isActive !== undefined) updateData.is_active = isActive
+        if (country !== undefined) {
+            // null clears, valid 2-letter code sets, invalid is ignored
+            updateData.country = country === null ? null
+                : (typeof country === 'string' && /^[A-Z]{2}$/.test(country)) ? country
+                    : undefined
+        }
 
         const user = await prisma.user.update({
             where: { id },
@@ -91,6 +98,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
                 email: user.email,
                 name: user.name,
                 role: user.role,
+                country: user.country,
                 isActive: user.is_active,
                 hotels: user.hotel_users.map(hu => ({
                     hotelId: hu.hotel_id,

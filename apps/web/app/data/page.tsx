@@ -12,6 +12,7 @@ import { DataValidationBadge } from './DataValidationBadge';
 import { getReservationStats30 } from '../../lib/cachedStats';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { DataTierGate } from './DataTierGate';
+import { getTranslations } from 'next-intl/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -134,6 +135,7 @@ async function fetchDataInspectorData() {
 
 export default async function DataInspectorPage() {
     const pageStart = Date.now();
+    const t = await getTranslations('dataPage');
 
     // Fetch all data in parallel
     const {
@@ -190,21 +192,21 @@ export default async function DataInspectorPage() {
             <div className="mx-auto max-w-[1400px] px-4 sm:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
                 {/* Header */}
                 <PageHeader
-                    title="Data Inspector"
-                    subtitle="Xem dữ liệu đã import và trạng thái hệ thống"
+                    title={t('pageTitle')}
+                    subtitle={t('pageSubtitle')}
                     badges={[
                         {
-                            label: 'Reservations',
+                            label: t('badgeReservations'),
                             value: totalReservations.toLocaleString(),
                             variant: 'info',
                         },
                         {
-                            label: 'Import Jobs',
+                            label: t('badgeImportJobs'),
                             value: totalJobs.toString(),
                             variant: 'neutral',
                         },
                         {
-                            label: 'OTB Days',
+                            label: t('badgeOtbDays'),
                             value: totalOtbDays.toString(),
                             variant: 'success',
                         },
@@ -230,19 +232,19 @@ export default async function DataInspectorPage() {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                     <div className="bg-white border border-gray-200 rounded-xl p-3 sm:p-4 shadow-sm">
                         <div className="text-2xl sm:text-3xl font-bold text-blue-600">{totalReservations}</div>
-                        <div className="text-sm text-gray-500">Tổng Reservations</div>
+                        <div className="text-sm text-gray-500">{t('totalReservations')}</div>
                     </div>
                     <div className="bg-white border border-gray-200 rounded-xl p-3 sm:p-4 shadow-sm">
                         <div className="text-2xl sm:text-3xl font-bold text-emerald-600">{totalJobs}</div>
-                        <div className="text-xs sm:text-sm text-gray-500">Import Jobs</div>
+                        <div className="text-xs sm:text-sm text-gray-500">{t('importJobsLabel')}</div>
                     </div>
                     <div className="bg-white border border-gray-200 rounded-xl p-3 sm:p-4 shadow-sm">
                         <div className="text-2xl sm:text-3xl font-bold text-amber-600">{totalOtbDays}</div>
-                        <div className="text-xs sm:text-sm text-gray-500">OTB Days</div>
+                        <div className="text-xs sm:text-sm text-gray-500">{t('otbDaysLabel')}</div>
                     </div>
                     {/* Data Freshness Card */}
                     <div className="bg-white border border-emerald-300 rounded-xl p-3 sm:p-4 shadow-sm">
-                        <div className="text-xs sm:text-sm text-gray-500 mb-1">Data Range</div>
+                        <div className="text-xs sm:text-sm text-gray-500 mb-1">{t('dataRangeLabel')}</div>
                         <div className="text-lg font-bold text-emerald-600">
                             {latestBookingDate
                                 ? DateUtils.format(latestBookingDate, 'dd/MM/yyyy')
@@ -250,8 +252,8 @@ export default async function DataInspectorPage() {
                         </div>
                         <div className="text-xs text-gray-400 mt-1">
                             {earliestBookingDate && latestBookingDate
-                                ? `Từ ${DateUtils.format(earliestBookingDate, 'dd/MM/yy')} → ${DateUtils.format(latestBookingDate, 'dd/MM/yy')}`
-                                : 'Chưa có dữ liệu'}
+                                ? t('fromTo', { from: DateUtils.format(earliestBookingDate, 'dd/MM/yy'), to: DateUtils.format(latestBookingDate, 'dd/MM/yy') })
+                                : t('noData')}
                         </div>
                     </div>
                 </div>
@@ -274,8 +276,8 @@ export default async function DataInspectorPage() {
                     {/* Recent Reservations */}
                     <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
                         <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-                            <h2 className="text-lg font-semibold text-gray-900">🏨 Đặt phòng gần đây</h2>
-                            <span className="text-xs text-gray-500">Thống kê 7 ngày gần nhất · 10 bản ghi mới nhất bên dưới</span>
+                            <h2 className="text-lg font-semibold text-gray-900">🏨 {t('recentBookings')}</h2>
+                            <span className="text-xs text-gray-500">{t('recentBookingsDesc')}</span>
                         </div>
 
                         {/* Summary Stats (last 30 days) */}
@@ -286,30 +288,30 @@ export default async function DataInspectorPage() {
                                         <div className="text-2xl font-bold text-blue-600">
                                             {reservationStats.count}
                                         </div>
-                                        <div className="text-xs text-gray-500">Lượt đặt (7 ngày)</div>
+                                        <div className="text-xs text-gray-500">{t('bookings7d')}</div>
                                     </div>
                                     <div className="text-center">
                                         <div className="text-2xl font-bold text-emerald-600">
                                             {reservationStats.rooms.toLocaleString()}
                                         </div>
-                                        <div className="text-xs text-gray-500">Room-nights</div>
+                                        <div className="text-xs text-gray-500">{t('roomNights')}</div>
                                     </div>
                                     <div className="text-center">
                                         <div className="text-2xl font-bold text-amber-600">
                                             {(reservationStats.revenue / 1000000).toFixed(1)}M
                                         </div>
-                                        <div className="text-xs text-gray-500">Doanh thu (7 ngày)</div>
+                                        <div className="text-xs text-gray-500">{t('revenue7d')}</div>
                                     </div>
                                 </div>
 
                                 {/* Top 3 Agents by Company Name */}
                                 {reservationStats.topAgents.length > 0 && (
                                     <div className="p-3 border-b border-gray-100">
-                                        <h3 className="text-xs font-medium text-gray-700 mb-2">🏆 Top 3 đại lý đặt phòng</h3>
+                                        <h3 className="text-xs font-medium text-gray-700 mb-2">🏆 {t('top3Agents')}</h3>
                                         <div className="flex flex-wrap gap-2">
                                             {reservationStats.topAgents.map((agent, idx) => (
                                                 <div key={idx} className="px-2 py-1 bg-blue-50 rounded text-xs">
-                                                    <span className="text-gray-600">{agent.company_name || 'Trực tiếp'}</span>
+                                                    <span className="text-gray-600">{agent.company_name || t('direct')}</span>
                                                     <span className="text-blue-600 font-medium ml-1">
                                                         {(agent.revenue / 1000000).toFixed(1)}M
                                                     </span>
@@ -325,12 +327,12 @@ export default async function DataInspectorPage() {
                             <table className="w-full text-sm">
                                 <thead className="bg-gray-50 sticky top-0">
                                     <tr>
-                                        <th className="px-3 py-2 text-left text-gray-600 font-medium">Mã ĐP</th>
-                                        <th className="px-3 py-2 text-left text-gray-600 font-medium">Ngày đặt</th>
-                                        <th className="px-3 py-2 text-left text-gray-600 font-medium">Đến</th>
-                                        <th className="px-3 py-2 text-right text-gray-600 font-medium">Phòng</th>
-                                        <th className="px-3 py-2 text-right text-gray-600 font-medium">DT</th>
-                                        <th className="px-3 py-2 text-left text-gray-600 font-medium">TT</th>
+                                        <th className="px-3 py-2 text-left text-gray-600 font-medium">{t('resId')}</th>
+                                        <th className="px-3 py-2 text-left text-gray-600 font-medium">{t('bookingDate')}</th>
+                                        <th className="px-3 py-2 text-left text-gray-600 font-medium">{t('arrival')}</th>
+                                        <th className="px-3 py-2 text-right text-gray-600 font-medium">{t('rooms')}</th>
+                                        <th className="px-3 py-2 text-right text-gray-600 font-medium">{t('revenue')}</th>
+                                        <th className="px-3 py-2 text-left text-gray-600 font-medium">{t('status')}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -363,7 +365,7 @@ export default async function DataInspectorPage() {
                                     {recentReservations.length === 0 && (
                                         <tr>
                                             <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
-                                                Chưa có reservations nào
+                                                {t('noReservations')}
                                             </td>
                                         </tr>
                                     )}
@@ -379,18 +381,18 @@ export default async function DataInspectorPage() {
                 {/* Reservations by Booking Date */}
                 <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
                     <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-                        <h2 className="text-lg font-semibold text-gray-900">📅 Reservations theo Ngày đặt</h2>
-                        <span className="text-xs text-gray-500">10 ngày gần nhất</span>
+                        <h2 className="text-lg font-semibold text-gray-900">📅 {t('resByBookingDate')}</h2>
+                        <span className="text-xs text-gray-500">{t('last10days')}</span>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead className="bg-gray-50">
                                 <tr>
-                                    <th className="px-4 py-2 text-left text-gray-600 font-medium">Ngày đặt</th>
-                                    <th className="px-4 py-2 text-left text-gray-600 font-medium">Trạng thái</th>
-                                    <th className="px-4 py-2 text-right text-gray-600 font-medium">Số lượng</th>
-                                    <th className="px-4 py-2 text-right text-gray-600 font-medium">Phòng</th>
-                                    <th className="px-4 py-2 text-right text-gray-600 font-medium">Doanh thu</th>
+                                    <th className="px-4 py-2 text-left text-gray-600 font-medium">{t('bookDate')}</th>
+                                    <th className="px-4 py-2 text-left text-gray-600 font-medium">{t('statusCol')}</th>
+                                    <th className="px-4 py-2 text-right text-gray-600 font-medium">{t('count')}</th>
+                                    <th className="px-4 py-2 text-right text-gray-600 font-medium">{t('rooms')}</th>
+                                    <th className="px-4 py-2 text-right text-gray-600 font-medium">{t('revenueCol')}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -403,7 +405,7 @@ export default async function DataInspectorPage() {
                                             <span className={`px-2 py-0.5 rounded text-xs font-medium ${stat.status === 'booked' ? 'bg-emerald-100 text-emerald-700' :
                                                 'bg-rose-100 text-rose-700'
                                                 }`}>
-                                                {stat.status === 'booked' ? 'Đã đặt' : 'Đã huỷ'}
+                                                {stat.status === 'booked' ? t('booked') : t('cancelled')}
                                             </span>
                                         </td>
                                         <td className="px-4 py-2 text-gray-900 text-right">
@@ -420,7 +422,7 @@ export default async function DataInspectorPage() {
                                 {reservationsByDate.length === 0 && (
                                     <tr>
                                         <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
-                                            Chưa có reservations nào
+                                            {t('noReservations')}
                                         </td>
                                     </tr>
                                 )}
@@ -432,17 +434,17 @@ export default async function DataInspectorPage() {
                 {/* Cancellations by Cancel Date */}
                 <div className="bg-white border border-rose-200 rounded-xl overflow-hidden shadow-sm">
                     <div className="px-4 py-3 border-b border-rose-200 bg-rose-50">
-                        <h2 className="text-lg font-semibold text-rose-700">📅 Cancellations theo Ngày hủy</h2>
-                        <span className="text-xs text-gray-500">10 ngày gần nhất</span>
+                        <h2 className="text-lg font-semibold text-rose-700">📅 {t('cancelByDate')}</h2>
+                        <span className="text-xs text-gray-500">{t('last10days')}</span>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead className="bg-gray-50">
                                 <tr>
-                                    <th className="px-4 py-2 text-left text-gray-600 font-medium">Ngày hủy</th>
-                                    <th className="px-4 py-2 text-right text-gray-600 font-medium">Số lượng</th>
-                                    <th className="px-4 py-2 text-right text-gray-600 font-medium">Đêm</th>
-                                    <th className="px-4 py-2 text-right text-gray-600 font-medium">Doanh thu mất</th>
+                                    <th className="px-4 py-2 text-left text-gray-600 font-medium">{t('cancelDate')}</th>
+                                    <th className="px-4 py-2 text-right text-gray-600 font-medium">{t('count')}</th>
+                                    <th className="px-4 py-2 text-right text-gray-600 font-medium">{t('nights')}</th>
+                                    <th className="px-4 py-2 text-right text-gray-600 font-medium">{t('lostRevenue')}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -465,7 +467,7 @@ export default async function DataInspectorPage() {
                                 {cancellationsByDate.length === 0 && (
                                     <tr>
                                         <td colSpan={4} className="px-4 py-8 text-center text-gray-400">
-                                            Chưa có dữ liệu huỷ phòng
+                                            {t('noCancelData')}
                                         </td>
                                     </tr>
                                 )}
@@ -478,22 +480,22 @@ export default async function DataInspectorPage() {
                 <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
                     <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                            <h2 className="text-lg font-semibold text-gray-900">📈 Daily OTB (On The Books)</h2>
+                            <h2 className="text-lg font-semibold text-gray-900">📈 {t('dailyOtbTitle')}</h2>
                             <BuildOtbButton />
                         </div>
                         <span className="text-xs text-gray-400">
-                            {totalOtbDays === 0 ? 'Chưa build OTB' : `${totalOtbDays} ngày`}
+                            {totalOtbDays === 0 ? t('notBuilt') : t('daysCount', { n: totalOtbDays })}
                         </span>
                     </div>
                     <div className="overflow-x-auto max-h-64">
                         <table className="w-full text-sm">
                             <thead className="bg-gray-50 sticky top-0">
                                 <tr>
-                                    <th className="px-4 py-2 text-left text-gray-600 font-medium">Ngày ở</th>
-                                    <th className="px-4 py-2 text-right text-gray-600 font-medium">Phòng OTB</th>
-                                    <th className="px-4 py-2 text-right text-gray-600 font-medium">Doanh thu OTB</th>
-                                    <th className="px-4 py-2 text-right text-gray-600 font-medium">ADR</th>
-                                    <th className="px-4 py-2 text-left text-gray-600 font-medium">Tính đến</th>
+                                    <th className="px-4 py-2 text-left text-gray-600 font-medium">{t('stayDate')}</th>
+                                    <th className="px-4 py-2 text-right text-gray-600 font-medium">{t('roomsOtb')}</th>
+                                    <th className="px-4 py-2 text-right text-gray-600 font-medium">{t('revenueOtb')}</th>
+                                    <th className="px-4 py-2 text-right text-gray-600 font-medium">{t('adr')}</th>
+                                    <th className="px-4 py-2 text-left text-gray-600 font-medium">{t('asOf')}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -521,7 +523,7 @@ export default async function DataInspectorPage() {
                                 {dailyOtb.length === 0 && (
                                     <tr>
                                         <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
-                                            Chưa có OTB data. Cần chạy &quot;Build OTB&quot; sau khi import reservations.
+                                            {t('noOtbData')}
                                         </td>
                                     </tr>
                                 )}

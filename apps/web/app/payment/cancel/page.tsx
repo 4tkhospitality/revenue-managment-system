@@ -14,16 +14,16 @@ export default function PaymentCancelPage() {
             <div className="text-center max-w-md mx-4">
                 <XCircle className="w-16 h-16 text-orange-500 mx-auto mb-6" />
                 <h1 className="text-2xl font-bold text-gray-900 mb-3">
-                    Thanh toán đã hủy
+                    Payment Cancelled
                 </h1>
                 <p className="text-gray-600 mb-8">
-                    Giao dịch chưa được hoàn tất. Bạn có thể thử lại bất cứ lúc nào.
+                    Transaction was not completed. You can try again at any time.
                 </p>
                 <Link
                     href="/pricing-plans"
                     className="inline-flex items-center gap-2 px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-900 rounded-xl font-medium transition-colors"
                 >
-                    <ArrowLeft className="w-4 h-4" /> Quay lại bảng giá
+                    <ArrowLeft className="w-4 h-4" /> Go Back pricing
                 </Link>
             </div>
         </div>

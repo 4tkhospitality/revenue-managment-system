@@ -41,7 +41,7 @@ export async function clearImportHistory(hotelId: string) {
 
         return {
             success: true,
-            message: `Đã xóa: ${deletedReservations.count} reservations, ${deletedCancellations.count} cancellations, ${deletedJobs.count} jobs`,
+            message: `Deleted: ${deletedReservations.count} reservations, ${deletedCancellations.count} cancellations, ${deletedJobs.count} jobs`,
             deleted: {
                 reservations: deletedReservations.count,
                 cancellations: deletedCancellations.count,
@@ -52,7 +52,7 @@ export async function clearImportHistory(hotelId: string) {
         console.error('[clearImportHistory] Error:', error);
         return {
             success: false,
-            message: error instanceof Error ? error.message : 'Lỗi không xác định'
+            message: error instanceof Error ? error.message : 'Unknown error'
         };
     }
 }

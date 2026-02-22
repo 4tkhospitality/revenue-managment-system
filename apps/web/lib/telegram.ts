@@ -45,11 +45,11 @@ export async function sendTelegramMessage(text: string): Promise<void> {
 export async function notifyNewUser(email: string, name: string | null): Promise<void> {
     const now = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
     const msg = [
-        '👤 <b>User mới đăng ký!</b>',
+        '👤 <b>New user signed up!</b>',
         '',
         `📧 Email: <code>${email}</code>`,
-        `👋 Tên: ${name || 'N/A'}`,
-        `🕐 Thời gian: ${now}`,
+        `👋 Name: ${name || 'N/A'}`,
+        `🕐 Time: ${now}`,
     ].join('\n');
 
     await sendTelegramMessage(msg);
@@ -73,15 +73,15 @@ export async function notifyPaymentConfirmed(params: {
         : `$${params.amount.toFixed(2)}`;
 
     const msg = [
-        '💰 <b>Thanh toán thành công!</b>',
+        '💰 <b>Payment successful!</b>',
         '',
         `📧 User: <code>${params.email || 'N/A'}</code>`,
-        `📦 Gói: <b>${params.tier}</b>`,
-        `💵 Số tiền: <b>${amountStr}</b>`,
-        `🏦 Cổng: ${params.gateway}`,
-        `🔖 Mã đơn: <code>${params.orderId}</code>`,
-        `✅ Xác nhận qua: ${params.confirmedVia}`,
-        `🕐 Thời gian: ${now}`,
+        `📦 Plan: <b>${params.tier}</b>`,
+        `💵 Amount: <b>${amountStr}</b>`,
+        `🏦 Gateway: ${params.gateway}`,
+        `🔖 Order: <code>${params.orderId}</code>`,
+        `✅ Confirmed via: ${params.confirmedVia}`,
+        `🕐 Time: ${now}`,
     ].join('\n');
 
     await sendTelegramMessage(msg);
@@ -95,19 +95,32 @@ export async function notifyUserLogin(params: {
     name: string | null;
     isNew: boolean;
     hotels?: string[];
+    country?: string | null;
 }): Promise<void> {
     const now = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
     const icon = params.isNew ? '🆕' : '🔑';
-    const label = params.isNew ? 'User MỚI đăng nhập' : 'User đăng nhập';
+    const label = params.isNew ? 'NEW user login' : 'User login';
     const hotelList = params.hotels?.length
         ? params.hotels.join(', ')
-        : 'Chưa có hotel';
+        : 'No hotel yet';
+
+    // Country display (flag + name or 'Unknown')
+    let countryDisplay = 'Unknown';
+    if (params.country) {
+        try {
+            const { getCountryDisplay } = await import('@/lib/constants/countries');
+            countryDisplay = getCountryDisplay(params.country);
+        } catch {
+            countryDisplay = params.country;
+        }
+    }
 
     const msg = [
         `${icon} <b>${label}</b>`,
         '',
         `📧 Email: <code>${params.email}</code>`,
-        `👋 Tên: ${params.name || 'N/A'}`,
+        `👋 Name: ${params.name || 'N/A'}`,
+        `🌍 Country: ${countryDisplay}`,
         `🏨 Hotels: ${hotelList}`,
         `🕐 ${now}`,
     ].join('\n');

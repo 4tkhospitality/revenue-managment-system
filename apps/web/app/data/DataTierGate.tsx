@@ -4,8 +4,10 @@ import { ReactNode } from 'react';
 import { Database, Upload as UploadIcon, FileText, BarChart3 } from 'lucide-react';
 import { TierPaywall } from '@/components/paywall/TierPaywall';
 import { useTierAccess } from '@/hooks/useTierAccess';
+import { useTranslations } from 'next-intl';
 
 export function DataTierGate({ children }: { children: ReactNode }) {
+    const t = useTranslations('dataPage');
     const { hasAccess, loading } = useTierAccess('DELUXE');
 
     if (loading) {
@@ -13,7 +15,7 @@ export function DataTierGate({ children }: { children: ReactNode }) {
             <div className="mx-auto max-w-[1400px] px-4 sm:px-8 py-4 sm:py-6 flex items-center justify-center min-h-[400px]">
                 <div className="text-center">
                     <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-3"></div>
-                    <div className="text-slate-500">Đang tải...</div>
+                    <div className="text-slate-500">{t('loading')}</div>
                 </div>
             </div>
         );
@@ -23,14 +25,14 @@ export function DataTierGate({ children }: { children: ReactNode }) {
         return (
             <TierPaywall
                 title="Data Inspector"
-                subtitle="Xem dữ liệu đã import và trạng thái hệ thống"
+                subtitle={t('dataTierSubtitle')}
                 tierDisplayName="Deluxe"
                 colorScheme="blue"
                 features={[
-                    { icon: <Database className="w-4 h-4" />, label: 'Xem chi tiết reservations & OTB data' },
-                    { icon: <UploadIcon className="w-4 h-4" />, label: 'Theo dõi lịch sử import jobs' },
-                    { icon: <FileText className="w-4 h-4" />, label: 'Báo cáo cancellations theo ngày' },
-                    { icon: <BarChart3 className="w-4 h-4" />, label: 'Build OTB, Features & Forecast' },
+                    { icon: <Database className="w-4 h-4" />, label: t('dataTierFeat1') },
+                    { icon: <UploadIcon className="w-4 h-4" />, label: t('dataTierFeat2') },
+                    { icon: <FileText className="w-4 h-4" />, label: t('dataTierFeat3') },
+                    { icon: <BarChart3 className="w-4 h-4" />, label: t('dataTierFeat4') },
                 ]}
             />
         );

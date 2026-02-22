@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Loader2, Download, FileText } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -37,6 +38,7 @@ interface MatrixData {
 type CalcMode = 'net_to_bar' | 'bar_to_net';
 
 export default function OverviewTab() {
+    const t = useTranslations('overviewTab');
     const [data, setData] = useState<MatrixData | null>(null);
     const [loading, setLoading] = useState(true);
     const [recalculating, setRecalculating] = useState(false);
@@ -160,9 +162,9 @@ export default function OverviewTab() {
     // Export CSV
     const handleExport = () => {
         if (!data) return;
-        const headers = ['Hạng phòng', mode === 'bar_to_net' ? 'Giá hiển thị (nhập)' : 'Giá thu về (NET)'];
+        const headers = [t('thRoomType'), mode === 'bar_to_net' ? t('enterDisplayPrice') : t('netRevenueLabel')];
         data.channels.forEach(ch => {
-            headers.push(`${ch.name} - Thu về`, `${ch.name} - BAR`, `${ch.name} - Hiển thị`);
+            headers.push(`${ch.name} - Net Revenue`, `${ch.name} - BAR`, `${ch.name} - Display`);
         });
 
         const rows = data.roomTypes.map((rt) => {
@@ -201,7 +203,7 @@ export default function OverviewTab() {
         return (
             <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
-                <span className="ml-2 text-slate-600">Đang tính toán...</span>
+                <span className="ml-2 text-slate-600">{t('loading')}</span>
             </div>
         );
     }
@@ -232,7 +234,7 @@ export default function OverviewTab() {
             {/* ── Controls Bar ── */}
             <div className="bg-white border border-slate-200 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                    <span className="text-[13px] font-semibold text-slate-800">Chế độ:</span>
+                    <span className="text-[13px] font-semibold text-slate-800">{t('viewMode')}</span>
                     <div className="flex bg-slate-100 rounded-lg p-[3px]">
                         <button
                             onClick={() => handleModeChange('net_to_bar')}
@@ -242,7 +244,7 @@ export default function OverviewTab() {
                                 }`}
                         >
                             <span className={`w-[7px] h-[7px] rounded-full ${!isBarToNet ? 'bg-emerald-400' : 'bg-slate-400'}`} />
-                            Thu về → Hiển thị
+                            {t('netRevenue')} → {t('displayPrice')}
                         </button>
                         <button
                             onClick={() => handleModeChange('bar_to_net')}
@@ -252,13 +254,13 @@ export default function OverviewTab() {
                                 }`}
                         >
                             <span className={`w-[7px] h-[7px] rounded-full ${isBarToNet ? 'bg-amber-400' : 'bg-slate-400'}`} />
-                            Hiển thị → Thu về
+                            {t('displayPrice')} → {t('netRevenue')}
                         </button>
                     </div>
                     <span className="text-[11px] text-slate-400 italic border-l border-slate-200 pl-3">
                         {!isBarToNet
-                            ? 'Nhập giá Net → Tính ra giá BAR & Giá khách thấy'
-                            : 'Nhập giá khách thấy → Tính ra giá BAR & Thu về'
+                            ? t('subtitle')
+                            : t('subtitle')
                         }
                     </span>
                 </div>
@@ -266,7 +268,7 @@ export default function OverviewTab() {
                     {(loading || recalculating) && (
                         <div className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 border border-blue-200 rounded-lg">
                             <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
-                            <span className="text-[11px] font-semibold text-blue-600">Đang tính...</span>
+                            <span className="text-[11px] font-semibold text-blue-600">{t('calculating')}</span>
                         </div>
                     )}
                     {isBarToNet && (
@@ -275,7 +277,7 @@ export default function OverviewTab() {
                             disabled={!hasAnyPriceInput}
                             className="px-3 py-1.5 text-xs font-medium bg-[#1E3A8A] text-white rounded-lg hover:bg-[#204184] disabled:opacity-50"
                         >
-                            Tính lại
+                            {t('calculate')}
                         </button>
                     )}
                     {!isBarToNet && (
@@ -283,13 +285,13 @@ export default function OverviewTab() {
                             onClick={() => fetchMatrix(mode)}
                             className="px-3 py-1.5 text-xs font-medium border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50"
                         >
-                            Tính lại
+                            {t('calculate')}
                         </button>
                     )}
                     <button
                         onClick={handleExportPDF}
                         disabled={!data || isDemo}
-                        title={isDemo ? 'Tính năng này không khả dụng cho Demo Hotel' : 'Xuất PDF'}
+                        title={isDemo ? t('demoExportPdf') : t('exportPdf')}
                         className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 disabled:opacity-50 ${isDemo ? 'cursor-not-allowed' : ''}`}
                     >
                         <FileText className="w-3.5 h-3.5" />
@@ -298,7 +300,7 @@ export default function OverviewTab() {
                     <button
                         onClick={handleExport}
                         disabled={!data || isDemo}
-                        title={isDemo ? 'Tính năng này không khả dụng cho Demo Hotel' : 'Xuất CSV'}
+                        title={isDemo ? t('demoExportCsv') : t('exportCsv')}
                         className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-[#1E3A8A] text-white rounded-lg hover:bg-[#204184] disabled:opacity-50 ${isDemo ? 'cursor-not-allowed' : ''}`}
                     >
                         <Download className="w-3.5 h-3.5" />
@@ -309,31 +311,31 @@ export default function OverviewTab() {
 
             {/* ── Legend ── */}
             <div className="flex flex-wrap items-center gap-4 px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-[11px] text-slate-500">
-                <span className="font-semibold text-slate-700">Mỗi ô hiển thị:</span>
+                <span className="font-semibold text-slate-700">{t('eachCellShows')}</span>
                 {!isBarToNet ? (
                     <>
                         <span className="flex items-center gap-1.5">
                             <span className="w-2.5 h-2.5 rounded-sm" style={{ background: 'linear-gradient(135deg,#FFFBEB,#FCD34D)' }} />
-                            Giá khách thấy (Display)
+                            {t('guestPriceDisplay')}
                         </span>
                     </>
                 ) : (
                     <>
                         <span className="flex items-center gap-1.5">
                             <span className="w-2.5 h-2.5 rounded-sm" style={{ background: 'linear-gradient(135deg,#ECFDF5,#A7F3D0)' }} />
-                            Doanh thu thu về (Net)
+                            {t('netRevenueLabel')}
                         </span>
                     </>
                 )}
                 <span className="flex items-center gap-1.5">
                     <span className="w-2.5 h-2.5 rounded-sm bg-slate-200" />
-                    Giá BAR (nhập CM)
+                    {t('barPriceInput')}
                 </span>
                 <span className="ml-auto flex items-center gap-1.5">
-                    Tỷ lệ giữ lại:
-                    <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700">&gt;75%</span>
-                    <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700">50–75%</span>
-                    <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-50 text-rose-700">&lt;50%</span>
+                    {t('retentionRate')}
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700">{t('retHigh')}</span>
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700">{t('retMid')}</span>
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-50 text-rose-700">{t('retLow')}</span>
                 </span>
             </div>
 
@@ -351,13 +353,13 @@ export default function OverviewTab() {
                         <thead>
                             <tr className="bg-slate-50 border-b border-slate-200">
                                 <th className="px-3 py-2.5 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
-                                    Hạng phòng
+                                    {t('thRoomType')}
                                 </th>
                                 <th className="px-3 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide">
                                     {isBarToNet ? (
-                                        <span className="text-amber-600">Nhập giá hiển thị</span>
+                                        <span className="text-amber-600">{t('enterDisplayPrice')}</span>
                                     ) : (
-                                        <span className="text-emerald-600">Giá Net cơ sở</span>
+                                        <span className="text-emerald-600">{t('baseNetPrice')}</span>
                                     )}
                                 </th>
                                 {data.channels.map((ch) => (
@@ -392,12 +394,12 @@ export default function OverviewTab() {
                                                         placeholder={formatVND(rt.netPrice)}
                                                         className="w-full text-right text-[13px] font-semibold font-mono text-amber-700 px-2 py-1 border border-amber-300 rounded-md bg-amber-50 placeholder:text-amber-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/15 focus:outline-none"
                                                     />
-                                                    <div className="text-[9px] text-amber-600 font-medium mt-0.5 text-right">Khách thấy</div>
+                                                    <div className="text-[9px] text-amber-600 font-medium mt-0.5 text-right">{t('displayPrice')}</div>
                                                 </div>
                                             ) : (
                                                 <div>
                                                     <div className="text-[15px] font-bold font-mono text-emerald-600">{formatVND(rt.netPrice)}</div>
-                                                    <div className="text-[9px] text-emerald-500 font-medium">Thu về (Net)</div>
+                                                    <div className="text-[9px] text-emerald-500 font-medium">{t('netRevenue')}</div>
                                                 </div>
                                             )}
                                         </td>
@@ -411,7 +413,7 @@ export default function OverviewTab() {
                                                 return (
                                                     <td key={ch.id} className="px-2 py-2">
                                                         <div className="h-[60px] flex items-center justify-center border-2 border-dashed border-slate-200 rounded-lg text-[10px] text-slate-400 italic">
-                                                            Chưa nhập giá
+                                                            {t('noPriceSet')}
                                                         </div>
                                                     </td>
                                                 );
@@ -434,7 +436,7 @@ export default function OverviewTab() {
                                                             <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 backdrop-blur-[1px]">
                                                                 <div className="flex items-center gap-1 px-2 py-0.5 bg-blue-50 border border-blue-200 rounded-full">
                                                                     <Loader2 className="w-2.5 h-2.5 animate-spin text-blue-600" />
-                                                                    <span className="text-[8px] font-bold text-blue-600">Đang tính...</span>
+                                                                    <span className="text-[8px] font-bold text-blue-600">{t('calculating')}</span>
                                                                 </div>
                                                             </div>
                                                         )}
@@ -442,13 +444,13 @@ export default function OverviewTab() {
                                                         {!isBarToNet ? (
                                                             /* Net→Display mode: show Display price (orange) */
                                                             <div className="px-2 py-1.5 text-center" style={{ background: 'linear-gradient(135deg, #FFFBEB, #FEF3C7)' }}>
-                                                                <div className="text-[9px] font-bold uppercase tracking-wide text-amber-600">Khách thấy</div>
+                                                                <div className="text-[9px] font-bold uppercase tracking-wide text-amber-600">{t('guestSees')}</div>
                                                                 <div className="text-[14px] font-bold font-mono text-amber-700 leading-tight">{formatVND(cell.display)}</div>
                                                             </div>
                                                         ) : (
                                                             /* Display→Net mode: show Net revenue (green) */
                                                             <div className="px-2 py-1.5 text-center" style={{ background: 'linear-gradient(135deg, #ECFDF5, #D1FAE5)' }}>
-                                                                <div className="text-[9px] font-bold uppercase tracking-wide text-emerald-600">Thu về</div>
+                                                                <div className="text-[9px] font-bold uppercase tracking-wide text-emerald-600">{t('revenue')}</div>
                                                                 <div className="text-[14px] font-bold font-mono text-emerald-700 leading-tight">{formatVND(cell.net)}</div>
                                                             </div>
                                                         )}
@@ -477,8 +479,8 @@ export default function OverviewTab() {
             {/* Empty State */}
             {data && (data.roomTypes.length === 0 || data.channels.length === 0) && (
                 <div className="text-center py-12 text-slate-500 bg-white border border-slate-200 rounded-xl">
-                    <p>Chưa có đủ dữ liệu để hiển thị.</p>
-                    <p className="text-sm mt-2">Vui lòng thêm Hạng phòng và Kênh OTA trước.</p>
+                    <p>{t('noSetup')}</p>
+                    <p className="text-sm mt-2">{t('goToSetup')}</p>
                 </div>
             )}
 
@@ -488,15 +490,15 @@ export default function OverviewTab() {
                     className="fixed bg-slate-800 text-white text-xs px-3 py-2 rounded-lg shadow-lg z-50 max-w-xs pointer-events-none"
                     style={{ left: tooltipPos.x + 10, top: tooltipPos.y + 10 }}
                 >
-                    <div className="font-semibold mb-1">Chi tiết tính giá:</div>
+                    <div className="font-semibold mb-1">{t('clickToTrace')}</div>
                     {data.matrix[hoverCell].trace?.map((step, i) => (
                         <div key={i} className="text-slate-300">{step.description}</div>
-                    )) || <div>Không có chi tiết</div>}
+                    )) || <div>{t('noDetails')}</div>}
                     <div className="mt-1 pt-1 border-t border-slate-600 space-y-0.5">
-                        <div>BAR: {formatVND(data.matrix[hoverCell].bar)}đ</div>
-                        <div>Hiển thị: {formatVND(data.matrix[hoverCell].display)}đ (KM: -{data.matrix[hoverCell].totalDiscount.toFixed(1)}%)</div>
+                        <div>{t('tooltipBar')} {formatVND(data.matrix[hoverCell].bar)}₫</div>
+                        <div>{t('tooltipDisplay')} {formatVND(data.matrix[hoverCell].display)}₫ ({t('tooltipKm')} -{data.matrix[hoverCell].totalDiscount.toFixed(1)}%)</div>
                         <div className="text-emerald-300 font-medium">
-                            Thu về: {formatVND(data.matrix[hoverCell].net)}đ
+                            {t('tooltipRevenue')} {formatVND(data.matrix[hoverCell].net)}₫
                             ({data.matrix[hoverCell].bar > 0
                                 ? ((data.matrix[hoverCell].net / data.matrix[hoverCell].bar) * 100).toFixed(1)
                                 : '0'}%)

@@ -1,5 +1,7 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
+
 interface UsageMeterProps {
     label: string;
     used: number;
@@ -9,6 +11,7 @@ interface UsageMeterProps {
 }
 
 export function UsageMeter({ label, used, limit, showUpgrade, onUpgrade }: UsageMeterProps) {
+    const t = useTranslations('billing');
     const isUnlimited = limit === 0;
     const percentage = isUnlimited ? 0 : Math.min((used / limit) * 100, 100);
     const isNearLimit = !isUnlimited && percentage >= 80;
@@ -39,7 +42,7 @@ export function UsageMeter({ label, used, limit, showUpgrade, onUpgrade }: Usage
                     onClick={onUpgrade}
                     className="text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors"
                 >
-                    Nâng cấp để mở giới hạn →
+                    {t('upgradeToUnlock')}
                 </button>
             )}
         </div>

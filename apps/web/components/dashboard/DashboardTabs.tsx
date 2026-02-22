@@ -5,13 +5,14 @@ import { LayoutDashboard, BarChart3, DollarSign } from 'lucide-react';
 import Link from 'next/link';
 import { ReactNode, useCallback, useMemo } from 'react';
 import { DatePickerSnapshot } from '@/components/DatePickerSnapshot';
+import { useTranslations } from 'next-intl';
 
 // ── Types ──────────────────────────────────────────────────────────
 type TabId = 'overview' | 'analytics' | 'pricing';
 
 interface TabDef {
     id: TabId;
-    label: string;
+    labelKey: string;
     icon: typeof LayoutDashboard;
 }
 
@@ -35,9 +36,9 @@ interface DashboardTabsProps {
 
 // ── Tab definitions ────────────────────────────────────────────────
 const TABS: TabDef[] = [
-    { id: 'overview', label: 'Tổng quan', icon: LayoutDashboard },
-    { id: 'analytics', label: 'Phân tích', icon: BarChart3 },
-    { id: 'pricing', label: 'Giá đề xuất', icon: DollarSign },
+    { id: 'overview', labelKey: 'tabs.overview', icon: LayoutDashboard },
+    { id: 'analytics', labelKey: 'tabs.analytics', icon: BarChart3 },
+    { id: 'pricing', labelKey: 'tabs.pricing', icon: DollarSign },
 ];
 
 // ── Freshness logic ────────────────────────────────────────────────
@@ -76,6 +77,7 @@ export function DashboardTabs({
     dataStatus = [],
     currentAsOfDate,
 }: DashboardTabsProps) {
+    const t = useTranslations('dashboard');
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -134,7 +136,7 @@ export function DashboardTabs({
                                     `}
                                 >
                                     <Icon className="w-4 h-4" aria-hidden="true" />
-                                    {tab.label}
+                                    {t(tab.labelKey)}
 
                                     {tab.id === 'pricing' && pricingActionCount > 0 && (
                                         <span className={`
@@ -170,7 +172,7 @@ export function DashboardTabs({
                                 <Link
                                     key={item.label}
                                     href={item.href}
-                                    title={`${item.label}: ${item.date || 'Chưa có'} → Xem chi tiết`}
+                                    title={`${item.label}: ${item.date || 'None yet'} → View details`}
                                     className={`
                                         inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium
                                         border transition-all duration-150 hover:shadow-sm whitespace-nowrap
@@ -203,19 +205,19 @@ export function DashboardTabs({
             <div className="hidden pdf-show space-y-6">
                 <div key="pdf-overview">
                     <div className="pdf-section-header text-lg font-semibold text-slate-800 border-b border-slate-200 pb-2 mb-4">
-                        Tổng quan
+                        Overview
                     </div>
                     {overviewContent}
                 </div>
                 <div key="pdf-analytics">
                     <div className="pdf-section-header text-lg font-semibold text-slate-800 border-b border-slate-200 pb-2 mb-4 mt-8">
-                        Chi tiết
+                        Detailed
                     </div>
                     {analyticsContent}
                 </div>
                 <div key="pdf-pricing">
                     <div className="pdf-section-header text-lg font-semibold text-slate-800 border-b border-slate-200 pb-2 mb-4 mt-8">
-                        Giá đề xuất
+                        Recommended Price
                     </div>
                     {pricingContent}
                 </div>

@@ -3,6 +3,7 @@
 import { ArrowUpDown, Flame, AlertTriangle, BedDouble, TrendingUp, TrendingDown, BarChart3, DollarSign, Info } from 'lucide-react';
 import type { AnalyticsKpi, ViewMode } from './types';
 import { formatRevenue } from './types';
+import { useTranslations } from 'next-intl';
 
 // ── Compact KPI Strip ────────────────────────────────
 // One thin horizontal bar: metric chips + DOD inline
@@ -34,6 +35,7 @@ export function AnalyticsKpiRow({
     viewMode: ViewMode;
     avgAdr: number | null;
 }) {
+    const t = useTranslations('analyticsTab');
     const occColor = (v: number) => v > 80 ? '#10b981' : v > 60 ? '#f59e0b' : '#ef4444';
     const paceColor = (v: number | null) => v != null ? (v >= 0 ? '#10b981' : '#ef4444') : '#94a3b8';
 
@@ -52,33 +54,33 @@ export function AnalyticsKpiRow({
         <div className="bg-white border border-slate-200 rounded-xl shadow-sm">
             <div className="flex flex-wrap items-center divide-x divide-slate-100">
                 {/* Core KPIs */}
-                <KpiChip label="Occ 7d" value={`${kpi.occ7}%`} color={occColor(kpi.occ7)} icon={BedDouble} />
-                <KpiChip label="Occ 14d" value={`${kpi.occ14}%`} color={occColor(kpi.occ14)} icon={BedDouble} />
-                <KpiChip label="Occ 30d" value={`${kpi.occ30}%`} color={occColor(kpi.occ30)} icon={BedDouble} />
+                <KpiChip label={t('occ7d')} value={`${kpi.occ7}%`} color={occColor(kpi.occ7)} icon={BedDouble} />
+                <KpiChip label={t('occ14d')} value={`${kpi.occ14}%`} color={occColor(kpi.occ14)} icon={BedDouble} />
+                <KpiChip label={t('occ30d')} value={`${kpi.occ30}%`} color={occColor(kpi.occ30)} icon={BedDouble} />
 
                 {/* Divider accent */}
                 <div className="hidden sm:block w-px h-6 bg-slate-200 mx-1" />
 
                 <KpiChip
-                    label="Pace 7d"
+                    label={t('pace7d')}
                     value={formatPace(kpi.pace7)}
                     color={paceColor(kpi.pace7)}
                     icon={kpi.pace7 != null && kpi.pace7 >= 0 ? TrendingUp : TrendingDown}
                 />
                 <KpiChip
-                    label="Pace 30d"
+                    label={t('pace30d')}
                     value={formatPace(kpi.pace30)}
                     color={paceColor(kpi.pace30)}
                     icon={kpi.pace30 != null && kpi.pace30 >= 0 ? TrendingUp : TrendingDown}
                 />
                 <KpiChip
-                    label="Pickup 7d"
+                    label={t('pickup7d')}
                     value={`${kpi.totalPickup7d > 0 ? '+' : ''}${kpi.totalPickup7d}`}
                     color={kpi.totalPickup7d >= 0 ? '#10b981' : '#ef4444'}
                     icon={BarChart3}
                 />
                 <KpiChip
-                    label="ADR"
+                    label={t('adr')}
                     value={avgAdr != null ? formatRevenue(avgAdr) : 'N/A'}
                     color={avgAdr != null ? '#3b82f6' : '#94a3b8'}
                     icon={DollarSign}
@@ -96,11 +98,11 @@ export function AnalyticsKpiRow({
                             : 'text-slate-500'
                     }`}>
                     <ArrowUpDown className="w-3 h-3 shrink-0" />
-                    <span className="whitespace-nowrap">vs qua:</span>
+                    <span className="whitespace-nowrap">{t('vsYesterday')}</span>
                     {hasDOD ? (
                         <span className="font-bold tabular-nums whitespace-nowrap">
                             {dodVal > 0 ? '+' : ''}{viewMode === 'revenue' ? formatRevenue(dodVal) : dodVal}
-                            {viewMode === 'rooms' ? ' rms' : ''}
+                            {viewMode === 'rooms' ? ` ${t('rms')}` : ''}
                         </span>
                     ) : (
                         <span className="italic">—</span>

@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { Plus, Search, Trash2, Loader2, RefreshCw, Building2, ExternalLink, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 // ──────────────────────────────────────────────────
 // Types
@@ -29,6 +30,7 @@ interface SearchSuggestion {
 // ──────────────────────────────────────────────────
 
 export default function CompetitorManagementPage() {
+    const t = useTranslations('rateShopper');
     // State
     const [competitors, setCompetitors] = useState<Competitor[]>([]);
     const [loading, setLoading] = useState(true);
@@ -51,7 +53,7 @@ export default function CompetitorManagementPage() {
             const json = await res.json();
             setCompetitors(json.data || []);
         } catch {
-            showNotification('error', 'Không thể tải danh sách đối thủ');
+            showNotification('error', t('cannotLoadCompetitors'));
         } finally {
             setLoading(false);
         }
@@ -74,10 +76,10 @@ export default function CompetitorManagementPage() {
             setSuggestions(json.data || []);
             setSearchFromCache(json.fromCache === true);
             if ((json.data || []).length === 0) {
-                showNotification('error', 'Không tìm thấy khách sạn nào');
+                showNotification('error', t('noHotelsFound'));
             }
         } catch {
-            showNotification('error', 'Lỗi tìm kiếm. Kiểm tra SERPAPI_API_KEY trong .env');
+            showNotification('error', t('searchError'));
         } finally {
             setSearching(false);
         }
@@ -102,11 +104,11 @@ export default function CompetitorManagementPage() {
                 const json = await res.json();
                 throw new Error(json.error || 'Failed to add');
             }
-            showNotification('success', `Đã thêm "${suggestion.name}"`);
+            showNotification('success', t('addedCompetitor', { name: suggestion.name }));
             setSuggestions(prev => prev.filter(s => s.property_token !== suggestion.property_token));
             await fetchCompetitors();
         } catch (err) {
-            showNotification('error', err instanceof Error ? err.message : 'Không thể thêm đối thủ');
+            showNotification('error', err instanceof Error ? err.message : t('cannotAddCompetitor'));
         } finally {
             setAdding(null);
         }
@@ -116,17 +118,17 @@ export default function CompetitorManagementPage() {
     // Remove competitor (soft delete)
     // ──────────────────────────────────────────────────
     const handleRemove = useCallback(async (competitor: Competitor) => {
-        if (!confirm(`Xóa "${competitor.name}" khỏi danh sách đối thủ?`)) return;
+        if (!confirm(t('confirmRemoveCompetitor', { name: competitor.name }))) return;
         try {
             setRemoving(competitor.id);
             const res = await fetch(`/api/rate-shopper/competitors/${competitor.id}`, {
                 method: 'DELETE',
             });
             if (!res.ok) throw new Error('Failed to remove');
-            showNotification('success', `Đã xóa "${competitor.name}"`);
+            showNotification('success', t('removedCompetitor', { name: competitor.name }));
             await fetchCompetitors();
         } catch {
-            showNotification('error', 'Không thể xóa đối thủ');
+            showNotification('error', t('cannotRemoveCompetitor'));
         } finally {
             setRemoving(null);
         }
@@ -149,8 +151,8 @@ export default function CompetitorManagementPage() {
             >
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                        <h1 className="text-lg font-semibold">Quản lý đối thủ</h1>
-                        <p className="text-white/70 text-sm">Thêm các khách sạn đối thủ để so sánh giá tự động hàng ngày</p>
+                        <h1 className="text-lg font-semibold">{t('manageCompetitorsTitle')}</h1>
+                        <p className="text-white/70 text-sm">{t('manageCompetitorsSubtitle')}</p>
                     </div>
                 </div>
             </header>
@@ -184,7 +186,7 @@ export default function CompetitorManagementPage() {
             }}>
                 <h2 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#334155', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
                     <Search size={20} />
-                    Tìm kiếm khách sạn đối thủ
+                    {t('searchCompetitors')}
                 </h2>
 
                 <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
@@ -193,7 +195,7 @@ export default function CompetitorManagementPage() {
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                        placeholder="Nhập tên khách sạn (VD: Vinpearl Phú Quốc, Pullman Saigon...)"
+                        placeholder={t('searchPlaceholder')}
                         style={{
                             flex: 1, padding: '12px 16px', borderRadius: 10,
                             border: '1px solid #d1d5db', fontSize: '0.95rem',
@@ -215,7 +217,7 @@ export default function CompetitorManagementPage() {
                         }}
                     >
                         {searching ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />}
-                        Tìm
+                        Search
                     </button>
                 </div>
 
@@ -224,7 +226,7 @@ export default function CompetitorManagementPage() {
                     <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 16 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                             <p style={{ fontSize: '0.85rem', color: '#64748b', margin: 0 }}>
-                                Tìm thấy {suggestions.length} kết quả. Click &quot;Thêm&quot; để thêm vào danh sách đối thủ.
+                                {t('foundResults', { count: suggestions.length })}
                             </p>
                             <span style={{
                                 padding: '2px 8px', borderRadius: 6, fontSize: '0.7rem', fontWeight: 600,
@@ -285,9 +287,9 @@ export default function CompetitorManagementPage() {
                                             {adding === s.property_token ? (
                                                 <Loader2 size={14} className="animate-spin" />
                                             ) : alreadyAdded ? (
-                                                <>✓ Đã thêm</>
+                                                <>✓ {t('alreadyAdded')}</>
                                             ) : (
-                                                <><Plus size={14} /> Thêm</>
+                                                <><Plus size={14} /> {t('addBtn')}</>
                                             )}
                                         </button>
                                     </div>
@@ -309,7 +311,7 @@ export default function CompetitorManagementPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                     <h2 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', gap: 8 }}>
                         <Building2 size={20} />
-                        Đối thủ đang theo dõi
+                        {t('trackedCompetitors')}
                         {competitors.length > 0 && (
                             <span style={{
                                 padding: '2px 10px', borderRadius: 12,
@@ -332,7 +334,7 @@ export default function CompetitorManagementPage() {
                         }}
                     >
                         <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-                        Làm mới
+                        {t('refresh')}
                     </button>
                 </div>
 
@@ -347,10 +349,10 @@ export default function CompetitorManagementPage() {
                     }}>
                         <Building2 size={48} style={{ margin: '0 auto 16px', opacity: 0.4 }} />
                         <p style={{ fontSize: '1rem', fontWeight: 600, color: '#64748b', marginBottom: 8 }}>
-                            Chưa có đối thủ nào
+                            {t('noCompetitorsYet')}
                         </p>
                         <p style={{ fontSize: '0.9rem' }}>
-                            Sử dụng ô tìm kiếm ở trên để tìm và thêm khách sạn đối thủ.
+                            {t('useSearchToAdd')}
                         </p>
                     </div>
                 ) : (
@@ -388,7 +390,7 @@ export default function CompetitorManagementPage() {
                                             Tier {c.tier}
                                         </span>
                                         <span>•</span>
-                                        <span>Thêm {new Date(c.created_at).toLocaleDateString('vi-VN')}</span>
+                                        <span>{new Date(c.created_at).toLocaleDateString()}</span>
                                     </div>
                                 </div>
                                 <a
@@ -430,12 +432,12 @@ export default function CompetitorManagementPage() {
                 background: '#f8fafc', border: '1px solid #e2e8f0',
                 fontSize: '0.85rem', color: '#64748b', lineHeight: 1.6,
             }}>
-                <strong style={{ color: '#475569' }}>Cách hoạt động:</strong>
+                <strong style={{ color: '#475569' }}>{t('howItWorks')}</strong>
                 <ul style={{ margin: '8px 0 0 20px', padding: 0 }}>
-                    <li>Tìm khách sạn đối thủ qua Google Hotels → Thêm vào danh sách</li>
-                    <li>Hệ thống tự động thu thập giá 5 mốc: 7, 14, 30, 60, 90 ngày</li>
-                    <li>Xem so sánh chi tiết tại trang <a href="/rate-shopper" style={{ color: '#6366f1', fontWeight: 500, textDecoration: 'none' }}>So sánh giá</a></li>
-                    <li>Giới hạn: tối đa 20 lần quét/ngày, 200 lần/tháng</li>
+                    <li>{t('howStep1')}</li>
+                    <li>{t('howStep2')}</li>
+                    <li>{t('howStep3')} <a href="/rate-shopper" style={{ color: '#6366f1', fontWeight: 500, textDecoration: 'none' }}>{t('compareRatesLink')}</a></li>
+                    <li>{t('howStep4')}</li>
                 </ul>
             </div>
 

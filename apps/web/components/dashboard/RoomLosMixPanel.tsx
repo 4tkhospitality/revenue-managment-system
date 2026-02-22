@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { BedDouble } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { DataStatusBadge } from '@/components/shared/DataStatusBadge';
+import { useTranslations } from 'next-intl';
 
 interface RoomMixItem {
     roomCode: string;
@@ -38,6 +39,7 @@ const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'
 const nf = new Intl.NumberFormat('vi-VN');
 
 export function RoomLosMixPanel({ hotelId, asOfDate, days = 90, isPdfMode = false }: RoomLosMixPanelProps) {
+    const t = useTranslations('roomLosMix');
     const [data, setData] = useState<RoomLosMixData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -51,7 +53,7 @@ export function RoomLosMixPanel({ hotelId, asOfDate, days = 90, isPdfMode = fals
                 if (!res.ok) throw new Error('Failed to fetch');
                 setData(await res.json());
             } catch {
-                setError('Không tải được dữ liệu');
+                setError(t('failedToLoad'));
             } finally {
                 setLoading(false);
             }
@@ -74,7 +76,7 @@ export function RoomLosMixPanel({ hotelId, asOfDate, days = 90, isPdfMode = fals
     if (error || !data) {
         return (
             <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-                <p className="text-gray-500 text-sm">{error || 'Không có dữ liệu'}</p>
+                <p className="text-gray-500 text-sm">{error || t('noData')}</p>
             </div>
         );
     }
@@ -83,8 +85,8 @@ export function RoomLosMixPanel({ hotelId, asOfDate, days = 90, isPdfMode = fals
     if (!hasData) {
         return (
             <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-                <h3 className="text-sm font-semibold text-gray-800"><BedDouble className="w-4 h-4 text-slate-500" aria-hidden="true" /> Room Mix & LOS</h3>
-                <p className="text-gray-500 text-sm mt-2">Chưa có dữ liệu.</p>
+                <h3 className="text-sm font-semibold text-gray-800"><BedDouble className="w-4 h-4 text-slate-500" aria-hidden="true" /> {t('title')}</h3>
+                <p className="text-gray-500 text-sm mt-2">{t('noData')}</p>
             </div>
         );
     }
@@ -106,7 +108,7 @@ export function RoomLosMixPanel({ hotelId, asOfDate, days = 90, isPdfMode = fals
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
             {/* Header */}
             <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-gray-800"><BedDouble className="w-4 h-4 text-slate-500" aria-hidden="true" /> Room Mix & LOS</h3>
+                <h3 className="text-sm font-semibold text-gray-800"><BedDouble className="w-4 h-4 text-slate-500" aria-hidden="true" /> {t('title')}</h3>
                 <div className="flex gap-1.5">
                     {!data.dataStatus.hasRoomCode && <DataStatusBadge status="missing_roomcode" />}
                     {!data.dataStatus.hasNights && <DataStatusBadge status="missing_booktime" />}
@@ -118,7 +120,7 @@ export function RoomLosMixPanel({ hotelId, asOfDate, days = 90, isPdfMode = fals
             <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-6">
                 {/* Room Type Donut */}
                 <div>
-                    <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">Room Type Share</h4>
+                    <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">{t('roomTypeShare')}</h4>
                     <div className="h-48">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
@@ -157,7 +159,7 @@ export function RoomLosMixPanel({ hotelId, asOfDate, days = 90, isPdfMode = fals
 
                 {/* LOS Bars */}
                 <div>
-                    <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">Length of Stay</h4>
+                    <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">{t('lengthOfStay')}</h4>
                     <div className="h-48">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={barData} layout="vertical" margin={{ left: 0, right: 20 }}>

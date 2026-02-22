@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { usePricingPreview } from '@/hooks/usePricingPreview';
 import { Plus, Trash2, Loader2, AlertTriangle, CheckCircle, ChevronDown, ChevronRight, Tag, X, Search, Calculator, DollarSign, TrendingUp } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { AGODA_BOOSTERS, BOOKING_BOOSTERS, EXPEDIA_BOOSTERS, getCatalogItem } from '@/lib/pricing/catalog';
 import type { CommissionBooster } from '@/lib/pricing/types';
 
@@ -10,15 +11,15 @@ import type { CommissionBooster } from '@/lib/pricing/types';
 const GROUP_CONFIG = {
     SEASONAL: {
         dotColor: 'bg-orange-500',
-        label: 'Seasonal (Theo mùa)',
+        label: 'Seasonal',
     },
     ESSENTIAL: {
         dotColor: 'bg-[#204183]',
-        label: 'Essential (Cơ bản)',
+        label: 'Essential',
     },
     TARGETED: {
         dotColor: 'bg-emerald-500',
-        label: 'Targeted (Mục tiêu)',
+        label: 'Targeted',
     },
     GENIUS: {
         dotColor: 'bg-indigo-500',
@@ -36,12 +37,12 @@ const GROUP_CONFIG = {
 
 // Unified group labels — same Vietnamese names across ALL vendors
 const UNIFIED_GROUP_LABELS: Record<keyof typeof GROUP_CONFIG, string> = {
-    SEASONAL: 'Theo mùa',
-    ESSENTIAL: 'Cơ bản',
-    TARGETED: 'Mục tiêu',
+    SEASONAL: 'Seasonal',
+    ESSENTIAL: 'Essential',
+    TARGETED: 'Targeted',
     GENIUS: 'Genius',
-    PORTFOLIO: 'Gói ưu đãi',
-    CAMPAIGN: 'Chiến dịch',
+    PORTFOLIO: 'Portfolio',
+    CAMPAIGN: 'Campaign',
 };
 
 // Vendor-specific tab groups for PromotionPicker
@@ -62,7 +63,7 @@ interface OTAChannel {
     id: string;
     name: string;
     code: string;
-    commission: number;  // % hoa hồng từ tab Kênh OTA
+    commission: number;  // % commission from OTA Channel tab
     calc_type?: string;  // 'PROGRESSIVE' | 'ADDITIVE'
 }
 
@@ -113,6 +114,7 @@ function PromotionGroup({
     onUpdateDiscount: (campaignId: string, newPct: number) => void;
     vendor: string;
 }) {
+    const t = useTranslations('promotionsTab');
     const [isOpen, setIsOpen] = useState(true);
     const config = GROUP_CONFIG[group];
     const count = campaigns.length;
@@ -134,17 +136,17 @@ function PromotionGroup({
                     <span className={`w-2.5 h-2.5 rounded-full ${config.dotColor}`} />
                     <span className="font-medium text-slate-800">{label}</span>
                     <span className="text-xs text-slate-500 uppercase tracking-wide">
-                        {count} items
+                        {t('items', { count })}
                     </span>
                 </button>
                 {/* Quick Add (+) button */}
                 <button
                     onClick={(e) => { e.stopPropagation(); onAddClick(group); }}
                     className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-[#204183] hover:bg-[#204183] hover:text-white rounded-lg border border-[#204183]/30 hover:border-[#204183] transition-colors"
-                    title={`Thêm khuyến mãi ${label}`}
+                    title={`Add promotion ${label}`}
                 >
                     <Plus className="w-3.5 h-3.5" />
-                    <span>Thêm</span>
+                    <span>{t('add')}</span>
                 </button>
             </div>
 
@@ -157,16 +159,16 @@ function PromotionGroup({
                             className="w-full flex flex-col items-center justify-center py-8 text-slate-400 hover:text-[#204183] hover:bg-white/50 rounded-lg transition-colors cursor-pointer border-2 border-dashed border-transparent hover:border-[#204183]"
                         >
                             <Plus className="w-8 h-8 mb-2 opacity-50" />
-                            <span className="text-sm font-medium">Nhấn để thêm khuyến mãi</span>
+                            <span className="text-sm font-medium">{t('clickToAdd')}</span>
                         </button>
                     ) : (
                         <div className="space-y-2">
                             {/* Guide header row */}
                             <div className="grid grid-cols-[1fr_80px_52px_36px] items-center px-4 py-1.5 text-[11px] font-medium text-slate-400 uppercase tracking-wider gap-3">
-                                <span>Tên khuyến mãi</span>
-                                <span className="text-right">Giảm giá</span>
-                                <span className="text-center">Trạng thái</span>
-                                <span className="text-center">Xóa</span>
+                                <span>{t('promotionName')}</span>
+                                <span className="text-right">{t('discount')}</span>
+                                <span className="text-center">{t('status')}</span>
+                                <span className="text-center">{t('delete')}</span>
                             </div>
                             {campaigns.map((c) => {
                                 // Check if this is a Free Nights deal
@@ -177,10 +179,10 @@ function PromotionGroup({
                                 const isTripCampaign = vendor === 'ctrip' && catalogGroupType === 'CAMPAIGN';
                                 const stackBehavior = isTripCampaign ? 'EXCLUSIVE' : (!c.promo.allow_stack ? 'EXCLUSIVE' : (catalogGroupType === 'PORTFOLIO' ? 'HIGHEST_WINS' : 'STACKABLE'));
                                 const badgeConfig = {
-                                    STACKABLE: { bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'Stackable' },
-                                    HIGHEST_WINS: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Highest Wins' },
-                                    EXCLUSIVE: { bg: 'bg-red-100', text: 'text-red-700', label: 'Exclusive' },
-                                    ONLY_WITH_GENIUS: { bg: 'bg-purple-100', text: 'text-purple-700', label: 'Only w/ Genius' },
+                                    STACKABLE: { bg: 'bg-emerald-100', text: 'text-emerald-700', label: t('stackable') },
+                                    HIGHEST_WINS: { bg: 'bg-blue-100', text: 'text-blue-700', label: t('highestWins') },
+                                    EXCLUSIVE: { bg: 'bg-red-100', text: 'text-red-700', label: t('exclusive') },
+                                    ONLY_WITH_GENIUS: { bg: 'bg-purple-100', text: 'text-purple-700', label: t('onlyWithGenius') },
                                 }[stackBehavior];
 
                                 return (
@@ -292,6 +294,7 @@ function PromotionPicker({
     initialTab: GroupType;
     vendor: string;
 }) {
+    const t = useTranslations('promotionsTab');
     const [activeTab, setActiveTab] = useState<GroupType>(initialTab);
     const [search, setSearch] = useState('');
 
@@ -309,9 +312,9 @@ function PromotionPicker({
                     <div>
                         <h3 className="text-xl font-bold text-[#204183] flex items-center gap-2">
                             <Plus className="w-6 h-6 text-orange-500" />
-                            Thêm Khuyến mãi {channelName}
+                            {t('addPromotionChannel', { channel: channelName })}
                         </h3>
-                        <p className="text-sm text-slate-500 mt-1">Chọn chương trình khuyến mãi từ danh mục có sẵn</p>
+                        <p className="text-sm text-slate-500 mt-1">{t('selectFromCatalog')}</p>
                     </div>
                     <button
                         onClick={onClose}
@@ -348,7 +351,7 @@ function PromotionPicker({
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-[#204183] transition-colors" />
                         <input
                             type="text"
-                            placeholder="Tìm kiếm chương trình..."
+                            placeholder={t('searchPromotions')}
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             className="w-full pl-10 pr-4 py-3 bg-white border border-[#DBE1EB] rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#204183]/20 focus:border-[#204183] transition-all shadow-sm"
@@ -363,8 +366,8 @@ function PromotionPicker({
                             <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
                                 <Tag className="w-8 h-8 opacity-50" />
                             </div>
-                            <span className="text-base font-medium">Không tìm thấy chương trình nào</span>
-                            <p className="text-sm mt-1">Thử tìm kiếm với từ khóa khác</p>
+                            <span className="text-base font-medium">{t('noPromosFound')}</span>
+                            <p className="text-sm mt-1">{t('tryDiffKeywords')}</p>
                         </div>
                     ) : (
                         <div className="grid gap-3">
@@ -389,7 +392,7 @@ function PromotionPicker({
                                             {promo.default_pct && (
                                                 <div className="flex items-center gap-1.5 text-emerald-600 font-medium bg-emerald-50 px-2 py-0.5 rounded-md">
                                                     <TrendingUp className="w-3.5 h-3.5" />
-                                                    Giảm {promo.default_pct}%
+                                                    {t('discount')} {promo.default_pct}%
                                                 </div>
                                             )}
                                             {promo.description && (
@@ -406,7 +409,7 @@ function PromotionPicker({
                                         className="flex items-center gap-2 px-5 py-2.5 bg-white border-2 border-[#204183] text-[#204183] hover:bg-[#204183] hover:text-white font-semibold rounded-lg transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed group-hover:bg-[#204183] group-hover:text-white"
                                     >
                                         <Plus className="w-4 h-4" />
-                                        Thêm
+                                        {t('add')}
                                     </button>
                                 </div>
                             ))}
@@ -429,6 +432,8 @@ function PriceCalculator({
     commissionPct,
     channelName,
     calcType,
+    vendor,
+    b2bBoostPct,
 }: {
     roomTypes: RoomType[];
     selectedRoomId: string;
@@ -438,7 +443,10 @@ function PriceCalculator({
     commissionPct: number;
     channelName: string;
     calcType: 'PROGRESSIVE' | 'ADDITIVE' | 'SINGLE_DISCOUNT';
+    vendor?: string;
+    b2bBoostPct?: number;
 }) {
+    const t = useTranslations('promotionsTab');
     const [calcMode, setCalcMode] = useState<'net_to_display' | 'display_to_net' | 'guest_price'>('net_to_display');
     const [customInput, setCustomInput] = useState<string>('');
 
@@ -475,17 +483,17 @@ function PriceCalculator({
     let netRevenue: number;
 
     if (calcMode === 'net_to_display') {
-        // Giá thu về → Tính ngược lên BAR + Display
+        // Net Revenue → Reverse calc to BAR + Display
         netRevenue = inputValue || baseNetPrice;
         guestPrice = commissionMultiplier > 0 ? netRevenue / commissionMultiplier : netRevenue;
         barPrice = discountMultiplier > 0 ? guestPrice / discountMultiplier : guestPrice;
     } else if (calcMode === 'display_to_net') {
-        // Giá BAR (Channel Manager) → Tính xuống Display + NET
+        // BAR Price (Channel Manager) → Calc down to Display + NET
         barPrice = inputValue || (baseNetPrice / discountMultiplier / commissionMultiplier);
         guestPrice = barPrice * discountMultiplier;
         netRevenue = guestPrice * commissionMultiplier;
     } else {
-        // Giá hiển thị (khách thấy) → Tính ngược BAR + tính xuống NET
+        // Display Price (guest sees) → Reverse to BAR + calc down to NET
         guestPrice = inputValue || (baseNetPrice / commissionMultiplier);
         barPrice = discountMultiplier > 0 ? guestPrice / discountMultiplier : guestPrice;
         netRevenue = guestPrice * commissionMultiplier;
@@ -496,20 +504,20 @@ function PriceCalculator({
             <div className="bg-[#F2F4F8] border border-[#DBE1EB] rounded-xl p-4">
                 <h3 className="text-sm font-semibold text-[#204183] mb-3 flex items-center gap-2">
                     <Calculator className="w-4 h-4" />
-                    Tính giá - {channelName}
+                    {t('calcPriceChannel', { channel: channelName })}
                 </h3>
-                <p className="text-sm text-slate-500">Chưa có hạng phòng. Vui lòng thêm ở tab &quot;Hạng phòng&quot;.</p>
+                <p className="text-sm text-slate-500">{t('noRoomTypesYet')}</p>
             </div>
         );
     }
 
-    const calcLabel = calcType === 'PROGRESSIVE' ? 'lũy tiến' : calcType === 'SINGLE_DISCOUNT' ? 'deal cao nhất' : 'cộng dồn';
+    const calcLabel = calcType === 'PROGRESSIVE' ? 'progressive' : calcType === 'SINGLE_DISCOUNT' ? 'highest deal' : 'additive';
 
     return (
         <div className="bg-[#F2F4F8] border border-[#DBE1EB] rounded-xl p-4">
             <h3 className="text-sm font-semibold text-[#204183] mb-3 flex items-center gap-2">
                 <Calculator className="w-4 h-4" />
-                Tính giá - {channelName} ({commissionPct}% hoa hồng)
+                {t('calcPriceChannelComm', { channel: channelName, commission: commissionPct })}
             </h3>
 
             {/* Mode Toggle — 3 tabs */}
@@ -521,7 +529,7 @@ function PriceCalculator({
                         : 'text-slate-600 hover:bg-slate-50'
                         }`}
                 >
-                    Giá Thu về
+                    {t('netRevenue')}
                 </button>
                 <button
                     onClick={() => setCalcMode('display_to_net')}
@@ -530,7 +538,7 @@ function PriceCalculator({
                         : 'text-slate-600 hover:bg-slate-50'
                         }`}
                 >
-                    Giá BAR
+                    {t('barPrice')}
                 </button>
                 <button
                     onClick={() => setCalcMode('guest_price')}
@@ -539,7 +547,7 @@ function PriceCalculator({
                         : 'text-slate-600 hover:bg-slate-50'
                         }`}
                 >
-                    Giá Hiển thị
+                    {t('displayPrice')}
                 </button>
             </div>
 
@@ -551,7 +559,7 @@ function PriceCalculator({
             >
                 {roomTypes.map((room) => (
                     <option key={room.id} value={room.id}>
-                        {room.name} - {formatNumber(room.net_price)}đ (Net)
+                        {room.name} - {formatNumber(room.net_price)}₫ (Net)
                     </option>
                 ))}
             </select>
@@ -560,10 +568,10 @@ function PriceCalculator({
             <div className="mb-4">
                 <label className="block text-xs font-medium text-slate-600 mb-1">
                     {calcMode === 'net_to_display'
-                        ? 'Nhập giá thu về mong muốn:'
+                        ? t('enterNetRevenue')
                         : calcMode === 'display_to_net'
-                            ? 'Nhập giá BAR (Channel Manager):'
-                            : 'Nhập giá khách thấy trên OTA:'
+                            ? t('enterBarPrice')
+                            : t('enterGuestPrice')
                     }
                 </label>
                 <div className="relative">
@@ -582,7 +590,7 @@ function PriceCalculator({
                         placeholder={calcMode === 'net_to_display' ? 'VD: 1.000.000' : calcMode === 'display_to_net' ? 'VD: 1.500.000' : 'VD: 1.200.000'}
                         className="w-full px-3 py-2 pr-8 bg-white border border-[#DBE1EB] rounded-lg text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-[#204183]"
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">đ</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">₫</span>
                 </div>
             </div>
 
@@ -591,8 +599,8 @@ function PriceCalculator({
                 {/* ① BAR — Channel Manager price */}
                 <div className="bg-white rounded-lg border border-[#DBE1EB] p-3">
                     <div className="flex justify-between items-center">
-                        <span className="text-slate-500 text-xs">① Giá Channel Manager (BAR)</span>
-                        <span className="font-bold text-[#204183] text-lg">{formatNumber(barPrice)}đ</span>
+                        <span className="text-slate-500 text-xs">{t('channelManagerBar')}</span>
+                        <span className="font-bold text-[#204183] text-lg">{formatNumber(barPrice)}₫</span>
                     </div>
                 </div>
 
@@ -600,33 +608,68 @@ function PriceCalculator({
                 {totalDiscount > 0 && (
                     <div className="flex items-center gap-2 px-3 text-xs text-orange-600">
                         <span>↓</span>
-                        <span>Khuyến mãi −{totalDiscount.toFixed(1)}% ({calcLabel})</span>
-                        <span className="ml-auto">−{formatNumber(barPrice - guestPrice)}đ</span>
+                        <span>{t('promotion')} −{totalDiscount.toFixed(1)}% ({calcLabel})</span>
+                        <span className="ml-auto">−{formatNumber(barPrice - guestPrice)}₫</span>
                     </div>
                 )}
 
                 {/* ② Guest Display Price */}
                 <div className="bg-white rounded-lg border border-orange-200 p-3">
                     <div className="flex justify-between items-center">
-                        <span className="text-slate-500 text-xs">② Giá khách thấy trên OTA</span>
-                        <span className="font-bold text-orange-600 text-lg">{formatNumber(guestPrice)}đ</span>
+                        <span className="text-slate-500 text-xs">{t('priceGuestSees')}</span>
+                        <span className="font-bold text-orange-600 text-lg">{formatNumber(guestPrice)}₫</span>
                     </div>
                 </div>
 
-                {/* Arrow + Commission info */}
-                <div className="flex items-center gap-2 px-3 text-xs text-slate-500">
-                    <span>↓</span>
-                    <span>Hoa hồng OTA −{commissionPct}%</span>
-                    <span className="ml-auto">−{formatNumber(guestPrice - netRevenue)}đ</span>
-                </div>
+                {/* Arrow + Commission + Net Revenue — split when B2B is active */}
+                {(() => {
+                    const showB2B = vendor === 'expedia' && b2bBoostPct && b2bBoostPct > 0;
+                    // When B2B is ON, commissionPct already includes B2B boost (e.g. 22% = 17% + 5%)
+                    // baseCommission = just the OTA base (17%), b2bBoostPct = additional B2B (5%)
+                    const baseCommission = showB2B ? commissionPct - b2bBoostPct : commissionPct;
+                    const b2cNet = showB2B ? guestPrice * (1 - baseCommission / 100) : netRevenue;
 
-                {/* ③ Net Revenue */}
-                <div className="bg-emerald-50 rounded-lg border border-emerald-200 p-3">
-                    <div className="flex justify-between items-center">
-                        <span className="text-emerald-700 text-xs font-medium">③ Tiền thu về (Net Revenue)</span>
-                        <span className="font-bold text-emerald-700 text-lg">{formatNumber(netRevenue)}đ</span>
-                    </div>
-                </div>
+                    return (
+                        <>
+                            {/* Commission line — show base commission */}
+                            <div className="flex items-center gap-2 px-3 text-xs text-slate-500">
+                                <span>↓</span>
+                                <span>{t('commissionOta')} −{baseCommission}%</span>
+                                <span className="ml-auto">−{formatNumber(guestPrice - b2cNet)}₫</span>
+                            </div>
+
+                            {/* ③ Net Revenue — B2C */}
+                            <div className="bg-emerald-50 rounded-lg border border-emerald-200 p-3">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-emerald-700 text-xs font-medium">
+                                        {showB2B ? t('netRevenueB2C') : t('netRevenueLabel')}
+                                    </span>
+                                    <span className="font-bold text-emerald-700 text-lg">{formatNumber(b2cNet)}₫</span>
+                                </div>
+                            </div>
+
+                            {/* ④ B2B additional deduction + Net (Expedia only) */}
+                            {showB2B && (
+                                <>
+                                    <div className="flex items-center gap-2 px-3 text-xs text-orange-500">
+                                        <span>↓</span>
+                                        <span>{t('b2bCommissionExtra', { base: baseCommission, boost: b2bBoostPct, total: commissionPct })}</span>
+                                        <span className="ml-auto">−{formatNumber(b2cNet - netRevenue)}₫</span>
+                                    </div>
+                                    <div className="bg-amber-50 rounded-lg border border-amber-200 p-3">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-amber-700 text-xs font-medium">{t('netRevenueB2B')}</span>
+                                            <span className="font-bold text-amber-700 text-lg">{formatNumber(netRevenue)}₫</span>
+                                        </div>
+                                        <div className="text-[10px] text-amber-500 mt-1">
+                                            {t('b2bExplanation')}
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </>
+                    );
+                })()}
             </div>
         </div>
     );
@@ -645,6 +688,7 @@ function MarketingPrograms({
     baseCommission: number;
     vendor: string;
 }) {
+    const t = useTranslations('promotionsTab');
     const activeBoosters = boosters.filter(b => b.enabled);
     const totalBoost = activeBoosters.reduce((sum, b) => sum + b.boostPct, 0);
     const effectiveCommission = baseCommission + totalBoost;
@@ -688,9 +732,9 @@ function MarketingPrograms({
 
     // Vendor-specific title
     const vendorTitles: Record<string, string> = {
-        agoda: 'Marketing Programs (Agoda)',
-        booking: 'Marketing Programs (Booking.com)',
-        expedia: 'Marketing Programs (Expedia)',
+        agoda: `${t('marketingPrograms')} (Agoda)`,
+        booking: `${t('marketingPrograms')} (Booking.com)`,
+        expedia: `${t('marketingPrograms')} (Expedia)`,
     };
 
     return (
@@ -699,11 +743,11 @@ function MarketingPrograms({
             <div className="flex items-center justify-between px-4 py-3">
                 <div className="flex items-center gap-2">
                     <TrendingUp className="w-4 h-4 text-[#204183]" />
-                    <span className="font-semibold text-sm text-slate-800">{vendorTitles[vendor] || 'Marketing Programs'}</span>
+                    <span className="font-semibold text-sm text-slate-800">{vendorTitles[vendor] || t('marketingPrograms')}</span>
                 </div>
                 {totalBoost > 0 && (
                     <span className="text-xs font-semibold text-orange-600 bg-orange-50 px-2.5 py-1 rounded-full">
-                        +{totalBoost}% commission
+                        +{totalBoost}% {t('commission')}
                     </span>
                 )}
             </div>
@@ -723,7 +767,7 @@ function MarketingPrograms({
                                     <span className={`absolute top-[3px] w-3.5 h-3.5 bg-white rounded-full shadow transition-transform ${activeAGP ? 'left-[18px]' : 'left-[3px]'}`} />
                                 </button>
                             </div>
-                            <div className="text-[11px] text-slate-400 mb-2">Agoda Growth Program</div>
+                            <div className="text-[11px] text-slate-400 mb-2">{t('agodaGrowthProgram')}</div>
                             {activeAGP && (
                                 <div className="flex gap-1">
                                     {agpBoosters.map(tier => (
@@ -782,13 +826,13 @@ function MarketingPrograms({
                 {totalBoost > 0 && (
                     <div className="bg-orange-50 border border-orange-200 rounded-lg px-3.5 py-2.5">
                         <p className="text-xs font-medium text-orange-800">
-                            Commission: Base {baseCommission}%
+                            {t('commissionBase', { base: baseCommission })}
                             {activeBoosters.map(b => ` + ${b.name} ${b.boostPct}%`).join('')}
                             {' '}= <strong>{effectiveCommission}%</strong>
                         </p>
                         {effectiveCommission > 40 && (
                             <p className="text-xs text-red-600 mt-1">
-                                ⚠️ Commission rất cao ({effectiveCommission}%) — kiểm tra lại
+                                {t('commissionHighWarning', { pct: effectiveCommission })}
                             </p>
                         )}
                     </div>
@@ -824,6 +868,7 @@ function PricingExplanation({
     calcType: 'PROGRESSIVE' | 'ADDITIVE' | 'SINGLE_DISCOUNT';
     netPrice: number;
 }) {
+    const t = useTranslations('promotionsTab');
     const fmt = (n: number) => new Intl.NumberFormat('vi-VN').format(Math.round(n));
 
     const validation = previewData?.validation ?? { isValid: true, errors: [], warnings: [] };
@@ -843,12 +888,12 @@ function PricingExplanation({
         <div className="bg-[#F2F4F8] border border-[#DBE1EB] rounded-xl p-4 space-y-4">
             {/* Validation */}
             <div>
-                <h3 className="text-sm font-semibold text-[#204183] mb-2">Validation</h3>
+                <h3 className="text-sm font-semibold text-[#204183] mb-2">{t('validation')}</h3>
                 <div className="space-y-1">
                     {validation.errors.length === 0 && validation.warnings.length === 0 ? (
                         <div className="flex items-center gap-2 text-sm text-emerald-600">
                             <CheckCircle className="w-4 h-4" />
-                            <span>Tất cả quy tắc đều đạt</span>
+                            <span>{t('allRulesPassed')}</span>
                         </div>
                     ) : (
                         <>
@@ -873,29 +918,29 @@ function PricingExplanation({
             <div className="border-t border-[#DBE1EB] pt-4">
                 <h3 className="text-sm font-semibold text-[#204183] mb-3 flex items-center gap-2">
                     <DollarSign className="w-4 h-4" />
-                    Giải thích cách tính
+                    {t('pricingExplained')}
                 </h3>
 
                 <div className="space-y-3 text-sm">
                     {/* Step 1: Net Price */}
                     <div className="bg-white rounded-lg p-3 border border-[#DBE1EB]">
-                        <p className="font-medium text-slate-700 mb-1">📌 Bước 1: Giá gốc (Net price)</p>
-                        <p className="text-slate-500">Giá phòng mà khách sạn muốn thu về</p>
+                        <p className="font-medium text-slate-700 mb-1">{t('step1BasePrice')}</p>
+                        <p className="text-slate-500">{t('step1Desc')}</p>
                         {netPrice > 0 && (
-                            <p className="mt-1.5 font-bold text-[#204183] text-base tabular-nums">{fmt(netPrice)}đ</p>
+                            <p className="mt-1.5 font-bold text-[#204183] text-base tabular-nums">{fmt(netPrice)}₫</p>
                         )}
                     </div>
 
                     {/* Step 2: Commission markup */}
                     <div className="bg-white rounded-lg p-3 border border-[#DBE1EB]">
-                        <p className="font-medium text-slate-700 mb-1">📌 Bước 2: Cộng hoa hồng OTA ({commissionPct}%)</p>
+                        <p className="font-medium text-slate-700 mb-1">{t('step2Commission', { pct: commissionPct })}</p>
                         {commissionStep ? (
                             <>
                                 <p className="text-slate-500">{commissionStep.description}</p>
-                                <p className="mt-1.5 font-bold text-[#204183] text-base tabular-nums">{fmt(commissionStep.priceAfter)}đ</p>
+                                <p className="mt-1.5 font-bold text-[#204183] text-base tabular-nums">{fmt(commissionStep.priceAfter)}₫</p>
                             </>
                         ) : (
-                            <p className="text-slate-500">{fmt(netPrice)}đ ÷ (1 − {commissionPct}%) = Giá trước khuyến mãi</p>
+                            <p className="text-slate-500">{fmt(netPrice)}₫ ÷ (1 − {commissionPct}%) = Price before promotions</p>
                         )}
                     </div>
 
@@ -903,7 +948,7 @@ function PricingExplanation({
                     {totalDiscount > 0 && promoSteps.length > 0 && (
                         <div className="bg-white rounded-lg p-3 border border-[#DBE1EB]">
                             <p className="font-medium text-slate-700 mb-1">
-                                📌 Bước 3: {calcType === 'PROGRESSIVE' ? 'Nhân lũy tiến' : calcType === 'SINGLE_DISCOUNT' ? 'Deal cao nhất' : 'Cộng dồn'} khuyến mãi ({totalDiscount.toFixed(1)}%)
+                                📌 Step 3: {calcType === 'PROGRESSIVE' ? 'Multiply progressive' : calcType === 'SINGLE_DISCOUNT' ? 'Highest Deal' : 'Additive'} promotions ({totalDiscount.toFixed(1)}%)
                             </p>
 
                             <div className="mt-2 space-y-1.5">
@@ -917,9 +962,9 @@ function PricingExplanation({
                                             <span className="text-slate-600 flex-1 truncate">
                                                 {step.step}
                                             </span>
-                                            <span className="text-slate-400 tabular-nums">{fmt(prevPrice)}đ</span>
+                                            <span className="text-slate-400 tabular-nums">{fmt(prevPrice)}₫</span>
                                             <span className="text-slate-300">→</span>
-                                            <span className="font-semibold text-[#204183] tabular-nums">{fmt(step.priceAfter)}đ</span>
+                                            <span className="font-semibold text-[#204183] tabular-nums">{fmt(step.priceAfter)}₫</span>
                                         </div>
                                     );
                                 })}
@@ -927,7 +972,7 @@ function PricingExplanation({
 
                             {bar > 0 && (
                                 <p className="mt-2 font-bold text-[#204183] text-base tabular-nums">
-                                    BAR = {fmt(bar)}đ
+                                    BAR = {fmt(bar)}₫
                                 </p>
                             )}
                         </div>
@@ -936,7 +981,7 @@ function PricingExplanation({
                     {/* Ignored promos (dropped by stacking rules) */}
                     {ignored.length > 0 && (
                         <div className="bg-amber-50 rounded-lg p-3 border border-amber-200">
-                            <p className="font-medium text-amber-700 mb-1.5 text-xs">⚠️ KM bị loại bỏ (do quy tắc xếp chồng)</p>
+                            <p className="font-medium text-amber-700 mb-1.5 text-xs">{t('promsExcluded')}</p>
                             <div className="space-y-1">
                                 {ignored.map((ig, i) => (
                                     <div key={i} className="flex items-center gap-2 text-xs">
@@ -951,27 +996,27 @@ function PricingExplanation({
 
                     {/* Result */}
                     <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-200">
-                        <p className="font-medium text-emerald-700 mb-1">✅ Kết quả</p>
+                        <p className="font-medium text-emerald-700 mb-1">{t('result')}</p>
                         {bar > 0 ? (
                             <div className="space-y-1">
                                 <div className="flex justify-between text-sm">
-                                    <span className="text-slate-500">Giá Channel Manager (BAR)</span>
-                                    <span className="font-bold text-[#204183] tabular-nums">{fmt(bar)}đ</span>
+                                    <span className="text-slate-500">{t('channelManagerPriceBar')}</span>
+                                    <span className="font-bold text-[#204183] tabular-nums">{fmt(bar)}₫</span>
                                 </div>
                                 {totalDiscount > 0 && (
                                     <div className="flex justify-between text-sm">
-                                        <span className="text-slate-500">Khách thấy trên OTA</span>
-                                        <span className="font-bold text-orange-600 tabular-nums">{fmt(display)}đ</span>
+                                        <span className="text-slate-500">{t('guestSeesOnOta')}</span>
+                                        <span className="font-bold text-orange-600 tabular-nums">{fmt(display)}₫</span>
                                     </div>
                                 )}
                                 <div className="flex justify-between text-sm border-t border-emerald-200 pt-1 mt-1">
-                                    <span className="text-emerald-700 font-medium">Khách sạn thu về (Net)</span>
-                                    <span className="font-bold text-emerald-700 tabular-nums">{fmt(net)}đ</span>
+                                    <span className="text-emerald-700 font-medium">{t('hotelReceivesNet')}</span>
+                                    <span className="font-bold text-emerald-700 tabular-nums">{fmt(net)}₫</span>
                                 </div>
                             </div>
                         ) : (
                             <p className="text-emerald-600">
-                                Chọn hạng phòng để xem số liệu cụ thể
+                                {t('selectRoomForPricing')}
                             </p>
                         )}
                     </div>
@@ -982,6 +1027,7 @@ function PricingExplanation({
 }
 
 export default function PromotionsTab() {
+    const t = useTranslations('promotionsTab');
     const [channels, setChannels] = useState<OTAChannel[]>([]);
     const [catalog, setCatalog] = useState<Promo[]>([]);
     const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -1147,7 +1193,7 @@ export default function PromotionsTab() {
 
     // Delete campaign
     const handleDelete = async (id: string) => {
-        if (!confirm('Xóa promotion này?')) return;
+        if (!confirm(t('deleteConfirm'))) return;
         try {
             const res = await fetch(`/api/pricing/campaigns/${id}`, { method: 'DELETE' });
             if (!res.ok) throw new Error('Failed to delete');
@@ -1259,12 +1305,12 @@ export default function PromotionsTab() {
 
     // Group pill config for table — short labels match UNIFIED_GROUP_LABELS
     const groupPillConfig: Record<string, { bg: string; text: string; dot: string; short: string }> = {
-        SEASONAL: { bg: 'bg-orange-50', text: 'text-orange-700', dot: 'bg-orange-500', short: 'Theo mùa' },
-        ESSENTIAL: { bg: 'bg-[#EFF1F8]', text: 'text-[#204183]', dot: 'bg-[#204183]', short: 'Cơ bản' },
-        TARGETED: { bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-500', short: 'Mục tiêu' },
+        SEASONAL: { bg: 'bg-orange-50', text: 'text-orange-700', dot: 'bg-orange-500', short: 'Seasonal' },
+        ESSENTIAL: { bg: 'bg-[#EFF1F8]', text: 'text-[#204183]', dot: 'bg-[#204183]', short: 'Essential' },
+        TARGETED: { bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-500', short: 'Targeted' },
         GENIUS: { bg: 'bg-indigo-50', text: 'text-indigo-700', dot: 'bg-indigo-500', short: 'Genius' },
-        PORTFOLIO: { bg: 'bg-teal-50', text: 'text-teal-700', dot: 'bg-teal-500', short: 'Gói ưu đãi' },
-        CAMPAIGN: { bg: 'bg-rose-50', text: 'text-rose-700', dot: 'bg-rose-500', short: 'Chiến dịch' },
+        PORTFOLIO: { bg: 'bg-teal-50', text: 'text-teal-700', dot: 'bg-teal-500', short: 'Portfolio' },
+        CAMPAIGN: { bg: 'bg-rose-50', text: 'text-rose-700', dot: 'bg-rose-500', short: 'Campaign' },
     };
 
     // Active campaign count for badge
@@ -1315,10 +1361,10 @@ export default function PromotionsTab() {
                         <h2 className="text-base font-bold text-slate-800">
                             {selectedChannelData?.name || 'OTA'}
                             <span className="text-sm font-normal text-slate-400 ml-2">
-                                · {campaigns.length} promotions · Hoa hồng {commissionPct}%
-                                {calcType === 'PROGRESSIVE' ? ' · lũy tiến'
-                                    : calcType === 'SINGLE_DISCOUNT' ? ' · deal cao nhất'
-                                        : ' · cộng dồn'}
+                                · {campaigns.length} {t('promotions')} · {t('commissionLabel')} {commissionPct}%
+                                {calcType === 'PROGRESSIVE' ? ` · ${t('progressive')}`
+                                    : calcType === 'SINGLE_DISCOUNT' ? ` · ${t('highestDeal')}`
+                                        : ` · ${t('additive')}`}
                             </span>
                         </h2>
                         <button
@@ -1326,7 +1372,7 @@ export default function PromotionsTab() {
                             className="flex items-center gap-2 px-4 py-2 bg-[#204183] hover:bg-[#1a3469] text-white text-sm font-semibold rounded-lg transition-colors"
                         >
                             <Plus className="w-4 h-4" />
-                            Thêm khuyến mãi
+                            {t('addPromotion')}
                         </button>
                     </div>
 
@@ -1342,7 +1388,7 @@ export default function PromotionsTab() {
                                 className="w-full flex flex-col items-center justify-center py-16 text-slate-400 hover:text-[#204183] transition-colors cursor-pointer"
                             >
                                 <Plus className="w-10 h-10 mb-3 opacity-40" />
-                                <span className="text-sm font-medium">Chưa có khuyến mãi nào — Nhấn để thêm</span>
+                                <span className="text-sm font-medium">{t('noPromosYet')}</span>
                             </button>
                         </div>
                     ) : (
@@ -1350,11 +1396,11 @@ export default function PromotionsTab() {
                             <table className="w-full text-sm">
                                 <thead>
                                     <tr className="bg-[#F2F4F8]">
-                                        <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Tên khuyến mãi</th>
-                                        <th className="text-left px-3 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Nhóm</th>
-                                        <th className="text-right px-3 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Giảm</th>
-                                        <th className="text-center px-3 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Trạng thái</th>
-                                        <th className="text-center px-3 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Thao tác</th>
+                                        <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{t('promotionName')}</th>
+                                        <th className="text-left px-3 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{t('group')}</th>
+                                        <th className="text-right px-3 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{t('discount')}</th>
+                                        <th className="text-center px-3 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{t('status')}</th>
+                                        <th className="text-center px-3 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{t('actions')}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1365,9 +1411,9 @@ export default function PromotionsTab() {
                                         const isTripCampaign = (selectedChannelData?.code === 'ctrip') && catalogGroupType === 'CAMPAIGN';
                                         const stackBehavior = isTripCampaign ? 'EXCLUSIVE' : (!c.promo.allow_stack ? 'EXCLUSIVE' : (catalogGroupType === 'PORTFOLIO' ? 'HIGHEST_WINS' : 'STACKABLE'));
                                         const badgeCfg = {
-                                            STACKABLE: { bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'Stackable' },
-                                            HIGHEST_WINS: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Highest Wins' },
-                                            EXCLUSIVE: { bg: 'bg-red-100', text: 'text-red-700', label: 'Exclusive' },
+                                            STACKABLE: { bg: 'bg-emerald-100', text: 'text-emerald-700', label: t('stackable') },
+                                            HIGHEST_WINS: { bg: 'bg-blue-100', text: 'text-blue-700', label: t('highestWins') },
+                                            EXCLUSIVE: { bg: 'bg-red-100', text: 'text-red-700', label: t('exclusive') },
                                         }[stackBehavior]!;
                                         const pill = groupPillConfig[catalogGroupType] || groupPillConfig.ESSENTIAL;
                                         const vendorCode = selectedChannelData?.code || 'agoda';
@@ -1475,7 +1521,7 @@ export default function PromotionsTab() {
                                                 className="w-full flex items-center justify-center gap-2 py-3 text-slate-400 hover:text-[#204183] hover:bg-[#F8FAFC] text-sm font-semibold border-t-2 border-dashed border-[#E9ECF3] hover:border-[#204183] transition-all"
                                             >
                                                 <Plus className="w-4 h-4" />
-                                                Thêm khuyến mãi từ catalog
+                                                {t('addFromCatalog')}
                                             </button>
                                         </td>
                                     </tr>
@@ -1489,11 +1535,9 @@ export default function PromotionsTab() {
                         <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex gap-3">
                             <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
                             <div className="text-sm text-amber-800 space-y-1">
-                                <p className="font-semibold">Agoda tự động bật cộng dồn cho khuyến mãi Cơ bản</p>
+                                <p className="font-semibold">{t('agodaStackingWarning')}</p>
                                 <p className="text-xs text-amber-700 leading-relaxed">
-                                    Khi tạo khuyến mãi Cơ bản trên Agoda, nút &ldquo;Kết hợp với khuyến mãi khác&rdquo; mặc định <strong>BẬT</strong>.
-                                    Điều này khiến tất cả khuyến mãi Cơ bản <strong>cộng dồn giảm giá</strong> lên nhau.
-                                    Nếu không muốn, hãy tắt nút này trong trang quản lý Agoda cho từng khuyến mãi.
+                                    {t('agodaStackingDesc')}
                                 </p>
                             </div>
                         </div>
@@ -1504,10 +1548,9 @@ export default function PromotionsTab() {
                         <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex gap-3">
                             <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
                             <div className="text-sm text-amber-800 space-y-1">
-                                <p className="font-semibold">⚠️ Campaign không cộng dồn với KM khác</p>
+                                <p className="font-semibold">{t('tripCampaignWarning')}</p>
                                 <p className="text-xs text-amber-700 leading-relaxed">
-                                    Khi Campaign đang bật, hệ thống sẽ <strong>tự động loại bỏ</strong> các khuyến mãi còn lại (Regular, Targeted, Package...).
-                                    Chỉ Campaign có % cao nhất được áp dụng.
+                                    {t('tripCampaignDesc')}
                                 </p>
                             </div>
                         </div>
@@ -1554,7 +1597,7 @@ export default function PromotionsTab() {
                                 />
                             )}
                             <span className="text-sm font-medium text-slate-700">
-                                Tổng giảm giá: {totalDiscount.toFixed(1)}% (Agoda tối đa 80%)
+                                {t('totalDiscountAgoda', { pct: totalDiscount.toFixed(1) })}
                             </span>
                         </div>
                     ) : (
@@ -1565,10 +1608,10 @@ export default function PromotionsTab() {
                                 <CheckCircle className="w-5 h-5 text-emerald-600" />
                             )}
                             <span className="text-sm font-medium text-slate-700">
-                                Tổng giảm giá: {totalDiscount.toFixed(1)}%
-                                {calcType === 'PROGRESSIVE' ? ' (lũy tiến)'
-                                    : calcType === 'SINGLE_DISCOUNT' ? ' (deal cao nhất)'
-                                        : ' (cộng dồn)'}
+                                {t('totalDiscount', { pct: totalDiscount.toFixed(1) })}
+                                {calcType === 'PROGRESSIVE' ? ` (${t('progressive')})`
+                                    : calcType === 'SINGLE_DISCOUNT' ? ` (${t('highestDeal')})`
+                                        : ` (${t('additive')})`}
                             </span>
                         </div>
                     )}
@@ -1586,6 +1629,8 @@ export default function PromotionsTab() {
                         commissionPct={effectiveCommissionPct}
                         channelName={selectedChannelData?.name || 'OTA'}
                         calcType={calcType}
+                        vendor={selectedChannelData?.code}
+                        b2bBoostPct={isExpedia ? (() => { const b = boosters.find(b => b.id === 'expedia-b2b-uplift'); return b?.enabled ? b.boostPct : undefined; })() : undefined}
                     />
 
                     {/* ── Expedia Public vs Member Comparison ── */}
@@ -1595,40 +1640,40 @@ export default function PromotionsTab() {
                                 <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
                                     <path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" />
                                 </svg>
-                                Public vs Member — Expedia
+                                {t('publicVsMember')}
                             </h4>
                             <div className="grid grid-cols-2 gap-2 text-sm">
                                 {/* Public column */}
                                 <div className="bg-white/80 rounded-lg p-3 border border-slate-200">
                                     <div className="text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1">
-                                        🌐 Public
+                                        {t('public')}
                                     </div>
                                     <div className="font-bold text-slate-800 text-lg tabular-nums">
-                                        {new Intl.NumberFormat('vi-VN').format(previewData.publicScenario.display)}đ
+                                        {new Intl.NumberFormat('vi-VN').format(previewData.publicScenario.display)}₫
                                     </div>
                                     <div className="text-[10px] text-slate-400 mt-0.5">
                                         −{previewData.publicScenario.totalDiscountEffective.toFixed(1)}%
                                         {previewData.publicScenario.appliedDeals.length > 0
                                             ? ` (${previewData.publicScenario.appliedDeals.join(', ')})`
-                                            : ' (không KM)'}
+                                            : ` ${t('noPromos')}`}
                                     </div>
                                     <div className="text-xs text-emerald-600 mt-1 font-medium">
-                                        Net: {new Intl.NumberFormat('vi-VN').format(previewData.publicScenario.net)}đ
+                                        Net: {new Intl.NumberFormat('vi-VN').format(previewData.publicScenario.net)}₫
                                     </div>
                                 </div>
                                 {/* Member column */}
                                 <div className="bg-white/80 rounded-lg p-3 border border-indigo-300 ring-1 ring-indigo-200">
                                     <div className="text-[10px] font-medium text-indigo-600 uppercase tracking-wider mb-1">
-                                        👤 Member
+                                        {t('member')}
                                     </div>
                                     <div className="font-bold text-indigo-700 text-lg tabular-nums">
-                                        {new Intl.NumberFormat('vi-VN').format(previewData.display)}đ
+                                        {new Intl.NumberFormat('vi-VN').format(previewData.display)}₫
                                     </div>
                                     <div className="text-[10px] text-indigo-400 mt-0.5">
                                         −{previewData.totalDiscountEffective.toFixed(1)}% (Member + deal)
                                     </div>
                                     <div className="text-xs text-emerald-600 mt-1 font-medium">
-                                        Net: {new Intl.NumberFormat('vi-VN').format(previewData.net)}đ
+                                        Net: {new Intl.NumberFormat('vi-VN').format(previewData.net)}₫
                                     </div>
                                 </div>
                             </div>
@@ -1636,8 +1681,8 @@ export default function PromotionsTab() {
                             {previewData.publicScenario.display > previewData.display && (
                                 <div className="mt-2 text-center">
                                     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-700 text-xs font-semibold">
-                                        💰 Member tiết kiệm {new Intl.NumberFormat('vi-VN').format(previewData.publicScenario.display - previewData.display)}đ
-                                        ({((1 - previewData.display / previewData.publicScenario.display) * 100).toFixed(1)}% rẻ hơn)
+                                        💰 Member saves {new Intl.NumberFormat('vi-VN').format(previewData.publicScenario.display - previewData.display)}₫
+                                        ({((1 - previewData.display / previewData.publicScenario.display) * 100).toFixed(1)}% cheaper)
                                     </span>
                                 </div>
                             )}

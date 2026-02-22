@@ -77,14 +77,14 @@ export function TierPaywall({
 
                         <h2 className="text-xl font-bold text-gray-900 mb-2">{title}</h2>
                         <p className="text-sm text-gray-500 mb-6">
-                            Tính năng này yêu cầu gói{' '}
-                            <strong className={c.tierColor}>{tierDisplayName}</strong> trở lên
+                            This feature requires plan{' '}
+                            <strong className={c.tierColor}>{tierDisplayName}</strong> or higher
                         </p>
 
                         {/* Features preview */}
                         <div className="text-left bg-gray-50 rounded-xl p-5 mb-6 space-y-3">
                             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
-                                Gói {tierDisplayName} bao gồm
+                                {tierDisplayName} plan includes
                             </p>
                             {features.map((f, i) => (
                                 <div key={i} className="flex items-center gap-2.5">
@@ -101,12 +101,12 @@ export function TierPaywall({
                             style={{ background: c.btn, color: '#fff' }}
                         >
                             <Crown className="w-4 h-4" />
-                            Xem gói nâng cấp
+                            View upgrade plans
                             <ArrowRight className="w-4 h-4" />
                         </Link>
 
                         <p className="text-xs text-gray-400 mt-4">
-                            Liên hệ Zalo 0778602953 để được tư vấn
+                            Contact Zalo 0778602953 for consultation
                         </p>
                     </div>
                 </div>

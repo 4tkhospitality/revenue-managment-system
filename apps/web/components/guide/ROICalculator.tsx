@@ -13,8 +13,10 @@ import {
     ResponsiveContainer,
     ReferenceLine
 } from 'recharts';
+import { useTranslations } from 'next-intl';
 
 export function ROICalculator() {
+    const t = useTranslations('roiCalc');
     // Inputs
     const [monthlyRevenue, setMonthlyRevenue] = useState(100000); // 100k USD or VND? Let's assume generic currency or local. 
     // actually localized VND is huge numbers. Let's use 100M VND default.
@@ -34,15 +36,6 @@ export function ROICalculator() {
     }, [monthlyRevenue, uplift]);
 
     const projectedNetRevenue = useMemo(() => {
-        // Cost = (Base Comm % * Proj Rev) + (Program Cost % * Proj Rev)
-        // Note: Booking Genius is a discount, so it reduces ADR, effectively changing revenue basis or treated as cost?
-        // Usually Genius is a discount off the rate, so the recorded revenue is lower, but commission is on final amount.
-        // However, here we treat "Program Cost" as generic (Preferred is comm add-on, Genius is discount).
-        // Let's assume "Program Cost" reduces the Net Revenue directly, whether via comm or discount.
-        // Formula: Net = Revenue * (1 - BaseComm% - ProgramCost%)
-        // Wait, if Genius is 10% discount, the Revenue decreases by 10%, AND comm is paid on that lower amount.
-        // But for "Program Cost Calculator" usually hotels think "I lose 10%".
-        // Let's stick to the simple model: "Program Cost" is a % of the *Projected Revenue* that is lost/paid.
         const totalCostPct = baseCommission + programCost;
         const totalCost = projectedRevenue * (totalCostPct / 100);
         return projectedRevenue - totalCost;
@@ -50,20 +43,10 @@ export function ROICalculator() {
 
     const netGain = projectedNetRevenue - currentNetRevenue;
     const roi = useMemo(() => {
-        // ROI = Net Gain / Incremental Cost?
-        // Incremental Cost = (ProjectedRev * ProgramCost%) + (ProjectedRev * BaseComm% - CurrentRev * BaseComm%)
-        // This is complex.
-        // Simple ROI for programs: (Net Revenue With Program - Net Revenue Without) / Cost of Program?
-        // Let's use the Net Gain directly as the main metric. "Profit Impact".
         return netGain;
     }, [netGain]);
 
     const breakevenUplift = useMemo(() => {
-        // Breakeven when Net Revenue With = Net Revenue Without
-        // Rev * (1 - Base) = Rev * (1 + x) * (1 - Base - Prog)
-        // (1 - Base) = (1 + x) * (1 - Base - Prog)
-        // 1 + x = (1 - Base) / (1 - Base - Prog)
-        // x = [(1 - Base) / (1 - Base - Prog)] - 1
         const num = 1 - baseCommission / 100;
         const den = 1 - (baseCommission + programCost) / 100;
         if (den <= 0) return 999; // Impossible
@@ -73,13 +56,13 @@ export function ROICalculator() {
 
     const chartData = [
         {
-            name: 'Hiện tại',
+            name: t('chartCurrent'),
             Revenue: monthlyRevenue,
             Net: currentNetRevenue,
             Cost: monthlyRevenue - currentNetRevenue,
         },
         {
-            name: 'Dự kiến',
+            name: t('chartProjected'),
             Revenue: Math.round(projectedRevenue),
             Net: Math.round(projectedNetRevenue),
             Cost: Math.round(projectedRevenue - projectedNetRevenue),
@@ -96,9 +79,9 @@ export function ROICalculator() {
                 <div className="mb-6">
                     <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                         <DollarSign className="w-5 h-5 text-blue-600" />
-                        Hiệu quả Khuyến mãi
+                        {t('title')}
                     </h3>
-                    <p className="text-sm text-gray-500 mt-1">Nhập chi phí chương trình (Genius, Preferred, AGP...) để xem khách sạn lời hay lỗ</p>
+                    <p className="text-sm text-gray-500 mt-1">{t('subtitle')}</p>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -106,31 +89,31 @@ export function ROICalculator() {
                     <div className="space-y-6 lg:col-span-1 border-r border-gray-100 pr-0 lg:pr-6">
                         <div className="space-y-4">
                             <InputGroup
-                                label="Doanh thu hàng tháng (VND)"
+                                label={t('monthlyRevenue')}
                                 value={monthlyRevenue}
                                 onChange={setMonthlyRevenue}
                                 type="currency"
                             />
                             <div className="grid grid-cols-2 gap-4">
                                 <InputGroup
-                                    label="Base Commission"
+                                    label={t('baseCommission')}
                                     value={baseCommission}
                                     onChange={setBaseCommission}
                                     unit="%"
                                 />
                                 <InputGroup
-                                    label="Program Cost/Discount"
+                                    label={t('programCost')}
                                     value={programCost}
                                     onChange={setProgramCost}
                                     unit="%"
-                                    tooltip="Ví dụ: Genius (10%), Preferred (15% + 3% = 18% -> nhập 3% add-on hoặc tổng? Hãy nhập phần tăng thêm/discount)"
+                                    tooltip={t('programCostTooltip')}
                                 />
                             </div>
                         </div>
 
                         <div className="pt-4 border-t border-gray-100">
                             <div className="flex justify-between items-center mb-2">
-                                <label className="text-sm font-medium text-gray-700">Dự kiến tăng trưởng (Uplift)</label>
+                                <label className="text-sm font-medium text-gray-700">{t('expectedUplift')}</label>
                                 <span className="text-indigo-600 font-bold">{uplift}%</span>
                             </div>
                             <input
@@ -151,11 +134,11 @@ export function ROICalculator() {
 
                         <div className="bg-gray-50 p-4 rounded-lg space-y-2">
                             <div className="flex justify-between text-sm">
-                                <span className="text-gray-600">Điểm hòa vốn (Breakeven):</span>
+                                <span className="text-gray-600">{t('breakeven')}</span>
                                 <span className="font-bold text-orange-600">+{breakevenUplift.toFixed(1)}% revenue</span>
                             </div>
                             <div className="text-xs text-gray-500">
-                                Bạn cần tăng doanh thu ít nhất <strong>{breakevenUplift.toFixed(1)}%</strong> để bù đắp chi phí chương trình.
+                                {t('breakevenDesc', { pct: breakevenUplift.toFixed(1) })}
                             </div>
                         </div>
                     </div>
@@ -165,20 +148,20 @@ export function ROICalculator() {
                         {/* KPI Cards */}
                         <div className="grid grid-cols-3 gap-4">
                             <KPIBox
-                                label="Net Revenue (Hiện tại)"
+                                label={t('netCurrent')}
                                 value={formatCurrency(currentNetRevenue)}
-                                subtext="Sau commission base"
+                                subtext={t('afterBaseComm')}
                             />
                             <KPIBox
-                                label="Net Revenue (Dự kiến)"
+                                label={t('netProjected')}
                                 value={formatCurrency(projectedNetRevenue)}
-                                subtext={`Với uplift +${uplift}%`}
+                                subtext={t('withUplift', { pct: uplift })}
                                 highlight
                             />
                             <KPIBox
-                                label="Lợi nhuận ròng (Net Gain)"
+                                label={t('netGain')}
                                 value={formatCurrency(netGain)}
-                                subtext={netGain > 0 ? "Tăng thêm" : "Giảm đi"}
+                                subtext={netGain > 0 ? t('gainUp') : t('gainDown')}
                                 color={netGain > 0 ? "text-emerald-600" : "text-red-600"}
                             />
                         </div>
@@ -195,7 +178,7 @@ export function ROICalculator() {
                                         contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                                     />
                                     <Legend />
-                                    <Bar dataKey="Revenue" fill="#E5E7EB" name="Tổng doanh thu" radius={[4, 4, 0, 0]} />
+                                    <Bar dataKey="Revenue" fill="#E5E7EB" name={t('totalRevenue')} radius={[4, 4, 0, 0]} />
                                     <Bar dataKey="Net" fill="#4F46E5" name="Net Revenue" radius={[4, 4, 0, 0]} />
                                 </BarChart>
                             </ResponsiveContainer>
@@ -207,13 +190,13 @@ export function ROICalculator() {
                             <div>
                                 <h4 className={`text-sm font-bold ${netGain > 0 ? 'text-emerald-800' : 'text-red-800'}`}>
                                     {netGain > 0
-                                        ? (netGain / currentNetRevenue > 0.1 ? "Khuyến nghị mạnh: NÊN THAM GIA" : "Khuyến nghị: Cân nhắc")
-                                        : "Không khuyến nghị: LỖ"}
+                                        ? (netGain / currentNetRevenue > 0.1 ? t('recStrongYes') : t('recConsider'))
+                                        : t('recNo')}
                                 </h4>
                                 <p className={`text-sm mt-1 ${netGain > 0 ? 'text-emerald-700' : 'text-red-700'}`}>
                                     {netGain > 0
-                                        ? `Chương trình mang lại thêm ${formatCurrency(netGain)} lợi nhuận ròng. Mức tăng trưởng ${uplift}% vượt qua điểm hòa vốn ${breakevenUplift.toFixed(1)}%.`
-                                        : `Mức tăng trưởng ${uplift}% chưa đủ bù đắp chi phí chương trình. Cần đạt tối thiểu ${breakevenUplift.toFixed(1)}% để hòa vốn.`}
+                                        ? t('recProfitMsg', { amount: formatCurrency(netGain), uplift: uplift, breakeven: breakevenUplift.toFixed(1) })
+                                        : t('recLossMsg', { uplift: uplift, breakeven: breakevenUplift.toFixed(1) })}
                                 </p>
                             </div>
                         </div>

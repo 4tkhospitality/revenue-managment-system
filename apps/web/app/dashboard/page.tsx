@@ -14,6 +14,7 @@ import { DashboardTabs } from '@/components/dashboard/DashboardTabs';
 import { InsightsPanel } from '@/components/dashboard/InsightsPanel';
 import { fetchInsightsV2Data } from '@/lib/insights/fetchInsightsV2Data';
 import { generateInsightsV2 } from '@/lib/insights/insightsV2Engine';
+import { getLocale } from 'next-intl/server';
 import { AnalyticsTabContent } from '@/components/analytics/AnalyticsTabContent';
 import { ComplianceBanner } from '@/components/compliance/ComplianceBanner';
 import { TopAccountsTable } from '@/components/dashboard/TopAccountsTable';
@@ -193,12 +194,12 @@ export default async function DashboardPage({
         return (
             <div className="p-6">
                 <div className="bg-amber-950/30 border border-amber-800 rounded-lg p-6 text-center">
-                    <h2 className="text-xl font-bold text-amber-400 mb-2">⚠️ Chưa cấu hình Hotel ID</h2>
+                    <h2 className="text-xl font-bold text-amber-400 mb-2">⚠️ Hotel ID Not Configured</h2>
                     <p className="text-amber-300 mb-4">
-                        Vui lòng thêm <code className="bg-gray-100 px-2 py-1 rounded text-gray-700">DEFAULT_HOTEL_ID</code> vào file <code className="bg-gray-100 px-2 py-1 rounded text-gray-700">.env</code>
+                        Please add <code className="bg-gray-100 px-2 py-1 rounded text-gray-700">DEFAULT_HOTEL_ID</code> to file <code className="bg-gray-100 px-2 py-1 rounded text-gray-700">.env</code>
                     </p>
                     <a href="/settings" className="inline-block px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
-                        Đi tới Settings →
+                        Go to Settings →
                     </a>
                 </div>
             </div>
@@ -221,7 +222,7 @@ export default async function DashboardPage({
     // Check if hotel exists and has capacity set
     const needsSetup = !hotel || !hotel.capacity;
     const hotelCapacity = hotel?.capacity || 0;
-    const hotelName = hotel?.name || 'Chưa đặt tên';
+    const hotelName = hotel?.name || 'Unnamed';
 
     // Calculate KPIs — v2: NULL-safe, never coalesce pickup to 0
     const totalOtb = otbData.reduce((sum, d) => sum + d.rooms_otb, 0);
@@ -289,7 +290,8 @@ export default async function DashboardPage({
         forecastData,
         referenceDate: referenceDate as Date,
     });
-    const insightsV2 = generateInsightsV2(insightsInput);
+    const locale = await getLocale();
+    const insightsV2 = generateInsightsV2({ ...insightsInput, locale });
 
     // Fetch Chart Data (OTB This Year vs Last Year using real features data)
     // Pass all data - OtbChart handles filtering internally with tabs (14/30/60/90 days)
@@ -357,6 +359,9 @@ export default async function DashboardPage({
         let action: 'INCREASE' | 'KEEP' | 'DECREASE' | 'STOP_SELL' | null = null;
         let deltaPct: number | null = null;
         let reasonTextVi: string | null = null;
+        let reasonCode: string | null = null;
+        let currentOcc: number | null = null;
+        let zone: string | null = null;
         let source: 'PIPELINE' | 'FALLBACK';
 
         if (pipelineRec) {
@@ -371,11 +376,19 @@ export default async function DashboardPage({
                 : 'KEEP');
             deltaPct = pipelineRec.delta_pct != null ? Number(pipelineRec.delta_pct) : null;
             reasonTextVi = pipelineRec.reason_text_vi || null;
+            reasonCode = pipelineRec.reason_code || null;
+            // Parse explanation for OCC/zone data
+            try {
+                const expl = pipelineRec.explanation ? JSON.parse(pipelineRec.explanation) : {};
+                currentOcc = expl.currentOcc ?? null;
+                zone = expl.zone ?? null;
+            } catch { }
 
             // Override action to STOP_SELL if no remaining supply
             if (isStopSell && action !== 'STOP_SELL') {
                 action = 'STOP_SELL';
-                reasonTextVi = 'Hết phòng — ngừng bán';
+                reasonCode = 'STOP_SELL';
+                reasonTextVi = null;
             }
         } else {
             // ⚠️ Fallback: simple heuristic (only when pipeline hasn't run)
@@ -388,11 +401,11 @@ export default async function DashboardPage({
                 action = 'STOP_SELL';
                 isStopSell = true;
                 deltaPct = 0;
-                reasonTextVi = 'Hết phòng — ngừng bán';
+                reasonCode = 'STOP_SELL';
             } else if (!currentPrice || currentPrice <= 0) {
                 isStopSell = false;
                 action = 'KEEP';
-                reasonTextVi = 'Thiếu giá hiện tại';
+                reasonCode = 'MISSING_PRICE';
             } else {
                 isStopSell = false;
                 // Simple heuristic: suggest increase if demand > supply, decrease if low demand
@@ -408,9 +421,9 @@ export default async function DashboardPage({
                 }
                 const rawDelta = ((recPrice - currentPrice) / currentPrice) * 100;
                 deltaPct = Math.round(rawDelta * 100) / 100;
-                if (action === 'KEEP') reasonTextVi = 'Giữ giá';
-                else if (action === 'INCREASE') reasonTextVi = `Đề xuất tăng ${deltaPct.toFixed(1)}%`;
-                else reasonTextVi = `Đề xuất giảm ${Math.abs(deltaPct).toFixed(1)}%`;
+                if (action === 'KEEP') reasonCode = 'STABLE';
+                else if (action === 'INCREASE') reasonCode = 'STRONG_DEMAND';
+                else reasonCode = 'LOW_PICKUP';
             }
         }
 
@@ -427,6 +440,9 @@ export default async function DashboardPage({
             action,
             deltaPct,
             reasonTextVi,
+            reasonCode,
+            currentOcc,
+            zone,
             source,
         };
     });
@@ -448,6 +464,8 @@ export default async function DashboardPage({
                 reasonTextVi: rec.reason_text_vi,
                 reasonCode: rec.reason_code,
                 projectedOcc: explanation.projectedOcc ?? null,
+                currentOcc: explanation.currentOcc ?? null,
+                zone: explanation.zone ?? null,
                 isAccepted: !!decision,
                 decisionId: decision?.decision_id ?? null,
             };
@@ -567,7 +585,7 @@ export default async function DashboardPage({
             {/* Row 1: Clean gradient header — title + PDF action */}
             <PageHeader
                 title={hotelName}
-                subtitle={`Dashboard • ${hotelCapacity} phòng`}
+                subtitle={`Dashboard • ${hotelCapacity} rooms`}
                 rightContent={
                     <ExportPdfButton
                         targetId="dashboard-pdf-content"
@@ -587,7 +605,7 @@ export default async function DashboardPage({
             {otbData.length === 0 && (
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
                     <p className="text-amber-700">
-                        Chưa có dữ liệu OTB. Vui lòng <a href="/upload" className="underline hover:text-amber-900">tải lên reservations</a> và <a href="/data" className="underline hover:text-amber-900">build OTB</a>.
+                        No OTB data. Please <a href="/upload" className="underline hover:text-amber-900">upload reservations</a> and <a href="/data" className="underline hover:text-amber-900">build OTB</a>.
                     </p>
                 </div>
             )}
@@ -596,7 +614,7 @@ export default async function DashboardPage({
             {needsSetup && (
                 <div className="bg-rose-50 border border-rose-200 rounded-lg p-4">
                     <p className="text-rose-700">
-                        Chưa cấu hình khách sạn! <a href="/settings" className="underline hover:text-rose-900">Vào Cài đặt</a> để nhập Số phòng và các thông tin khác.
+                        Hotels not configured! <a href="/settings" className="underline hover:text-rose-900">Go to Settings</a> to enter room count and other info.
                     </p>
                 </div>
             )}
@@ -631,7 +649,7 @@ export default async function DashboardPage({
                         dataAsOf ? otbData[0]?.as_of_date?.toISOString().split('T')[0] : undefined
                     }
                     overviewContent={
-                        <>
+                        <div key="overview-content" className="space-y-4">
                             {/* KPI Cards — 5-card row */}
                             <KpiCards key="kpi" data={kpiData} hotelCapacity={hotelCapacity} />
 
@@ -669,16 +687,18 @@ export default async function DashboardPage({
                                     </div>
                                 </div>
                             </Suspense>
-                        </>
+                        </div>
                     }
                     analyticsContent={
                         <AnalyticsTabContent
+                            key="analytics-content"
                             hotelId={hotelId}
                             asOfDate={asOfDateStr}
                         />
                     }
                     pricingContent={
                         <QuickModePricingWrapper
+                            key="pricing-content"
                             isQuickMode={isQuickMode}
                             quickModeData={quickModeData}
                             onAcceptAll={handleQuickAcceptAll}

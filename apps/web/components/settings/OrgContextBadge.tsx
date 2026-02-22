@@ -28,7 +28,7 @@ export function OrgContextBadge({ hotelId }: { hotelId?: string }) {
         return (
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 animate-pulse flex items-center gap-3">
                 <Loader2 className="w-5 h-5 text-slate-400 animate-spin" />
-                <span className="text-sm text-slate-400">Đang tải thông tin tổ chức...</span>
+                <span className="text-sm text-slate-400">Loading organization info...</span>
             </div>
         );
     }
@@ -64,7 +64,7 @@ export function OrgContextBadge({ hotelId }: { hotelId?: string }) {
                     href="/settings/team"
                     className="inline-block mt-3 text-sm text-blue-600 hover:text-blue-800 font-medium"
                 >
-                    Quản lý Organization →
+                    Manage Organization →
                 </Link>
             )}
         </div>

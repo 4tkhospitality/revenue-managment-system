@@ -69,7 +69,7 @@ export async function POST(req: Request) {
             ) {
                 console.error(`${TAG} ❌ Blocked by existing ${currentSub.external_provider} subscription`);
                 return NextResponse.json(
-                    { error: `Bạn đang có subscription qua ${currentSub.external_provider}. Vui lòng hủy trước.` },
+                    { error: `You have an active subscription via ${currentSub.external_provider}. Please cancel first.` },
                     { status: 409 }
                 );
             }
@@ -152,7 +152,7 @@ export async function POST(req: Request) {
             purchased_tier: tier,
             purchased_room_band: roomBand,
             expires_at: expiresAt,
-            description: `PayPal one-time ${tier} - Band ${roomBand} - ${termMonths} tháng`,
+            description: `PayPal one-time ${tier} - Band ${roomBand} - ${termMonths} months`,
         };
         if (hotelId) txData.hotel_id = hotelId;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -1,104 +1,110 @@
 {
-  "updated_at": "2026-02-18T09:47:00+07:00",
+  "updated_at": "2026-02-21T21:30:00+07:00",
   "working_on": {
-    "feature": "Payment Gateway Live Deployment",
-    "task": "SePay env vars added + PayPal switched from Sandbox to Live on Vercel",
+    "feature": "OTA Pricing Engine — Vendor Stacking Audit & Fix",
+    "task": "Completed: Traveloka TERA catalog, Trip.com Row-Column stacking fix, Expedia B2B net revenue. All pushed to main (b8bc277)",
     "status": "completed",
-    "files": [],
+    "files": [
+      "apps/web/lib/pricing/catalog.ts",
+      "apps/web/lib/pricing/engine.ts",
+      "apps/web/components/pricing/OverviewTab.tsx"
+    ],
     "blockers": [],
-    "notes": "User confirmed: SePay env vars added to Vercel production, PayPal switched from Sandbox to Live (4 env vars updated). Payment gateway is now fully live."
+    "notes": "Trip.com stacking now uses scenario-based Row-Column model matching Partner Center diagram. Traveloka has 9 promotions with TERA additive rules. Expedia B2B shows net revenue row."
   },
   "pending_tasks": [
     {
+      "task": "guidePage i18n for id/ms/th",
+      "priority": "medium",
+      "notes": "~241 keys still English fallback. Largest remaining i18n gap. Need dedicated patch script."
+    },
+    {
       "task": "Account Mapping Admin Page",
       "priority": "medium",
-      "notes": "Quick fix done (Unknown → Direct/Walk-in). Need full admin page to let users map company_name to accounts/segments. Brainstorm needed."
+      "notes": "Quick fix done (Unknown → Direct/Walk-in). Need full admin page for company_name mapping."
     },
     {
       "task": "Distribution & Conversion Clinic — Channel Revenue & Risk (P0)",
       "priority": "medium",
-      "notes": "Brainstorm complete. Data exists in reservations_raw + OTAChannel.commission. Needs: 1 API route (channel-performance) + 1 UI component."
+      "notes": "Brainstorm complete. Needs: 1 API route (channel-performance) + 1 UI component."
     },
     {
-      "task": "Manual Verification — Pricing Unification ACs",
-      "priority": "high",
-      "notes": "Run AC-1 to AC-9 on live app: STOP_SELL badge, delta rounding, deep-link preservation, mode toggle, Accept All logic."
+      "task": "Landing Page Redesign (when ready to re-enable)",
+      "priority": "low",
+      "notes": "pakhos.com redirected to rms.pakhos.com via vercel.json. Remove vercel.json to restore."
+    },
+    {
+      "task": "Editable Commission Inline per OTA",
+      "priority": "medium",
+      "notes": "Planned earlier this session. Allows hotel to override default commission % directly in pricing overview."
     }
   ],
   "recent_changes": [
     {
-      "timestamp": "2026-02-17T23:20:00+07:00",
-      "type": "feature",
-      "description": "Full Pipeline now includes OTB build: 6 steps — OTB(D-1) → OTB(D) → CancelStats → Features → Forecast → Pricing. Ensures DOD delta always has yesterday snapshot. Pipeline API handles 'buildOTB' action. Commit c2cc5d6.",
-      "files": [
-        "apps/web/components/analytics/FullPipelineButton.tsx",
-        "apps/web/app/api/analytics/pipeline/route.ts"
-      ]
-    },
-    {
-      "timestamp": "2026-02-17T23:15:00+07:00",
+      "timestamp": "2026-02-21T21:14:00+07:00",
       "type": "fix",
-      "description": "KPI 'Còn trống' card: replaced meaningless '— 0' trend with 'X% đã bán' (sold percentage). Calculates from OTB / (capacity × 30 days). Commit 7556152.",
+      "description": "Trip.com: Rewrote 7-box stacking with Row-Column scenario model. Box 1/3/4 non-stackable (horizontal), Box 2/5/6/7 stackable (vertical). Campaign only stacks with CoinPlus. Engine builds all valid scenarios and picks highest total discount.",
       "files": [
-        "apps/web/components/dashboard/KpiCards.tsx"
+        "apps/web/lib/pricing/engine.ts"
       ]
     },
     {
-      "timestamp": "2026-02-17T23:10:00+07:00",
+      "timestamp": "2026-02-21T20:30:00+07:00",
       "type": "feature",
-      "description": "Season multiplier from DB: (1) Added multiplier Float @default(1.0) to SeasonConfig schema, (2) Engine reads sc.multiplier from DB with legacy fallback, (3) API POST/PUT accept multiplier, (4) UI shows ×1.0/×1.2/×1.5 input in SeasonConfigPanel, (5) Existing rows seeded NORMAL=1.0, HIGH=1.2, HOLIDAY=1.5. Commit a03d438.",
+      "description": "Traveloka: Added TRAVELOKA_PROMOTIONS catalog (9 items) with TERA stacking rules. Campaign (3, EXCLUSIVE among self), Basic (4, stackable), Rate Channel (2, pick 1/subcategory). ADDITIVE mode. Wired into all helper functions.",
       "files": [
-        "apps/web/prisma/schema.prisma",
-        "apps/web/app/actions/runPricingEngine.ts",
-        "apps/web/app/api/pricing/seasons/route.ts",
-        "apps/web/app/api/pricing/seasons/[id]/route.ts",
-        "apps/web/components/pricing/SeasonConfigPanel.tsx"
+        "apps/web/lib/pricing/catalog.ts",
+        "apps/web/lib/pricing/engine.ts"
       ]
     },
     {
-      "timestamp": "2026-02-17T22:30:00+07:00",
-      "type": "docs",
-      "description": "Dashboard guide (/guide page): rewrote rec-table section with comprehensive guide on reading the dashboard — Quick/Detail modes, OTB vs Projected OCC, Anchor pricing, Zone→Multiplier table, ADR sanity banner, GM override guidance.",
-      "files": [
-        "apps/web/app/guide/page.tsx"
-      ]
-    },
-    {
-      "timestamp": "2026-02-17T21:14:00+07:00",
+      "timestamp": "2026-02-21T17:30:00+07:00",
       "type": "feature",
-      "description": "Added 'Hành động' badge + 'Lý do' column to RecommendationTable (Detailed Mode). Computes action/deltaPct/reasonTextVi from PricingLogic + OCC context in dashboard/page.tsx. Commit 0e5ca60.",
+      "description": "Expedia B2B: Added net revenue row in OverviewTab for B2B merchant model channels. Shows NET after commission deduction.",
       "files": [
-        "apps/web/components/dashboard/RecommendationTable.tsx",
-        "apps/web/app/dashboard/page.tsx"
+        "apps/web/components/pricing/OverviewTab.tsx"
       ]
+    },
+    {
+      "timestamp": "2026-02-21T16:00:00+07:00",
+      "type": "feature",
+      "description": "Editable commission per OTA: Planned inline commission override feature for pricing overview. Implementation plan created.",
+      "files": []
     }
   ],
   "errors_encountered": [
     {
-      "error": "KPI 'Còn trống' card shows '— 0' instead of useful info",
-      "solution": "Trend was set to 0 with empty label when remaining supply > 20. Replaced with calculated sold% (OTB / totalCapacity * 100), shows 'X% đã bán'.",
-      "resolved": true,
-      "file": "apps/web/components/dashboard/KpiCards.tsx"
+      "error": "Trip.com stacking treated all 7 boxes as independently stackable — wrong per Partner Center diagram",
+      "solution": "Rewrote with scenario-based Row-Column model: Box 1/3/4 non-stackable row, Box 2/5/6/7 stackable column. Picks best scenario.",
+      "resolved": true
     },
     {
-      "error": "Analytics 'vs qua: 0 rms' always shows 0",
-      "solution": "DOD compares today's OTB snapshot vs yesterday's. If no yesterday snapshot exists, delta is null/0. Fixed by adding OTB(D-1) step to Full Pipeline so yesterday's snapshot is always built before comparison.",
-      "resolved": true,
-      "file": "apps/web/components/analytics/FullPipelineButton.tsx"
+      "error": "Trip.com Campaign EXCLUSIVE blocked ALL boxes including CoinPlus",
+      "solution": "Changed to scenario C: Campaign + CoinPlus (Box 7) only. User clarified: 'Campaign không stack với ai trừ CoinPlus'",
+      "resolved": true
+    },
+    {
+      "error": "git commit appeared stuck in terminal (no output for 10+ minutes)",
+      "solution": "Command actually completed silently. Check git log --oneline to verify commit before retrying.",
+      "resolved": true
     }
   ],
   "decisions_made": [
     {
-      "decision": "Season multiplier stored in DB per hotel, not hardcoded",
-      "reason": "Different hotels have different seasonal pricing strategies. NORMAL=1.0, HIGH=1.2, HOLIDAY=1.5 are defaults but GM can customize. Engine falls back to legacy values if DB multiplier is null."
+      "decision": "Trip.com: Scenario-based stacking (deal-box vs package vs campaign)",
+      "reason": "Partner Center diagram shows horizontal non-stackable row (Box 1/3/4) and vertical stackable column (Box 2/5/6/7). Each scenario has different stackable boxes."
     },
     {
-      "decision": "Full Pipeline builds OTB for D-1 and D before running Features/Forecast/Pricing",
-      "reason": "DOD (day-over-day) delta requires yesterday's OTB snapshot. Without it, 'vs qua' metric shows 0 or null. Pipeline now ensures both snapshots exist. /data page keeps separate OTB button for manual/bulk builds."
+      "decision": "Trip.com: Box 2 (Mobile Rate) only stacks with Box 1 (Deal Box)",
+      "reason": "User clarified: 'basic deal và mobile rate sẽ ko stack với package'. Same column in diagram."
     },
     {
-      "decision": "/data Build OTB button kept as-is (no D-1 auto-build)",
-      "reason": "/data already builds by tier (daily/weekly/monthly) which usually covers D-1. Full Pipeline handles D-1+D for analytics DOD. Different tools, different purposes."
+      "decision": "Trip.com: Campaign only stacks with CoinPlus (Box 7)",
+      "reason": "User clarified: 'campaign là lớn nhất không stack với ai trừ Coinplus'. Most exclusive."
+    },
+    {
+      "decision": "Traveloka: ADDITIVE stacking (campaign + basics + rate channels)",
+      "reason": "Per TERA documentation. All groups stack additively. Only restriction: 1 campaign max."
     }
   ]
 }

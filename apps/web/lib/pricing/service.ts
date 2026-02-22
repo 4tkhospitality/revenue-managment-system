@@ -274,18 +274,18 @@ export async function calculatePreview(input: PreviewInput): Promise<PreviewResu
         bar = effectiveDiscount >= 100 ? 0 : Math.round(display / (1 - effectiveDiscount / 100));
         net = Math.round(display * (1 - commission / 100));
         trace = [
-            { step: 'Giá khách thấy', description: `Hiển thị trên OTA = ${formatVND(display)}`, priceAfter: display },
-            { step: 'Tính BAR', description: `BAR = ${formatVND(display)} / (1 - ${effectiveDiscount.toFixed(1)}%) = ${formatVND(bar)}`, priceAfter: bar },
-            { step: 'Hoa hồng OTA', description: `Thu về = ${formatVND(display)} × (1 - ${commission}%) = ${formatVND(net)}`, priceAfter: net },
+            { step: 'Display Price', description: `Shown on OTA = ${formatVND(display)}`, priceAfter: display },
+            { step: 'Calculate BAR', description: `BAR = ${formatVND(display)} / (1 - ${effectiveDiscount.toFixed(1)}%) = ${formatVND(bar)}`, priceAfter: bar },
+            { step: 'OTA Commission', description: `Net revenue = ${formatVND(display)} × (1 - ${commission}%) = ${formatVND(net)}`, priceAfter: net },
         ];
     }
 
     // Add timing conflict warning to validation.warnings (not a separate violations field)
     if (hadConflict && removed) {
-        validation.warnings.push(`Early Bird + Last-Minute → Bỏ "${removed.name}" (${removed.percent}%)`);
+        validation.warnings.push(`Early Bird + Last-Minute → Dropped "${removed.name}" (${removed.percent}%)`);
         trace.unshift({
-            step: '⚠️ Không cộng dồn',
-            description: `Early Bird + Last-Minute → Bỏ "${removed.name}" (${removed.percent}%)`,
+            step: '⚠️ Non-stackable',
+            description: `Early Bird + Last-Minute → Dropped "${removed.name}" (${removed.percent}%)`,
             priceAfter: value,
         });
     }
@@ -498,8 +498,8 @@ export interface DynamicMatrixInput {
     hotelId: string;
     stayDate: string;         // ISO date YYYY-MM-DD (date-only, hotel.timezone)
     channelId: string;
-    seasonIdOverride?: string; // User chọn season thủ công → skip auto-detect
-    occOverride?: number;      // User nhập OCC% thủ công (0..1)
+    seasonIdOverride?: string; // User selects season manually → skip auto-detect
+    occOverride?: number;      // User inputs OCC% manually (0..1)
 }
 
 export interface DynamicCell {
@@ -728,7 +728,7 @@ export async function calculateDynamicMatrix(
                         field: 'net',
                         value: cell.net,
                         min: minRate,
-                        message: `${rt.name} tier ${tier.label}: NET ${cell.net.toLocaleString()} dưới guardrail min ${minRate.toLocaleString()}`,
+                        message: `${rt.name} tier ${tier.label}: NET ${cell.net.toLocaleString()} below guardrail min ${minRate.toLocaleString()}`,
                     });
                 }
                 if (cell.bar > maxRate && maxRate < Infinity) {
@@ -738,7 +738,7 @@ export async function calculateDynamicMatrix(
                         field: 'bar',
                         value: cell.bar,
                         max: maxRate,
-                        message: `${rt.name} tier ${tier.label}: BAR ${cell.bar.toLocaleString()} vượt guardrail max ${maxRate.toLocaleString()}`,
+                        message: `${rt.name} tier ${tier.label}: BAR ${cell.bar.toLocaleString()} exceeds guardrail max ${maxRate.toLocaleString()}`,
                     });
                 }
             }

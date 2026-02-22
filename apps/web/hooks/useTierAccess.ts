@@ -58,11 +58,13 @@ export function useTierAccess(requiredTier: string): TierAccessResult {
     // Demo hotel viewers get SUPERIOR tier access → can see Analytics to evaluate the product.
     // Rate Shopper (SUITE) still shows paywall for demo users.
     // Expired subscriptions are already downgraded server-side, but double-check here.
-    const effectivePlan = (isDemo && !isSuperAdmin) ? 'SUPERIOR' : currentPlan;
+    // Super admins are NEVER treated as demo — they get full access everywhere.
+    const effectiveIsDemo = isDemo && !isSuperAdmin;
+    const effectivePlan = effectiveIsDemo ? 'SUPERIOR' : currentPlan;
     const userLevel = TIER_LEVELS[effectivePlan] ?? 0;
     const requiredLevel = TIER_LEVELS[requiredTier] ?? 0;
     const hasAccess = isSuperAdmin || userLevel >= requiredLevel;
 
-    return { currentPlan, isDemo, hasAccess, isExpired, periodEnd, loading };
+    return { currentPlan, isDemo: effectiveIsDemo, hasAccess, isExpired, periodEnd, loading };
 }
 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Loader2, Save, Plus, Trash2, AlertTriangle, TrendingUp } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 interface OccTier {
     id?: string;
@@ -19,6 +20,7 @@ interface Props {
 }
 
 export default function OccTierEditor({ onTiersChange }: Props) {
+    const t = useTranslations('occTierEditor');
     const [tiers, setTiers] = useState<OccTier[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -101,38 +103,38 @@ export default function OccTierEditor({ onTiersChange }: Props) {
 
     // Per-row validation
     function getRowErrors(idx: number): string[] {
-        const t = tiers[idx];
+        const tier = tiers[idx];
         const errors: string[] = [];
-        if (t.occ_min >= t.occ_max) errors.push('min ≥ max');
-        if (t.adjustment_type === 'MULTIPLY' && (t.multiplier < 0.5 || t.multiplier > 3.0)) {
-            errors.push('Hệ số ngoài 0.5–3.0');
+        if (tier.occ_min >= tier.occ_max) errors.push(t('errMinGteMax'));
+        if (tier.adjustment_type === 'MULTIPLY' && (tier.multiplier < 0.5 || tier.multiplier > 3.0)) {
+            errors.push(t('errMultiplierRange'));
         }
-        if (idx > 0 && tiers[idx - 1].occ_max !== t.occ_min) {
-            errors.push(`không liền mạch — bậc trước kết thúc ${Math.round(tiers[idx - 1].occ_max * 100)}%`);
+        if (idx > 0 && tiers[idx - 1].occ_max !== tier.occ_min) {
+            errors.push(t('errNotContinuous', { pct: Math.round(tiers[idx - 1].occ_max * 100) }));
         }
-        if (idx === 0 && t.occ_min !== 0) errors.push('phải bắt đầu từ 0%');
-        if (idx === tiers.length - 1 && t.occ_max !== 1.0) errors.push('phải kết thúc ở 100%');
+        if (idx === 0 && tier.occ_min !== 0) errors.push(t('errMustStartZero'));
+        if (idx === tiers.length - 1 && tier.occ_max !== 1.0) errors.push(t('errMustEndHundred'));
         return errors;
     }
 
     // Global validation
     function validate(): string[] {
         const errors: string[] = [];
-        if (tiers.length < 3) errors.push('Cần ít nhất 3 bậc');
-        if (tiers.length > 6) errors.push('Tối đa 6 bậc');
+        if (tiers.length < 3) errors.push(t('errNeedThreeTiers'));
+        if (tiers.length > 6) errors.push(t('errMaxSixTiers'));
 
         for (let i = 0; i < tiers.length; i++) {
-            const t = tiers[i];
-            if (t.occ_min >= t.occ_max) errors.push(`Bậc ${i}: min ≥ max`);
-            if (t.adjustment_type === 'MULTIPLY' && (t.multiplier < 0.5 || t.multiplier > 3.0)) {
-                errors.push(`Bậc ${i}: hệ số ngoài 0.5–3.0`);
+            const tier = tiers[i];
+            if (tier.occ_min >= tier.occ_max) errors.push(t('errTierMinGteMax', { idx: i }));
+            if (tier.adjustment_type === 'MULTIPLY' && (tier.multiplier < 0.5 || tier.multiplier > 3.0)) {
+                errors.push(t('errTierMultiplier', { idx: i }));
             }
-            if (i > 0 && tiers[i - 1].occ_max !== t.occ_min) {
-                errors.push(`Bậc ${i}: không liền mạch với bậc ${i - 1}`);
+            if (i > 0 && tiers[i - 1].occ_max !== tier.occ_min) {
+                errors.push(t('errTierNotContinuous', { idx: i, prevIdx: i - 1 }));
             }
         }
-        if (tiers.length > 0 && tiers[0].occ_min !== 0) errors.push('Bậc đầu phải bắt đầu từ 0%');
-        if (tiers.length > 0 && tiers[tiers.length - 1].occ_max !== 1.0) errors.push('Bậc cuối phải kết thúc ở 100%');
+        if (tiers.length > 0 && tiers[0].occ_min !== 0) errors.push(t('errFirstTierStart'));
+        if (tiers.length > 0 && tiers[tiers.length - 1].occ_max !== 1.0) errors.push(t('errLastTierEnd'));
         return errors;
     }
 
@@ -251,7 +253,7 @@ export default function OccTierEditor({ onTiersChange }: Props) {
             onTiersChange?.();
             setTimeout(() => setSuccess(false), 2000);
         } catch (e) {
-            setError(e instanceof Error ? e.message : 'Save failed');
+            setError(e instanceof Error ? e.message : t('saveFailed'));
         } finally {
             setSaving(false);
         }
@@ -278,10 +280,10 @@ export default function OccTierEditor({ onTiersChange }: Props) {
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <TrendingUp className="w-4 h-4 text-blue-500" />
-                    <h3 className="text-sm font-semibold text-slate-700">Bậc công suất (OCC Tiers)</h3>
+                    <h3 className="text-sm font-semibold text-slate-700">{t('title')}</h3>
                     {isDirty && (
                         <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[10px] rounded-full font-medium">
-                            Chưa lưu
+                            {t('unsaved')}
                         </span>
                     )}
                 </div>
@@ -290,7 +292,7 @@ export default function OccTierEditor({ onTiersChange }: Props) {
                         onClick={addTier}
                         disabled={tiers.length >= 6}
                         className="p-1.5 text-emerald-600 hover:bg-emerald-50 disabled:text-slate-300 rounded transition-colors"
-                        title="Thêm bậc"
+                        title={t('addTier')}
                     >
                         <Plus className="w-4 h-4" />
                     </button>
@@ -298,7 +300,7 @@ export default function OccTierEditor({ onTiersChange }: Props) {
                         onClick={removeTier}
                         disabled={tiers.length <= 3}
                         className="p-1.5 text-red-500 hover:bg-red-50 disabled:text-slate-300 rounded transition-colors"
-                        title="Xóa bậc cuối"
+                        title={t('deleteLast')}
                     >
                         <Trash2 className="w-4 h-4" />
                     </button>
@@ -308,10 +310,10 @@ export default function OccTierEditor({ onTiersChange }: Props) {
             {/* Table Header */}
             <div className="grid grid-cols-[40px_1fr_1fr_auto_1fr] gap-1.5 text-[10px] text-slate-400 uppercase tracking-wider px-1 font-medium">
                 <span></span>
-                <span>Từ</span>
-                <span>Đến</span>
-                <span className="text-center w-14">Loại</span>
-                <span>Điều chỉnh</span>
+                <span>{t('from')}</span>
+                <span>{t('to')}</span>
+                <span className="text-center w-14">{t('type')}</span>
+                <span>{t('adjustment')}</span>
             </div>
 
             {/* Tier rows */}
@@ -357,10 +359,10 @@ export default function OccTierEditor({ onTiersChange }: Props) {
                                 <button
                                     onClick={() => toggleAdjType(idx)}
                                     className={`w-14 h-7 rounded-md text-xs font-semibold transition-all ${isMultiply
-                                            ? 'bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100'
-                                            : 'bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100'
+                                        ? 'bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100'
+                                        : 'bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100'
                                         }`}
-                                    title={isMultiply ? 'Đang dùng hệ số (×). Click để chuyển sang số tiền (₫)' : 'Đang dùng số tiền (₫). Click để chuyển sang hệ số (×)'}
+                                    title={isMultiply ? t('useMultiplierTooltip') : t('useAmountTooltip')}
                                 >
                                     {isMultiply ? '× %' : '+ ₫'}
                                 </button>
@@ -414,8 +416,8 @@ export default function OccTierEditor({ onTiersChange }: Props) {
             <div className="flex flex-wrap gap-1 pt-1 border-t border-slate-100">
                 {tiers.map((t, i) => (
                     <span key={i} className={`text-[10px] px-1.5 py-0.5 rounded-full border ${t.adjustment_type === 'MULTIPLY'
-                            ? 'bg-blue-50 text-blue-600 border-blue-200'
-                            : 'bg-emerald-50 text-emerald-600 border-emerald-200'
+                        ? 'bg-blue-50 text-blue-600 border-blue-200'
+                        : 'bg-emerald-50 text-emerald-600 border-emerald-200'
                         }`}>
                         {t.label}: {t.adjustment_type === 'MULTIPLY' ? `×${t.multiplier.toFixed(2)}` : `+${formatVND(t.fixed_amount)}`}
                     </span>
@@ -435,20 +437,20 @@ export default function OccTierEditor({ onTiersChange }: Props) {
             )}
 
             {error && <div className="text-xs text-red-600 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> {error}</div>}
-            {success && <div className="text-xs text-emerald-600">Đã lưu thành công!</div>}
+            {success && <div className="text-xs text-emerald-600">{t('savedSuccess')}</div>}
 
             <button
                 onClick={handleSave}
                 disabled={saving || validationErrors.length > 0 || !isDirty}
                 className={`w-full flex items-center justify-center gap-2 px-3 py-2 text-white text-sm rounded-lg transition-colors ${validationErrors.length > 0
-                        ? 'bg-slate-300 cursor-not-allowed'
-                        : isDirty
-                            ? 'bg-blue-600 hover:bg-blue-700'
-                            : 'bg-slate-300 cursor-not-allowed'
+                    ? 'bg-slate-300 cursor-not-allowed'
+                    : isDirty
+                        ? 'bg-blue-600 hover:bg-blue-700'
+                        : 'bg-slate-300 cursor-not-allowed'
                     }`}
             >
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                {isDirty ? 'Lưu bậc OCC' : 'Đã lưu'}
+                {isDirty ? t('saveButton') : t('saved')}
             </button>
         </div>
     );

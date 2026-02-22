@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { Zap, RefreshCw, MoreHorizontal, Square, Loader2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 interface BuildFeaturesInlineProps {
     asOfDate: string;
@@ -14,8 +15,8 @@ interface BuildFeaturesInlineProps {
 /**
  * Inline banner shown when features_daily is missing for the selected as_of_date.
  * Provides 3 actions:
- * - Build ngày này (single date)
- * - Build tất cả (smart skip)
+ * - Build this date (single date)
+ * - Build all (smart skip)
  * - Rebuild (force) in overflow menu
  */
 export function BuildFeaturesInline({
@@ -24,6 +25,7 @@ export function BuildFeaturesInline({
     hotelId,
     onBuildComplete,
 }: BuildFeaturesInlineProps) {
+    const t = useTranslations('analyticsTab');
     const [building, setBuilding] = useState(false);
     const [batchProgress, setBatchProgress] = useState<{ built: number; skipped: number; total: number } | null>(null);
     const [showMenu, setShowMenu] = useState(false);
@@ -101,10 +103,10 @@ export function BuildFeaturesInline({
                 </div>
                 <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-amber-800">
-                        Chưa có Pickup/STLY cho {asOfDate}
+                        {t('noPickupStly', { date: asOfDate })}
                     </div>
                     <div className="text-xs text-amber-600 mt-0.5">
-                        {hint || 'OTB cơ bản vẫn hiển thị. Build features để xem đầy đủ Pickup, Pace, STLY.'}
+                        {hint || t('buildHint')}
                     </div>
 
                     {/* Progress bar */}
@@ -112,8 +114,8 @@ export function BuildFeaturesInline({
                         <div className="mt-2">
                             <div className="flex items-center gap-2 text-xs text-amber-700">
                                 <Loader2 className="w-3 h-3 animate-spin" />
-                                <span>{batchProgress.built + batchProgress.skipped}/{batchProgress.total} ngày</span>
-                                <span className="text-amber-500">({batchProgress.built} built, {batchProgress.skipped} skipped)</span>
+                                <span>{t('daysProgress', { done: batchProgress.built + batchProgress.skipped, total: batchProgress.total })}</span>
+                                <span className="text-amber-500">{t('builtSkipped', { built: batchProgress.built, skipped: batchProgress.skipped })}</span>
                             </div>
                             <div className="mt-1 h-1.5 bg-amber-200 rounded-full overflow-hidden">
                                 <div
@@ -133,12 +135,12 @@ export function BuildFeaturesInline({
                             className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
                         >
                             <Square className="w-3 h-3" />
-                            Dừng
+                            {t('stop')}
                         </button>
                     ) : building ? (
                         <div className="flex items-center gap-1.5 text-xs text-amber-600">
                             <Loader2 className="w-4 h-4 animate-spin" />
-                            Đang build...
+                            {t('building')}
                         </div>
                     ) : (
                         <>
@@ -147,14 +149,14 @@ export function BuildFeaturesInline({
                                 className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-amber-700 bg-white border border-amber-300 rounded-lg hover:bg-amber-100 transition-colors"
                             >
                                 <Zap className="w-3 h-3" />
-                                Build ngày này
+                                {t('buildThisDate')}
                             </button>
                             <button
                                 onClick={() => buildAll('smart')}
                                 className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700 transition-colors"
                             >
                                 <RefreshCw className="w-3 h-3" />
-                                Build tất cả
+                                {t('buildAll')}
                             </button>
 
                             {/* Overflow menu for force rebuild */}
@@ -174,7 +176,7 @@ export function BuildFeaturesInline({
                                                 onClick={() => buildAll('force')}
                                                 className="w-full text-left px-3 py-2 text-xs text-red-600 hover:bg-red-50 transition-colors"
                                             >
-                                                🔄 Rebuild tất cả (force)
+                                                {t('rebuildForce')}
                                             </button>
                                         </div>
                                     </>

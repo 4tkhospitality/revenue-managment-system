@@ -19,7 +19,7 @@ export async function POST() {
 
         if (!result) {
             return NextResponse.json(
-                { error: 'Demo Hotel không khả dụng. Vui lòng tạo khách sạn mới.' },
+                { error: 'Demo Hotel unavailable. Please create a new hotel.' },
                 { status: 404 }
             )
         }
@@ -62,7 +62,7 @@ export async function POST() {
     } catch (error) {
         console.error('[API] Onboarding demo error:', error)
         return NextResponse.json(
-            { error: 'Có lỗi xảy ra, vui lòng thử lại' },
+            { error: 'An error occurred, please try again' },
             { status: 500 }
         )
     }

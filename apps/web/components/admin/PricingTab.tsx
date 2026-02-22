@@ -41,7 +41,7 @@ const TIER_LABELS: Record<string, string> = {
 };
 const BANDS = ['R30', 'R80', 'R150', 'R300P'];
 const BAND_LABELS: Record<string, string> = {
-    R30: '1–30 phòng', R80: '31–80 phòng', R150: '81–150 phòng', R300P: '151–300+',
+    R30: '1–30 rooms', R80: '31–80 rooms', R150: '81–150 rooms', R300P: '151–300+',
 };
 const TERMS = [1, 3, 6, 12];
 
@@ -212,21 +212,21 @@ function ConfigForm({
             background: isEdit ? '#fffbeb' : C.blue50,
         }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: C.navy800, marginBottom: 12 }}>
-                {isEdit ? <><Pencil size={13} style={{ marginRight: 4 }} /> Chỉnh sửa</> : <><Plus size={13} style={{ marginRight: 4 }} /> Thêm mới</>}
+                {isEdit ? <><Pencil size={13} style={{ marginRight: 4 }} /> Edit</> : <><Plus size={13} style={{ marginRight: 4 }} /> Add New</>}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: 10 }}>
                 {type === 'BASE_PRICE' && (
                     <>
                         <div>
-                            <label style={lbl}>Gói</label>
+                            <label style={lbl}>Plan</label>
                             <select style={inp} value={form.tier as string || ''}
                                 onChange={e => set('tier', e.target.value)}>
-                                <option value="">Chọn gói</option>
+                                <option value="">Select Plan</option>
                                 {TIERS.map(t => <option key={t} value={t}>{TIER_LABELS[t]}</option>)}
                             </select>
                         </div>
                         <div>
-                            <label style={lbl}>Giá (VNĐ/tháng)</label>
+                            <label style={lbl}>Price (VND/month)</label>
                             <input style={inp} type="number" min={0} step={10000}
                                 value={form.amount_vnd as number ?? ''}
                                 onChange={e => set('amount_vnd', Number(e.target.value))}
@@ -237,10 +237,10 @@ function ConfigForm({
                 {type === 'BAND_MULTIPLIER' && (
                     <>
                         <div>
-                            <label style={lbl}>Band phòng</label>
+                            <label style={lbl}>Band rooms</label>
                             <select style={inp} value={form.room_band as string || ''}
                                 onChange={e => set('room_band', e.target.value)}>
-                                <option value="">Chọn band</option>
+                                <option value="">Select Band</option>
                                 {BANDS.map(b => <option key={b} value={b}>{b} — {BAND_LABELS[b]}</option>)}
                             </select>
                         </div>
@@ -256,15 +256,15 @@ function ConfigForm({
                 {type === 'TERM_DISCOUNT' && (
                     <>
                         <div>
-                            <label style={lbl}>Kỳ hạn</label>
+                            <label style={lbl}>Term</label>
                             <select style={inp} value={form.term_months as number ?? ''}
                                 onChange={e => set('term_months', Number(e.target.value))}>
-                                <option value="">Chọn kỳ hạn</option>
-                                {TERMS.map(t => <option key={t} value={t}>{t} tháng</option>)}
+                                <option value="">Select Term</option>
+                                {TERMS.map(t => <option key={t} value={t}>{t} months</option>)}
                             </select>
                         </div>
                         <div>
-                            <label style={lbl}>Giảm giá (%)</label>
+                            <label style={lbl}>Decrease (%)</label>
                             <input style={inp} type="number" min={0} max={99}
                                 value={form.percent as number ?? ''}
                                 onChange={e => set('percent', Number(e.target.value))}
@@ -273,23 +273,23 @@ function ConfigForm({
                     </>
                 )}
                 <div>
-                    <label style={lbl}>Hiệu lực từ</label>
+                    <label style={lbl}>Effective From</label>
                     <input style={inp} type="datetime-local"
                         value={form.effective_from as string || ''}
                         onChange={e => set('effective_from', e.target.value)} />
                 </div>
                 <div>
-                    <label style={lbl}>Đến (trống = vĩnh viễn)</label>
+                    <label style={lbl}>To (empty = permanent)</label>
                     <input style={inp} type="datetime-local"
                         value={form.effective_to as string || ''}
                         onChange={e => set('effective_to', e.target.value || undefined)} />
                 </div>
                 <div>
-                    <label style={lbl}>Nhãn / Ghi chú</label>
+                    <label style={lbl}>Label / Notes</label>
                     <input style={inp}
                         value={form.label as string || ''}
                         onChange={e => set('label', e.target.value)}
-                        placeholder="VD: Khuyến mãi Q1" />
+                        placeholder="VD: Q1 Promotion" />
                 </div>
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
@@ -299,7 +299,7 @@ function ConfigForm({
                     borderRadius: 8, border: `1px solid ${C.navy200}`, background: C.white,
                     color: C.navy600, cursor: 'pointer', transition: 'all 0.15s',
                 }}>
-                    <X size={14} /> Hủy
+                    <X size={14} /> Cancel
                 </button>
                 <button onClick={() => {
                     // Strip fields that don't belong to this config_type
@@ -324,7 +324,7 @@ function ConfigForm({
                     background: C.blue600, color: C.white,
                     opacity: saving ? 0.7 : 1, transition: 'all 0.15s',
                 }}>
-                    <Save size={14} /> {saving ? 'Đang lưu…' : isEdit ? 'Cập nhật' : 'Tạo mới'}
+                    <Save size={14} /> {saving ? 'Saving…' : isEdit ? 'Update' : 'Create'}
                 </button>
             </div>
         </div>
@@ -376,7 +376,7 @@ function ConfigRow({
         case 'TERM_DISCOUNT':
             nameCell = (
                 <div>
-                    <span style={{ fontWeight: 600, fontSize: 14, color: C.navy800 }}>{config.term_months} tháng</span>
+                    <span style={{ fontWeight: 600, fontSize: 14, color: C.navy800 }}>{config.term_months} months</span>
                     {config.label && <div style={{ fontSize: 11, color: C.navy400, marginTop: 1 }}>{config.label}</div>}
                 </div>
             );
@@ -404,7 +404,7 @@ function ConfigRow({
             <div style={{ textAlign: 'center', fontSize: 12, color: C.navy400, lineHeight: 1.4 }}>
                 <div>{fmtDate(config.effective_from)}</div>
                 <div style={{ color: config.effective_to ? C.navy400 : C.green600, fontSize: 11 }}>
-                    {config.effective_to ? `→ ${fmtDate(config.effective_to)}` : '∞ Vĩnh viễn'}
+                    {config.effective_to ? `→ ${fmtDate(config.effective_to)}` : '∞ Permanent'}
                 </div>
             </div>
             <div style={{ textAlign: 'center' }}>
@@ -413,7 +413,7 @@ function ConfigRow({
             <div style={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
                 {!past && (
                     <>
-                        <button onClick={() => onEdit(config)} title="Chỉnh sửa" style={{
+                        <button onClick={() => onEdit(config)} title="Edit" style={{
                             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                             width: 30, height: 30, borderRadius: 6, border: 'none',
                             background: 'transparent', color: C.navy400, cursor: 'pointer',
@@ -424,7 +424,7 @@ function ConfigRow({
                         >
                             <Pencil size={14} />
                         </button>
-                        <button onClick={() => onDelete(config.id)} title="Hủy kích hoạt" style={{
+                        <button onClick={() => onDelete(config.id)} title="Deactivate" style={{
                             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                             width: 30, height: 30, borderRadius: 6, border: 'none',
                             background: 'transparent', color: C.navy400, cursor: 'pointer',
@@ -482,10 +482,10 @@ function ConfigSection({
 
     // Header labels for grid
     const colLabels = type === 'BASE_PRICE'
-        ? ['Gói', 'Giá/tháng', 'Hiệu lực', 'Status', '']
+        ? ['Plan', 'Price/month', 'Effective', 'Status', '']
         : type === 'BAND_MULTIPLIER'
-            ? ['Band', 'Hệ số', 'Hiệu lực', 'Status', '']
-            : ['Kỳ hạn', 'Giảm giá', 'Hiệu lực', 'Status', ''];
+            ? ['Band', 'Multiplier', 'Effective', 'Status', '']
+            : ['Term', 'Decrease', 'Effective', 'Status', ''];
 
     return (
         <div style={{
@@ -528,7 +528,7 @@ function ConfigSection({
                         onMouseEnter={e => { e.currentTarget.style.background = C.blue500; }}
                         onMouseLeave={e => { e.currentTarget.style.background = C.blue600; }}
                     >
-                        <Plus size={13} /> Thêm mới
+                        <Plus size={13} /> Add New
                     </button>
                     {collapsed ? <ChevronDown size={16} color={C.navy400} /> : <ChevronUp size={16} color={C.navy400} />}
                 </div>
@@ -571,7 +571,7 @@ function ConfigSection({
                     {filtered.length === 0 ? (
                         <div style={{ padding: '32px 16px', textAlign: 'center', color: C.navy400 }}>
                             <AlertCircle size={20} style={{ marginBottom: 6, opacity: 0.5 }} />
-                            <div style={{ fontSize: 13 }}>Chưa có config nào</div>
+                            <div style={{ fontSize: 13 }}>No config yet</div>
                         </div>
                     ) : (
                         filtered.map(c => (
@@ -649,34 +649,34 @@ function PreviewCalculator() {
                 </div>
                 <div>
                     <div style={{ fontSize: 14, fontWeight: 600, color: C.navy800 }}>Preview Calculator</div>
-                    <div style={{ fontSize: 12, color: C.navy400 }}>Tính giá thực tế theo cấu hình hiện tại</div>
+                    <div style={{ fontSize: 12, color: C.navy400 }}>Calculate actual price based on current config</div>
                 </div>
             </div>
             <div style={{ padding: 16 }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 16 }}>
                     <div>
-                        <label style={lbl}>Gói</label>
+                        <label style={lbl}>Plan</label>
                         <select style={inp} value={tier} onChange={e => setTier(e.target.value)}>
                             {TIERS.map(t => <option key={t} value={t}>{TIER_LABELS[t]}</option>)}
                         </select>
                     </div>
                     <div>
-                        <label style={lbl}>Band phòng</label>
+                        <label style={lbl}>Band rooms</label>
                         <select style={inp} value={band} onChange={e => setBand(e.target.value)}>
                             {BANDS.map(b => <option key={b} value={b}>{b} — {BAND_LABELS[b]}</option>)}
                         </select>
                     </div>
                     <div>
-                        <label style={lbl}>Kỳ hạn</label>
+                        <label style={lbl}>Term</label>
                         <select style={inp} value={term} onChange={e => setTerm(Number(e.target.value))}>
-                            {TERMS.map(t => <option key={t} value={t}>{t} tháng</option>)}
+                            {TERMS.map(t => <option key={t} value={t}>{t} months</option>)}
                         </select>
                     </div>
                 </div>
 
                 {loading ? (
                     <div style={{ textAlign: 'center', padding: 24, color: C.navy400, fontSize: 13 }}>
-                        Đang tính toán…
+                        Calculating…
                     </div>
                 ) : result && (
                     <div style={{
@@ -685,7 +685,7 @@ function PreviewCalculator() {
                         border: `1px solid ${C.navy200}`,
                     }}>
                         <div style={{ fontSize: 12, fontWeight: 500, color: C.navy400, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                            Khách trả / tháng
+                            Customer pays / month
                         </div>
                         <div style={{
                             fontSize: 36, fontWeight: 800, color: C.navy900,
@@ -700,11 +700,11 @@ function PreviewCalculator() {
                                 background: C.green100, borderRadius: 20,
                                 fontSize: 12, fontWeight: 600, color: C.green600,
                             }}>
-                                <Percent size={11} /> Giảm {result.discountPercent}% so với monthly
+                                <Percent size={11} /> Discount {result.discountPercent}% compared to monthly
                             </div>
                         )}
                         <div style={{ fontSize: 12, color: C.navy400, marginTop: 8 }}>
-                            Giá gốc monthly: {fmtVND(result.basePrice)}
+                            Monthly base price: {fmtVND(result.basePrice)}
                         </div>
                     </div>
                 )}
@@ -739,14 +739,14 @@ export default function PricingTab() {
         });
         if (!res.ok) {
             const err = await res.json();
-            alert(`Lỗi: ${err.error}`);
+            alert(`Error: ${err.error}`);
             return;
         }
         fetchConfigs();
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm('Hủy kích hoạt config này? (effective_to = now)')) return;
+        if (!confirm('Deactivate this config? (effective_to = now)')) return;
         await fetch(`/api/admin/pricing-config?id=${id}`, { method: 'DELETE' });
         fetchConfigs();
     };
@@ -758,7 +758,7 @@ export default function PricingTab() {
             const data = await res.json();
             alert(data.message);
             fetchConfigs();
-        } catch { alert('Seed thất bại'); }
+        } catch { alert('Seed failed'); }
         setSeeding(false);
     };
 
@@ -769,7 +769,7 @@ export default function PricingTab() {
         return (
             <div style={{ padding: 40, textAlign: 'center' }}>
                 <RefreshCw size={20} color={C.navy300} style={{ animation: 'spin 1s linear infinite' }} />
-                <div style={{ marginTop: 8, fontSize: 13, color: C.navy400 }}>Đang tải cấu hình giá…</div>
+                <div style={{ marginTop: 8, fontSize: 13, color: C.navy400 }}>Loading price configuration…</div>
                 <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
             </div>
         );
@@ -805,7 +805,7 @@ export default function PricingTab() {
                             background: C.green600, color: C.white,
                             cursor: seeding ? 'wait' : 'pointer', transition: 'all 0.15s',
                         }}>
-                            <Sprout size={14} /> {seeding ? 'Đang seed…' : 'Seed Defaults'}
+                            <Sprout size={14} /> {seeding ? 'Seeding…' : 'Seed Defaults'}
                         </button>
                     )}
                     <button onClick={fetchConfigs} style={{
@@ -827,7 +827,7 @@ export default function PricingTab() {
             <ConfigSection
                 type="BASE_PRICE"
                 label="Base Price"
-                subtitle="Giá gốc theo gói"
+                subtitle="Base Price by Plan"
                 configs={configs}
                 onSave={handleSave}
                 onDelete={handleDelete}
@@ -835,7 +835,7 @@ export default function PricingTab() {
             <ConfigSection
                 type="BAND_MULTIPLIER"
                 label="Band Multiplier"
-                subtitle="Hệ số nhân theo quy mô phòng"
+                subtitle="Multiplier by room count scale"
                 configs={configs}
                 onSave={handleSave}
                 onDelete={handleDelete}
@@ -843,7 +843,7 @@ export default function PricingTab() {
             <ConfigSection
                 type="TERM_DISCOUNT"
                 label="Term Discount"
-                subtitle="Chiết khấu theo kỳ hạn cam kết"
+                subtitle="Discount by Commitment Term"
                 configs={configs}
                 onSave={handleSave}
                 onDelete={handleDelete}

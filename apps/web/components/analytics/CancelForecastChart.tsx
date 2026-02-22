@@ -6,6 +6,7 @@ import {
     Tooltip, ResponsiveContainer, Cell, Line, ComposedChart,
 } from 'recharts';
 import type { AnalyticsRow } from './types';
+import { useTranslations } from 'next-intl';
 
 // ─── Cancel Forecast Chart ──────────────────────────────────
 // Shows rooms_otb, expected_cxl (stacked), and net_remaining line
@@ -19,22 +20,13 @@ function getConfidenceColor(confidence: string | null): string {
     }
 }
 
-function getConfidenceBadge(confidence: string | null): string {
-    switch (confidence) {
-        case 'high': return '🟢 Cao';
-        case 'medium': return '🟡 TB';
-        case 'low': return '🔴 Thấp';
-        case 'fallback': return '⚪ Mặc định';
-        default: return '—';
-    }
-}
-
 interface CancelForecastChartProps {
     rows: AnalyticsRow[];
     capacity: number;
 }
 
 export function CancelForecastChart({ rows, capacity }: CancelForecastChartProps) {
+    const t = useTranslations('analyticsTab');
     const hasCancelData = rows.some(r => r.expected_cxl != null);
 
     if (!hasCancelData) {
@@ -43,11 +35,11 @@ export function CancelForecastChart({ rows, capacity }: CancelForecastChartProps
                 <div className="flex items-center gap-2 mb-3">
                     <TrendingDown className="w-4 h-4 text-slate-400" />
                     <h3 className="text-sm font-semibold text-slate-500">
-                        Dự báo Hủy phòng
+                        {t('cancelTitleEmpty')}
                     </h3>
                 </div>
                 <div className="flex items-center justify-center h-40 text-sm text-slate-400">
-                    Chưa có dữ liệu cancel stats. Chạy &quot;Build Features&quot; để tạo.
+                    {t('noCancelData')}
                 </div>
             </div>
         );
@@ -73,24 +65,28 @@ export function CancelForecastChart({ rows, capacity }: CancelForecastChartProps
     const avgRate = rows.filter(r => r.cxl_rate_used != null).reduce((s, r) => s + (r.cxl_rate_used ?? 0), 0) /
         Math.max(1, rows.filter(r => r.cxl_rate_used != null).length);
 
+    const roomsHeldLabel = t('roomsHeld');
+    const expectedCxlLabel = t('expectedCxl');
+    const actualEmptyLabel = t('actualEmpty');
+
     return (
         <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
             <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                     <TrendingDown className="w-4 h-4 text-amber-500" />
                     <h3 className="text-sm font-semibold text-slate-700">
-                        Dự báo Hủy phòng (30 ngày)
+                        {t('cancelTitle')}
                     </h3>
                 </div>
                 <div className="flex items-center gap-3 text-[10px] text-slate-500">
                     <span className="inline-flex items-center gap-1">
-                        <span className="w-2.5 h-2.5 rounded-sm bg-blue-500" /> Phòng giữ
+                        <span className="w-2.5 h-2.5 rounded-sm bg-blue-500" /> {roomsHeldLabel}
                     </span>
                     <span className="inline-flex items-center gap-1">
-                        <span className="w-2.5 h-2.5 rounded-sm bg-amber-400" /> Dự báo hủy
+                        <span className="w-2.5 h-2.5 rounded-sm bg-amber-400" /> {expectedCxlLabel}
                     </span>
                     <span className="inline-flex items-center gap-1">
-                        <span className="w-2.5 h-1 bg-emerald-500 rounded" /> Trống thực tế
+                        <span className="w-2.5 h-1 bg-emerald-500 rounded" /> {actualEmptyLabel}
                     </span>
                 </div>
             </div>
@@ -98,10 +94,10 @@ export function CancelForecastChart({ rows, capacity }: CancelForecastChartProps
             {/* KPI chips */}
             <div className="flex gap-3 mb-3 text-xs">
                 <span className="px-2 py-0.5 bg-amber-50 text-amber-700 rounded-full font-medium">
-                    Tổng dự báo hủy: {totalCxl} phòng
+                    {t('totalExpectedCxl', { count: totalCxl })}
                 </span>
                 <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full font-medium">
-                    Tỷ lệ TB: {(avgRate * 100).toFixed(1)}%
+                    {t('avgRate', { rate: (avgRate * 100).toFixed(1) })}
                 </span>
             </div>
 
@@ -127,16 +123,16 @@ export function CancelForecastChart({ rows, capacity }: CancelForecastChartProps
                             boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
                         }}
                         formatter={((value: any, name: any, props: any) => {
-                            if (name === 'Phòng giữ') return [value, name];
-                            if (name === 'Dự báo hủy') {
+                            if (name === roomsHeldLabel) return [value, name];
+                            if (name === expectedCxlLabel) {
                                 const rate = props.payload?.rate;
                                 return [`${value} (${rate ? (rate * 100).toFixed(1) + '%' : '—'})`, name];
                             }
                             return [value, name];
                         }) as any}
                     />
-                    <Bar dataKey="stay_rooms" stackId="otb" name="Phòng giữ" fill="#3b82f6" />
-                    <Bar dataKey="expected_cxl" stackId="otb" name="Dự báo hủy">
+                    <Bar dataKey="stay_rooms" stackId="otb" name={roomsHeldLabel} fill="#3b82f6" />
+                    <Bar dataKey="expected_cxl" stackId="otb" name={expectedCxlLabel}>
                         {chartData.map((entry, i) => (
                             <Cell key={i} fill={getConfidenceColor(entry.confidence)} opacity={0.6} />
                         ))}
@@ -144,7 +140,7 @@ export function CancelForecastChart({ rows, capacity }: CancelForecastChartProps
                     <Line
                         type="monotone"
                         dataKey="net_remaining"
-                        name="Trống thực tế"
+                        name={actualEmptyLabel}
                         stroke="#10b981"
                         strokeWidth={2}
                         strokeDasharray="5 5"

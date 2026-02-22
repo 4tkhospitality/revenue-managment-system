@@ -6,6 +6,7 @@ import {
     ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid,
     Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
+import { useTranslations } from 'next-intl';
 
 // ─── ForecastAccuracyChart ──────────────────────────────────
 // Compares remaining_demand (forecast) vs actual arriving rooms
@@ -36,6 +37,7 @@ function getZoneColor(zone: string | null): string {
 }
 
 export function ForecastAccuracyChart({ forecastRows, actualOtbMap }: ForecastAccuracyChartProps) {
+    const t = useTranslations('analyticsTab');
     const chartData = useMemo(() =>
         forecastRows.slice(0, 30).map(r => {
             const actualRooms = actualOtbMap?.get(r.stay_date) ?? null;
@@ -71,16 +73,16 @@ export function ForecastAccuracyChart({ forecastRows, actualOtbMap }: ForecastAc
                 <div className="flex items-center gap-2">
                     <BarChart3 className="w-4 h-4 text-indigo-500" />
                     <h3 className="text-sm font-semibold text-slate-700">
-                        Dự báo Demand (30 ngày)
+                        {t('demandForecastTitle')}
                     </h3>
                 </div>
                 <div className="flex items-center gap-2">
                     {mape != null && (
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${Number(mape) < 15 ? 'bg-emerald-50 text-emerald-700' :
-                                Number(mape) < 30 ? 'bg-amber-50 text-amber-700' :
-                                    'bg-red-50 text-red-700'
+                            Number(mape) < 30 ? 'bg-amber-50 text-amber-700' :
+                                'bg-red-50 text-red-700'
                             }`}>
-                            MAPE: {mape}% ({comparisons} ngày)
+                            {t('mapeLabel', { mape, days: comparisons })}
                         </span>
                     )}
                 </div>
@@ -134,7 +136,7 @@ export function ForecastAccuracyChart({ forecastRows, actualOtbMap }: ForecastAc
                     {hasAnyActual && (
                         <Bar
                             dataKey="actual_rooms"
-                            name="Thực tế"
+                            name={t('actual')}
                             fill="#6366f1"
                             opacity={0.4}
                             barSize={16}
@@ -143,7 +145,7 @@ export function ForecastAccuracyChart({ forecastRows, actualOtbMap }: ForecastAc
                     <Line
                         type="monotone"
                         dataKey="forecast_demand"
-                        name="Dự báo demand"
+                        name={t('demandForecast')}
                         stroke="#f97316"
                         strokeWidth={2}
                         dot={{ r: 2 }}

@@ -38,13 +38,13 @@ export function validatePromotions(
 
     // Rule 1: Commission < 100%
     if (commission >= 100) {
-        errors.push('Commission phải nhỏ hơn 100%');
+        errors.push('Commission must be less than 100%');
     }
 
     // Rule 2: Max 1 SEASONAL
     const seasonals = active.filter(d => d.group === 'SEASONAL');
     if (seasonals.length > 1) {
-        errors.push(`Chỉ được chọn 1 Seasonal promotion (đang chọn ${seasonals.length})`);
+        errors.push(`Only 1 Seasonal promotion allowed (currently selected: ${seasonals.length})`);
     }
 
     // Rule 3: Max 1 TARGETED per subcategory
@@ -53,7 +53,7 @@ export function validatePromotions(
 
     Object.entries(subcategoryGroups).forEach(([subcat, items]) => {
         if (items.length > 1 && subcat) {
-            errors.push(`Chỉ được chọn 1 Targeted trong nhóm ${subcat} (đang chọn ${items.length})`);
+            errors.push(`Only 1 Targeted rate per group ${subcat} allowed (currently selected: ${items.length})`);
         }
     });
 
@@ -61,16 +61,16 @@ export function validatePromotions(
     const totalDiscount = active.reduce((sum, d) => sum + d.percent, 0);
     if (maxDiscountCap !== null) {
         if (totalDiscount > maxDiscountCap) {
-            errors.push(`Tổng giảm giá vượt quá ${maxDiscountCap}% (hiện tại: ${totalDiscount}%)`);
+            errors.push(`Total discount exceeds ${maxDiscountCap}% (current: ${totalDiscount}%)`);
         } else if (totalDiscount > maxDiscountCap - 10) {
-            warnings.push(`Tổng giảm giá gần đạt giới hạn (${totalDiscount}% / ${maxDiscountCap}%)`);
+            warnings.push(`Total discount near limit (${totalDiscount}% / ${maxDiscountCap}%)`);
         }
     }
 
     // Rule 5: Warn if commission + discount approaching limits
     const effectiveReduction = commission + totalDiscount;
     if (effectiveReduction > 90) {
-        warnings.push(`Tổng Commission + Discount = ${effectiveReduction}% (khuyến nghị < 90%)`);
+        warnings.push(`Total Commission + Discount = ${effectiveReduction}% (recommended < 90%)`);
     }
 
     // Rule 6: Early Bird + Last-Minute non-stacking warning (V01.3)
@@ -81,11 +81,11 @@ export function validatePromotions(
     if (hasEarlyBird && hasLastMinute) {
         if (vendor === 'booking') {
             // Booking.com: BLOCK (Early Booker ❌ Last Minute per matrix)
-            errors.push('Early Booker Deal ❌ Last Minute Deal — không thể kết hợp (booking window khác nhau)');
+            errors.push('Early Booker Deal ❌ Last Minute Deal - cannot combine (different booking windows)');
         } else {
             warnings.push(
-                'Early Bird + Last-Minute thường KHÔNG cộng dồn vì booking window khác nhau. ' +
-                'Hệ thống chỉ tính KM lớn hơn. Chỉ stack khi set ngày áp dụng chồng lên nhau.'
+                'Early Bird + Last-Minute are usually NOT stackable due to different booking windows. ' +
+                'System applies highest discount only. Stack only when application dates overlap.'
             );
         }
     }
@@ -112,19 +112,19 @@ export function validatePromotions(
             Math.min(portfolioPromos.length + exclusivePromos.length, 1);
         if (appliedCount > 3) {
             // Shouldn't happen given the category caps, but safety check
-            errors.push(`Tối đa 3 discounts được áp dụng (Genius + Targeted Rate + Promotion)`);
+            errors.push(`Maximum 3 discounts can be applied (Genius + Targeted Rate + Promotion)`);
         }
 
         // ── B2: Mobile Rate ❌ Country Rate (mutual exclusive) ──
         if (targetedRates.length > 1) {
-            errors.push('Mobile Rate ❌ Country Rate — không thể kết hợp');
+            errors.push('Mobile Rate ❌ Country Rate - cannot combine');
         }
 
         // ── B3: Business Bookers ❌ ALL (exclusive rate) ──
         if (businessBookers.length > 0 && active.length > businessBookers.length) {
             const others = active.filter(d => d.subCategory !== 'BUSINESS_BOOKERS').map(d => d.name).join(', ');
             errors.push(
-                `Business Bookers là exclusive rate — không stack với: ${others}`
+                `Business Bookers is an exclusive rate - does not stack with: ${others}`
             );
         }
 
@@ -136,20 +136,20 @@ export function validatePromotions(
             if (allTargeted.length > 0) {
                 const targetedNames = allTargeted.map(d => d.name).join(', ');
                 errors.push(
-                    `${exclusiveName} ❌ ${targetedNames} — Campaign/Deal of Day không stack với Targeted Rates`
+                    `${exclusiveName} ❌ ${targetedNames} — Campaign/Deal of Day does not stack with Targeted Rates`
                 );
             }
             // Check vs other promotions
             if (portfolioPromos.length > 0) {
                 const promoNames = portfolioPromos.map(d => d.name).join(', ');
                 errors.push(
-                    `${exclusiveName} ❌ ${promoNames} — Campaign/Deal of Day không stack với promotions khác`
+                    `${exclusiveName} ❌ ${promoNames} — Campaign/Deal of Day does not stack with other promotions`
                 );
             }
             // Check vs other exclusive promos
             if (exclusivePromos.length > 1) {
                 errors.push(
-                    `Chỉ được chọn 1 Campaign/Deal of Day (đang chọn: ${exclusivePromos.map(d => d.name).join(', ')})`
+                    `Only 1 Campaign/Deal of Day allowed (currently selected: ${exclusivePromos.map(d => d.name).join(', ')})`
                 );
             }
         }
@@ -163,13 +163,13 @@ export function validatePromotions(
             const names = portfolioPromos.map(d => `${d.name} (${d.percent}%)`).join(', ');
             warnings.push(
                 `${portfolioPromos.length} promotions enabled: ${names}. ` +
-                `Promotions không stack — chỉ "${winner.name}" (${winner.percent}%) được áp dụng (highest wins).`
+                `Promotions do not stack - only "${winner.name}" (${winner.percent}%) is applied (highest wins).`
             );
         }
 
         // ── B6: Max 1 Genius level ──
         if (genius.length > 1) {
-            errors.push(`Chỉ được chọn 1 Genius level (đang chọn ${genius.length})`);
+            errors.push(`Only 1 Genius level allowed (currently selected: ${genius.length})`);
         }
     }
 
@@ -196,7 +196,7 @@ export function canAddPromotion(
     if (newPromo.group === 'SEASONAL') {
         const existingSeasonals = existing.filter(d => d.group === 'SEASONAL');
         if (existingSeasonals.length >= 1) {
-            errors.push(`Không thể thêm ${newPromo.name}: đã có Seasonal "${existingSeasonals[0].name}"`);
+            errors.push(`Cannot add ${newPromo.name}: Seasonal "${existingSeasonals[0].name}" already exists`);
         }
     }
 
@@ -206,7 +206,7 @@ export function canAddPromotion(
             d => d.group === 'TARGETED' && d.subCategory === newPromo.subCategory
         );
         if (sameSubcat.length >= 1) {
-            errors.push(`Không thể thêm ${newPromo.name}: đã có Targeted "${sameSubcat[0].name}" trong nhóm ${newPromo.subCategory}`);
+            errors.push(`Cannot add ${newPromo.name}: Targeted "${sameSubcat[0].name}" already exists in group ${newPromo.subCategory}`);
         }
     }
 
@@ -215,7 +215,7 @@ export function canAddPromotion(
         const currentTotal = existing.reduce((sum, d) => sum + d.percent, 0);
         const newTotal = currentTotal + newPromo.percent;
         if (newTotal > maxDiscountCap) {
-            errors.push(`Tổng giảm giá sẽ vượt ${maxDiscountCap}% (${currentTotal}% + ${newPromo.percent}% = ${newTotal}%)`);
+            errors.push(`Total discount would exceed ${maxDiscountCap}% (${currentTotal}% + ${newPromo.percent}% = ${newTotal}%)`);
         }
     }
 

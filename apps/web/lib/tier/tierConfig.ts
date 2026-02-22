@@ -48,7 +48,7 @@ export const TIER_CONFIGS: Record<PlanTier, TierConfig> = {
     STANDARD: {
         name: 'STANDARD',
         displayName: 'Calculator',
-        description: 'Tính giá NET → BAR + promo stacking',
+        description: 'NET → BAR pricing + promo stacking',
         maxUsers: 2,
         maxProperties: 1,
         maxImportsMonth: 3,
@@ -61,7 +61,7 @@ export const TIER_CONFIGS: Record<PlanTier, TierConfig> = {
     SUPERIOR: {
         name: 'SUPERIOR',
         displayName: 'Assistant',
-        description: 'Daily Action + Export cho khách sạn 10-30 phòng',
+        description: 'Daily Action + Export for 10-30 room hotels',
         maxUsers: 3,
         maxProperties: 1,
         maxImportsMonth: 60,
@@ -80,7 +80,7 @@ export const TIER_CONFIGS: Record<PlanTier, TierConfig> = {
     DELUXE: {
         name: 'DELUXE',
         displayName: 'RMS Lite',
-        description: 'Guardrails + Analytics cho khách sạn 31-60 phòng',
+        description: 'Guardrails + Analytics for 31-60 room hotels',
         maxUsers: 5,
         maxProperties: 1,
         maxImportsMonth: 200,

@@ -1,6 +1,6 @@
 /**
  * Daily Action Engine V0 - Rule-based pricing recommendations
- * SMB60 V1.2 - "5 phút/ngày pricing assistant"
+ * SMB60 V1.2 - "5 min/day pricing assistant"
  *
  * Logic: Occupancy + Pickup Index -> Action (Increase/Keep/Decrease) + Delta + Reason
  */
@@ -64,35 +64,35 @@ const RULES = [
         action: 'INCREASE' as ActionType,
         delta: 8,
         reason_key: 'HIGH_DEMAND_FAST_PICKUP',
-        reason_text: 'Công suất cao và tốc độ bán nhanh hơn bình thường',
+        reason_text: 'High occupancy and faster-than-normal pickup',
     },
     {
         condition: (occ: number, pi: number) => occ >= 0.70 && pi >= 1.1,
         action: 'INCREASE' as ActionType,
         delta: 5,
         reason_key: 'STRONG_DEMAND',
-        reason_text: 'Đang bán tốt, có dư địa tăng giá',
+        reason_text: 'Selling well, room for price increase',
     },
     {
         condition: (occ: number, pi: number) => occ >= 0.45 && occ < 0.70,
         action: 'KEEP' as ActionType,
         delta: 0,
         reason_key: 'STABLE',
-        reason_text: 'Bán đúng nhịp, giữ giá',
+        reason_text: 'On pace, maintain rate',
     },
     {
         condition: (occ: number, pi: number) => occ < 0.45 && pi < 0.9,
         action: 'DECREASE' as ActionType,
         delta: -5,
         reason_key: 'SLOW_PICKUP',
-        reason_text: 'Bán chậm hơn bình thường, cần kích cầu',
+        reason_text: 'Slower than normal, needs demand stimulation',
     },
     {
         condition: (occ: number, pi: number) => occ < 0.30 && pi < 0.7,
         action: 'DECREASE' as ActionType,
         delta: -8,
         reason_key: 'HIGH_RISK_EMPTY',
-        reason_text: 'Rủi ro trống phòng cao',
+        reason_text: 'High vacancy risk',
     },
 ];
 
@@ -101,7 +101,7 @@ const DEFAULT_RULE = {
     action: 'KEEP' as ActionType,
     delta: 0,
     reason_key: 'DEFAULT',
-    reason_text: 'Giữ giá hiện tại',
+    reason_text: 'Maintain current rate',
 };
 
 // ═══════════════════════════════════════════════════════════════════

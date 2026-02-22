@@ -2,16 +2,18 @@
 
 import { signIn } from "next-auth/react"
 import Image from "next/image"
+import { useTranslations } from 'next-intl'
 
-// 4TK Brand Colors (từ logo)
+// 4TK Brand Colors (from logo)
 const BRAND = {
     primary: '#204183',      // Brand Primary
-    dark: '#0B1E3A',         // Brand Dark (nền sâu)
+    dark: '#0B1E3A',         // Brand Dark (deep background)
     mid: '#16325F',          // Brand Mid (gradient trung gian)
-    light: '#AABAD1',        // Brand Light (viền/hover nhẹ)
+    light: '#AABAD1',        // Brand Light (border/hover light)
 }
 
 export default function LoginPage() {
+    const t = useTranslations();
     return (
         <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
             {/* Background - Brand Gradient + Radial glow */}
@@ -33,7 +35,7 @@ export default function LoginPage() {
                 }}
             />
 
-            {/* Glass Card - tiệp brand */}
+            {/* Glass Card - brand continuation */}
             <div
                 className="relative z-10 w-full max-w-md mx-4 rounded-3xl border border-white/15 bg-white/10 backdrop-blur-xl"
                 style={{
@@ -41,7 +43,7 @@ export default function LoginPage() {
                 }}
             >
                 <div className="p-10">
-                    {/* Logo - với nền xanh brand để tiệp màu logo JPG */}
+                    {/* Logo - with brand blue bg to match JPG logo color */}
                     <div className="flex justify-center mb-6">
                         <div
                             className="rounded-2xl p-0.5"
@@ -57,7 +59,7 @@ export default function LoginPage() {
                         </div>
                     </div>
 
-                    {/* Title - text-white cho title chính */}
+                    {/* Title - text-white for main title */}
                     <h1
                         className="text-2xl font-semibold text-center text-white mb-2"
                         style={{ fontStyle: 'italic', letterSpacing: '0.01em' }}
@@ -65,12 +67,12 @@ export default function LoginPage() {
                         Revenue Management System
                     </h1>
 
-                    {/* Subtitle - dùng text-white/70 (không dùng xám) */}
+                    {/* Subtitle - uses text-white/70 (not gray) */}
                     <p className="text-center text-white/70 mb-8 text-sm">
-                        Đăng nhập để tiếp tục
+                        {t('auth.loginSubtitle')}
                     </p>
 
-                    {/* Google Login Button - Trắng chuẩn, nổi bật */}
+                    {/* Google Login Button - standard white, prominent */}
                     <button
                         onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
                         className="w-full flex items-center justify-center gap-3 rounded-xl bg-white px-4 py-3.5 text-slate-900 font-medium shadow-sm ring-1 ring-white/60 transition-all duration-200 hover:bg-white/95 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-white/80"
@@ -93,12 +95,12 @@ export default function LoginPage() {
                                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                             />
                         </svg>
-                        Đăng nhập bằng Google
+                        {t('auth.signInWith', { provider: 'Google' })}
                     </button>
 
                     {/* Helper text - text-white/55 */}
                     <p className="text-center text-white/55 text-xs mt-5">
-                        Khuyến nghị dùng email công ty
+                        {t('auth.useCompanyEmail')}
                     </p>
 
                     {/* Footer */}

@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
             serverLog.info(`[CANCEL API] ⚠️ DUPLICATE FILE - already processed`)
             return NextResponse.json({
                 success: false,
-                error: `File này đã được import trước đó (Job ID: ${existingJob.job_id})`,
+                error: `This file was already imported (Job ID: ${existingJob.job_id})`,
             })
         }
 
@@ -91,13 +91,13 @@ export async function POST(req: NextRequest) {
                     where: { job_id: job.job_id },
                     data: {
                         status: "failed",
-                        error_summary: "Không tìm thấy dữ liệu hủy phòng trong file",
+                        error_summary: "No cancellation data found in file",
                     },
                 })
                 return NextResponse.json({
                     success: false,
                     jobId: job.job_id,
-                    error: "Không tìm thấy dữ liệu hủy phòng trong file",
+                    error: "No cancellation data found in file",
                 })
             }
 

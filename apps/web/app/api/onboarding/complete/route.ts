@@ -224,10 +224,10 @@ export async function POST(request: NextRequest) {
             subscriptionActivated,
             hotelId,
             message: subscriptionActivated
-                ? `Đã kích hoạt gói ${paymentToLink?.purchased_tier}! Chào mừng bạn!`
+                ? `Plan ${paymentToLink?.purchased_tier} activated! Welcome!`
                 : trialExtended
-                    ? 'Onboarding hoàn tất! Trial được gia hạn thêm 7 ngày.'
-                    : 'Onboarding hoàn tất!'
+                    ? 'Onboarding complete! Trial extended by 7 days.'
+                    : 'Onboarding complete!'
         })
 
         // Set active hotel cookie so middleware allows through even before JWT refreshes

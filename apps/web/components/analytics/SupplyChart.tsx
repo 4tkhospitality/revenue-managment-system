@@ -6,17 +6,18 @@ import {
     Tooltip, ResponsiveContainer, Cell,
 } from 'recharts';
 import type { AnalyticsRow } from './types';
+import { useTranslations } from 'next-intl';
 
 // ─── D8: Supply chart color thresholds ──────────────────────
-// Green  <70%  "Còn nhiều"
-// Yellow 70-89% "Cần theo dõi"
+// Green  <70%  "Available"
+// Yellow 70-89% "Watch"
 // Red    ≥90%  "Compression"
 // Black  100%  "Sold out"
 function getOccColor(occPct: number): string {
     if (occPct >= 100) return '#1e293b';   // slate-800 — Sold out
     if (occPct >= 90) return '#f43f5e';    // rose-500 — Compression
-    if (occPct >= 70) return '#f59e0b';    // amber-500 — Cần theo dõi
-    return '#10b981';                       // emerald-500 — Còn nhiều
+    if (occPct >= 70) return '#f59e0b';    // amber-500 — Watch
+    return '#10b981';                       // emerald-500 — Available
 }
 
 function getRemainingColor(occPct: number): string {
@@ -31,6 +32,7 @@ export function SupplyChart({
     rows: AnalyticsRow[];
     capacity: number;
 }) {
+    const t = useTranslations('analyticsTab');
     const chartData = rows.slice(0, 30).map(r => {
         const occ = capacity > 0 ? Math.round((r.rooms_otb / capacity) * 100) : 0;
         return {
@@ -50,7 +52,7 @@ export function SupplyChart({
             <div className="flex items-center gap-2 mb-3">
                 <Hotel className="w-4 h-4 text-slate-500" />
                 <h3 className="text-sm font-semibold text-slate-700">
-                    Remaining Supply ({capacity} rooms)
+                    {t('supplyTitle', { capacity })}
                 </h3>
             </div>
 
@@ -66,11 +68,11 @@ export function SupplyChart({
                     <span className="w-2.5 h-2.5 rounded-sm bg-rose-500" /> ≥90%
                 </span>
                 <span className="inline-flex items-center gap-1">
-                    <span className="w-2.5 h-2.5 rounded-sm bg-slate-800" /> Sold out
+                    <span className="w-2.5 h-2.5 rounded-sm bg-slate-800" /> {t('soldOut')}
                 </span>
                 {hasCancelData && (
                     <span className="inline-flex items-center gap-1">
-                        <span className="w-4 h-0.5 bg-violet-500 rounded" style={{ borderTop: '2px dashed #8b5cf6' }} /> Trống thực tế
+                        <span className="w-4 h-0.5 bg-violet-500 rounded" style={{ borderTop: '2px dashed #8b5cf6' }} /> {t('actualEmpty')}
                     </span>
                 )}
             </div>
@@ -97,18 +99,19 @@ export function SupplyChart({
                             boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
                         }}
                         formatter={((value: any, name: any, props: any) => {
-                            if (name === 'Trống thực tế' && props.payload?.expected_cxl) {
-                                return [`${value} (+${props.payload.expected_cxl} CXL dự báo)`, name];
+                            const tNetAvailable = t('netAvailable');
+                            if (name === tNetAvailable && props.payload?.expected_cxl) {
+                                return [`${value} ${t('cxlExpected', { cxl: props.payload.expected_cxl })}`, name];
                             }
                             return [value, name];
                         }) as any}
                     />
-                    <Bar dataKey="otb" stackId="a" name="Rooms OTB">
+                    <Bar dataKey="otb" stackId="a" name={t('roomsOtb')}>
                         {chartData.map((entry, i) => (
                             <Cell key={i} fill={getOccColor(entry.occ)} />
                         ))}
                     </Bar>
-                    <Bar dataKey="remaining" stackId="a" name="Còn trống">
+                    <Bar dataKey="remaining" stackId="a" name={t('available')}>
                         {chartData.map((entry, i) => (
                             <Cell key={i} fill={getRemainingColor(entry.occ)} />
                         ))}
@@ -117,7 +120,7 @@ export function SupplyChart({
                         <Line
                             type="monotone"
                             dataKey="net_remaining"
-                            name="Trống thực tế"
+                            name={t('netAvailable')}
                             stroke="#8b5cf6"
                             strokeWidth={2}
                             strokeDasharray="5 5"

@@ -45,7 +45,7 @@ export function ScorecardInputModal({ isOpen, onClose, currentMetrics, onSave }:
             <div className="bg-white rounded-2xl w-full max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto">
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white z-10">
-                    <h3 className="text-lg font-semibold text-gray-900">Cập nhật chỉ số OTA Health</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">Update OTA Health Metrics</h3>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
                         <X className="w-5 h-5" />
                     </button>
@@ -74,10 +74,10 @@ export function ScorecardInputModal({ isOpen, onClose, currentMetrics, onSave }:
                         <div className="bg-blue-50/50 p-3 rounded-lg flex items-start gap-2 text-sm text-blue-700">
                             <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
                             <p>
-                                Nhập dữ liệu từ Extranet/YCS báo cáo tháng trước.
+                                Enter data from last month's Extranet/YCS report.
                                 <br />
                                 <span className="text-xs opacity-80">
-                                    Mẹo: Booking.com Analytics Dashboard & Agoda Production Report.
+                                    Tip: Booking.com Analytics Dashboard & Agoda Production Report.
                                 </span>
                             </p>
                         </div>
@@ -127,11 +127,11 @@ export function ScorecardInputModal({ isOpen, onClose, currentMetrics, onSave }:
                 {/* Footer */}
                 <div className="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3 sticky bottom-0 rounded-b-2xl">
                     <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-200 rounded-lg transition-colors">
-                        Hủy bỏ
+                        Cancel
                     </button>
                     <button onClick={handleSave} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors">
                         <Save className="w-4 h-4" />
-                        Lưu chỉ số
+                        Save Metrics
                     </button>
                 </div>
             </div>

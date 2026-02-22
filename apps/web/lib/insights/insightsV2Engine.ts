@@ -10,6 +10,9 @@
  * - Pricing hint: compare TWO PricingDecision records over time
  */
 
+import * as fs from 'fs';
+import * as path from 'path';
+
 // ── Types ──────────────────────────────────────────────────────────
 // Confidence
 export type ConfidenceLevel = 'HIGH' | 'MEDIUM' | 'LOW';
@@ -96,8 +99,8 @@ export interface InsightsV2Input {
     segments: SegmentData[];       // For segment mix
     pricingHints: PricingHintData[]; // For pricing change detection
     confidenceDims: ConfidenceDimensions;
-    // Configurable parameters (spec §8)
     config: InsightsConfig;
+    locale?: string;               // 'vi' | 'en' | 'id' | 'ms' | 'th'
 }
 
 export interface InsightsConfig {
@@ -137,17 +140,47 @@ const nfVND = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 });
 const nf1 = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 });
 const nfPct = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 });
 
+// ── Translation helper (server-side) ──────────────────────────────
+const translationCache: Record<string, Record<string, string>> = {};
+
+function getInsightT(locale: string): (key: string, params?: Record<string, string | number>) => string {
+    if (!translationCache[locale]) {
+        try {
+            const messagesDir = path.join(process.cwd(), 'messages');
+            const json = JSON.parse(fs.readFileSync(path.join(messagesDir, `${locale}.json`), 'utf8'));
+            translationCache[locale] = json.insightsEngine || {};
+        } catch {
+            translationCache[locale] = {};
+        }
+    }
+    const dict = translationCache[locale];
+    return (key: string, params?: Record<string, string | number>) => {
+        let val = dict[key] || key;
+        if (params) {
+            for (const [k, v] of Object.entries(params)) {
+                val = val.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v));
+            }
+        }
+        return val;
+    };
+}
+
 function formatVND(n: number): string {
-    if (Math.abs(n) >= 1_000_000_000) return `${nf1.format(n / 1_000_000_000)} Tỷ₫`;
-    if (Math.abs(n) >= 1_000_000) return `${nfVND.format(n / 1_000_000)}M₫`;
+    if (Math.abs(n) >= 1_000_000_000) return `${nf1.format(n / 1_000_000_000)} tỷ đ`;
+    if (Math.abs(n) >= 1_000_000) return `${nfVND.format(n / 1_000_000)} Tr đ`;
     return `${nfVND.format(n)}₫`;
 }
 
-function formatDate(d: Date): string {
-    const days = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+const localeMap: Record<string, string> = {
+    vi: 'vi-VN', en: 'en-US', id: 'id-ID', ms: 'ms-MY', th: 'th-TH',
+};
+
+function formatDate(d: Date, locale?: string): string {
+    const bcp47 = localeMap[locale || 'en'] || 'en-US';
+    const weekday = new Intl.DateTimeFormat(bcp47, { weekday: 'short' }).format(d);
     const day = d.getDate().toString().padStart(2, '0');
     const month = (d.getMonth() + 1).toString().padStart(2, '0');
-    return `${days[d.getDay()]} ${day}/${month}`;
+    return `${weekday} ${day}/${month}`;
 }
 
 function clamp01(v: number): number {
@@ -192,6 +225,8 @@ function generateCompressionInsights(
     capacity: number,
     config: InsightsConfig,
     dims: ConfidenceDimensions,
+    t: ReturnType<typeof getInsightT>,
+    locale?: string,
 ): InsightCard[] {
     const cards: InsightCard[] = [];
 
@@ -199,7 +234,7 @@ function generateCompressionInsights(
         const occ = day.roomsOtb / capacity;
         const remaining = capacity - day.roomsOtb;
         const paceGap = day.paceVsLy;
-        const dateStr = formatDate(day.stayDate);
+        const dateStr = formatDate(day.stayDate, locale);
 
         // DANGER: low occ OR pace far behind STLY
         if (occ < config.floorOcc || (paceGap != null && paceGap < config.paceGapThreshold)) {
@@ -215,20 +250,20 @@ function generateCompressionInsights(
             const reasons: string[] = [];
             if (occ < config.floorOcc) reasons.push(`OCC ${occPct}% < ${Math.round(config.floorOcc * 100)}%`);
             if (paceGap != null && paceGap < config.paceGapThreshold) reasons.push(`pace ▼${Math.round(Math.abs(paceGap))}pt vs STLY`);
-            if (day.pickupNetT7 != null && day.pickupNetT7 < 2) reasons.push('pickup T7 yếu');
+            if (day.pickupNetT7 != null && day.pickupNetT7 < 2) reasons.push(t('pickupWeak'));
 
             cards.push({
                 type: 'compression_danger',
                 severity: 'danger',
-                title: `DANGER — ${dateStr}`,
-                what: `Mới đặt ${occPct}% phòng${paceGap != null ? ` — thua cùng kỳ năm trước ${Math.abs(Math.round(paceGap))} điểm` : ''}. Còn thiếu khoảng ${Math.max(0, rnGap)} đêm phòng mới đạt mức an toàn`,
-                soWhat: 'Ngày này đang bán chậm hơn mức cần thiết — nếu không kích cầu sớm, phòng sẽ bỏ trống',
-                doThis: conf === 'LOW'
-                    ? 'Cần thêm dữ liệu để đưa ra khuyến nghị cụ thể — hãy upload thêm booking'
-                    : `Giảm giá 8–15% trên các kênh bán chính để thu hút thêm booking`,
-                impact: conf === 'LOW'
-                    ? 'Chưa đủ dữ liệu để ước tính'
-                    : `Nếu lấp được 50% phòng đang thiếu → thu thêm khoảng ${formatVND(impactEst)}`,
+                title: t('dangerTitle', { date: dateStr }),
+                what: t('dangerWhat', {
+                    occPct: String(occPct),
+                    paceInfo: paceGap != null ? t('dangerPaceInfo', { points: String(Math.abs(Math.round(paceGap))) }) : '',
+                    gap: String(Math.max(0, rnGap)),
+                }),
+                soWhat: t('dangerSoWhat'),
+                doThis: conf === 'LOW' ? t('dangerDoThisLow') : t('dangerDoThis'),
+                impact: conf === 'LOW' ? t('dangerImpactLow') : t('dangerImpact', { amount: formatVND(impactEst) }),
                 confidence: conf,
                 stayDates: [day.stayDate.toISOString()],
                 reasons,
@@ -246,22 +281,22 @@ function generateCompressionInsights(
                 ? day.pickupNetT3 / Math.max(day.pickupNetT7, config.eps)
                 : null;
 
-            const reasons: string[] = [`OCC ${occPct}%`, `Còn ${remaining} RN`];
-            if (day.pickupNetT7 != null) reasons.push(`pickup +${Math.round(day.pickupNetT7)}/ngày`);
-            if (accelBonus != null && accelBonus > 1.3) reasons.push('pickup đang tăng tốc');
+            const reasons: string[] = [`OCC ${occPct}%`, `${remaining} RN left`];
+            if (day.pickupNetT7 != null) reasons.push(`pickup +${Math.round(day.pickupNetT7)}/day`);
+            if (accelBonus != null && accelBonus > 1.3) reasons.push(t('pickupAccelerating'));
 
             cards.push({
                 type: 'compression_hot',
                 severity: 'hot',
-                title: `HOT — ${dateStr}`,
-                what: `Đã đặt ${occPct}% phòng, chỉ còn ${remaining} phòng trống${day.pickupNetT7 != null ? `. Đang nhận thêm khoảng ${Math.round(day.pickupNetT7)} booking mỗi ngày` : ''}`,
-                soWhat: 'Nhu cầu cao hơn số phòng còn lại — đây là cơ hội tốt để tăng giá bán',
-                doThis: conf === 'LOW'
-                    ? 'Cần thêm dữ liệu để đưa ra khuyến nghị cụ thể — hãy upload thêm booking'
-                    : `Tăng giá 10–20%, ưu tiên bán qua kênh ít phí hoa hồng (website, đặt trực tiếp)`,
-                impact: conf === 'LOW'
-                    ? 'Chưa đủ dữ liệu để ước tính'
-                    : `Nếu tăng giá ${Math.round(uplift * 100)}% cho phòng còn lại → thu thêm khoảng ${formatVND(impactEst)}`,
+                title: t('hotTitle', { date: dateStr }),
+                what: t('hotWhat', {
+                    occPct: String(occPct),
+                    remaining: String(remaining),
+                    pickupInfo: day.pickupNetT7 != null ? t('hotPickupInfo', { pickup: String(Math.round(day.pickupNetT7)) }) : '',
+                }),
+                soWhat: t('hotSoWhat'),
+                doThis: conf === 'LOW' ? t('dangerDoThisLow') : t('hotDoThis'),
+                impact: conf === 'LOW' ? t('dangerImpactLow') : t('hotImpact', { pct: String(Math.round(uplift * 100)), amount: formatVND(impactEst) }),
                 confidence: conf,
                 stayDates: [day.stayDate.toISOString()],
                 reasons,
@@ -277,6 +312,7 @@ function generateRevenueOpportunity(
     days30: DayData[],
     capacity: number,
     dims: ConfidenceDimensions,
+    t: ReturnType<typeof getInsightT>,
 ): InsightCard | null {
     const conf = getCardConfidence('revenue_opportunity', dims);
     const totalRemaining = days30.reduce((s, d) => s + Math.max(0, capacity - d.roomsOtb), 0);
@@ -298,17 +334,16 @@ function generateRevenueOpportunity(
         }, 0);
         upliftTotal = revenueEstimate - baseline;
         const upliftPct = baseline > 0 ? (upliftTotal / baseline * 100) : 0;
-        impactStr = `Uplift +${nf1.format(upliftPct)}% (~+${formatVND(upliftTotal)}) nếu áp dụng PriceRec`;
+        impactStr = t('upliftLabel', { pct: nf1.format(upliftPct), amount: formatVND(upliftTotal) });
     } else {
-        // Fallback: remaining × ADR
         const avgAdr = days30.reduce((s, d) => {
             return s + (d.roomsOtb > 0 ? d.revenueOtb / d.roomsOtb : 0);
         }, 0) / Math.max(days30.length, 1);
         revenueEstimate = totalRemaining * avgAdr;
         upliftTotal = 0;
         impactStr = conf === 'LOW'
-            ? `~${formatVND(revenueEstimate)} (ước tính sơ — range rộng)`
-            : `~${formatVND(revenueEstimate)} (dựa ADR hiện tại)`;
+            ? t('roughEstimate', { amount: formatVND(revenueEstimate) })
+            : t('adrEstimate', { amount: formatVND(revenueEstimate) });
     }
 
     // Count days without forecast
@@ -317,26 +352,29 @@ function generateRevenueOpportunity(
     // GM-friendly impact string
     let gmImpact: string;
     if (hasRecs && conf !== 'LOW') {
-        gmImpact = `Nếu áp dụng giá khuyến nghị, doanh thu tăng thêm khoảng ${formatVND(upliftTotal)} (+${nf1.format(upliftTotal > 0 && revenueEstimate > 0 ? (upliftTotal / (revenueEstimate - upliftTotal) * 100) : 0)}%)`;
+        const upliftPctCalc = upliftTotal > 0 && revenueEstimate > 0 ? (upliftTotal / (revenueEstimate - upliftTotal) * 100) : 0;
+        gmImpact = upliftPctCalc > 0
+            ? t('revenueImpactRecHigh', { amount: formatVND(upliftTotal), pct: nf1.format(upliftPctCalc) })
+            : t('revenueImpactAdr', { amount: formatVND(revenueEstimate) });
     } else {
         gmImpact = conf === 'LOW'
-            ? `Ước tính sơ bộ khoảng ${formatVND(revenueEstimate)} — cần thêm dữ liệu để chính xác hơn`
-            : `Nếu bán hết phòng trống với giá trung bình hiện tại → thu thêm khoảng ${formatVND(revenueEstimate)}`;
+            ? t('revenueImpactLow', { amount: formatVND(revenueEstimate) })
+            : t('revenueImpactAdr', { amount: formatVND(revenueEstimate) });
     }
 
     return {
         type: 'revenue_opportunity',
         severity: 'info',
-        title: 'Doanh thu tiềm năng — 30 ngày tới',
-        what: `Trong 30 ngày tới, khách sạn còn ${nfVND.format(totalRemaining)} đêm phòng chưa có ai đặt`,
+        title: t('revenueTitle'),
+        what: t('revenueWhat', { totalRemaining: nfVND.format(totalRemaining) }),
         soWhat: noForecastDays > 0
-            ? `Có ${noForecastDays} ngày hệ thống chưa tính được dự báo nhu cầu — cần thêm dữ liệu`
-            : 'Hệ thống đã tính được dự báo nhu cầu cho toàn bộ 30 ngày — đủ thông tin để ra quyết định giá',
+            ? t('revenueSoWhatNoForecast', { days: String(noForecastDays) })
+            : t('revenueSoWhatForecast'),
         doThis: conf === 'LOW'
-            ? 'Hãy upload thêm dữ liệu booking để hệ thống đưa ra khuyến nghị chi tiết hơn'
+            ? t('revenueDoThisLow')
             : noForecastDays > 0
-                ? `Tập trung vào ${nfVND.format(noForecastDays)} ngày chưa có dự báo — đẩy mạnh bán qua website và khách hàng thân thiết`
-                : `Vào tab Giá đề xuất, chọn những ngày có giá khuyến nghị tăng hơn 5% so với hiện tại → duyệt và áp dụng`,
+                ? t('revenueDoThisNoForecast', { days: nfVND.format(noForecastDays) })
+                : t('revenueDoThisRec'),
         impact: gmImpact,
         confidence: conf,
     };
@@ -347,6 +385,7 @@ function generatePaceInsight(
     days30: DayData[],
     capacity: number,
     dims: ConfidenceDimensions,
+    t: ReturnType<typeof getInsightT>,
 ): InsightCard | null {
     const conf = getCardConfidence('pace_stly', dims);
 
@@ -378,22 +417,33 @@ function generatePaceInsight(
     const stlyRevPar = stlyRevenue / (capacity * daysWithStly.length);
     const revParPct = stlyRevPar > 0 ? Math.round(((revPar - stlyRevPar) / stlyRevPar) * 100) : 0;
 
+    const driverWord = driver === 'rate' ? t('paceDriverRate') : t('paceDriverVolume');
+
     return {
         type: 'pace_stly',
         severity: isAhead ? 'success' : 'warning',
-        title: `So với cùng kỳ năm trước: ${isAhead ? 'tốt hơn' : 'kém hơn'} ${Math.abs(rnDelta)} đêm phòng`,
-        what: `Đã đặt ${nfVND.format(totalRN)} đêm phòng (năm trước: ${nfVND.format(stlyRN)}, ${rnPctChange >= 0 ? '+' : ''}${rnPctChange}%). Giá trung bình: ${formatVND(adrCurrent)} (năm trước: ${formatVND(adrStly)}, ${adrPctChange >= 0 ? '+' : ''}${adrPctChange}%)`,
-        soWhat: `Doanh thu ${isAhead ? 'tăng' : 'giảm'} chủ yếu vì ${driver === 'rate' ? 'giá bán thay đổi' : 'lượng booking thay đổi'}`,
+        title: isAhead
+            ? t('paceAheadTitle', { delta: String(Math.abs(rnDelta)) })
+            : t('paceBehindTitle', { delta: String(Math.abs(rnDelta)) }),
+        what: t('paceWhat', {
+            totalRN: nfVND.format(totalRN),
+            stlyRN: nfVND.format(stlyRN),
+            rnPct: `${rnPctChange >= 0 ? '+' : ''}${rnPctChange}`,
+            adr: formatVND(adrCurrent),
+            stlyAdr: formatVND(adrStly),
+            adrPct: `${adrPctChange >= 0 ? '+' : ''}${adrPctChange}`,
+        }),
+        soWhat: isAhead ? t('paceSoWhatUp', { driver: driverWord }) : t('paceSoWhatDown', { driver: driverWord }),
         doThis: conf === 'LOW'
-            ? 'Cần thêm dữ liệu để đưa ra khuyến nghị chi tiết — hãy upload thêm booking'
+            ? t('paceDoThisLow')
             : isAhead
                 ? driver === 'rate'
-                    ? 'Giữ nguyên chiến lược giá, đề xuất khách nâng hạng phòng để tăng doanh thu'
-                    : 'Lượng đặt tốt, giá có thể tăng thêm — xem xét điều chỉnh giá bán'
+                    ? t('paceDoThisAheadRate')
+                    : t('paceDoThisAheadVolume')
                 : driver === 'volume'
-                    ? `Cần thêm ${Math.abs(rnDelta)} đêm phòng để bằng năm trước — tăng quảng cáo hoặc giảm giá các kênh yếu`
-                    : `Giá bán đang thấp hơn năm trước — hạn chế giảm giá sâu, xem lại chiến lược giá`,
-        impact: `Doanh thu trên mỗi phòng: ${revParPct >= 0 ? 'tăng' : 'giảm'} ${Math.abs(revParPct)}% so với cùng kỳ`,
+                    ? t('paceDoThisBehindVolume', { delta: String(Math.abs(rnDelta)) })
+                    : t('paceDoThisBehindRate'),
+        impact: t('paceImpact', { direction: revParPct >= 0 ? t('paceImpactUp') : t('paceImpactDown'), pct: String(Math.abs(revParPct)) }),
         confidence: conf,
     };
 }
@@ -404,10 +454,10 @@ function generatePickupAcceleration(
     pricingHints: PricingHintData[],
     config: InsightsConfig,
     dims: ConfidenceDimensions,
+    t: ReturnType<typeof getInsightT>,
 ): InsightCard | null {
     const conf = getCardConfidence('pickup_acceleration', dims);
 
-    // Need sufficient pickup data
     const withPickup = days7.filter(d => d.pickupNetT3 != null && d.pickupNetT7 != null);
     if (withPickup.length < 3) return null;
 
@@ -415,12 +465,10 @@ function generatePickupAcceleration(
     const avgT7 = withPickup.reduce((s, d) => s + (d.pickupNetT7 ?? 0), 0) / withPickup.length;
     const accel = avgT3 / Math.max(avgT7, config.eps);
 
-    // Skip if stable (spec: else → skip card)
     if (accel >= 0.5 && accel <= 1.5) return null;
 
     const isAccelerating = accel > 1.5;
 
-    // Pricing hint: check if any stay_date had price change in last 3d
     const pricingHintTag = pricingHints.length > 0
         ? pricingHints.some(h => {
             const delta = Math.abs(h.latestFinalPrice - h.prevFinalPrice) / Math.max(h.prevFinalPrice, 1);
@@ -439,23 +487,23 @@ function generatePickupAcceleration(
     return {
         type: 'pickup_acceleration',
         severity: isAccelerating ? 'hot' : 'warning',
-        title: isAccelerating ? 'Booking đang TĂNG TỐC' : 'Booking đang GIẢM TỐC',
-        what: `3 ngày gần nhất: ${avgT3 >= 0 ? '+' : ''}${nf1.format(avgT3)} phòng/ngày. Trung bình 7 ngày: ${avgT7 >= 0 ? '+' : ''}${nf1.format(avgT7)} phòng/ngày (chênh lệch ${accelPct >= 0 ? '+' : ''}${accelPct}%)`,
-        soWhat: isAccelerating
-            ? 'Khách đặt phòng nhiều hơn bình thường — có thể do sự kiện, mùa cao điểm, hoặc nhu cầu cuối giờ'
-            : 'Lượng đặt phòng đang giảm so với tuần trước — cần theo dõi sát và chuẩn bị phương án',
+        title: isAccelerating ? t('accelTitle') : t('decelTitle'),
+        what: t('accelWhat', {
+            t3: `${avgT3 >= 0 ? '+' : ''}${nf1.format(avgT3)}`,
+            t7: `${avgT7 >= 0 ? '+' : ''}${nf1.format(avgT7)}`,
+            pct: `${accelPct >= 0 ? '+' : ''}${accelPct}`,
+        }),
+        soWhat: isAccelerating ? t('accelSoWhat') : t('decelSoWhat'),
         doThis: conf === 'LOW'
-            ? 'Hãy upload thêm dữ liệu booking để hệ thống đưa ra khuyến nghị cụ thể hơn'
-            : isAccelerating
-                ? 'Không cần chạy khuyến mãi trong 7 ngày tới — nhu cầu tự nhiên đang tốt'
-                : 'Cân nhắc kích cầu — xem lại giá các ngày có ít booking',
+            ? t('accelDoThisLow')
+            : isAccelerating ? t('accelDoThis') : t('decelDoThis'),
         impact: conf === 'LOW'
-            ? 'Chưa đủ dữ liệu để ước tính'
+            ? t('dangerImpactLow')
             : isAccelerating
-                ? `Nếu giữ giá tốt, tránh mất khoảng ${formatVND(impactVND)} doanh thu`
-                : `Cần bù khoảng ${formatVND(impactVND)} doanh thu so với tuần trước`,
+                ? t('accelImpact', { amount: formatVND(impactVND) })
+                : t('decelImpact', { amount: formatVND(impactVND) }),
         confidence: conf,
-        pricingHint: pricingHintTag ? 'Lưu ý: có thay đổi giá gần đây, có thể ảnh hưởng đến lượng booking' : undefined,
+        pricingHint: pricingHintTag ? t('pricingHintNote') : undefined,
     };
 }
 
@@ -464,11 +512,11 @@ function generateCancelInsight(
     cancelData: CancelData | null,
     config: InsightsConfig,
     dims: ConfidenceDimensions,
+    t: ReturnType<typeof getInsightT>,
 ): InsightCard[] {
     if (!cancelData) return [];
     const cards: InsightCard[] = [];
 
-    // Tier 1: ALWAYS show
     const confTier1 = getCardConfidence('cancel_tier1', dims);
     const netPickup = cancelData.pickupGross7d - cancelData.cancel7d;
     const cancelPct = Math.round(cancelData.cancelRate30d * 100 * 10) / 10;
@@ -476,34 +524,34 @@ function generateCancelInsight(
     cards.push({
         type: 'cancel_tier1',
         severity: cancelData.cancelRate30d > 0.15 ? 'warning' : 'info',
-        title: `Tỷ lệ hủy phòng 30 ngày: ${cancelPct}%`,
-        what: `Tuần qua: nhận ${cancelData.pickupGross7d} booking mới, bị hủy ${cancelData.cancel7d} → thực tế tăng ${netPickup} đêm phòng${cancelData.topCancelSegment ? `. Kênh hủy nhiều nhất: ${cancelData.topCancelSegment}` : ''}`,
-        soWhat: cancelData.cancelRate30d > 0.15
-            ? 'Tỷ lệ hủy đang cao — đang mất đáng kể doanh thu mỗi tuần'
-            : 'Tỷ lệ hủy ở mức bình thường — tiếp tục theo dõi',
+        title: t('cancelTitle', { pct: String(cancelPct) }),
+        what: t('cancelWhat', {
+            gross: String(cancelData.pickupGross7d),
+            cancelled: String(cancelData.cancel7d),
+            net: String(netPickup),
+            topChannel: cancelData.topCancelSegment ? t('cancelTopChannel', { channel: cancelData.topCancelSegment }) : '',
+        }),
+        soWhat: cancelData.cancelRate30d > 0.15 ? t('cancelSoWhatHigh') : t('cancelSoWhatNormal'),
         doThis: confTier1 === 'LOW'
-            ? 'Cần bổ sung dữ liệu kênh bán để phân tích nguyên nhân hủy chi tiết hơn'
-            : cancelData.cancelRate30d > 0.15
-                ? 'Xem lại chính sách hủy phòng — cân nhắc yêu cầu đặt cọc hoặc phí hủy phòng'
-                : 'Chưa cần hành động — tiếp tục theo dõi hàng tuần',
-        impact: `Mỗi tuần mất ${cancelData.cancel7d} đêm phòng vì bị hủy`,
+            ? t('cancelDoThisLow')
+            : cancelData.cancelRate30d > 0.15 ? t('cancelDoThisHigh') : t('cancelDoThisNormal'),
+        impact: t('cancelImpact', { count: String(cancelData.cancel7d) }),
         confidence: confTier1,
     });
 
-    // Tier 2: Oversell suggestion — only if ALL conditions met
     const confTier2 = getCardConfidence('cancel_tier2', dims);
     if (confTier2 === 'HIGH' && config.oversellEnabled) {
-        const recoverRN = Math.round(cancelData.cancel7d * 4 * 0.8); // monthly estimate
-        const recoverVND = recoverRN * config.walkCostPerGuest * 0.5; // conservative
+        const recoverRN = Math.round(cancelData.cancel7d * 4 * 0.8);
+        const recoverVND = recoverRN * config.walkCostPerGuest * 0.5;
 
         cards.push({
             type: 'cancel_tier2',
             severity: 'info',
-            title: 'Cơ hội: Bán vượt công suất',
-            what: `Vì tỷ lệ hủy ${cancelPct}%, có thể nhận thêm 5–8% booking cho những ngày đã đặt trên 80% phòng`,
-            soWhat: 'Tận dụng xu hướng hủy phòng để tối ưu doanh thu — rủi ro khách bị chuyển phòng rất thấp',
-            doThis: `Cho phép nhận thêm 5–8% booking vượt công suất vào những ngày đã đặt trên 80% phòng`,
-            impact: `Thu hồi được khoảng ${nfVND.format(recoverRN)} đêm phòng/tháng = +${formatVND(recoverVND)}. Chi phí rủi ro nếu phải chuyển khách: ${formatVND(config.walkCostPerGuest)}/khách`,
+            title: t('oversellTitle'),
+            what: t('oversellWhat', { pct: String(cancelPct) }),
+            soWhat: t('oversellSoWhat'),
+            doThis: t('oversellDoThis'),
+            impact: t('oversellImpact', { rn: nfVND.format(recoverRN), amount: formatVND(recoverVND), walkCost: formatVND(config.walkCostPerGuest) }),
             confidence: 'MEDIUM',
         });
     }
@@ -517,6 +565,7 @@ function generateSegmentMix(
     days30: DayData[],
     config: InsightsConfig,
     dims: ConfidenceDimensions,
+    t: ReturnType<typeof getInsightT>,
 ): InsightCard | null {
     const conf = getCardConfidence('segment_mix', dims);
     if (segments.length === 0) return null;
@@ -524,38 +573,32 @@ function generateSegmentMix(
     const totalRooms = segments.reduce((s, seg) => s + seg.roomCount, 0);
     if (totalRooms === 0) return null;
 
-    // Detect OTA-heavy mix
     const otaSegments = segments.filter(s =>
         /ota|booking\.com|agoda|expedia|traveloka/i.test(s.segmentName)
     );
     const otaRooms = otaSegments.reduce((s, seg) => s + seg.roomCount, 0);
     const otaPct = otaRooms / totalRooms;
 
-    if (otaPct <= 0.55) return null; // Not OTA-heavy, skip
+    if (otaPct <= 0.55) return null;
 
     const avgAdr = days30.reduce((s, d) => s + (d.roomsOtb > 0 ? d.revenueOtb / d.roomsOtb : 0), 0)
         / Math.max(days30.length, 1);
-    const shiftPct = 0.10; // 10% shift target
+    const shiftPct = 0.10;
     const avgCommission = (config.commissionRange[0] + config.commissionRange[1]) / 2;
     const leakageSaved = otaRooms * shiftPct * avgAdr * avgCommission;
     const annualSaved = leakageSaved * 12;
 
-    // Top segments breakdown
     const topSegments = [...segments].sort((a, b) => b.pct - a.pct).slice(0, 4);
     const segmentBreakdown = topSegments.map(s => `${s.segmentName} ${Math.round(s.pct * 100)}%`).join(', ');
 
     return {
         type: 'segment_mix',
         severity: 'info',
-        title: `${Math.round(otaPct * 100)}% booking đến từ kênh OTA (Booking.com, Agoda...)`,
-        what: `Phân bổ kênh bán: ${segmentBreakdown}`,
-        soWhat: 'Đang trả nhiều phí hoa hồng cho OTA — có cơ hội chuyển khách sang đặt trực tiếp để giảm chi phí',
-        doThis: conf === 'LOW'
-            ? 'Cần bổ sung dữ liệu kênh bán để phân tích chính xác hơn'
-            : 'Đảm bảo giá website luôn tốt nhất + chạy ưu đãi cho khách đặt trực tiếp và khách hàng thân thiết',
-        impact: conf === 'LOW'
-            ? 'Chưa đủ dữ liệu kênh bán để ước tính'
-            : `Nếu chuyển được 10% booking từ OTA sang đặt trực tiếp → tiết kiệm khoảng ${formatVND(annualSaved)}/năm tiền hoa hồng`,
+        title: t('segmentTitle', { pct: String(Math.round(otaPct * 100)) }),
+        what: t('segmentWhat', { breakdown: segmentBreakdown }),
+        soWhat: t('segmentSoWhat'),
+        doThis: conf === 'LOW' ? t('segmentDoThisLow') : t('segmentDoThis'),
+        impact: conf === 'LOW' ? t('segmentImpactLow') : t('segmentImpact', { amount: formatVND(annualSaved) }),
         confidence: conf,
     };
 }
@@ -629,7 +672,9 @@ export function generateInsightsV2(input: InsightsV2Input): {
     compression: InsightCard[];
     otherInsights: InsightCard[];
 } {
-    const { hotelCapacity, days, cancelData, segments, pricingHints, confidenceDims, config } = input;
+    const { hotelCapacity, days, cancelData, segments, pricingHints, confidenceDims, config, locale } = input;
+
+    const t = getInsightT(locale || 'en');
 
     if (days.length === 0) {
         return { top3: [], compression: [], otherInsights: [] };
@@ -645,22 +690,22 @@ export function generateInsightsV2(input: InsightsV2Input): {
     });
 
     // P0-2: Compression dates
-    const compressionCards = generateCompressionInsights(days7, hotelCapacity, config, confidenceDims);
+    const compressionCards = generateCompressionInsights(days7, hotelCapacity, config, confidenceDims, t, locale);
 
     // P0-3: Revenue opportunity
-    const revenueCard = generateRevenueOpportunity(days30, hotelCapacity, confidenceDims);
+    const revenueCard = generateRevenueOpportunity(days30, hotelCapacity, confidenceDims, t);
 
     // P0-4: Pace vs STLY
-    const paceCard = generatePaceInsight(days30, hotelCapacity, confidenceDims);
+    const paceCard = generatePaceInsight(days30, hotelCapacity, confidenceDims, t);
 
     // P1-1: Pickup acceleration
-    const accelCard = generatePickupAcceleration(days7, pricingHints, config, confidenceDims);
+    const accelCard = generatePickupAcceleration(days7, pricingHints, config, confidenceDims, t);
 
     // P1-2: Cancel tiers
-    const cancelCards = generateCancelInsight(cancelData, config, confidenceDims);
+    const cancelCards = generateCancelInsight(cancelData, config, confidenceDims, t);
 
     // P1-3: Segment mix
-    const segmentCard = generateSegmentMix(segments, days30, config, confidenceDims);
+    const segmentCard = generateSegmentMix(segments, days30, config, confidenceDims, t);
 
     // P0-1: Top 3 Actions (scored from compression dates)
     const top3 = scoreAndRankTop3(compressionCards, days7, hotelCapacity, config, confidenceDims);

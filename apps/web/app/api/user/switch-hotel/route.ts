@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
     // Use the robust fallback chain from getActiveHotelId():
     // 1. Cookie → 2. Session hotels → 3. First real hotel (admin) → 4. Demo Hotel
     const { getActiveHotelId } = await import('@/lib/pricing/get-hotel');
@@ -81,23 +81,51 @@ export async function GET() {
     })
 
     let activeHotelRole: string | null = null;
+    let userCountry: string | null = null;
+
     if (userId) {
-        const hotelUser = await prisma.hotelUser.findUnique({
-            where: {
-                user_id_hotel_id: {
-                    user_id: userId,
-                    hotel_id: activeHotelId,
+        const [hotelUser, user] = await Promise.all([
+            prisma.hotelUser.findUnique({
+                where: {
+                    user_id_hotel_id: {
+                        user_id: userId,
+                        hotel_id: activeHotelId,
+                    },
                 },
-            },
-            select: { role: true },
-        });
+                select: { role: true },
+            }),
+            prisma.user.findUnique({
+                where: { id: userId },
+                select: { country: true, locale: true },
+            }),
+        ]);
         activeHotelRole = hotelUser?.role || null;
+
+        // ── Auto-detect country (only when user.country is null) ─────
+        if (user && user.country == null) {
+            const { detectCountry } = await import('@/lib/geo/detect-country');
+            const detected = await detectCountry(
+                request.headers,
+                user.locale || (session?.user as any)?.locale,
+            );
+            if (detected) {
+                await prisma.user.update({
+                    where: { id: userId },
+                    data: { country: detected },
+                });
+                userCountry = detected;
+                console.log(`[SWITCH-HOTEL] Auto-detected country for user ${userId}: ${detected}`);
+            }
+        } else {
+            userCountry = user?.country || null;
+        }
     }
 
     return NextResponse.json({
         activeHotelId,
         activeHotelName: hotel?.name || null,
         activeHotelRole,
+        userCountry,
     })
 }
 

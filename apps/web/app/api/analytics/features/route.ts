@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
             select: { as_of_date: true },
         });
         latestFeaturesDate = latestFeat?.as_of_date?.toISOString().split('T')[0] || null;
-        noFeaturesWarning = `Chưa build features cho ngày ${asOfParam}. Pickup/STLY sẽ không hiện.`;
+        noFeaturesWarning = `Features not built for ${asOfParam}. Pickup/STLY will not be available.`;
     }
 
     // Fetch OTB for current as_of

@@ -46,11 +46,11 @@ export async function resetDerivedData(hotelId: string): Promise<{ success: bool
 
         return {
             success: true,
-            message: `Đã xóa ${totalDeleted} records. Raw data vẫn được giữ lại.`,
+            message: `Deleted ${totalDeleted} records. Raw data has been preserved.`,
             deleted
         };
     } catch (error) {
         console.error('Reset error:', error);
-        throw new Error('Không thể reset dữ liệu. Vui lòng thử lại.');
+        throw new Error('Unable to reset data. Please try again.');
     }
 }

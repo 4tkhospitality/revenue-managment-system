@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
         const rateCheck = await tryRateLimit(userId, 'INVITE_ATTEMPT', undefined, 5, 60)
         if (!rateCheck.allowed) {
             return NextResponse.json(
-                { error: `Quá nhiều lần thử. Vui lòng đợi ${Math.ceil((rateCheck.resetAt.getTime() - Date.now()) / 1000)}s` },
+                { error: `Too many attempts. Please wait ${Math.ceil((rateCheck.resetAt.getTime() - Date.now()) / 1000)}s` },
                 { status: 429 }
             )
         }
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
 
         if (!code && !token) {
             return NextResponse.json(
-                { error: 'Vui lòng nhập mã mời hoặc token' },
+                { error: 'Please enter an invite code or token' },
                 { status: 400 }
             )
         }
@@ -73,18 +73,18 @@ export async function POST(request: NextRequest) {
             }
 
             if (!invite) {
-                throw new Error('Mã mời không hợp lệ hoặc đã hết hạn')
+                throw new Error('Invalid or expired invite code')
             }
 
             // Check status and usage
             if (invite.status !== 'active') {
-                throw new Error('Mã mời đã bị vô hiệu hóa')
+                throw new Error('Invite code has been deactivated')
             }
             if (invite.expires_at < new Date()) {
-                throw new Error('Mã mời đã hết hạn')
+                throw new Error('Invite code has expired')
             }
             if (invite.used_count >= invite.max_uses) {
-                throw new Error('Mã mời đã được sử dụng hết')
+                throw new Error('Invite code has been fully used')
             }
 
             // ── Seat check with row-level lock ──────────────────────
@@ -121,13 +121,13 @@ export async function POST(request: NextRequest) {
 
             if (existingMember) {
                 if (existingMember.is_active) {
-                    throw new Error('Bạn đã là thành viên của khách sạn này')
+                    throw new Error('You are already a member of this hotel')
                 }
 
                 // Reactivation for soft-removed user — check seat first
                 if (maxSeats > 0 && activeCount >= maxSeats) {
                     throw Object.assign(
-                        new Error('Khách sạn đã đạt giới hạn thành viên theo gói hiện tại'),
+                        new Error('Hotel has reached seat limit for current plan'),
                         { code: 'SEAT_LIMIT' }
                     )
                 }
@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
             // ── New member — check seat before creating ─────────────
             if (maxSeats > 0 && activeCount >= maxSeats) {
                 throw Object.assign(
-                    new Error('Khách sạn đã đạt giới hạn thành viên theo gói hiện tại'),
+                    new Error('Hotel has reached seat limit for current plan'),
                     { code: 'SEAT_LIMIT' }
                 )
             }
@@ -216,7 +216,7 @@ export async function POST(request: NextRequest) {
             role: result.role,
         })
     } catch (error: any) {
-        const message = error instanceof Error ? error.message : 'Có lỗi xảy ra'
+        const message = error instanceof Error ? error.message : 'An error occurred'
         const status = error?.code === 'SEAT_LIMIT' ? 403 : 400
         console.error('[API] Invite redeem error:', message)
         return NextResponse.json({ error: message, code: error?.code }, { status })

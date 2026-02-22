@@ -2,12 +2,14 @@
 
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
+import { useTranslations } from 'next-intl';
 
 interface DeleteByMonthButtonProps {
     className?: string;
 }
 
 export function DeleteByMonthButton({ className }: DeleteByMonthButtonProps) {
+    const t = useTranslations('dataPage');
     const { data: session } = useSession();
     const [isOpen, setIsOpen] = useState(false);
     const [month, setMonth] = useState('');
@@ -26,7 +28,7 @@ export function DeleteByMonthButton({ className }: DeleteByMonthButtonProps) {
 
     const handlePreview = async () => {
         if (!month) {
-            setError('Vui lòng chọn tháng');
+            setError(t('pleaseSelectMonth'));
             return;
         }
 
@@ -52,8 +54,8 @@ export function DeleteByMonthButton({ className }: DeleteByMonthButtonProps) {
     };
 
     const handleDelete = async () => {
-        if (confirmText !== 'XÓA DỮ LIỆU') {
-            setError('Vui lòng gõ đúng "XÓA DỮ LIỆU" để xác nhận');
+        if (confirmText !== 'DELETE DATA') {
+            setError(t('pleaseTypeConfirm'));
             return;
         }
 
@@ -112,7 +114,7 @@ export function DeleteByMonthButton({ className }: DeleteByMonthButtonProps) {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
-                Xóa theo tháng
+                {t('deleteByMonth')}
             </button>
 
             {/* Modal Overlay */}
@@ -127,8 +129,8 @@ export function DeleteByMonthButton({ className }: DeleteByMonthButtonProps) {
                                 </svg>
                             </div>
                             <div>
-                                <h2 className="text-lg font-semibold text-gray-900">Xóa dữ liệu theo tháng</h2>
-                                <p className="text-sm text-red-600">Hành động này không thể hoàn tác</p>
+                                <h2 className="text-lg font-semibold text-gray-900">{t('deleteByMonthTitle')}</h2>
+                                <p className="text-sm text-red-600">{t('irreversible')}</p>
                             </div>
                         </div>
 
@@ -137,14 +139,14 @@ export function DeleteByMonthButton({ className }: DeleteByMonthButtonProps) {
                             {result ? (
                                 <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-700">
                                     ✓ {result}
-                                    <p className="text-sm mt-2">Đang tải lại trang...</p>
+                                    <p className="text-sm mt-2">{t('reloading')}</p>
                                 </div>
                             ) : (
                                 <>
                                     {/* Month Selection */}
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Chọn tháng cần xóa
+                                            {t('selectMonth')}
                                         </label>
                                         <select
                                             value={month}
@@ -155,10 +157,10 @@ export function DeleteByMonthButton({ className }: DeleteByMonthButtonProps) {
                                             }}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                         >
-                                            <option value="">-- Chọn tháng --</option>
+                                            <option value="">{t('chooseMonth')}</option>
                                             {monthOptions.map(m => (
                                                 <option key={m} value={m}>
-                                                    Tháng {m.split('-')[1]}/{m.split('-')[0]}
+                                                    {t('monthLabel', { m: m.split('-')[1], y: m.split('-')[0] })}
                                                 </option>
                                             ))}
                                         </select>
@@ -167,16 +169,16 @@ export function DeleteByMonthButton({ className }: DeleteByMonthButtonProps) {
                                     {/* Data Type Selection */}
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Loại dữ liệu
+                                            {t('dataType')}
                                         </label>
                                         <select
                                             value={dataType}
                                             onChange={(e) => setDataType(e.target.value as 'reservations' | 'cancellations' | 'all')}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                         >
-                                            <option value="reservations">Chỉ đặt phòng</option>
-                                            <option value="cancellations">Chỉ hủy phòng</option>
-                                            <option value="all">Tất cả</option>
+                                            <option value="reservations">{t('reservationsOnly')}</option>
+                                            <option value="cancellations">{t('cancellationsOnly')}</option>
+                                            <option value="all">{t('all')}</option>
                                         </select>
                                     </div>
 
@@ -186,21 +188,21 @@ export function DeleteByMonthButton({ className }: DeleteByMonthButtonProps) {
                                         disabled={!month || loading}
                                         className="w-full py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
                                     >
-                                        {loading ? 'Đang kiểm tra...' : 'Xem trước số lượng'}
+                                        {loading ? t('checking') : t('previewCount')}
                                     </button>
 
                                     {/* Preview Result */}
                                     {preview && (
                                         <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
                                             <p className="font-medium text-amber-800">
-                                                Dữ liệu sẽ bị xóa:
+                                                {t('dataToDelete')}
                                             </p>
                                             <ul className="mt-2 space-y-1 text-sm text-amber-700">
-                                                <li>• Đặt phòng: <strong>{preview.reservationCount.toLocaleString()}</strong> bản ghi</li>
-                                                <li>• Hủy phòng: <strong>{preview.cancellationCount.toLocaleString()}</strong> bản ghi</li>
+                                                <li>• {t('reservationsOnly')}: <strong>{preview.reservationCount.toLocaleString()}</strong></li>
+                                                <li>• {t('cancellationsOnly')}: <strong>{preview.cancellationCount.toLocaleString()}</strong></li>
                                                 {preview.otbCount > 0 && (
-                                                    <li>• OTB snapshots: <strong>{preview.otbCount.toLocaleString()}</strong> bản ghi
-                                                        {!includeOtb && <span className="text-amber-500"> (sẽ KHÔNG xóa)</span>}
+                                                    <li>• OTB snapshots: <strong>{preview.otbCount.toLocaleString()}</strong>
+                                                        {!includeOtb && <span className="text-amber-500"> {t('willNotDelete')}</span>}
                                                     </li>
                                                 )}
                                             </ul>
@@ -215,7 +217,7 @@ export function DeleteByMonthButton({ className }: DeleteByMonthButtonProps) {
                                                         className="w-4 h-4 rounded border-amber-400 text-red-600 focus:ring-red-500"
                                                     />
                                                     <span className="text-sm text-amber-800 font-medium">
-                                                        Xóa luôn OTB + Features ({preview.otbCount.toLocaleString()} bản ghi)
+                                                        {t('deleteOtbToo', { n: preview.otbCount.toLocaleString() })}
                                                     </span>
                                                 </label>
                                             )}
@@ -226,13 +228,13 @@ export function DeleteByMonthButton({ className }: DeleteByMonthButtonProps) {
                                     {preview && (preview.reservationCount > 0 || preview.cancellationCount > 0 || preview.otbCount > 0) && (
                                         <div>
                                             <label className="block text-sm font-medium text-red-700 mb-1">
-                                                Gõ <strong>&quot;XÓA DỮ LIỆU&quot;</strong> để xác nhận
+                                                Type <strong>&quot;DELETE DATA&quot;</strong> to confirm
                                             </label>
                                             <input
                                                 type="text"
                                                 value={confirmText}
                                                 onChange={(e) => setConfirmText(e.target.value)}
-                                                placeholder="XÓA DỮ LIỆU"
+                                                placeholder="DELETE DATA"
                                                 className="w-full px-3 py-2 border border-red-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 font-mono"
                                             />
                                         </div>
@@ -254,22 +256,23 @@ export function DeleteByMonthButton({ className }: DeleteByMonthButtonProps) {
                                 onClick={handleClose}
                                 className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                             >
-                                {result ? 'Đóng' : 'Hủy'}
+                                {result ? t('close') : t('cancel')}
                             </button>
 
                             {!result && preview && (preview.reservationCount > 0 || preview.cancellationCount > 0 || preview.otbCount > 0) && (
                                 <button
                                     onClick={handleDelete}
-                                    disabled={confirmText !== 'XÓA DỮ LIỆU' || loading}
+                                    disabled={confirmText !== 'DELETE DATA' || loading}
                                     className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                 >
-                                    {loading ? 'Đang xóa...' : 'Xóa vĩnh viễn'}
+                                    {loading ? t('deleting') : t('deletePermanently')}
                                 </button>
                             )}
                         </div>
                     </div>
-                </div>
-            )}
+                </div >
+            )
+            }
         </>
     );
 }

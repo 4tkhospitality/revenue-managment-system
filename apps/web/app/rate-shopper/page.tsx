@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { RefreshCw, Search, TrendingUp, TrendingDown, Minus, AlertCircle, Clock, Wifi, Plus, Building2, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { RateShopperPaywall } from '@/components/paywall/RateShopperPaywall';
+import { useTranslations } from 'next-intl';
 
 // Types (inline to avoid server/client boundary issues)
 interface IntradayRate {
@@ -49,11 +50,11 @@ interface IntradayViewModel {
 const OFFSETS = [7, 14, 30, 60, 90] as const;
 
 const OFFSET_LABELS: Record<number, string> = {
-    7: '+7 ngày',
-    14: '+14 ngày',
-    30: '+30 ngày',
-    60: '+60 ngày',
-    90: '+90 ngày',
+    7: '+7 days',
+    14: '+14 days',
+    30: '+30 days',
+    60: '+60 days',
+    90: '+90 days',
 };
 
 type FetchStatus = 'idle' | 'scanning' | 'loading' | 'done' | 'error';
@@ -65,17 +66,17 @@ interface OffsetState {
 }
 
 const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
-    FRESH: { bg: '#F0FDF4', text: '#166534', label: 'Mới nhất' },
-    STALE: { bg: '#FFFBEB', text: '#92400E', label: 'Hết hạn' },
-    EXPIRED: { bg: '#FEF2F2', text: '#991B1B', label: 'Hết hạn' },
-    REFRESHING: { bg: '#EFF6FF', text: '#1E40AF', label: 'Đang cập nhật' },
-    FAILED: { bg: '#FEF2F2', text: '#991B1B', label: 'Lỗi' },
+    FRESH: { bg: '#F0FDF4', text: '#166534', label: 'Fresh' },
+    STALE: { bg: '#FFFBEB', text: '#92400E', label: 'Stale' },
+    EXPIRED: { bg: '#FEF2F2', text: '#991B1B', label: 'Expired' },
+    REFRESHING: { bg: '#EFF6FF', text: '#1E40AF', label: 'Refreshing' },
+    FAILED: { bg: '#FEF2F2', text: '#991B1B', label: 'Error' },
 };
 
 const CONFIDENCE_BADGES: Record<string, { color: string; label: string }> = {
-    HIGH: { color: '#16A34A', label: 'Cao' },
-    MED: { color: '#CA8A04', label: 'T.Bình' },
-    LOW: { color: '#C62828', label: 'Thấp' },
+    HIGH: { color: '#16A34A', label: 'High' },
+    MED: { color: '#CA8A04', label: 'Medium' },
+    LOW: { color: '#C62828', label: 'Low' },
 };
 
 // ──────────────────────────────────────────────────
@@ -93,13 +94,13 @@ function formatDate(dateStr: string): string {
 }
 
 function timeAgo(isoStr: string | null): string {
-    if (!isoStr) return 'Chưa có dữ liệu';
+    if (!isoStr) return 'No data';
     const diff = Date.now() - new Date(isoStr).getTime();
     const mins = Math.floor(diff / 60000);
-    if (mins < 1) return 'Vừa xong';
-    if (mins < 60) return `${mins} phút trước`;
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return `${mins}m ago`;
     const hrs = Math.floor(mins / 60);
-    return `${hrs}h trước`;
+    return `${hrs}h ago`;
 }
 
 // ──────────────────────────────────────────────────
@@ -148,6 +149,7 @@ export default function RateShopperPage() {
 }
 
 function RateShopperContent() {
+    const t = useTranslations('rateShopper');
     const [selectedOffset, setSelectedOffset] = useState<number>(7);
     const [offsetStates, setOffsetStates] = useState<Record<number, OffsetState>>(() => {
         const init: Record<number, OffsetState> = {};
@@ -178,14 +180,14 @@ function RateShopperContent() {
                 data: viewData,
             });
         } catch {
-            updateOffset(offset, { status: 'error', message: 'Lỗi tải dữ liệu' });
+            updateOffset(offset, { status: 'error', message: t('errorLoading') });
         }
     }, [updateOffset]);
 
     // Scan all competitors for an offset (calls SerpApi, costs credits)
     const handleScan = useCallback(async (offset: number) => {
         try {
-            updateOffset(offset, { status: 'scanning', message: 'Đang quét giá đối thủ...' });
+            updateOffset(offset, { status: 'scanning', message: t('scanning') });
 
             const res = await fetch('/api/rate-shopper/scan', {
                 method: 'POST',
@@ -205,12 +207,12 @@ function RateShopperContent() {
 
             updateOffset(offset, {
                 status: 'done',
-                message: result.message || 'Hoàn tất',
+                message: result.message || t('completed'),
             });
         } catch (err) {
             updateOffset(offset, {
                 status: 'error',
-                message: err instanceof Error ? err.message : 'Lỗi quét giá',
+                message: err instanceof Error ? err.message : t('errorScanning'),
             });
         }
     }, [updateOffset, loadCachedData]);
@@ -234,8 +236,8 @@ function RateShopperContent() {
             >
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                        <h1 className="text-lg font-semibold">So sánh giá đối thủ</h1>
-                        <p className="text-white/70 text-sm">Rate Shopper • Nhấn &quot;Tìm giá&quot; để quét từng khung thời gian</p>
+                        <h1 className="text-lg font-semibold">{t('pageTitle')}</h1>
+                        <p className="text-white/70 text-sm">{t('pageSubtitle')}</p>
                     </div>
                 </div>
             </header>
@@ -249,14 +251,14 @@ function RateShopperContent() {
                         style={{ backgroundColor: '#204184', color: '#fff' }}
                     >
                         <Search className="w-4 h-4" />
-                        So sánh giá
+                        {t('navPriceComparison')}
                     </Link>
                     <Link
                         href="/rate-shopper/competitors"
                         className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-all"
                     >
                         <Building2 className="w-4 h-4" />
-                        Quản lý đối thủ
+                        {t('navManageCompetitors')}
                     </Link>
                 </div>
                 <div className="flex gap-2">
@@ -266,7 +268,7 @@ function RateShopperContent() {
                         style={{ backgroundColor: '#10b981', color: '#fff' }}
                     >
                         <Plus className="w-4 h-4" />
-                        Thêm đối thủ
+                        {t('navAddCompetitor')}
                     </Link>
                 </div>
             </div>
@@ -316,10 +318,10 @@ function RateShopperContent() {
                                                 : '#6B7280',
                                 }}
                             >
-                                {isScanning ? 'Đang quét...'
-                                    : isLoading ? 'Tải...'
-                                        : hasData ? 'Có dữ liệu'
-                                            : 'Chưa quét'}
+                                {isScanning ? t('scanningStatus')
+                                    : isLoading ? t('loadingStatus')
+                                        : hasData ? t('hasData')
+                                            : t('notScanned')}
                             </span>
                         </button>
                     );
@@ -332,16 +334,16 @@ function RateShopperContent() {
                     <div className="text-center space-y-3">
                         <RefreshCw className="w-8 h-8 animate-spin text-blue-500 mx-auto" />
                         <p className="text-sm text-gray-500">
-                            {currentState.message || 'Đang quét giá đối thủ...'}
+                            {currentState.message || t('scanMessage')}
                         </p>
-                        <p className="text-xs text-gray-400">Quá trình này có thể mất 10-30 giây</p>
+                        <p className="text-xs text-gray-400">{t('scanTime')}</p>
                     </div>
                 </div>
             ) : currentState.status === 'loading' ? (
                 <div className="flex items-center justify-center py-20">
                     <div className="text-center space-y-3">
                         <RefreshCw className="w-8 h-8 animate-spin text-blue-500 mx-auto" />
-                        <p className="text-sm text-gray-500">Đang tải dữ liệu...</p>
+                        <p className="text-sm text-gray-500">{t('loadingData')}</p>
                     </div>
                 </div>
             ) : selectedView ? (
@@ -355,7 +357,7 @@ function RateShopperContent() {
                                 style={{ backgroundColor: '#204184', color: '#fff' }}
                             >
                                 <Zap className="w-4 h-4" />
-                                Quét lại giá
+                                {t('rescanRates')}
                             </button>
                             {currentState.message && (
                                 <span className="text-xs text-green-600 bg-green-50 px-3 py-1 rounded-full">
@@ -364,32 +366,32 @@ function RateShopperContent() {
                             )}
                         </div>
                         <span className="text-xs text-gray-400">
-                            Cập nhật: {timeAgo(selectedView.cache_fetched_at)}
+                            {t('updatedAt', { time: timeAgo(selectedView.cache_fetched_at) })}
                         </span>
                     </div>
 
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                         <StatCard
-                            label="Check-in"
+                            label={t('thCheckIn') || 'Check-in'}
                             value={formatDate(selectedView.check_in_date)}
                             icon={<Clock className="w-5 h-5" />}
                             color="#204184"
                         />
                         <StatCard
-                            label="Đối thủ"
+                            label={t('competitors')}
                             value={`${selectedView.competitors.length}`}
                             icon={<Search className="w-5 h-5" />}
                             color="#7C3AED"
                         />
                         <StatCard
-                            label="Cập nhật"
+                            label={t('updated')}
                             value={timeAgo(selectedView.cache_fetched_at)}
                             icon={<Wifi className="w-5 h-5" />}
                             color={STATUS_COLORS[selectedView.cache_status]?.text ?? '#666'}
                         />
                         <StatCard
-                            label="Tax/Fee"
-                            value={selectedView.tax_fee_mixed ? 'Hỗn hợp' : 'Đồng nhất'}
+                            label={t('thTaxFee') || 'Tax/Fee'}
+                            value={selectedView.tax_fee_mixed ? t('taxMixed') : t('taxUniform')}
                             icon={<AlertCircle className="w-5 h-5" />}
                             color={selectedView.tax_fee_mixed ? '#E65100' : '#2E7D32'}
                         />
@@ -399,7 +401,7 @@ function RateShopperContent() {
                     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                         <div className="px-5 py-4 border-b border-gray-100">
                             <h2 className="text-lg font-semibold" style={{ color: '#1A1A2E' }}>
-                                Bảng giá đối thủ
+                                {t('competitorTable')}
                             </h2>
                         </div>
                         <div className="overflow-x-auto">
@@ -407,22 +409,22 @@ function RateShopperContent() {
                                 <thead>
                                     <tr className="bg-gray-50">
                                         <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">
-                                            Đối thủ
+                                            {t('thCompetitors')}
                                         </th>
                                         <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">
-                                            Nguồn (OTA)
+                                            {t('thSource')}
                                         </th>
                                         <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase">
-                                            Giá
+                                            {t('thPrice')}
                                         </th>
                                         <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase">
-                                            Trạng thái
+                                            {t('thStatus')}
                                         </th>
                                         <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase">
-                                            Tin cậy
+                                            {t('thReliability')}
                                         </th>
                                         <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase">
-                                            Cập nhật
+                                            {t('thUpdate')}
                                         </th>
                                     </tr>
                                 </thead>
@@ -431,9 +433,9 @@ function RateShopperContent() {
                                         <tr>
                                             <td colSpan={7} className="px-5 py-12 text-center text-gray-400">
                                                 <Building2 className="w-10 h-10 mx-auto mb-3 opacity-30" />
-                                                <p className="text-sm font-medium text-gray-500">Chưa có đối thủ nào</p>
+                                                <p className="text-sm font-medium text-gray-500">{t('noCompetitors')}</p>
                                                 <p className="text-xs text-gray-400 mt-1 mb-4">
-                                                    Thêm đối thủ để bắt đầu so sánh giá
+                                                    {t('addToStart')}
                                                 </p>
                                                 <Link
                                                     href="/rate-shopper/competitors"
@@ -441,7 +443,7 @@ function RateShopperContent() {
                                                     style={{ backgroundColor: '#10b981', color: '#fff' }}
                                                 >
                                                     <Plus className="w-4 h-4" />
-                                                    Thêm đối thủ ngay
+                                                    {t('addCompetitorNow')}
                                                 </Link>
                                             </td>
                                         </tr>
@@ -452,6 +454,7 @@ function RateShopperContent() {
                                                 comp={comp}
                                                 myRate={selectedView.my_rate}
                                                 isEven={idx % 2 === 0}
+                                                t={t}
                                             />
                                         ))
                                     )}
@@ -467,10 +470,10 @@ function RateShopperContent() {
                         <Search className="w-12 h-12 text-gray-300 mx-auto" />
                         <div>
                             <p className="text-base font-medium text-gray-600">
-                                Chưa có dữ liệu cho {OFFSET_LABELS[selectedOffset]}
+                                {t('noDataForOffset', { offset: OFFSET_LABELS[selectedOffset] })}
                             </p>
                             <p className="text-sm text-gray-400 mt-1">
-                                Nhấn nút bên dưới để quét giá đối thủ
+                                {t('clickToScan')}
                             </p>
                         </div>
                         <button
@@ -479,10 +482,10 @@ function RateShopperContent() {
                             style={{ backgroundColor: '#204184', color: '#fff' }}
                         >
                             <Zap className="w-4 h-4" />
-                            Tìm giá {OFFSET_LABELS[selectedOffset]}
+                            {t('findRates', { offset: OFFSET_LABELS[selectedOffset] })}
                         </button>
                         <p className="text-xs text-gray-400">
-                            Mỗi lần quét tiêu 1 credit SerpApi / đối thủ
+                            {t('serpApiNote')}
                         </p>
                     </div>
                 </div>
@@ -497,7 +500,7 @@ function RateShopperContent() {
                         onClick={() => handleScan(selectedOffset)}
                         className="ml-auto text-xs text-red-600 underline"
                     >
-                        Thử lại
+                        {t('retry')}
                     </button>
                 </div>
             )}
@@ -542,10 +545,12 @@ function CompetitorRow({
     comp,
     myRate,
     isEven,
+    t,
 }: {
     comp: IntradayCompetitor;
     myRate: number | null;
     isEven: boolean;
+    t: any;
 }) {
     const rates = comp.rates ?? [];
     const hasAnyRate = rates.some((r) => r.representative_price !== null);
@@ -571,9 +576,9 @@ function CompetitorRow({
                 </td>
                 <td className="px-5 py-4 text-sm text-gray-400">—</td>
                 <td className="px-5 py-4 text-right text-sm text-gray-400">—</td>
-                <td className="px-5 py-4 text-center text-xs text-gray-400">Không có giá</td>
+                <td className="px-5 py-4 text-center text-xs text-gray-400">{t('noPrice')}</td>
                 <td className="px-5 py-4 text-center">
-                    <span className="text-xs font-medium" style={{ color: '#C62828' }}>Thấp</span>
+                    <span className="text-xs font-medium" style={{ color: '#C62828' }}>{t('lowConfidence')}</span>
                 </td>
                 <td className="px-5 py-4 text-right text-xs text-gray-400">{timeAgo(comp.scraped_at)}</td>
             </tr>
@@ -589,10 +594,10 @@ function CompetitorRow({
                 const confidence = CONFIDENCE_BADGES[rate.data_confidence] ?? CONFIDENCE_BADGES.LOW;
                 const availLabel =
                     rate.availability_status === 'AVAILABLE'
-                        ? 'Còn phòng'
+                        ? t('available')
                         : rate.availability_status === 'SOLD_OUT'
-                            ? 'Hết phòng'
-                            : 'Không có giá';
+                            ? t('soldOut')
+                            : t('noPrice');
                 const priceDiff = hasPrice && myRate ? ((price - myRate) / myRate) * 100 : null;
 
                 return (
@@ -614,7 +619,7 @@ function CompetitorRow({
                                     <div>
                                         <span className="text-sm font-medium text-gray-800">{comp.name}</span>
                                         <span className="block text-[10px] text-gray-400 mt-0.5">
-                                            {rates.length} nguồn giá
+                                            {t('priceSources', { n: rates.length })}
                                         </span>
                                     </div>
                                 </div>
@@ -626,7 +631,7 @@ function CompetitorRow({
                             <div className="flex items-center gap-1.5">
                                 <span className="text-xs font-medium text-gray-700">{rate.source}</span>
                                 {rate.is_official && (
-                                    <span className="text-[9px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-semibold">Official</span>
+                                    <span className="text-[9px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-semibold">{t('official')}</span>
                                 )}
                             </div>
                         </td>

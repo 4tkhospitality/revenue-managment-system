@@ -55,7 +55,7 @@ export async function POST(req: Request) {
         ) {
             return NextResponse.json(
                 {
-                    error: `Bạn đang có subscription qua ${currentSub.external_provider}. Vui lòng hủy trước hoặc quản lý tại /settings/billing.`,
+                    error: `You have an active subscription via ${currentSub.external_provider}. Please cancel first or manage at /settings/billing.`,
                 },
                 { status: 409 }
             );

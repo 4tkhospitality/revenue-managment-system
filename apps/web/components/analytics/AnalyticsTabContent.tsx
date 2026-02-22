@@ -16,6 +16,7 @@ import { BuildFeaturesInline } from '@/components/analytics/BuildFeaturesInline'
 import { TierPaywall } from '@/components/paywall/TierPaywall';
 import { useTierAccess } from '@/hooks/useTierAccess';
 import { TrendingUp, BarChart3, CalendarDays, Database } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 // ── Lazy Imports for mix widgets (unchanged from old Tab 2) ──
 import { TopAccountsTable } from '@/components/dashboard/TopAccountsTable';
@@ -31,6 +32,7 @@ interface AnalyticsTabContentProps {
 }
 
 export function AnalyticsTabContent({ hotelId, asOfDate: initialAsOf }: AnalyticsTabContentProps) {
+    const t = useTranslations('analyticsTab');
     const { hasAccess, loading: tierLoading } = useTierAccess('SUPERIOR');
     const [data, setData] = useState<AnalyticsData | null>(null);
     const [loading, setLoading] = useState(true);
@@ -108,15 +110,15 @@ export function AnalyticsTabContent({ hotelId, asOfDate: initialAsOf }: Analytic
     if (!tierLoading && !hasAccess) {
         return (
             <TierPaywall
-                title="Pace & Pickup Analytics"
-                subtitle="Phân tích STLY, Booking Pace, Remaining Supply"
+                title={t('paywallTitle')}
+                subtitle={t('paywallSubtitle')}
                 tierDisplayName="Superior"
                 colorScheme="blue"
                 features={[
-                    { icon: <TrendingUp className="w-4 h-4" />, label: 'So sánh cùng kỳ năm trước (STLY)' },
-                    { icon: <BarChart3 className="w-4 h-4" />, label: 'Booking Pace — theo dõi tốc độ đặt phòng' },
-                    { icon: <CalendarDays className="w-4 h-4" />, label: 'Pickup T-3/T-7/T-15/T-30 chi tiết' },
-                    { icon: <Database className="w-4 h-4" />, label: 'Remaining Supply — phòng còn trống' },
+                    { icon: <TrendingUp className="w-4 h-4" />, label: t('featureStly') },
+                    { icon: <BarChart3 className="w-4 h-4" />, label: t('featurePace') },
+                    { icon: <CalendarDays className="w-4 h-4" />, label: t('featurePickup') },
+                    { icon: <Database className="w-4 h-4" />, label: t('featureSupply') },
                 ]}
             />
         );
@@ -128,7 +130,7 @@ export function AnalyticsTabContent({ hotelId, asOfDate: initialAsOf }: Analytic
             <div className="flex items-center justify-center min-h-[300px]">
                 <div className="text-center">
                     <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-3" />
-                    <div className="text-slate-500 text-sm">Đang tải Analytics...</div>
+                    <div className="text-slate-500 text-sm">{t('loadingAnalytics')}</div>
                 </div>
             </div>
         );
@@ -138,10 +140,10 @@ export function AnalyticsTabContent({ hotelId, asOfDate: initialAsOf }: Analytic
     if (error && !data) {
         return (
             <div className="bg-rose-50 border border-rose-200 rounded-xl p-6 text-center">
-                <div className="text-lg font-semibold text-rose-700 mb-1">Chưa có dữ liệu Analytics</div>
+                <div className="text-lg font-semibold text-rose-700 mb-1">{t('noDataTitle')}</div>
                 <div className="text-sm text-rose-500 mb-4">{error}</div>
                 <div className="text-sm text-slate-600">
-                    Bước 1: Upload reservations → Bước 2: Build OTB → Bước 3: Build Features
+                    {t('noDataSteps')}
                 </div>
             </div>
         );

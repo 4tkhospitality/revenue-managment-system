@@ -112,12 +112,12 @@ export const DOW_LABELS = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 
 // ─── KPI Tooltip definitions ────────────────────────────────
 export const KPI_TOOLTIPS: Record<string, string> = {
-    'Occ 7d': 'Occupancy trung bình cho 7 ngày lưu trú tiếp theo\n= Σ(rooms_otb) / (7 × capacity) × 100',
-    'Occ 14d': 'Occupancy trung bình cho 14 ngày lưu trú tiếp theo',
-    'Occ 30d': 'Occupancy trung bình cho 30 ngày lưu trú tiếp theo',
-    'Pace 7d': 'So sánh tổng OTB hiện tại vs cùng thời điểm năm trước\ncho 7 ngày lưu trú tiếp. Dương = đang ahead.',
-    'Pace 30d': 'So sánh tổng OTB hiện tại vs cùng thời điểm năm trước\ncho 30 ngày lưu trú tiếp.',
-    'Pickup 7d': 'Tổng rooms đặt thêm (net) trong 7 ngày qua.\nBao gồm bookings mới − cancellations.',
-    'Avg ADR': 'Giá phòng trung bình (Average Daily Rate)\n= Tổng Revenue / Tổng Rooms (7d ahead)',
-    'Net DOD': 'Thay đổi OTB từ hôm qua đến hôm nay\ncho toàn bộ horizon đang hiển thị.',
+    'Occ 7d': 'Average occupancy for next 7 upcoming stay dates\n= Σ(rooms_otb) / (7 × capacity) × 100',
+    'Occ 14d': 'Average occupancy for next 14 stay dates',
+    'Occ 30d': 'Average occupancy for next 30 stay dates',
+    'Pace 7d': 'Compare current OTB total vs same time last year\nfor next 7 stay dates. Positive = ahead of pace.',
+    'Pace 30d': 'Compare current OTB total vs same time last year\nfor next 30 stay dates.',
+    'Pickup 7d': 'Total additional rooms booked (net) in last 7 days.\nIncludes new bookings − cancellations.',
+    'Avg ADR': 'Average room rate (Average Daily Rate)\n= Total Revenue / Total Rooms (7d ahead)',
+    'Net DOD': 'OTB change from yesterday to today\nfor entire currently displayed horizon.',
 };

@@ -6,6 +6,7 @@
 
 import { useState } from 'react';
 import { Tag, Check, AlertCircle, Loader2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 interface PromoRedeemCardProps {
     hotelId: string;
@@ -33,14 +34,14 @@ export default function PromoRedeemCard({ hotelId, onRedeemed }: PromoRedeemCard
             if (data.valid) {
                 setStatus('valid');
                 setPromoInfo({ percentOff: data.promo.percentOff, description: data.promo.description || '' });
-                setMessage(`Giảm ${data.promo.percentOff}% — Nhấn "Áp dụng" để kích hoạt`);
+                setMessage(`Save ${data.promo.percentOff}% — Click Apply to activate`);
             } else {
                 setStatus('invalid');
-                setMessage(data.error || 'Mã không hợp lệ');
+                setMessage(data.error || 'Invalid code');
             }
         } catch {
             setStatus('error');
-            setMessage('Lỗi kết nối. Vui lòng thử lại.');
+            setMessage('Connection error. Please try again.');
         }
     }
 
@@ -57,15 +58,15 @@ export default function PromoRedeemCard({ hotelId, onRedeemed }: PromoRedeemCard
 
             if (res.ok) {
                 setStatus('success');
-                setMessage(`🎉 Đã áp dụng mã ${data.promoCode} — Giảm ${data.percentOff}%`);
+                setMessage(`🎉 Applied code ${data.promoCode} — Save ${data.percentOff}%`);
                 onRedeemed?.({ promoCode: data.promoCode, percentOff: data.percentOff });
             } else {
                 setStatus('error');
-                setMessage(data.error || 'Không thể áp dụng mã');
+                setMessage(data.error || 'Cannot apply code');
             }
         } catch {
             setStatus('error');
-            setMessage('Lỗi kết nối. Vui lòng thử lại.');
+            setMessage('Connection error. Please try again.');
         }
     }
 
@@ -89,7 +90,7 @@ export default function PromoRedeemCard({ hotelId, onRedeemed }: PromoRedeemCard
         }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                 <Tag size={18} color="#7c3aed" />
-                <span style={{ fontSize: 15, fontWeight: 600 }}>Mã khuyến mãi</span>
+                <span style={{ fontSize: 15, fontWeight: 600 }}>Promo Code</span>
             </div>
 
             <div style={{ display: 'flex', gap: 8 }}>
@@ -106,7 +107,7 @@ export default function PromoRedeemCard({ hotelId, onRedeemed }: PromoRedeemCard
                         outline: 'none',
                         transition: 'border-color 0.2s',
                     }}
-                    placeholder="Nhập mã..."
+                    placeholder="Enter code..."
                     value={code}
                     onChange={e => {
                         setCode(e.target.value.toUpperCase());
@@ -135,7 +136,7 @@ export default function PromoRedeemCard({ hotelId, onRedeemed }: PromoRedeemCard
                         }}
                     >
                         {status === ('redeeming' as string) ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-                        Áp dụng
+                        Apply
                     </button>
                 ) : (
                     <button
@@ -157,7 +158,7 @@ export default function PromoRedeemCard({ hotelId, onRedeemed }: PromoRedeemCard
                         }}
                     >
                         {status === 'validating' ? <Loader2 size={14} className="animate-spin" /> : <Tag size={14} />}
-                        Kiểm tra
+                        Verify
                     </button>
                 )}
             </div>

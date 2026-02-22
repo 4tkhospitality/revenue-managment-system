@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
-import { getCountryDisplay } from '@/lib/constants/countries';
+import { getCountryDisplay, COUNTRIES } from '@/lib/constants/countries';
+import { useTranslations } from 'next-intl';
 
 // ── SVG Icon Components ────────────────────────────────────────────
 const Icons = {
@@ -113,6 +114,7 @@ interface User {
     phone: string | null;
     image: string | null;
     role: string;
+    country: string | null;
     isActive: boolean;
     createdAt: string;
     hotels: HotelAssignment[];
@@ -127,6 +129,7 @@ interface Hotel {
 // ── Main Component ─────────────────────────────────────────────────
 
 export default function AdminUsersPage() {
+    const t = useTranslations('admin');
     const { data: session } = useSession();
     const [users, setUsers] = useState<User[]>([]);
     const [hotels, setHotels] = useState<Hotel[]>([]);
@@ -165,7 +168,7 @@ export default function AdminUsersPage() {
     };
 
     const toggleUserActive = async (user: User) => {
-        if (!confirm(`${user.isActive ? 'Vô hiệu hóa' : 'Kích hoạt'} người dùng ${user.email}?`)) return;
+        if (!confirm(t('confirmToggle', { action: user.isActive ? t('deactivate') : t('activate'), email: user.email }))) return;
         try {
             await fetch(`/api/admin/users/${user.id}`, {
                 method: 'PUT',
@@ -179,11 +182,11 @@ export default function AdminUsersPage() {
     };
 
     const deleteUser = async (user: User) => {
-        if (!confirm(`⚠️ XÓA VĨNH VIỄN người dùng ${user.email}?\n\nHành động này không thể hoàn tác!`)) return;
+        if (!confirm(t('confirmDeleteUser', { email: user.email }))) return;
         try {
             const res = await fetch(`/api/admin/users/${user.id}`, { method: 'DELETE' });
             if (res.ok) fetchUsers();
-            else alert('Có lỗi xảy ra khi xóa');
+            else alert(t('errorDeleting'));
         } catch (error) {
             console.error('Error deleting user:', error);
         }
@@ -226,12 +229,12 @@ export default function AdminUsersPage() {
                 </div>
                 {payment.tier && (
                     <div className="text-[11px] text-slate-500">
-                        Gói <span className="font-semibold text-slate-700">{payment.tier}</span>
+                        {t('tierLabel', { tier: payment.tier })}
                     </div>
                 )}
                 {isCompleted && !payment.hasHotel && (
                     <div className="inline-flex items-center gap-1 text-[11px] text-amber-600 font-medium">
-                        {Icons.warning} Chờ onboarding
+                        {Icons.warning} {t('pendingOnboardingLabel')}
                     </div>
                 )}
             </div>
@@ -251,9 +254,9 @@ export default function AdminUsersPage() {
                     <div className="w-16 h-16 mx-auto rounded-2xl bg-red-50 flex items-center justify-center">
                         {Icons.lock}
                     </div>
-                    <h1 className="text-xl font-semibold text-slate-900">Không có quyền truy cập</h1>
+                    <h1 className="text-xl font-semibold text-slate-900">{t('noAccess')}</h1>
                     <Link href="/dashboard" className="text-sm text-blue-600 hover:text-blue-800 hover:underline transition-colors">
-                        ← Quay lại Dashboard
+                        {t('backToDashboard')}
                     </Link>
                 </div>
             </div>
@@ -280,8 +283,8 @@ export default function AdminUsersPage() {
                             {Icons.users}
                         </div>
                         <div>
-                            <h1 className="text-lg font-semibold tracking-tight">Quản lý người dùng</h1>
-                            <p className="text-blue-200 text-sm">{totalUsers} người dùng · {activeUsers} hoạt động</p>
+                            <h1 className="text-lg font-semibold tracking-tight">{t('usersTitle')}</h1>
+                            <p className="text-blue-200 text-sm">{t('usersCount', { total: totalUsers, active: activeUsers })}</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -293,7 +296,7 @@ export default function AdminUsersPage() {
                         <button onClick={() => setShowCreateModal(true)}
                             className="inline-flex items-center gap-2 px-4 py-2 bg-white text-blue-900 font-medium rounded-lg hover:bg-blue-50 transition-colors duration-200 text-sm cursor-pointer">
                             {Icons.plus}
-                            <span>Thêm user</span>
+                            <span>{t('addUser')}</span>
                         </button>
                     </div>
                 </div>
@@ -302,10 +305,10 @@ export default function AdminUsersPage() {
             {/* ── KPI Cards ────────────────────────────────────────── */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
-                    { label: 'Tổng user', value: totalUsers, color: 'text-slate-900' },
-                    { label: 'Hoạt động', value: activeUsers, color: 'text-emerald-600' },
-                    { label: 'Đã thanh toán', value: paidUsers, color: 'text-blue-600' },
-                    { label: 'Chờ onboarding', value: pendingOnboarding, color: pendingOnboarding > 0 ? 'text-amber-600' : 'text-slate-400' },
+                    { label: t('totalUsers'), value: totalUsers, color: 'text-slate-900' },
+                    { label: t('active'), value: activeUsers, color: 'text-emerald-600' },
+                    { label: t('paid'), value: paidUsers, color: 'text-blue-600' },
+                    { label: t('pendingOnboarding'), value: pendingOnboarding, color: pendingOnboarding > 0 ? 'text-amber-600' : 'text-slate-400' },
                 ].map((stat) => (
                     <div key={stat.label} className="bg-white rounded-xl border border-slate-200/60 px-4 py-3
                         shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.06)]
@@ -323,7 +326,7 @@ export default function AdminUsersPage() {
                 </div>
                 <input
                     type="text"
-                    placeholder="Tìm theo email hoặc tên..."
+                    placeholder={t('searchPlaceholder')}
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && fetchUsers()}
@@ -339,10 +342,10 @@ export default function AdminUsersPage() {
                 {loading ? (
                     <div className="text-center py-12">
                         <div className="w-8 h-8 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto" />
-                        <p className="text-sm text-slate-400 mt-3">Đang tải...</p>
+                        <p className="text-sm text-slate-400 mt-3">{t('loading')}</p>
                     </div>
                 ) : users.length === 0 ? (
-                    <div className="text-center py-12 text-slate-400 text-sm">Không tìm thấy người dùng</div>
+                    <div className="text-center py-12 text-slate-400 text-sm">{t('noUsersFound')}</div>
                 ) : (
                     users.map((user) => (
                         <div key={user.id}
@@ -360,7 +363,7 @@ export default function AdminUsersPage() {
                                     </div>
                                 )}
                                 <div className="flex-1 min-w-0">
-                                    <div className="font-medium text-slate-900 text-sm truncate">{user.name || 'Chưa đặt tên'}</div>
+                                    <div className="font-medium text-slate-900 text-sm truncate">{user.name || t('noNameSet')}</div>
                                     <div className="text-xs text-slate-500 truncate">{user.email}</div>
                                 </div>
                                 <span className={`shrink-0 w-2 h-2 rounded-full ${user.isActive ? 'bg-emerald-500' : 'bg-red-400'}`} />
@@ -381,7 +384,7 @@ export default function AdminUsersPage() {
                                         ))}
                                     </>
                                 ) : (
-                                    <span className="text-slate-400 italic">Chưa gán hotel</span>
+                                    <span className="text-slate-400 italic">{t('noHotelAssigned')}</span>
                                 )}
                             </div>
                             {/* Payment */}
@@ -394,15 +397,15 @@ export default function AdminUsersPage() {
                             <div className="flex items-center gap-1 pt-2 border-t border-slate-100">
                                 <button onClick={() => { setSelectedUser(user); setShowEditModal(true); }}
                                     className="inline-flex items-center gap-1 px-3 py-1.5 text-xs text-slate-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer">
-                                    {Icons.edit} Sửa
+                                    {Icons.edit} {t('edit')}
                                 </button>
                                 <button onClick={() => { setSelectedUser(user); setShowAssignModal(true); }}
                                     className="inline-flex items-center gap-1 px-3 py-1.5 text-xs text-slate-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer">
-                                    {Icons.link} Gán hotel
+                                    {Icons.link} {t('assignHotel')}
                                 </button>
                                 <button onClick={() => toggleUserActive(user)}
                                     className={`inline-flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg transition-colors cursor-pointer ${user.isActive ? 'text-slate-600 hover:text-orange-700 hover:bg-orange-50' : 'text-slate-600 hover:text-green-700 hover:bg-green-50'}`}>
-                                    {user.isActive ? Icons.lock : Icons.unlock} {user.isActive ? 'Khóa' : 'Mở'}
+                                    {user.isActive ? Icons.lock : Icons.unlock} {user.isActive ? t('lock') : t('unlock')}
                                 </button>
                                 <button onClick={() => deleteUser(user)}
                                     className="inline-flex items-center gap-1 px-3 py-1.5 text-xs text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer ml-auto">
@@ -420,27 +423,28 @@ export default function AdminUsersPage() {
                 <table className="w-full">
                     <thead>
                         <tr className="bg-slate-50/80 border-b border-slate-200/60">
-                            <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Người dùng</th>
-                            <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Liên hệ</th>
-                            <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Thanh toán</th>
+                            <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('userCol')}</th>
+                            <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('contactCol')}</th>
+                            <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('paymentCol')}</th>
                             <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Role</th>
+                            <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Country</th>
                             <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Hotels</th>
-                            <th className="px-5 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Trạng thái</th>
-                            <th className="px-5 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Thao tác</th>
+                            <th className="px-5 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('statusCol')}</th>
+                            <th className="px-5 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('actionsCol')}</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                         {loading ? (
                             <tr>
-                                <td colSpan={7} className="px-5 py-12 text-center">
+                                <td colSpan={8} className="px-5 py-12 text-center">
                                     <div className="w-7 h-7 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto" />
-                                    <p className="text-sm text-slate-400 mt-3">Đang tải...</p>
+                                    <p className="text-sm text-slate-400 mt-3">{t('loading')}</p>
                                 </td>
                             </tr>
                         ) : users.length === 0 ? (
                             <tr>
-                                <td colSpan={7} className="px-5 py-12 text-center text-sm text-slate-400">
-                                    Không tìm thấy người dùng
+                                <td colSpan={8} className="px-5 py-12 text-center text-sm text-slate-400">
+                                    {t('noUsersFound')}
                                 </td>
                             </tr>
                         ) : (
@@ -460,7 +464,7 @@ export default function AdminUsersPage() {
                                                 </div>
                                             )}
                                             <div className="min-w-0">
-                                                <div className="font-medium text-slate-900 text-sm truncate">{user.name || 'Chưa đặt tên'}</div>
+                                                <div className="font-medium text-slate-900 text-sm truncate">{user.name || 'Unnamed'}</div>
                                                 <div className="text-xs text-slate-500 truncate">{user.email}</div>
                                             </div>
                                         </div>
@@ -491,10 +495,20 @@ export default function AdminUsersPage() {
                                             <span className="text-slate-300 text-xs italic">—</span>
                                         )}
                                     </td>
+                                    {/* Country */}
+                                    <td className="px-5 py-3.5">
+                                        {user.country ? (
+                                            <span className="text-sm text-slate-700" title={user.country}>
+                                                {getCountryDisplay(user.country)}
+                                            </span>
+                                        ) : (
+                                            <span className="text-slate-300 text-xs italic">—</span>
+                                        )}
+                                    </td>
                                     {/* Hotels */}
                                     <td className="px-5 py-3.5">
                                         {user.hotels.length === 0 ? (
-                                            <span className="text-slate-300 text-xs italic">Chưa gán</span>
+                                            <span className="text-slate-300 text-xs italic">{t('notAssigned')}</span>
                                         ) : (
                                             <div className="flex flex-wrap gap-1">
                                                 {user.hotels.slice(0, 2).map((h, i) => (
@@ -517,29 +531,29 @@ export default function AdminUsersPage() {
                                             : 'bg-red-50 text-red-600'
                                             }`}>
                                             <span className={`w-1.5 h-1.5 rounded-full ${user.isActive ? 'bg-emerald-500' : 'bg-red-400'}`} />
-                                            {user.isActive ? 'Hoạt động' : 'Đã khóa'}
+                                            {user.isActive ? t('activeStatus') : t('lockedStatus')}
                                         </span>
                                     </td>
                                     {/* Actions */}
                                     <td className="px-5 py-3.5">
                                         <div className="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                                             <button onClick={() => { setSelectedUser(user); setShowEditModal(true); }}
-                                                title="Sửa"
+                                                title={t('edit')}
                                                 className="p-2 text-slate-400 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer">
                                                 {Icons.edit}
                                             </button>
                                             <button onClick={() => { setSelectedUser(user); setShowAssignModal(true); }}
-                                                title="Gán hotel"
+                                                title={t('assignHotel')}
                                                 className="p-2 text-slate-400 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer">
                                                 {Icons.link}
                                             </button>
                                             <button onClick={() => toggleUserActive(user)}
-                                                title={user.isActive ? 'Khóa' : 'Mở khóa'}
+                                                title={user.isActive ? t('lock') : t('unlock')}
                                                 className={`p-2 rounded-lg transition-colors cursor-pointer ${user.isActive ? 'text-slate-400 hover:text-orange-600 hover:bg-orange-50' : 'text-slate-400 hover:text-green-600 hover:bg-green-50'}`}>
                                                 {user.isActive ? Icons.lock : Icons.unlock}
                                             </button>
                                             <button onClick={() => deleteUser(user)}
-                                                title="Xóa vĩnh viễn"
+                                                title={t('deletePermanently')}
                                                 className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer">
                                                 {Icons.trash}
                                             </button>
@@ -620,6 +634,7 @@ function CreateUserModal({ hotels, onClose, onCreated }: {
     onClose: () => void;
     onCreated: () => void;
 }) {
+    const t = useTranslations('admin');
     const [email, setEmail] = useState('');
     const [name, setName] = useState('');
     const [phone, setPhone] = useState('');
@@ -641,14 +656,14 @@ function CreateUserModal({ hotels, onClose, onCreated }: {
             if (res.ok) onCreated();
             else {
                 const data = await res.json();
-                alert(data.error || 'Có lỗi xảy ra');
+                alert(data.error || t('errorOccurred'));
             }
-        } catch { alert('Có lỗi xảy ra'); }
+        } catch { alert(t('errorOccurred')); }
         finally { setSaving(false); }
     };
 
     return (
-        <ModalShell title="Thêm người dùng" onClose={onClose}>
+        <ModalShell title={t('addUserTitle')} onClose={onClose}>
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                     <label className={labelCls}>Email *</label>
@@ -656,11 +671,11 @@ function CreateUserModal({ hotels, onClose, onCreated }: {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                     <div>
-                        <label className={labelCls}>Họ tên</label>
-                        <input type="text" value={name} onChange={(e) => setName(e.target.value)} className={inputCls} placeholder="Nguyễn Văn A" />
+                        <label className={labelCls}>{t('fullName')}</label>
+                        <input type="text" value={name} onChange={(e) => setName(e.target.value)} className={inputCls} placeholder={t('namePlaceholder')} />
                     </div>
                     <div>
-                        <label className={labelCls}>Số điện thoại</label>
+                        <label className={labelCls}>{t('phone')}</label>
                         <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className={inputCls} placeholder="0901234567" />
                     </div>
                 </div>
@@ -670,12 +685,12 @@ function CreateUserModal({ hotels, onClose, onCreated }: {
                         <option value="viewer">Viewer (default)</option>
                         <option value="super_admin">Super Admin</option>
                     </select>
-                    <p className="text-xs text-slate-400 mt-1">Quyền thật nằm ở Hotel Role bên dưới.</p>
+                    <p className="text-xs text-slate-400 mt-1">{t('roleNote')}</p>
                 </div>
                 <div className="border-t border-slate-100 pt-4">
-                    <label className={labelCls}>Gán vào Hotel</label>
+                    <label className={labelCls}>{t('assignToHotel')}</label>
                     <select value={hotelId} onChange={(e) => setHotelId(e.target.value)} className={inputCls}>
-                        <option value="">— Không gán —</option>
+                        <option value="">{t('noAssignment')}</option>
                         {hotels.map(h => <option key={h.id} value={h.id}>{h.name}</option>)}
                     </select>
                 </div>
@@ -690,8 +705,8 @@ function CreateUserModal({ hotels, onClose, onCreated }: {
                     </div>
                 )}
                 <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
-                    <button type="button" onClick={onClose} className={btnSecondary}>Hủy</button>
-                    <button type="submit" disabled={saving} className={btnPrimary}>{saving ? 'Đang tạo...' : 'Tạo người dùng'}</button>
+                    <button type="button" onClick={onClose} className={btnSecondary}>{t('cancel')}</button>
+                    <button type="submit" disabled={saving} className={btnPrimary}>{saving ? t('creating') : t('createUser')}</button>
                 </div>
             </form>
         </ModalShell>
@@ -706,6 +721,7 @@ function AssignHotelsModal({ user, hotels, onClose, onSaved }: {
     onClose: () => void;
     onSaved: () => void;
 }) {
+    const t = useTranslations('admin');
     const [assignments, setAssignments] = useState<Array<{ hotelId: string; role: string; isPrimary: boolean }>>(
         user.hotels.map(h => ({ hotelId: h.hotelId, role: h.role, isPrimary: h.isPrimary }))
     );
@@ -738,13 +754,13 @@ function AssignHotelsModal({ user, hotels, onClose, onSaved }: {
                 body: JSON.stringify({ assignments })
             });
             if (res.ok) onSaved();
-            else alert('Có lỗi xảy ra');
+            else alert(t('errorOccurred'));
         } catch { console.error('Error saving assignments'); }
         finally { setSaving(false); }
     };
 
     return (
-        <ModalShell title="Gán Hotels" subtitle={user.email} onClose={onClose}>
+        <ModalShell title={t('assignHotelsTitle')} subtitle={user.email} onClose={onClose}>
             <div className="space-y-2.5 mb-4">
                 {assignments.map((a, index) => (
                     <div key={index} className="flex items-center gap-2 p-3 bg-slate-50 rounded-xl border border-slate-100">
@@ -775,19 +791,19 @@ function AssignHotelsModal({ user, hotels, onClose, onSaved }: {
                     </div>
                 ))}
                 {assignments.length === 0 && (
-                    <p className="text-slate-400 text-sm text-center py-6">Chưa có hotel nào được gán</p>
+                    <p className="text-slate-400 text-sm text-center py-6">{t('noHotelsAssigned')}</p>
                 )}
             </div>
 
             <button onClick={addAssignment} disabled={assignments.length >= hotels.length}
                 className="w-full py-2.5 border-2 border-dashed border-slate-200 rounded-xl text-sm text-slate-500
                     hover:border-blue-300 hover:text-blue-600 disabled:opacity-40 transition-colors cursor-pointer">
-                + Thêm hotel
+                {t('addHotelAssignment')}
             </button>
 
             <div className="flex justify-end gap-2 pt-5 mt-4 border-t border-slate-100">
-                <button onClick={onClose} className={btnSecondary}>Hủy</button>
-                <button onClick={handleSave} disabled={saving} className={btnPrimary}>{saving ? 'Đang lưu...' : 'Lưu thay đổi'}</button>
+                <button onClick={onClose} className={btnSecondary}>{t('cancel')}</button>
+                <button onClick={handleSave} disabled={saving} className={btnPrimary}>{saving ? t('saving') : t('save')}</button>
             </div>
         </ModalShell>
     );
@@ -803,6 +819,7 @@ function EditUserModal({ user, onClose, onSaved }: {
     const [name, setName] = useState(user.name || '');
     const [phone, setPhone] = useState(user.phone || '');
     const [role, setRole] = useState(user.role);
+    const [country, setCountry] = useState(user.country || '');
     const [saving, setSaving] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -812,26 +829,26 @@ function EditUserModal({ user, onClose, onSaved }: {
             const res = await fetch(`/api/admin/users/${user.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: name || null, phone: phone || null, role })
+                body: JSON.stringify({ name: name || null, phone: phone || null, role, country: country || null })
             });
             if (res.ok) onSaved();
             else {
                 const data = await res.json();
-                alert(data.error || 'Có lỗi xảy ra');
+                alert(data.error || 'An error occurred');
             }
-        } catch { alert('Có lỗi xảy ra'); }
+        } catch { alert('An error occurred'); }
         finally { setSaving(false); }
     };
 
     return (
-        <ModalShell title="Chỉnh sửa" subtitle={user.email} onClose={onClose}>
+        <ModalShell title="Edit" subtitle={user.email} onClose={onClose}>
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                    <label className={labelCls}>Họ tên</label>
-                    <input type="text" value={name} onChange={(e) => setName(e.target.value)} className={inputCls} placeholder="Nhập họ tên" />
+                    <label className={labelCls}>Full name</label>
+                    <input type="text" value={name} onChange={(e) => setName(e.target.value)} className={inputCls} placeholder="Enter full name" />
                 </div>
                 <div>
-                    <label className={labelCls}>Số điện thoại</label>
+                    <label className={labelCls}>Phone number</label>
                     <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className={inputCls} placeholder="0901234567" />
                 </div>
                 <div>
@@ -840,11 +857,21 @@ function EditUserModal({ user, onClose, onSaved }: {
                         <option value="viewer">Viewer (default)</option>
                         <option value="super_admin">Super Admin</option>
                     </select>
-                    <p className="text-xs text-slate-400 mt-1">Quyền thật nằm ở Hotel Role (trong Gán hotel).</p>
+                    <p className="text-xs text-slate-400 mt-1">Actual permissions are set in Hotel Role (in Assign hotel).</p>
+                </div>
+                <div>
+                    <label className={labelCls}>Country</label>
+                    <select value={country} onChange={(e) => setCountry(e.target.value)} className={inputCls}>
+                        <option value="">— Auto-detect —</option>
+                        {COUNTRIES.map((c) => (
+                            <option key={c.code} value={c.code}>{c.flag} {c.name}</option>
+                        ))}
+                    </select>
+                    <p className="text-xs text-slate-400 mt-1">Set manually or leave blank for auto-detection.</p>
                 </div>
                 <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
-                    <button type="button" onClick={onClose} className={btnSecondary}>Hủy</button>
-                    <button type="submit" disabled={saving} className={btnPrimary}>{saving ? 'Đang lưu...' : 'Lưu thay đổi'}</button>
+                    <button type="button" onClick={onClose} className={btnSecondary}>Cancel</button>
+                    <button type="submit" disabled={saving} className={btnPrimary}>{saving ? 'Saving...' : 'Save Changes'}</button>
                 </div>
             </form>
         </ModalShell>

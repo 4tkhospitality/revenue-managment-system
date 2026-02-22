@@ -14,32 +14,32 @@ interface PaywallModalProps {
 const FEATURE_INFO = {
     export: {
         icon: <BarChart3 className="w-10 h-10 text-blue-400" />,
-        title: 'Nâng cấp để xuất thêm dữ liệu',
-        description: 'Gói miễn phí chỉ cho phép 3 lượt xuất dữ liệu mỗi tuần.',
-        cta: 'Nâng cấp để xuất không giới hạn',
+        title: 'Upgrade to export more data',
+        description: 'Free plan allows only 3 exports per week.',
+        cta: 'Upgrade for unlimited exports',
     },
     team: {
         icon: <Users className="w-10 h-10 text-blue-400" />,
-        title: 'Mời thêm thành viên',
-        description: 'Gói miễn phí chỉ cho phép 1 thành viên.',
-        cta: 'Nâng cấp để mở rộng team',
+        title: 'Invite more team members',
+        description: 'Free plan allows only 1 member.',
+        cta: 'Upgrade to expand your team',
     },
     audit: {
         icon: <Search className="w-10 h-10 text-blue-400" />,
-        title: 'Báo cáo kiểm tra dữ liệu chi tiết',
-        description: 'Phân tích sâu về chất lượng dữ liệu chỉ có ở gói Pro.',
-        cta: 'Nâng cấp để xem báo cáo đầy đủ',
+        title: 'Detailed data audit reports',
+        description: 'Deep data quality analysis available on Pro plan.',
+        cta: 'Upgrade for full reports',
     },
     generic: {
         icon: <Star className="w-10 h-10 text-amber-400" />,
-        title: 'Tính năng cao cấp',
-        description: 'Tính năng này yêu cầu nâng cấp gói.',
-        cta: 'Xem các gói nâng cấp',
+        title: 'Premium feature',
+        description: 'This feature requires a plan upgrade.',
+        cta: 'View upgrade plans',
     },
 }
 
 const TIER_BADGES = {
-    FREE: { label: 'Miễn phí', color: 'bg-slate-500' },
+    FREE: { label: 'Free', color: 'bg-slate-500' },
     STARTER: { label: 'Starter', color: 'bg-blue-500' },
     PRO: { label: 'Pro', color: 'bg-purple-500' },
     ENTERPRISE: { label: 'Enterprise', color: 'bg-amber-500' },
@@ -96,7 +96,7 @@ export default function PaywallModal({
 
                     {/* Current tier badge */}
                     <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-xs text-white/60 mb-4">
-                        Gói hiện tại:
+                        Current plan:
                         <span className={`px-2 py-0.5 rounded-full ${tierBadge.color} text-white`}>
                             {tierBadge.label}
                         </span>
@@ -112,19 +112,19 @@ export default function PaywallModal({
 
                     {/* Benefits */}
                     <div className="p-4 bg-white/5 rounded-xl mb-6 text-left">
-                        <p className="text-sm text-white/80 font-medium mb-2">Gói Pro bao gồm:</p>
+                        <p className="text-sm text-white/80 font-medium mb-2">Pro plan includes:</p>
                         <ul className="space-y-2 text-sm text-white/60">
                             <li className="flex items-center gap-2">
-                                <span className="text-green-400">✓</span> Xuất dữ liệu không giới hạn
+                                <span className="text-green-400">✓</span> Unlimited data exports
                             </li>
                             <li className="flex items-center gap-2">
-                                <span className="text-green-400">✓</span> Mời tối đa 10 thành viên
+                                <span className="text-green-400">✓</span> Up to 10 team members
                             </li>
                             <li className="flex items-center gap-2">
-                                <span className="text-green-400">✓</span> Báo cáo kiểm tra dữ liệu chi tiết
+                                <span className="text-green-400">✓</span> Detailed data audit reports
                             </li>
                             <li className="flex items-center gap-2">
-                                <span className="text-green-400">✓</span> Rate Shopper theo dõi giá đối thủ
+                                <span className="text-green-400">✓</span> Rate Shopper competitor tracking
                             </li>
                         </ul>
                     </div>
@@ -136,13 +136,13 @@ export default function PaywallModal({
                             disabled={loading}
                             className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold disabled:opacity-50 hover:opacity-90 transition"
                         >
-                            {loading ? 'Đang chuyển...' : info.cta}
+                            {loading ? 'Redirecting...' : info.cta}
                         </button>
                         <button
                             onClick={onClose}
                             className="w-full py-3 rounded-xl text-white/60 hover:text-white/80 transition"
                         >
-                            Để sau
+                            Maybe later
                         </button>
                     </div>
                 </div>

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Building2, AlertTriangle } from 'lucide-react';
 import { DataStatusBadge } from '@/components/shared/DataStatusBadge';
 import { AccountDetailModal } from './AccountDetailModal';
+import { useTranslations } from 'next-intl';
 
 interface AccountRow {
     account: string;
@@ -34,6 +35,7 @@ const nf = new Intl.NumberFormat('vi-VN');
 const nfCurrency = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 });
 
 export function TopAccountsTable({ hotelId, asOfDate, days = 90 }: TopAccountsTableProps) {
+    const t = useTranslations('topAccounts');
     const [data, setData] = useState<TopAccountsData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -49,7 +51,7 @@ export function TopAccountsTable({ hotelId, asOfDate, days = 90 }: TopAccountsTa
                 const json = await res.json();
                 setData(json);
             } catch (e) {
-                setError('Không tải được dữ liệu');
+                setError(t('failedToLoad'));
             } finally {
                 setLoading(false);
             }
@@ -73,7 +75,7 @@ export function TopAccountsTable({ hotelId, asOfDate, days = 90 }: TopAccountsTa
     if (error || !data) {
         return (
             <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-                <p className="text-gray-500 text-sm">{error || 'Không có dữ liệu'}</p>
+                <p className="text-gray-500 text-sm">{error || t('noData')}</p>
             </div>
         );
     }
@@ -81,8 +83,8 @@ export function TopAccountsTable({ hotelId, asOfDate, days = 90 }: TopAccountsTa
     if (data.accounts.length === 0) {
         return (
             <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-                <h3 className="text-sm font-semibold text-gray-800 mb-2"><Building2 className="w-4 h-4 text-slate-500" aria-hidden="true" /> Top Accounts</h3>
-                <p className="text-gray-500 text-sm">Chưa có dữ liệu booking trong {days} ngày tới.</p>
+                <h3 className="text-sm font-semibold text-gray-800 mb-2"><Building2 className="w-4 h-4 text-slate-500" aria-hidden="true" /> {t('title')}</h3>
+                <p className="text-gray-500 text-sm">{t('noBookingData', { days })}</p>
             </div>
         );
     }
@@ -93,8 +95,8 @@ export function TopAccountsTable({ hotelId, asOfDate, days = 90 }: TopAccountsTa
                 {/* Header */}
                 <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
                     <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                        <Building2 className="w-4 h-4 text-slate-500" aria-hidden="true" /> Top Accounts
-                        <span className="text-xs font-normal text-gray-500">({days} ngày)</span>
+                        <Building2 className="w-4 h-4 text-slate-500" aria-hidden="true" /> {t('title')}
+                        <span className="text-xs font-normal text-gray-500">{t('days', { days })}</span>
                     </h3>
                     <DataStatusBadge status={data.dataStatus.hasCancelData ? 'ok' : 'missing_cancel'} />
                 </div>
@@ -105,12 +107,12 @@ export function TopAccountsTable({ hotelId, asOfDate, days = 90 }: TopAccountsTa
                         <thead>
                             <tr className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wider">
                                 <th className="px-4 py-2.5 text-left font-medium">#</th>
-                                <th className="px-4 py-2.5 text-left font-medium">Account</th>
-                                <th className="px-4 py-2.5 text-left font-medium">Segment</th>
-                                <th className="px-4 py-2.5 text-right font-medium">Room-nights</th>
-                                <th className="px-4 py-2.5 text-right font-medium">Revenue</th>
-                                <th className="px-4 py-2.5 text-right font-medium">ADR</th>
-                                <th className="px-4 py-2.5 text-right font-medium">Cancel</th>
+                                <th className="px-4 py-2.5 text-left font-medium">{t('thAccount')}</th>
+                                <th className="px-4 py-2.5 text-left font-medium">{t('thSegment')}</th>
+                                <th className="px-4 py-2.5 text-right font-medium">{t('thRoomNights')}</th>
+                                <th className="px-4 py-2.5 text-right font-medium">{t('thRevenue')}</th>
+                                <th className="px-4 py-2.5 text-right font-medium">{t('thAdr')}</th>
+                                <th className="px-4 py-2.5 text-right font-medium">{t('thCancel')}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -152,7 +154,7 @@ export function TopAccountsTable({ hotelId, asOfDate, days = 90 }: TopAccountsTa
 
                 {/* Footer — click hint */}
                 <div className="px-5 py-2 border-t border-gray-100 text-xs text-gray-400">
-                    Click hàng để xem chi tiết account
+                    {t('clickHint')}
                 </div>
             </div>
 

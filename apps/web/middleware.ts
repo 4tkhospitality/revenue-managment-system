@@ -10,7 +10,7 @@ const publicRoutes = ["/auth/login", "/api/auth"]
 
 // API routes that should bypass middleware (handle auth themselves)
 // This is needed because Prisma cannot run in Edge middleware
-const apiBypassRoutes = ["/api/pricing", "/api/onboarding", "/api/invite"]
+const apiBypassRoutes = ["/api/pricing", "/api/onboarding", "/api/invite", "/api/user/locale"]
 
 // Routes that don't require hotel access
 const noHotelRoutes = ["/admin", "/api/admin", "/blocked", "/no-hotel-access", "/select-hotel", "/onboarding", "/api/onboarding", "/welcome", "/invite", "/api/invite", "/api/payments/pending-activation", "/payment", "/pricing-plans"]

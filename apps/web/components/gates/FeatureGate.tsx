@@ -45,12 +45,12 @@ export function FeatureGate({
                     <div className="blur-sm pointer-events-none select-none">{children}</div>
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/60 backdrop-blur-[1px] rounded-lg">
                         <Eye size={24} className="text-slate-400 mb-2" />
-                        <p className="text-sm text-slate-600 font-medium">Bản xem trước</p>
+                        <p className="text-sm text-slate-600 font-medium">Preview</p>
                         <button
                             onClick={() => setShowModal(true)}
                             className="mt-2 px-4 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 transition-colors"
                         >
-                            Nâng cấp để mở khóa
+                            Upgrade to unlock
                         </button>
                     </div>
                 </div>
@@ -72,12 +72,12 @@ export function FeatureGate({
             {fallback || (
                 <div className="flex flex-col items-center justify-center p-8 border border-dashed border-slate-300 rounded-lg bg-slate-50">
                     <Lock size={24} className="text-slate-400 mb-2" />
-                    <p className="text-sm text-slate-600 font-medium">Tính năng bị khóa</p>
+                    <p className="text-sm text-slate-600 font-medium">Feature locked</p>
                     <button
                         onClick={() => setShowModal(true)}
                         className="mt-2 px-4 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 transition-colors"
                     >
-                        Nâng cấp để sử dụng
+                        Upgrade to use
                     </button>
                 </div>
             )}

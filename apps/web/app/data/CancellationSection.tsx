@@ -1,8 +1,10 @@
 import prisma from '../../lib/prisma';
 import { DateUtils } from '../../lib/date';
 import { getCancellationStats30Days } from '../../lib/cachedStats';
+import { getTranslations } from 'next-intl/server';
 
 export async function CancellationSection({ hotelId }: { hotelId?: string }) {
+    const t = await getTranslations('dataPage');
     // Source-agnostic: reads from reservations_raw (CSV/XML/any import source)
     const whereHotel = hotelId ? { hotel_id: hotelId } : {};
 
@@ -58,25 +60,25 @@ export async function CancellationSection({ hotelId }: { hotelId?: string }) {
     return (
         <div className="bg-white border border-rose-200 rounded-xl overflow-hidden shadow-sm">
             <div className="px-4 py-3 border-b border-rose-200 bg-rose-50">
-                <h2 className="text-lg font-semibold text-rose-700">❌ Huỷ phòng gần đây</h2>
-                <span className="text-xs text-gray-500">10 bản ghi mới nhất</span>
+                <h2 className="text-lg font-semibold text-rose-700">❌ {t('recentCancellations')}</h2>
+                <span className="text-xs text-gray-500">{t('latestRecords')}</span>
             </div>
 
             {/* KPI Cards (7 days) */}
             <div className="p-4 grid grid-cols-3 gap-4 border-b border-gray-100">
                 <div className="text-center">
                     <div className="text-2xl font-bold text-rose-600">{stats.count}</div>
-                    <div className="text-xs text-gray-500">Tổng lượt huỷ</div>
+                    <div className="text-xs text-gray-500">{t('totalCancels')}</div>
                 </div>
                 <div className="text-center">
                     <div className="text-2xl font-bold text-rose-600">{stats.nights}</div>
-                    <div className="text-xs text-gray-500">Room nights</div>
+                    <div className="text-xs text-gray-500">{t('cancelledNights')}</div>
                 </div>
                 <div className="text-center">
                     <div className="text-2xl font-bold text-rose-600">
                         {(stats.revenue / 1000000).toFixed(1)}M
                     </div>
-                    <div className="text-xs text-gray-500">Doanh thu mất</div>
+                    <div className="text-xs text-gray-500">{t('lostRevenue')}</div>
                 </div>
             </div>
 
@@ -84,8 +86,8 @@ export async function CancellationSection({ hotelId }: { hotelId?: string }) {
             {totalMatchCount > 0 && (
                 <div className="p-3 border-b border-gray-100 bg-gray-50">
                     <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-xs font-medium text-gray-700">🔗 Trạng thái khớp (Bridge)</h3>
-                        <span className="text-xs text-emerald-600 font-medium">{matchRate}% đã khớp</span>
+                        <h3 className="text-xs font-medium text-gray-700">🔗 {t('matchStatus')}</h3>
+                        <span className="text-xs text-emerald-600 font-medium">{matchRate}% {t('matched')}</span>
                     </div>
                     <div className="flex gap-2">
                         <div className="flex-1 px-2 py-1 bg-emerald-100 rounded text-center">
@@ -113,11 +115,11 @@ export async function CancellationSection({ hotelId }: { hotelId?: string }) {
             {/* By Channel - Top 3 from all data */}
             {stats.topChannels.length > 0 && (
                 <div className="p-3 border-b border-gray-100">
-                    <h3 className="text-xs font-medium text-gray-700 mb-2">🏆 Top 3 đại lý hủy phòng</h3>
+                    <h3 className="text-xs font-medium text-gray-700 mb-2">🏆 {t('top3CancelAgents')}</h3>
                     <div className="flex flex-wrap gap-2">
                         {stats.topChannels.map((ch, idx) => (
                             <div key={idx} className="px-2 py-1 bg-rose-50 rounded text-xs">
-                                <span className="text-gray-600">{ch.channel || 'Khác'}</span>
+                                <span className="text-gray-600">{ch.channel || t('other')}</span>
                                 <span className="text-rose-600 font-medium ml-1">
                                     {(ch.revenue / 1000000).toFixed(1)}M
                                 </span>
@@ -132,11 +134,11 @@ export async function CancellationSection({ hotelId }: { hotelId?: string }) {
                 <table className="w-full text-sm">
                     <thead className="bg-gray-50 sticky top-0">
                         <tr>
-                            <th className="px-3 py-2 text-left text-gray-600 font-medium">Mã ĐP</th>
-                            <th className="px-3 py-2 text-left text-gray-600 font-medium">Huỷ lúc</th>
-                            <th className="px-3 py-2 text-left text-gray-600 font-medium">Đến</th>
-                            <th className="px-3 py-2 text-right text-gray-600 font-medium">Đêm</th>
-                            <th className="px-3 py-2 text-right text-gray-600 font-medium">DT</th>
+                            <th className="px-3 py-2 text-left text-gray-600 font-medium">{t('cancelId')}</th>
+                            <th className="px-3 py-2 text-left text-gray-600 font-medium">{t('cancelTime')}</th>
+                            <th className="px-3 py-2 text-left text-gray-600 font-medium">{t('arrival')}</th>
+                            <th className="px-3 py-2 text-right text-gray-600 font-medium">{t('nights')}</th>
+                            <th className="px-3 py-2 text-right text-gray-600 font-medium">{t('revenue')}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -160,7 +162,7 @@ export async function CancellationSection({ hotelId }: { hotelId?: string }) {
                         {cancellationsWithNights.length === 0 && (
                             <tr>
                                 <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
-                                    Chưa có dữ liệu huỷ phòng
+                                    {t('noCancelRecords')}
                                 </td>
                             </tr>
                         )}

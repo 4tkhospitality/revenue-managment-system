@@ -9,6 +9,7 @@ import { OTAHealthScorecard } from './OTAHealthScorecard';
 import { ROICalculator } from './ROICalculator';
 import { ReviewCalculator } from './ReviewCalculator';
 import { WhenToBoost } from './WhenToBoost';
+import { useTranslations } from 'next-intl';
 
 type OTATab = 'scorecard' | 'booking' | 'agoda' | 'roi' | 'review' | 'boost';
 
@@ -18,15 +19,16 @@ interface OTAPlaybookGuideProps {
 }
 
 export function OTAPlaybookGuide({ hasAccess = true }: OTAPlaybookGuideProps) {
+    const t = useTranslations('guidePlaybook');
     const [activeOTA, setActiveOTA] = useState<OTATab>('scorecard');
 
     const tabs: { id: OTATab; label: string; desc: string }[] = [
-        { id: 'scorecard', label: 'Kiểm tra sức khỏe toàn diện', desc: 'Kiểm tra các chỉ số trên kênh OTA của khách sạn để biết tình trạng đang tốt hay xấu' },
-        { id: 'booking', label: 'Booking.com', desc: 'Các đầu mục công việc Checklist nhằm tối ưu ranking trên Booking.com' },
-        { id: 'agoda', label: 'Agoda', desc: 'Các đầu mục công việc Checklist nhằm tối ưu ranking trên Agoda' },
-        { id: 'roi', label: 'Nên tham gia Campaign?', desc: 'Tham gia Promotion hay Campaign như Genius, Preferred, AGP, v.v thì hiệu quả lời lỗ ra sao?' },
-        { id: 'review', label: 'Điểm Review', desc: 'Cách tính điểm số review và mô phỏng tác động của Review tới điểm số' },
-        { id: 'boost', label: 'Cách tăng Ranking', desc: 'Hướng dẫn cách tăng thứ hạng ranking và gợi ý khi nào nên đẩy ranking trên OTA' },
+        { id: 'scorecard', label: t('tabScorecard'), desc: t('tabScorecardDesc') },
+        { id: 'booking', label: t('tabBooking'), desc: t('tabBookingDesc') },
+        { id: 'agoda', label: t('tabAgoda'), desc: t('tabAgodaDesc') },
+        { id: 'roi', label: t('tabROI'), desc: t('tabROIDesc') },
+        { id: 'review', label: t('tabReview'), desc: t('tabReviewDesc') },
+        { id: 'boost', label: t('tabBoost'), desc: t('tabBoostDesc') },
     ];
 
     return (
@@ -64,10 +66,10 @@ export function OTAPlaybookGuide({ hasAccess = true }: OTAPlaybookGuideProps) {
                         <Lock className="w-7 h-7 text-blue-600" />
                     </div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                        Nội dung chi tiết cần nâng cấp
+                        {t('paywallTitle')}
                     </h3>
                     <p className="text-gray-500 text-sm text-center max-w-md mb-6">
-                        Nâng cấp lên gói <strong className="text-blue-600">Superior</strong> để xem phân tích chi tiết, checklist tối ưu, và công cụ tính toán cho từng hạng mục.
+                        {t.rich('paywallDesc', { strong: (c) => <strong className="text-blue-600">{c}</strong> })}
                     </p>
                     <Link
                         href="/pricing-plans"
@@ -75,11 +77,11 @@ export function OTAPlaybookGuide({ hasAccess = true }: OTAPlaybookGuideProps) {
                         style={{ background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)', color: '#fff' }}
                     >
                         <Crown className="w-4 h-4" />
-                        Nâng cấp lên Superior
+                        {t('paywallButton')}
                         <ArrowRight className="w-4 h-4" />
                     </Link>
                     <p className="text-xs text-gray-400 mt-3">
-                        Hoặc liên hệ Zalo để được tư vấn
+                        {t('paywallContact')}
                     </p>
                 </div>
             ) : (
@@ -93,12 +95,8 @@ export function OTAPlaybookGuide({ hasAccess = true }: OTAPlaybookGuideProps) {
 
                     {/* Phase B Note */}
                     <div className="mt-8 bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm text-gray-500">
-                        <p className="font-medium text-gray-700 mb-1">Tự động hóa (Phase B — Sắp ra mắt)</p>
-                        <p>
-                            Trong tương lai, RMS sẽ kết nối trực tiếp với Booking.com Property Scores API và Opportunities API
-                            để tự động đánh giá và đề xuất hành động. Hiện tại Booking.com đang tạm dừng integrations mới —
-                            fallback: nhập thủ công hoặc import báo cáo từ Extranet/YCS.
-                        </p>
+                        <p className="font-medium text-gray-700 mb-1">{t('phaseBTitle')}</p>
+                        <p>{t('phaseBDesc')}</p>
                     </div>
                 </>
             )}

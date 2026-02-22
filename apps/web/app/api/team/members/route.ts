@@ -120,7 +120,7 @@ export async function PATCH(request: NextRequest) {
 
         // Actor must be hotel_admin+
         if (!isActorAdmin(session, activeHotelId)) {
-            return NextResponse.json({ error: 'Chỉ Admin mới có thể đổi vai trò' }, { status: 403 })
+            return NextResponse.json({ error: 'Only Admins can change roles' }, { status: 403 })
         }
 
         const body = await request.json()
@@ -138,17 +138,17 @@ export async function PATCH(request: NextRequest) {
             where: { id: memberId, hotel_id: activeHotelId, is_active: true },
         })
         if (!target) {
-            return NextResponse.json({ error: 'Thành viên không tồn tại' }, { status: 404 })
+            return NextResponse.json({ error: 'Member not found' }, { status: 404 })
         }
 
         // Cannot change Owner's role
         if (target.is_primary) {
-            return NextResponse.json({ error: 'Không thể thay đổi vai trò của Owner' }, { status: 403 })
+            return NextResponse.json({ error: 'Cannot change the Owner\'s role' }, { status: 403 })
         }
 
         // Cannot change own role
         if (target.user_id === session.user.id) {
-            return NextResponse.json({ error: 'Không thể tự đổi vai trò của mình' }, { status: 403 })
+            return NextResponse.json({ error: 'Cannot change your own role' }, { status: 403 })
         }
 
         // Determine if actor is Owner
@@ -161,13 +161,13 @@ export async function PATCH(request: NextRequest) {
         if (!actorIsOwner) {
             if (target.role === 'hotel_admin') {
                 return NextResponse.json(
-                    { error: 'Chỉ Owner mới có thể thay đổi vai trò Admin' },
+                    { error: 'Only the Owner can change Admin roles' },
                     { status: 403 }
                 )
             }
             if (newRole === 'hotel_admin') {
                 return NextResponse.json(
-                    { error: 'Chỉ Owner mới có thể promote lên Admin' },
+                    { error: 'Only the Owner can promote to Admin' },
                     { status: 403 }
                 )
             }
@@ -180,7 +180,7 @@ export async function PATCH(request: NextRequest) {
             })
             if (adminCount <= 1) {
                 return NextResponse.json(
-                    { error: 'Không thể bỏ Admin cuối cùng — cần ít nhất 1 Admin' },
+                    { error: 'Cannot remove the last Admin - at least 1 Admin is required' },
                     { status: 400 }
                 )
             }
@@ -215,7 +215,7 @@ export async function DELETE(request: NextRequest) {
 
         // Actor must be hotel_admin+
         if (!isActorAdmin(session, activeHotelId)) {
-            return NextResponse.json({ error: 'Chỉ Admin mới có thể xóa thành viên' }, { status: 403 })
+            return NextResponse.json({ error: 'Only Admins can remove members' }, { status: 403 })
         }
 
         const body = await request.json()
@@ -230,17 +230,17 @@ export async function DELETE(request: NextRequest) {
             where: { id: memberId, hotel_id: activeHotelId, is_active: true },
         })
         if (!target) {
-            return NextResponse.json({ error: 'Thành viên không tồn tại' }, { status: 404 })
+            return NextResponse.json({ error: 'Member not found' }, { status: 404 })
         }
 
         // Cannot remove Owner
         if (target.is_primary) {
-            return NextResponse.json({ error: 'Không thể xóa Owner' }, { status: 403 })
+            return NextResponse.json({ error: 'Cannot remove the Owner' }, { status: 403 })
         }
 
         // Cannot remove self
         if (target.user_id === session.user.id) {
-            return NextResponse.json({ error: 'Không thể tự xóa chính mình' }, { status: 403 })
+            return NextResponse.json({ error: 'Cannot remove yourself' }, { status: 403 })
         }
 
         // Determine if actor is Owner
@@ -252,7 +252,7 @@ export async function DELETE(request: NextRequest) {
         // Non-owner admin cannot remove hotel_admin members
         if (!actorIsOwner && target.role === 'hotel_admin') {
             return NextResponse.json(
-                { error: 'Chỉ Owner mới có thể xóa Admin' },
+                { error: 'Only the Owner can remove Admins' },
                 { status: 403 }
             )
         }
@@ -264,7 +264,7 @@ export async function DELETE(request: NextRequest) {
             })
             if (adminCount <= 1) {
                 return NextResponse.json(
-                    { error: 'Không thể xóa Admin cuối cùng — cần ít nhất 1 Admin' },
+                    { error: 'Cannot remove the last Admin - at least 1 Admin is required' },
                     { status: 400 }
                 )
             }

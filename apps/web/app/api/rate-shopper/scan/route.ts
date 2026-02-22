@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
         if (competitors.length === 0) {
             return NextResponse.json({
                 success: false,
-                message: 'Chưa có đối thủ nào. Thêm đối thủ trước khi tìm giá.',
+                message: 'No competitors found. Add competitors before scanning.',
                 summary: { total: 0, completed: 0, cached: 0, failed: 0 },
             });
         }
@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({
             success: true,
-            message: `Đã quét ${summary.completed + summary.cached}/${summary.total} đối thủ (${summary.cached} từ cache)`,
+            message: `Scanned ${summary.completed + summary.cached}/${summary.total} competitors (${summary.cached} from cache)`,
             summary,
         });
     } catch (error) {

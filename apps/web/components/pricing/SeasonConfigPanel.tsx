@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Loader2, Save, Plus, Trash2, ChevronDown, ChevronRight, Calendar } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import SeasonRateEditor from './SeasonRateEditor';
 
 interface Season {
@@ -25,6 +26,7 @@ const SEASON_PRESETS = [
 ];
 
 export default function SeasonConfigPanel({ onSeasonsChange }: Props) {
+    const t = useTranslations('seasonConfigPanel');
     const [seasons, setSeasons] = useState<Season[]>([]);
     const [loading, setLoading] = useState(true);
     const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -60,11 +62,11 @@ export default function SeasonConfigPanel({ onSeasonsChange }: Props) {
                     date_ranges: [],
                 }),
             });
-            if (!res.ok) throw new Error('Failed to create season');
+            if (!res.ok) throw new Error(t('createFailed'));
             await fetchSeasons();
             onSeasonsChange?.();
         } catch (e) {
-            setError(e instanceof Error ? e.message : 'Create failed');
+            setError(e instanceof Error ? e.message : t('createFailed'));
         }
     };
 
@@ -85,11 +87,11 @@ export default function SeasonConfigPanel({ onSeasonsChange }: Props) {
                     is_active: season.is_active,
                 }),
             });
-            if (!res.ok) throw new Error('Failed to update');
+            if (!res.ok) throw new Error(t('updateFailed'));
             await fetchSeasons();
             onSeasonsChange?.();
         } catch (e) {
-            setError(e instanceof Error ? e.message : 'Update failed');
+            setError(e instanceof Error ? e.message : t('updateFailed'));
         } finally {
             setSaving(null);
         }
@@ -97,15 +99,15 @@ export default function SeasonConfigPanel({ onSeasonsChange }: Props) {
 
     // Delete season
     const handleDelete = async (id: string) => {
-        if (!confirm('Xóa season này? Dữ liệu NET rate liên quan cũng sẽ bị xóa.')) return;
+        if (!confirm(t('confirmDelete'))) return;
         setError(null);
         try {
             const res = await fetch(`/api/pricing/seasons/${id}`, { method: 'DELETE' });
-            if (!res.ok) throw new Error('Failed to delete');
+            if (!res.ok) throw new Error(t('deleteFailed'));
             await fetchSeasons();
             onSeasonsChange?.();
         } catch (e) {
-            setError(e instanceof Error ? e.message : 'Delete failed');
+            setError(e instanceof Error ? e.message : t('deleteFailed'));
         }
     };
 
@@ -164,7 +166,7 @@ export default function SeasonConfigPanel({ onSeasonsChange }: Props) {
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-blue-500" />
-                    <h3 className="text-sm font-semibold text-slate-700">Mùa (Seasons)</h3>
+                    <h3 className="text-sm font-semibold text-slate-700">{t('title')}</h3>
                 </div>
                 <div className="flex gap-1">
                     {SEASON_PRESETS.filter(p => !usedCodes.has(p.code)).map(preset => (
@@ -172,7 +174,7 @@ export default function SeasonConfigPanel({ onSeasonsChange }: Props) {
                             key={preset.code}
                             onClick={() => handleCreate(preset)}
                             className="flex items-center gap-1 px-2 py-1 text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 rounded transition-colors"
-                            title={`Tạo ${preset.name}`}
+                            title={t('createTooltip', { name: preset.name })}
                         >
                             <Plus className="w-3 h-3" />
                             {preset.code}
@@ -181,11 +183,11 @@ export default function SeasonConfigPanel({ onSeasonsChange }: Props) {
                 </div>
             </div>
 
-            {error && <div className="text-xs text-red-600 flex items-center gap-1"><span className="font-medium">Lỗi:</span> {error}</div>}
+            {error && <div className="text-xs text-red-600 flex items-center gap-1"><span className="font-medium">{t('errorLabel')}</span> {error}</div>}
 
             {seasons.length === 0 && (
                 <div className="text-center py-4 text-sm text-slate-400">
-                    Chưa có season. Bấm nút trên để tạo.
+                    {t('noSeasons')}
                 </div>
             )}
 
@@ -204,7 +206,7 @@ export default function SeasonConfigPanel({ onSeasonsChange }: Props) {
                                 <span className="text-sm font-medium text-slate-700 flex-1">{season.name}</span>
                                 {priorityBadge(season.code)}
                                 <span className="text-xs font-mono text-slate-500">×{season.multiplier?.toFixed(1) ?? '1.0'}</span>
-                                <span className="text-xs text-slate-400">{season.date_ranges.length} khoảng</span>
+                                <span className="text-xs text-slate-400">{t('ranges', { count: season.date_ranges.length })}</span>
                             </div>
 
                             {/* Expanded content */}
@@ -212,7 +214,7 @@ export default function SeasonConfigPanel({ onSeasonsChange }: Props) {
                                 <div className="px-3 pb-3 space-y-3 border-t border-slate-100">
                                     {/* Multiplier input */}
                                     <div className="mt-2 flex items-center gap-2">
-                                        <span className="text-xs text-slate-500 font-medium">Hệ số nhân (rack = base × hệ số):</span>
+                                        <span className="text-xs text-slate-500 font-medium">{t('multiplierLabel')}</span>
                                         <input
                                             type="number"
                                             step="0.1"
@@ -233,12 +235,12 @@ export default function SeasonConfigPanel({ onSeasonsChange }: Props) {
                                     {/* Date ranges */}
                                     <div className="mt-2 space-y-1.5">
                                         <div className="flex items-center justify-between">
-                                            <span className="text-xs text-slate-500 font-medium">Khoảng ngày:</span>
+                                            <span className="text-xs text-slate-500 font-medium">{t('dateRanges')}</span>
                                             <button
                                                 onClick={() => addDateRange(season.id)}
                                                 className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-0.5"
                                             >
-                                                <Plus className="w-3 h-3" /> Thêm
+                                                <Plus className="w-3 h-3" /> {t('addDateRange')}
                                             </button>
                                         </div>
                                         {season.date_ranges.map((range, idx) => (
@@ -278,7 +280,7 @@ export default function SeasonConfigPanel({ onSeasonsChange }: Props) {
                                             className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white text-xs rounded-lg transition-colors"
                                         >
                                             {saving === season.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
-                                            Lưu
+                                            {t('save')}
                                         </button>
                                         <button
                                             onClick={() => handleDelete(season.id)}

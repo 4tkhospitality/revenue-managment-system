@@ -4,8 +4,10 @@ import { useState } from 'react';
 import { runForecast } from '../actions/runForecast';
 import { getActiveHotelData } from '../actions/getActiveHotelData';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 
 export function RunForecastButton() {
+    const t = useTranslations('dataPage');
     const [isRunning, setIsRunning] = useState(false);
     const [result, setResult] = useState<{ success: boolean; count?: number; error?: string } | null>(null);
     const router = useRouter();
@@ -16,7 +18,7 @@ export function RunForecastButton() {
         try {
             const { hotelId } = await getActiveHotelData();
             if (!hotelId) {
-                setResult({ success: false, error: 'Chưa có dữ liệu reservation' });
+                setResult({ success: false, error: t('noReservationData') });
                 return;
             }
 
@@ -25,7 +27,7 @@ export function RunForecastButton() {
             const featuresData = await featuresRes.json();
 
             if (!featuresData.latestAsOfDate) {
-                setResult({ success: false, error: 'Chưa có Features. Hãy Build Features trước.' });
+                setResult({ success: false, error: t('noFeatures') });
                 return;
             }
 
@@ -75,7 +77,7 @@ export function RunForecastButton() {
 
             {result && (
                 <span className={`text-sm font-medium ${result.success ? 'text-emerald-600' : 'text-red-600'}`}>
-                    {result.success ? `✓ Đã tạo ${result.count} forecasts` : `✗ ${result.error}`}
+                    {result.success ? t('createdForecasts', { n: result.count }) : `✗ ${result.error}`}
                 </span>
             )}
         </div>

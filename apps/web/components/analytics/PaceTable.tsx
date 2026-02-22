@@ -4,9 +4,10 @@ import { useState, useMemo } from 'react';
 import { ChevronDown, ChevronRight, TableProperties } from 'lucide-react';
 import type { EnrichedRow, AnalyticsKpi, AnalyticsQuality, ViewMode } from './types';
 import { DOW_LABELS, formatRevenue, formatCurrency } from './types';
+import { useTranslations } from 'next-intl';
 
 // ─── PaceTable: GM-scan friendly column order (D7) ──────────
-// Default:  Ngày | DOW | OTB | Occ% | Supply | T-3 | T-7 | T-15 | T-30 | vs STLY | DOD
+// Default:  Date | DOW | OTB | Occ% | Supply | T-3 | T-7 | T-15 | T-30 | vs STLY | DOD
 // Revenue:  + ADR | RevPAR columns
 
 interface PaceTableProps {
@@ -30,6 +31,7 @@ export function PaceTable({
     kpi,
     maxRows = 60,
 }: PaceTableProps) {
+    const t = useTranslations('analyticsTab');
     const tableRows = rows.slice(0, maxRows);
     const [showExtraCols, setShowExtraCols] = useState(false);
 
@@ -139,12 +141,12 @@ export function PaceTable({
                     : <ChevronRight className="w-4 h-4 text-slate-500" />
                 }
                 <TableProperties className="w-4 h-4 text-slate-500" />
-                <h3 className="text-sm font-semibold text-slate-700">Booking Pace (Pickup)</h3>
+                <h3 className="text-sm font-semibold text-slate-700">{t('bookingPace')}</h3>
                 <span className="text-xs text-slate-400">
-                    {expanded ? 'Click để thu gọn' : 'Click để mở bảng chi tiết'}
+                    {expanded ? t('clickCollapse') : t('clickExpand')}
                 </span>
                 {!expanded && tableRows.length > 0 && (
-                    <span className="ml-auto text-xs text-slate-400">{tableRows.length} stay dates</span>
+                    <span className="ml-auto text-xs text-slate-400">{t('stayDates', { count: tableRows.length })}</span>
                 )}
             </button>
 
@@ -153,28 +155,28 @@ export function PaceTable({
                     {/* ─── Summary Row (KPI snapshot) ─────────── */}
                     <div className="px-4 py-2.5 bg-blue-50/60 border-b border-blue-100 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3 text-xs">
                         <div>
-                            <span className="text-slate-500">Avg Occ 7d</span>
+                            <span className="text-slate-500">{t('avgOcc7d')}</span>
                             <span className="ml-1.5 font-bold text-slate-700">{kpi.occ7}%</span>
                         </div>
                         <div>
-                            <span className="text-slate-500">Avg Occ 30d</span>
+                            <span className="text-slate-500">{t('avgOcc30d')}</span>
                             <span className="ml-1.5 font-bold text-slate-700">{kpi.occ30}%</span>
                         </div>
                         <div>
-                            <span className="text-slate-500">Pickup 7d</span>
+                            <span className="text-slate-500">{t('pickup7d')}</span>
                             <span className={`ml-1.5 font-bold ${kpi.totalPickup7d >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                                 {kpi.totalPickup7d > 0 ? '+' : ''}{kpi.totalPickup7d}
                             </span>
                         </div>
                         <div>
-                            <span className="text-slate-500">Pace vs LY</span>
+                            <span className="text-slate-500">{t('paceVsLy')}</span>
                             <span className={`ml-1.5 font-bold ${(kpi.pace7 ?? 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                                 {kpi.pace7 != null ? `${kpi.pace7 > 0 ? '+' : ''}${kpi.pace7}` : '—'}
                             </span>
                         </div>
                         {summaryAvgAdr != null && (
                             <div>
-                                <span className="text-slate-500">Avg ADR</span>
+                                <span className="text-slate-500">{t('avgAdr')}</span>
                                 <span className="ml-1.5 font-bold text-blue-600">
                                     {formatCurrency(summaryAvgAdr)}
                                 </span>
@@ -185,7 +187,7 @@ export function PaceTable({
                     {/* ─── Column controls ────────────────────── */}
                     {pickupCols.hasExtra && (
                         <div className="px-4 py-2 bg-slate-50/50 border-b border-slate-100 flex items-center gap-2">
-                            <span className="text-xs text-slate-400">Pickup windows:</span>
+                            <span className="text-xs text-slate-400">{t('pickupWindows')}</span>
                             <span className="text-xs text-slate-500 font-medium">
                                 {pickupCols.visible.map(c => c.label).join(' • ')}
                             </span>
@@ -193,7 +195,7 @@ export function PaceTable({
                                 onClick={() => setShowExtraCols(!showExtraCols)}
                                 className="ml-auto text-xs text-blue-600 hover:text-blue-800 hover:underline"
                             >
-                                {showExtraCols ? '− Ẩn T-15, T-30' : '+ Thêm T-15, T-30'}
+                                {showExtraCols ? t('hideT15T30') : t('addT15T30')}
                             </button>
                         </div>
                     )}
@@ -203,22 +205,22 @@ export function PaceTable({
                         <table className="w-full text-sm">
                             <thead className="bg-slate-50 sticky top-0 z-10">
                                 <tr>
-                                    <th className="px-3 py-2 text-left text-xs text-slate-600 font-medium">Ngày</th>
-                                    <th className="px-2 py-2 text-center text-xs text-slate-600 font-medium">DOW</th>
-                                    <th className="px-3 py-2 text-right text-xs text-slate-600 font-medium">OTB</th>
-                                    <th className="px-2 py-2 text-right text-xs text-slate-600 font-medium">Occ%</th>
-                                    <th className="px-3 py-2 text-right text-xs text-slate-600 font-medium">Supply</th>
+                                    <th className="px-3 py-2 text-left text-xs text-slate-600 font-medium">{t('dateCol')}</th>
+                                    <th className="px-2 py-2 text-center text-xs text-slate-600 font-medium">{t('dowCol')}</th>
+                                    <th className="px-3 py-2 text-right text-xs text-slate-600 font-medium">{t('otbCol')}</th>
+                                    <th className="px-2 py-2 text-right text-xs text-slate-600 font-medium">{t('occCol')}</th>
+                                    <th className="px-3 py-2 text-right text-xs text-slate-600 font-medium">{t('supplyCol')}</th>
                                     {pickupCols.visible.map(c => (
                                         <th key={c.key} className="px-2 py-2 text-right text-xs text-slate-600 font-medium">{c.label}</th>
                                     ))}
-                                    <th className="px-3 py-2 text-right text-xs text-slate-600 font-medium">vs STLY</th>
+                                    <th className="px-3 py-2 text-right text-xs text-slate-600 font-medium">{t('vsStlyCol')}</th>
                                     {viewMode === 'revenue' && (
                                         <>
-                                            <th className="px-3 py-2 text-right text-xs text-slate-600 font-medium">ADR</th>
-                                            <th className="px-3 py-2 text-right text-xs text-slate-600 font-medium">RevPAR</th>
+                                            <th className="px-3 py-2 text-right text-xs text-slate-600 font-medium">{t('adrCol')}</th>
+                                            <th className="px-3 py-2 text-right text-xs text-slate-600 font-medium">{t('revparCol')}</th>
                                         </>
                                     )}
-                                    <th className="px-2 py-2 text-right text-xs text-slate-600 font-medium">DOD</th>
+                                    <th className="px-2 py-2 text-right text-xs text-slate-600 font-medium">{t('dodCol')}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -272,7 +274,7 @@ export function PaceTable({
                                 {tableRows.length === 0 && (
                                     <tr>
                                         <td colSpan={totalCols} className="px-4 py-8 text-center text-slate-400">
-                                            Chưa có features data. Chạy Build Features trước.
+                                            {t('noFeaturesData')}
                                         </td>
                                     </tr>
                                 )}
@@ -281,19 +283,19 @@ export function PaceTable({
                                 <tfoot className="bg-slate-100 border-t-2 border-slate-300">
                                     <tr>
                                         <td colSpan={5} className="px-3 py-2 text-xs font-semibold text-slate-700">
-                                            Total ({tableRows.length} ngày)
+                                            {t('totalDays', { count: tableRows.length })}
                                         </td>
                                         {pickupCols.visible.map(c => {
-                                            const t = fmtTotal(totals.pickups[c.key] ?? 0);
+                                            const t2 = fmtTotal(totals.pickups[c.key] ?? 0);
                                             return (
-                                                <td key={c.key} className={`px-2 py-2 text-xs text-right font-mono font-semibold ${t.cls}`}>
-                                                    {t.text}
+                                                <td key={c.key} className={`px-2 py-2 text-xs text-right font-mono font-semibold ${t2.cls}`}>
+                                                    {t2.text}
                                                 </td>
                                             );
                                         })}
                                         {(() => {
-                                            const t = fmtTotal(Math.round(totals.vsLY));
-                                            return <td className={`px-3 py-2 text-xs text-right font-mono font-semibold ${t.cls}`}>{t.text}</td>;
+                                            const t2 = fmtTotal(Math.round(totals.vsLY));
+                                            return <td className={`px-3 py-2 text-xs text-right font-mono font-semibold ${t2.cls}`}>{t2.text}</td>;
                                         })()}
                                         {viewMode === 'revenue' && (
                                             <>
@@ -302,8 +304,8 @@ export function PaceTable({
                                             </>
                                         )}
                                         {(() => {
-                                            const t = fmtTotal(Math.round(totals.dodTotal));
-                                            return <td className={`px-2 py-2 text-xs text-right font-mono font-semibold ${t.cls}`}>{t.text}</td>;
+                                            const t2 = fmtTotal(Math.round(totals.dodTotal));
+                                            return <td className={`px-2 py-2 text-xs text-right font-mono font-semibold ${t2.cls}`}>{t2.text}</td>;
                                         })()}
                                     </tr>
                                 </tfoot>

@@ -50,7 +50,7 @@ export async function buildFeaturesDaily(
     if (!resolvedHotelId) {
         return {
             success: false,
-            message: 'Không tìm thấy hotel. Vui lòng chọn hotel trước.',
+            message: 'Hotel not found. Please select a hotel first.',
         };
     }
 
@@ -71,7 +71,7 @@ export async function buildFeaturesDaily(
         if (!validation.valid) {
             return {
                 success: false,
-                message: `Validation failed với ${validation.stats.failCount} lỗi. Không thể build features từ data bẩn.`,
+                message: `Validation failed with ${validation.stats.failCount} errors. Cannot build features from dirty data.`,
                 issues: validation.issues.map(i => ({
                     type: i.severity === 'FAIL' ? 'FAIL' as const : 'WARNING' as const,
                     code: i.code,
@@ -311,7 +311,7 @@ export async function buildFeaturesDaily(
         return {
             success: true,
             rowsBuilt: rowCount,
-            message: `Đã build ${rowCount} features cho ${snapshotDateStr}`,
+            message: `Built ${rowCount} features for ${snapshotDateStr}`,
         };
 
     } catch (error) {
@@ -352,7 +352,7 @@ export async function backfillFeatures(
             success: false,
             totalProcessed: 0,
             totalChunks: 0,
-            message: 'Không tìm thấy hotel.',
+            message: 'Hotel not found.',
         };
     }
 
@@ -373,7 +373,7 @@ export async function backfillFeatures(
                 success: true,
                 totalProcessed: 0,
                 totalChunks: 0,
-                message: 'Không có as_of_date nào cần backfill.',
+                message: 'No as_of_date needs backfill.',
             };
         }
 
@@ -410,7 +410,7 @@ export async function backfillFeatures(
             totalChunks,
             lastProcessedDate: lastDate?.toISOString().split('T')[0],
             errors: errors.length > 0 ? errors : undefined,
-            message: `Backfill hoàn tất: ${processed}/${asOfDates.length} as_of_dates`,
+            message: `Backfill complete: ${processed}/${asOfDates.length} as_of_dates`,
         };
 
     } catch (error) {

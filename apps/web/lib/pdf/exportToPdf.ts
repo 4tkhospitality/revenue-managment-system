@@ -160,7 +160,7 @@ export async function exportToPdf(
     const element = document.getElementById(elementId);
 
     if (!element) {
-        throw new Error(`Không tìm thấy phần tử #${elementId}`);
+        throw new Error(`Element #${elementId} not found`);
     }
 
     // 1. Wait for charts to render

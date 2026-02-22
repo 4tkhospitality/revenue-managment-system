@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     const hotelRole = hotelEntry?.role || session.user.role || 'viewer';
 
     if (!session.user.isAdmin && !['manager', 'hotel_admin'].includes(hotelRole)) {
-        return NextResponse.json({ error: 'Forbidden — Cần quyền Manager hoặc Admin để thay đổi cài đặt' }, { status: 403 });
+        return NextResponse.json({ error: 'Forbidden — Manager or Admin role required to change settings' }, { status: 403 });
     }
 
     // Reuse activeHotelId from role check above (no duplicate call)
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
                 // Block if new capacity exceeds purchased band (unless super_admin)
                 if (newBandLevel > currentBandLevel && !session.user.isAdmin) {
                     return NextResponse.json({
-                        error: `Số phòng ${capacity} vượt quá giới hạn gói hiện tại (${sub.room_band}, tối đa ${maxRooms} phòng). Vui lòng nâng cấp gói hoặc liên hệ Zalo 0778602953 để được hỗ trợ.`,
+                        error: `Room count ${capacity} exceeds current plan limit (${sub.room_band}, max ${maxRooms} rooms). Please upgrade your plan or contact support via Zalo 0778602953.`,
                         bandExceeded: true,
                         currentBand: sub.room_band,
                         requiredBand: newBand,

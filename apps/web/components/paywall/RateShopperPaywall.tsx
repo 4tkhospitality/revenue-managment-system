@@ -13,8 +13,8 @@ export function RateShopperPaywall() {
             >
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                        <h1 className="text-lg font-semibold">So sánh giá đối thủ</h1>
-                        <p className="text-white/70 text-sm">Rate Shopper • Theo dõi giá đối thủ theo thời gian thực</p>
+                        <h1 className="text-lg font-semibold">Competitor Price Comparison</h1>
+                        <p className="text-white/70 text-sm">Rate Shopper • Track competitor prices in real-time</p>
                     </div>
                 </div>
             </header>
@@ -33,22 +33,22 @@ export function RateShopperPaywall() {
                         </div>
 
                         <h2 className="text-xl font-bold text-gray-900 mb-2">
-                            Tính năng Rate Shopper
+                            Feature Rate Shopper
                         </h2>
                         <p className="text-sm text-gray-500 mb-6">
-                            Tính năng này chỉ dành cho gói <strong className="text-blue-600">Suite</strong>
+                            This feature is only for <strong className="text-blue-600">Suite</strong>
                         </p>
 
                         {/* Features preview */}
                         <div className="text-left bg-gray-50 rounded-xl p-5 mb-6 space-y-3">
                             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
-                                Gói Suite bao gồm
+                                Suite plan includes
                             </p>
                             {[
-                                'So sánh giá với 10+ đối thủ',
-                                'Quét giá tự động hàng ngày',
-                                'Báo cáo phân tích giá thị trường',
-                                'Cảnh báo khi đối thủ giảm giá',
+                                'Price Comparison with 10+ competitors',
+                                'Automatic daily price scanning',
+                                'Market price analysis reports',
+                                'Alerts when competitors drop prices',
                                 'Multi-property management',
                             ].map((feature) => (
                                 <div key={feature} className="flex items-center gap-2.5">
@@ -65,12 +65,12 @@ export function RateShopperPaywall() {
                             style={{ background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)', color: '#fff' }}
                         >
                             <Crown className="w-4 h-4" />
-                            Nâng cấp lên Suite
+                            Upgrade to Suite
                             <ArrowRight className="w-4 h-4" />
                         </Link>
 
                         <p className="text-xs text-gray-400 mt-4">
-                            Hoặc liên hệ Zalo để được tư vấn
+                            Or contact via Zalo for consultation
                         </p>
                     </div>
                 </div>

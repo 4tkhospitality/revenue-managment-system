@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { getOTBBuildPlan, buildOTBBatch } from '../actions/buildOTBBatched';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 
 const BATCH_SIZE = 5; // dates per batch
 
@@ -15,6 +16,7 @@ interface BuildProgress {
 }
 
 export function BuildOtbButton() {
+    const t = useTranslations('dataPage');
     const [progress, setProgress] = useState<BuildProgress | null>(null);
     const [result, setResult] = useState<{ success: boolean; message?: string; error?: string } | null>(null);
     const abortRef = useRef(false);
@@ -40,7 +42,7 @@ export function BuildOtbButton() {
 
             if (total === 0) {
                 setProgress(null);
-                setResult({ success: true, message: `Tất cả ${existing} snapshots đã tồn tại. Không cần build thêm.` });
+                setResult({ success: true, message: t('allExist', { n: existing }) });
                 return;
             }
 
@@ -83,8 +85,8 @@ export function BuildOtbButton() {
             setResult({
                 success: totalBuilt > 0,
                 message: stoppedEarly
-                    ? `Dừng sớm. Đã build ${totalBuilt}/${total} snapshots (${totalSkipped} bỏ qua).`
-                    : `✓ Build xong ${totalBuilt} snapshots (${tiers.daily}d + ${tiers.weekly}w + ${tiers.monthly}m, ${totalSkipped} bỏ qua, ${existing} đã có).`,
+                    ? t('stoppedEarly', { built: totalBuilt, total, skipped: totalSkipped })
+                    : t('buildDone', { built: totalBuilt, daily: tiers.daily, weekly: tiers.weekly, monthly: tiers.monthly, skipped: totalSkipped, existing }),
             });
 
             router.refresh();
@@ -119,7 +121,7 @@ export function BuildOtbButton() {
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                         </svg>
-                        {progress?.phase === 'planning' ? 'Đang tính...' : `${percent}%`}
+                        {progress?.phase === 'planning' ? t('planning') : `${percent}%`}
                     </>
                 ) : (
                     <>
@@ -137,7 +139,7 @@ export function BuildOtbButton() {
                     onClick={handleStop}
                     className="px-3 py-2 rounded-lg text-xs font-medium text-red-600 bg-red-50 border border-red-200 hover:bg-red-100 transition-all"
                 >
-                    Dừng
+                    {t('stop')}
                 </button>
             )}
 

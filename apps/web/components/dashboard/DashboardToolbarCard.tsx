@@ -47,8 +47,8 @@ function getVariant(dateStr: string | null): 'fresh' | 'stale' | 'missing' {
 
 const variantConfig = {
     fresh: { dot: 'bg-emerald-500', text: 'text-emerald-700', bg: 'bg-emerald-50', label: '' },
-    stale: { dot: 'bg-amber-500', text: 'text-amber-700', bg: 'bg-amber-50', label: 'Cũ' },
-    missing: { dot: 'bg-red-500', text: 'text-red-600', bg: 'bg-red-50', label: 'Thiếu' },
+    stale: { dot: 'bg-amber-500', text: 'text-amber-700', bg: 'bg-amber-50', label: 'Stale' },
+    missing: { dot: 'bg-red-500', text: 'text-red-600', bg: 'bg-red-50', label: 'Missing' },
 };
 
 function StatusRow({ item }: { item: DataStatusItem }) {
@@ -61,7 +61,7 @@ function StatusRow({ item }: { item: DataStatusItem }) {
             <span className={`w-2 h-2 rounded-full ${cfg.dot} shrink-0`} />
             <span className="text-sm text-slate-600 group-hover:text-slate-800">{item.label}</span>
             <span className="text-sm font-medium text-slate-800 ml-auto">
-                {item.date || 'Chưa có'}
+                {item.date || 'None'}
             </span>
             {item.variant !== 'fresh' && (
                 <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${cfg.bg} ${cfg.text}`}>
@@ -82,13 +82,13 @@ export function DashboardToolbarCard({
 
     const statusItems: DataStatusItem[] = [
         {
-            label: 'Đặt phòng',
+            label: 'Room bookings',
             date: latestReservationDate,
             variant: getVariant(latestReservationDate),
             href: '/data?tab=reservations',
         },
         {
-            label: 'Hủy phòng',
+            label: 'Room cancellations',
             date: latestCancellationDate,
             variant: getVariant(latestCancellationDate),
             href: '/data?tab=cancellations',
@@ -115,7 +115,7 @@ export function DashboardToolbarCard({
                 <div className="flex-1 p-4">
                     <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                         <BarChart3 className="w-3.5 h-3.5" aria-hidden="true" />
-                        Trạng thái dữ liệu
+                        Data Status
                     </h3>
                     <div className="space-y-0.5">
                         {statusItems.map((item) => (
@@ -128,7 +128,7 @@ export function DashboardToolbarCard({
                 <div className="flex-1 p-4">
                     <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                         <CalendarDays className="w-3.5 h-3.5" aria-hidden="true" />
-                        Xem OTB tại
+                        View OTB at
                     </h3>
                     <DatePickerSnapshot
                         onDateChange={handleDateChange}

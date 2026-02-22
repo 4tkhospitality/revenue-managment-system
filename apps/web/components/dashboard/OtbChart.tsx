@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useTranslations } from 'next-intl';
 import {
     ComposedChart,
     Line,
@@ -28,6 +29,7 @@ type DayFilter = 14 | 30 | 60 | 90;
 const surface = "rounded-[var(--card-radius)] bg-white border border-slate-200/80 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-card-hover)] transition-shadow duration-200";
 
 export function OtbChart({ data }: OtbChartProps) {
+    const t = useTranslations('otbChart');
     const [dayFilter, setDayFilter] = useState<DayFilter>(14);
 
     // Filter data based on selected range
@@ -39,10 +41,10 @@ export function OtbChart({ data }: OtbChartProps) {
     const hasStlyData = filteredData.some(d => d.otbLastYear !== null);
 
     const filterButtons: { value: DayFilter; label: string }[] = [
-        { value: 14, label: '14 ngày' },
-        { value: 30, label: '30 ngày' },
-        { value: 60, label: '60 ngày' },
-        { value: 90, label: '90 ngày' },
+        { value: 14, label: t('days14') },
+        { value: 30, label: t('days30') },
+        { value: 60, label: t('days60') },
+        { value: 90, label: t('days90') },
     ];
 
     return (
@@ -51,7 +53,7 @@ export function OtbChart({ data }: OtbChartProps) {
             <div className="px-5 py-4 border-b border-slate-100">
                 <div className="flex items-center justify-between flex-wrap gap-4">
                     <h2 className="text-lg font-semibold text-gray-900">
-                        OTB so với năm trước
+                        {t('title')}
                     </h2>
 
                     <div className="flex items-center gap-4">
@@ -78,12 +80,12 @@ export function OtbChart({ data }: OtbChartProps) {
                         <div className="flex items-center gap-4 text-xs">
                             <div className="flex items-center gap-2">
                                 <div className="w-3 h-0.5 rounded" style={{ backgroundColor: '#2D4A8C' }} />
-                                <span className="text-gray-600">Năm nay</span>
+                                <span className="text-gray-600">{t('thisYear')}</span>
                             </div>
                             <div className="flex items-center gap-2">
                                 <div className="w-3 h-0.5 bg-gray-400 rounded" style={{ borderTop: '2px dashed' }} />
                                 <span className={`${hasStlyData ? 'text-gray-600' : 'text-gray-400'}`}>
-                                    Năm trước {!hasStlyData && '(chưa có)'}
+                                    {t('lastYear')} {!hasStlyData && t('noneYet')}
                                 </span>
                             </div>
                         </div>
@@ -160,7 +162,7 @@ export function OtbChart({ data }: OtbChartProps) {
                         <Line
                             type="monotone"
                             dataKey="otbCurrent"
-                            name="OTB Năm nay"
+                            name={t('otbThisYear')}
                             stroke="#2D4A8C"
                             strokeWidth={2.5}
                             dot={false}
@@ -169,7 +171,7 @@ export function OtbChart({ data }: OtbChartProps) {
                         <Line
                             type="monotone"
                             dataKey="otbLastYear"
-                            name="Năm trước"
+                            name={t('lastYear')}
                             stroke="#94a3b8"
                             strokeWidth={1.5}
                             strokeDasharray="6 4"

@@ -54,7 +54,7 @@ export function AccountDetailModal({ account, hotelId, asOfDate, days, onClose }
                 <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-blue-50 to-white">
                     <div>
                         <h2 className="text-lg font-semibold text-gray-900">📋 {account}</h2>
-                        <p className="text-xs text-gray-500 mt-0.5">Chi tiết booking • {days} ngày</p>
+                        <p className="text-xs text-gray-500 mt-0.5">Detailed booking • {days} days</p>
                     </div>
                     <button
                         onClick={onClose}
@@ -72,7 +72,7 @@ export function AccountDetailModal({ account, hotelId, asOfDate, days, onClose }
                             <div className="h-32 bg-gray-100 rounded" />
                         </div>
                     ) : !data ? (
-                        <p className="text-gray-500 text-sm">Không có dữ liệu</p>
+                        <p className="text-gray-500 text-sm">No data available</p>
                     ) : (
                         <>
                             {/* Summary pills */}
@@ -113,13 +113,13 @@ export function AccountDetailModal({ account, hotelId, asOfDate, days, onClose }
                             {/* By Stay Date (condensed table) */}
                             <div>
                                 <h4 className="text-sm font-semibold text-gray-700 mb-2">
-                                    Timeline ({data.byDate.length} ngày có booking)
+                                    Timeline ({data.byDate.length} days with bookings)
                                 </h4>
                                 <div className="max-h-48 overflow-y-auto">
                                     <table className="w-full text-xs">
                                         <thead className="sticky top-0 bg-white">
                                             <tr className="text-gray-400 border-b">
-                                                <th className="py-1.5 text-left font-medium">Ngày</th>
+                                                <th className="py-1.5 text-left font-medium">Date</th>
                                                 <th className="py-1.5 text-right font-medium">RN</th>
                                                 <th className="py-1.5 text-right font-medium">Revenue</th>
                                             </tr>

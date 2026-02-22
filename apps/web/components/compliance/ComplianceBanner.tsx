@@ -20,16 +20,16 @@ export function ComplianceBanner({ hotelId }: { hotelId?: string }) {
                 <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
                 <div className="flex-1">
                     <p className="text-sm font-semibold text-red-800">
-                        Gói Tiêu chuẩn chỉ dành cho khách sạn ≤ 30 phòng
+                        Standard plan is for hotels ≤ 30 rooms only
                     </p>
                     <p className="text-xs text-red-600 mt-1">
-                        Khách sạn của bạn có {compliance.hotelCapacity} phòng. Vui lòng nâng cấp để tiếp tục sử dụng.
+                        Your hotel has {compliance.hotelCapacity} rooms. Please upgrade to continue.
                     </p>
                     <Link
                         href="/pricing-plans"
                         className="inline-flex items-center gap-1 mt-2 text-sm text-red-700 hover:text-red-900 font-medium"
                     >
-                        Nâng cấp ngay <ArrowUpRight className="w-3.5 h-3.5" />
+                        Upgrade ngay <ArrowUpRight className="w-3.5 h-3.5" />
                     </Link>
                 </div>
             </div>
@@ -43,17 +43,17 @@ export function ComplianceBanner({ hotelId }: { hotelId?: string }) {
                 <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
                 <div className="flex-1">
                     <p className="text-sm font-semibold text-amber-800">
-                        📊 Band không khớp
+                        📊 Band mismatch
                     </p>
                     <p className="text-xs text-amber-700 mt-1">
-                        Khách sạn có {compliance.hotelCapacity} phòng (band {compliance.derivedBand})
-                        nhưng gói hiện tại là {compliance.subscriptionBand}. Một số quota có thể bị giới hạn.
+                        Hotel has {compliance.hotelCapacity} rooms (band {compliance.derivedBand})
+                        but current plan is {compliance.subscriptionBand}. Some quotas may be limited.
                     </p>
                     <Link
                         href="/pricing-plans"
                         className="inline-flex items-center gap-1 mt-2 text-sm text-amber-700 hover:text-amber-900 font-medium"
                     >
-                        Nâng cấp band <ArrowUpRight className="w-3.5 h-3.5" />
+                        Upgrade band <ArrowUpRight className="w-3.5 h-3.5" />
                     </Link>
                 </div>
             </div>

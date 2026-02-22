@@ -85,6 +85,7 @@ export async function GET(request: NextRequest) {
                     phone: u.phone,
                     image: u.image,
                     role: u.role,
+                    country: u.country,
                     isActive: u.is_active,
                     createdAt: u.created_at,
                     hotels: u.hotel_users.map(hu => ({
@@ -127,7 +128,7 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json()
-        const { email, name, phone, role = 'viewer', isActive = true, hotelAssignments = [] } = body
+        const { email, name, phone, role = 'viewer', isActive = true, hotelAssignments = [], country } = body
 
         if (!email) {
             return NextResponse.json({ error: 'Email is required' }, { status: 400 })
@@ -153,6 +154,7 @@ export async function POST(request: NextRequest) {
                 email,
                 name,
                 phone,
+                country: country && /^[A-Z]{2}$/.test(country) ? country : undefined,
                 role: role === 'super_admin' ? 'super_admin' : 'viewer', // Global role
                 is_active: isActive,
                 hotel_users: {
@@ -179,6 +181,7 @@ export async function POST(request: NextRequest) {
                 name: user.name,
                 phone: user.phone,
                 role: user.role,
+                country: user.country,
                 isActive: user.is_active,
                 hotels: user.hotel_users.map(hu => ({
                     hotelId: hu.hotel_id,

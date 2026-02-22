@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Loader2, Save } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 interface RoomType {
     id: string;
@@ -21,6 +22,7 @@ interface Props {
 }
 
 export default function SeasonRateEditor({ seasonId, seasonName }: Props) {
+    const t = useTranslations('seasonRateEditor');
     const [roomTypes, setRoomTypes] = useState<RoomType[]>([]);
     const [rates, setRates] = useState<Map<string, number>>(new Map());
     const [loading, setLoading] = useState(true);
@@ -76,11 +78,11 @@ export default function SeasonRateEditor({ seasonId, seasonName }: Props) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ seasonId, rates: payload }),
             });
-            if (!res.ok) throw new Error('Failed to save rates');
+            if (!res.ok) throw new Error(t('failedToSaveRates'));
             setSuccess(true);
             setTimeout(() => setSuccess(false), 2000);
         } catch (e) {
-            setError(e instanceof Error ? e.message : 'Save failed');
+            setError(e instanceof Error ? e.message : t('saveFailed'));
         } finally {
             setSaving(false);
         }
@@ -92,7 +94,7 @@ export default function SeasonRateEditor({ seasonId, seasonName }: Props) {
 
     return (
         <div className="space-y-2">
-            <div className="text-xs font-medium text-slate-500">NET rates cho {seasonName}:</div>
+            <div className="text-xs font-medium text-slate-500">{t('netRatesFor', { seasonName })}</div>
             <div className="space-y-1">
                 {roomTypes.map(rt => (
                     <div key={rt.id} className="flex items-center gap-2 text-xs">
@@ -112,7 +114,7 @@ export default function SeasonRateEditor({ seasonId, seasonName }: Props) {
             </div>
 
             {error && <div className="text-xs text-red-600">❌ {error}</div>}
-            {success && <div className="text-xs text-emerald-600">✅ Đã lưu rates!</div>}
+            {success && <div className="text-xs text-emerald-600">✅ {t('ratesSaved')}</div>}
 
             <button
                 onClick={handleSave}
@@ -120,7 +122,7 @@ export default function SeasonRateEditor({ seasonId, seasonName }: Props) {
                 className="w-full flex items-center justify-center gap-1 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-300 text-white text-xs rounded-lg transition-colors"
             >
                 {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
-                Lưu NET rates
+                {t('saveNetRates')}
             </button>
         </div>
     );

@@ -2,6 +2,7 @@
 
 import { Clock, Gift, Check, Circle, ArrowRight } from 'lucide-react';
 import type { TrialProgress } from '@/lib/plg/trial';
+import { useTranslations } from 'next-intl';
 
 interface TrialBannerProps {
     daysRemaining: number;
@@ -16,6 +17,7 @@ export function TrialBanner({
     onUpgrade,
     onDismiss,
 }: TrialBannerProps) {
+    const t = useTranslations('billing');
     const conditionsMet = trialProgress?.conditionsMet ?? 0;
     const bonusGranted = trialProgress?.bonusGranted ?? false;
 
@@ -26,7 +28,7 @@ export function TrialBanner({
                 <div className="flex items-center gap-2">
                     <Clock size={14} />
                     <span className="font-medium">
-                        Trial: còn {daysRemaining} ngày
+                        {t('trialRemaining', { n: daysRemaining })}
                     </span>
                 </div>
 
@@ -34,7 +36,7 @@ export function TrialBanner({
                 {trialProgress && !bonusGranted && (
                     <div className="flex items-center gap-2">
                         <Gift size={14} />
-                        <span>Bonus +7 ngày:</span>
+                        <span>{t('bonusDays')}</span>
                         <div className="flex items-center gap-1.5">
                             {trialProgress.conditions.map((c) => (
                                 <span
@@ -47,14 +49,14 @@ export function TrialBanner({
                                 </span>
                             ))}
                         </div>
-                        <span className="text-blue-200 text-xs">({conditionsMet}/3 điều kiện)</span>
+                        <span className="text-blue-200 text-xs">{t('conditionsMet', { n: conditionsMet })}</span>
                     </div>
                 )}
 
                 {bonusGranted && (
                     <div className="flex items-center gap-1 text-emerald-200">
                         <Gift size={14} />
-                        <span className="font-medium">Bonus +7 ngày đã được cộng!</span>
+                        <span className="font-medium">{t('bonusApplied')}</span>
                     </div>
                 )}
 

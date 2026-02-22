@@ -5,9 +5,11 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { SubscriptionBanner } from './SubscriptionBanner';
 import { LayoutDashboard, Upload, Database, Settings, BookOpen, Shield, Menu, X, LogOut, DollarSign, BarChart3, TrendingUp, CalendarCheck, Crown, Lock, Users, CreditCard } from 'lucide-react';
 import { HotelSwitcher } from '@/components/HotelSwitcher';
+import { LanguageSwitcher } from '@/components/shared/LanguageSwitcher';
 
 // Role levels for permission checks
 const ROLE_LEVELS: Record<string, number> = {
@@ -32,39 +34,39 @@ const TIER_DISPLAY: Record<string, string> = {
     SUITE: 'Suite',
 };
 
-// Navigation groups with items
+// Navigation groups with i18n keys instead of hardcoded labels
 const navGroups = [
     {
         id: 'overview',
-        label: 'Tổng quan - Phân tích',
+        labelKey: 'sidebar.groupOverview',
         items: [
-            { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, minRole: 'viewer' },
+            { href: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard, minRole: 'viewer' },
         ],
     },
     {
         id: 'pricing',
-        label: 'Định giá',
+        labelKey: 'sidebar.groupPricing',
         items: [
-            { href: '/pricing', label: 'Tính giá OTA', icon: DollarSign, minRole: 'viewer' },
-            { href: '/rate-shopper', label: 'So sánh giá', icon: BarChart3, minRole: 'viewer', requiredTier: 'SUITE' as const },
+            { href: '/pricing', labelKey: 'sidebar.otaPricing', icon: DollarSign, minRole: 'viewer' },
+            { href: '/rate-shopper', labelKey: 'sidebar.rateCompare', icon: BarChart3, minRole: 'viewer', requiredTier: 'SUITE' as const },
         ],
     },
     {
         id: 'data',
-        label: 'Quản lý dữ liệu',
+        labelKey: 'sidebar.groupData',
         items: [
-            { href: '/upload', label: 'Tải lên', icon: Upload, minRole: 'manager', requiredTier: 'DELUXE' as const },
-            { href: '/data', label: 'Dữ liệu', icon: Database, minRole: 'manager', requiredTier: 'DELUXE' as const },
+            { href: '/upload', labelKey: 'nav.upload', icon: Upload, minRole: 'manager', requiredTier: 'DELUXE' as const },
+            { href: '/data', labelKey: 'nav.data', icon: Database, minRole: 'manager', requiredTier: 'DELUXE' as const },
         ],
     },
     {
         id: 'system',
-        label: 'Hệ thống',
+        labelKey: 'sidebar.groupSystem',
         items: [
-            { href: '/settings', label: 'Cài đặt', icon: Settings, minRole: 'hotel_admin', hideForDemo: true },
-            { href: '/settings/team', label: 'Team', icon: Users, minRole: 'hotel_admin', hideForDemo: true },
-            { href: '/guide', label: 'Hướng dẫn', icon: BookOpen, minRole: 'viewer' },
-            { href: '/pricing-plans', label: 'Nâng cấp', icon: Crown, minRole: 'viewer' },
+            { href: '/settings', labelKey: 'nav.settings', icon: Settings, minRole: 'hotel_admin', hideForDemo: true },
+            { href: '/settings/team', labelKey: 'sidebar.team', icon: Users, minRole: 'hotel_admin', hideForDemo: true },
+            { href: '/guide', labelKey: 'nav.guide', icon: BookOpen, minRole: 'viewer' },
+            { href: '/pricing-plans', labelKey: 'sidebar.upgrade', icon: Crown, minRole: 'viewer' },
         ],
     },
 ];
@@ -75,6 +77,7 @@ const LOGO_BLUE = '#204184';
 export function Sidebar() {
     const pathname = usePathname();
     const { data: session } = useSession();
+    const t = useTranslations();
     const [isOpen, setIsOpen] = useState(false);
     const [isDemo, setIsDemo] = useState(false);
     const [currentPlan, setCurrentPlan] = useState<string>('STANDARD');
@@ -118,6 +121,9 @@ export function Sidebar() {
     };
 
     const formatDateShort = (d: string) => new Date(d).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+    // Helper to resolve i18n nav label
+    const tNav = (key: string) => t(key);
 
 
     // Check if Demo Hotel + fetch subscription plan + active hotel
@@ -255,7 +261,7 @@ export function Sidebar() {
 
                 {/* Mobile: Close button and spacer */}
                 <div className="lg:hidden flex items-center justify-between px-4 py-4">
-                    <span className="text-white font-medium">Menu</span>
+                    <span className="text-white font-medium">{t('sidebar.menu')}</span>
                     <button
                         onClick={() => setIsOpen(false)}
                         className="p-2 text-white hover:bg-white/10 rounded-lg"
@@ -285,7 +291,7 @@ export function Sidebar() {
                                     )}
                                     {subInfo.isExpired && (
                                         <span className="px-1 py-px text-[9px] font-medium bg-red-400/20 text-red-300 rounded">
-                                            Hết hạn
+                                            {t('sidebar.expired')}
                                         </span>
                                     )}
                                 </div>
@@ -317,7 +323,7 @@ export function Sidebar() {
 
                                 {/* Group label */}
                                 <div className="px-6 py-1 text-xs font-semibold text-white/50 uppercase tracking-wider">
-                                    {group.label}
+                                    {tNav(group.labelKey)}
                                 </div>
 
                                 {/* Group items */}
@@ -345,7 +351,7 @@ export function Sidebar() {
                                                 onClick={() => setIsOpen(false)}
                                             >
                                                 <Icon className="w-5 h-5" />
-                                                <span className="flex-1">{item.label}</span>
+                                                <span className="flex-1">{tNav(item.labelKey)}</span>
                                             </Link>
                                         );
                                     } else if (canAccess && !hasTier) {
@@ -356,15 +362,15 @@ export function Sidebar() {
                                                 className="flex items-center gap-3 px-6 py-2.5 text-sm font-medium mx-2 rounded-lg cursor-pointer group relative hover:bg-white/5 transition-colors"
                                                 style={{ color: 'rgba(255,255,255,0.5)' }}
                                                 onClick={() => { setIsOpen(false); window.location.href = '/pricing-plans'; }}
-                                                title={`Cần nâng cấp lên gói ${needsTier}`}
+                                                title={t('sidebar.needUpgrade', { tier: needsTier as string })}
                                             >
                                                 <Icon className="w-5 h-5" />
-                                                <span className="flex-1">{item.label}</span>
+                                                <span className="flex-1">{tNav(item.labelKey)}</span>
                                                 <Lock className="w-3.5 h-3.5 text-amber-400/70" />
 
                                                 {/* Tooltip */}
                                                 <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
-                                                    Cần nâng cấp gói {needsTier}
+                                                    {t('sidebar.needUpgrade', { tier: needsTier as string })}
                                                 </div>
                                             </div>
                                         );
@@ -377,15 +383,15 @@ export function Sidebar() {
                                                 style={{
                                                     color: 'rgba(255,255,255,0.35)',
                                                 }}
-                                                title={`Cần quyền ${getRoleName(item.minRole)}`}
+                                                title={t('sidebar.needRole', { role: getRoleName(item.minRole) })}
                                             >
                                                 <Icon className="w-5 h-5" />
-                                                <span className="flex-1">{item.label}</span>
+                                                <span className="flex-1">{tNav(item.labelKey)}</span>
                                                 <Lock className="w-3.5 h-3.5 opacity-60" />
 
                                                 {/* Tooltip on hover */}
                                                 <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
-                                                    Cần quyền {getRoleName(item.minRole)}
+                                                    {t('sidebar.needRole', { role: getRoleName(item.minRole) })}
                                                 </div>
                                             </div>
                                         );
@@ -400,7 +406,7 @@ export function Sidebar() {
                         <div className="mt-2">
                             <div className="mx-4 my-3 border-t border-white/10" />
                             <div className="px-6 py-1 text-xs font-semibold text-white/50 uppercase tracking-wider">
-                                Quản trị
+                                {t('sidebar.groupAdmin')}
                             </div>
                             <Link
                                 href="/admin/users"
@@ -455,10 +461,12 @@ export function Sidebar() {
                         className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
                     >
                         <LogOut className="w-4 h-4" />
-                        Đăng xuất
+                        {t('auth.logout')}
                     </button>
+                    {/* Language Switcher */}
+                    <LanguageSwitcher />
                     <p className="text-xs text-white/40 mt-3">
-                        Phiên bản 1.0
+                        {t('sidebar.version')}
                     </p>
                 </div>
             </aside>

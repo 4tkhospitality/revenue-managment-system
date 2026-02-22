@@ -13,7 +13,7 @@ interface QuotaWarningProps {
 const LABEL_MAP: Record<QuotaKey, string> = {
     imports: 'import',
     exports: 'export',
-    users: 'người dùng',
+    users: 'users',
 };
 
 export function QuotaWarning({ quotaKey, used, limit, onUpgrade }: QuotaWarningProps) {
@@ -35,8 +35,8 @@ export function QuotaWarning({ quotaKey, used, limit, onUpgrade }: QuotaWarningP
                 <AlertTriangle size={14} />
                 <span>
                     {isExceeded
-                        ? `Đã dùng hết quota ${label} (${used}/${limit})`
-                        : `Gần hết quota ${label}: ${used}/${limit} (${Math.round(percentage)}%)`}
+                        ? `Quota fully used ${label} (${used}/${limit})`
+                        : `Quota nearly used ${label}: ${used}/${limit} (${Math.round(percentage)}%)`}
                 </span>
             </div>
             {onUpgrade && (
@@ -45,7 +45,7 @@ export function QuotaWarning({ quotaKey, used, limit, onUpgrade }: QuotaWarningP
                     className="flex items-center gap-1 text-xs font-medium hover:underline"
                 >
                     <ArrowUpCircle size={12} />
-                    Nâng cấp
+                    Upgrade
                 </button>
             )}
         </div>

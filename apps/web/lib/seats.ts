@@ -66,10 +66,10 @@ export async function checkSeatAvailability(hotelId: string): Promise<SeatAvaila
  * Standard error response for tier limit reached.
  */
 export function tierLimitError(plan: string | null, maxSeats: number) {
-    const planDisplay = plan ?? 'Hiện tại'
+    const planDisplay = plan ?? 'Current'
     return {
         error: 'TIER_LIMIT_REACHED',
-        message: `Gói ${planDisplay} chỉ cho phép ${maxSeats >= 999 ? 'không giới hạn' : maxSeats} thành viên. Nâng cấp gói để thêm.`,
+        message: `Plan ${planDisplay} allows ${maxSeats >= 999 ? 'unlimited' : maxSeats} members. Upgrade your plan to add more.`,
         upgradeUrl: '/pricing-plans',
     }
 }

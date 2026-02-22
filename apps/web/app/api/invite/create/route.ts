@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
             )
             if (!hotelAccess || hotelAccess.role !== 'hotel_admin') {
                 return NextResponse.json(
-                    { error: 'Chỉ Admin mới có thể tạo mã mời' },
+                    { error: 'Only Admins can create invite codes' },
                     { status: 403 }
                 )
             }
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
     } catch (error) {
         console.error('[API] Invite create error:', error)
         return NextResponse.json(
-            { error: 'Không thể tạo mã mời' },
+            { error: 'Unable to create invite code' },
             { status: 500 }
         )
     }

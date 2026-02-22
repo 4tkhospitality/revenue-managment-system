@@ -9,35 +9,35 @@ const DEFAULT_OTA_CHANNELS = [
         name: 'Agoda',
         code: 'agoda',
         commission: 20,
-        calc_type: 'ADDITIVE' as CalcTypeValue, // Cộng dồn
+        calc_type: 'ADDITIVE' as CalcTypeValue, // Additive
         is_active: true,
     },
     {
         name: 'Booking.com',
         code: 'booking',
         commission: 18,
-        calc_type: 'PROGRESSIVE' as CalcTypeValue, // Lũy tiến
+        calc_type: 'PROGRESSIVE' as CalcTypeValue, // Progressive
         is_active: true,
     },
     {
         name: 'Traveloka',
         code: 'traveloka',
         commission: 15,
-        calc_type: 'ADDITIVE' as CalcTypeValue, // Cộng dồn (đã research: flat rate ~15%)
+        calc_type: 'ADDITIVE' as CalcTypeValue, // Additive (researched: flat rate ~15%)
         is_active: true,
     },
     {
         name: 'Expedia',
         code: 'expedia',
         commission: 17,
-        calc_type: 'SINGLE_DISCOUNT' as CalcTypeValue, // Mỗi deal riêng, chỉ 1 deal áp dụng
+        calc_type: 'SINGLE_DISCOUNT' as CalcTypeValue, // Single discount, only 1 deal applies
         is_active: true,
     },
     {
         name: 'CTRIP',
         code: 'ctrip',
         commission: 18,
-        calc_type: 'ADDITIVE' as CalcTypeValue, // Cộng dồn (Trip.com)
+        calc_type: 'ADDITIVE' as CalcTypeValue, // Additive (Trip.com)
         is_active: true,
     },
 ];

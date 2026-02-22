@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { validateOTBData, type ValidationResult, type ValidationIssue } from '../actions/validateOTBData';
+import { useTranslations } from 'next-intl';
 
 export function DataValidationBadge() {
+    const t = useTranslations('dataPage');
     const [result, setResult] = useState<ValidationResult | null>(null);
     const [loading, setLoading] = useState(true);
     const [expanded, setExpanded] = useState(false);
@@ -31,7 +33,7 @@ export function DataValidationBadge() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
-                Đang kiểm tra chất lượng dữ liệu...
+                {t('checkingQuality')}
             </div>
         );
     }
@@ -77,10 +79,10 @@ export function DataValidationBadge() {
     );
 
     const badgeLabel = stats.failCount > 0
-        ? `${stats.failCount} lỗi nghiêm trọng`
+        ? t('criticalErrors', { n: stats.failCount })
         : stats.warningCount > 0
-            ? `${stats.warningCount} cảnh báo`
-            : 'Dữ liệu tốt';
+            ? t('warnings', { n: stats.warningCount })
+            : t('dataGood');
 
     return (
         <div className={`rounded-xl border ${badgeStyles.container} overflow-hidden`}>
@@ -116,7 +118,7 @@ export function DataValidationBadge() {
                     ))}
                     {issues.length > 50 && (
                         <div className="text-xs text-gray-500 text-center py-1">
-                            ... và {issues.length - 50} vấn đề khác
+                            ... {t('andMoreIssues', { n: issues.length - 50 })}
                         </div>
                     )}
                 </div>
@@ -124,7 +126,7 @@ export function DataValidationBadge() {
 
             {expanded && issues.length === 0 && (
                 <div className="border-t border-current/10 px-4 py-3 text-sm text-gray-600 bg-white/50">
-                    Không phát hiện vấn đề. Dữ liệu sạch!
+                    {t('noIssues')}
                 </div>
             )}
         </div>

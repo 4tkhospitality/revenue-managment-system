@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { Users, Ticket, AlertTriangle, Trash2, Clock, XCircle, ChevronDown, Shield, ShieldCheck, Eye } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
 interface InviteData {
     inviteId: string
@@ -45,6 +46,7 @@ const ROLE_LABELS: Record<string, string> = {
 
 export default function TeamSettingsPage() {
     const { data: session } = useSession()
+    const t = useTranslations('teamPage')
     const [members, setMembers] = useState<TeamMember[]>([])
     const [loading, setLoading] = useState(true)
     const [inviteLoading, setInviteLoading] = useState(false)
@@ -188,13 +190,13 @@ export default function TeamSettingsPage() {
                 loadInvites()
             } else {
                 if (data.error === 'TIER_LIMIT_REACHED') {
-                    setError(data.message || 'Đã đạt giới hạn thành viên cho gói hiện tại.')
+                    setError(data.message || t('limitReachedError'))
                 } else {
-                    setError(data.error || 'Không thể tạo mã mời')
+                    setError(data.error || t('cannotCreate'))
                 }
             }
         } catch (err) {
-            setError('Có lỗi xảy ra')
+            setError(t('errorOccurred'))
         } finally {
             setInviteLoading(false)
         }
@@ -211,13 +213,13 @@ export default function TeamSettingsPage() {
             })
             const data = await res.json()
             if (res.ok) {
-                setSuccess(`Đã đổi vai trò thành ${ROLE_LABELS[newRole] || newRole}`)
+                setSuccess(t('roleChanged', { role: ROLE_LABELS[newRole] || newRole }))
                 loadMembers()
             } else {
-                setError(data.error || 'Không thể đổi vai trò')
+                setError(data.error || t('cannotChangeRole'))
             }
         } catch (err) {
-            setError('Có lỗi xảy ra')
+            setError('An error occurred')
         } finally {
             setChangingRole(null)
         }
@@ -235,14 +237,14 @@ export default function TeamSettingsPage() {
             })
             const data = await res.json()
             if (res.ok) {
-                setSuccess('Đã xóa thành viên')
+                setSuccess(t('memberRemoved'))
                 loadMembers()
                 loadInvites()
             } else {
-                setError(data.error || 'Không thể xóa thành viên')
+                setError(data.error || t('cannotRemove'))
             }
         } catch (err) {
-            setError('Có lỗi xảy ra')
+            setError('An error occurred')
         } finally {
             setRemoving(null)
         }
@@ -293,7 +295,7 @@ export default function TeamSettingsPage() {
 
     const getRoleBadge = (role: string, isPrimary: boolean) => {
         if (isPrimary) {
-            return <span className="px-2 py-1 text-xs rounded-full bg-amber-100 text-amber-700 font-medium">Owner</span>
+            return <span className="px-2 py-1 text-xs rounded-full bg-amber-100 text-amber-700 font-medium">{t('owner')}</span>
         }
         const badges: Record<string, { bg: string; text: string; icon: any }> = {
             hotel_admin: { bg: 'bg-purple-100', text: 'text-purple-700', icon: ShieldCheck },
@@ -327,10 +329,10 @@ export default function TeamSettingsPage() {
             >
                 <h1 className="text-lg font-semibold">
                     <Users className="w-5 h-5 inline mr-1" />
-                    {orgInfo ? `Thành viên • ${orgInfo.orgName}` : 'Quản lý Team'}
+                    {orgInfo ? t('titleWithOrg', { org: orgInfo.orgName }) : t('title')}
                     {seats?.plan && <span className="ml-2 text-white/60 text-sm">({seats.plan})</span>}
                 </h1>
-                <p className="text-white/70 text-sm mt-1">Mời thành viên và quản lý quyền truy cập</p>
+                <p className="text-white/70 text-sm mt-1">{t('subtitle')}</p>
             </header>
 
             {/* Success Toast */}
@@ -351,13 +353,13 @@ export default function TeamSettingsPage() {
             {isAdmin && (
                 <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6">
                     <div className="flex items-center justify-between mb-4">
-                        <h2 className="font-semibold text-gray-900"><Ticket className="w-4 h-4 inline mr-1" /> Mời thành viên</h2>
+                        <h2 className="font-semibold text-gray-900"><Ticket className="w-4 h-4 inline mr-1" /> {t('inviteTitle')}</h2>
                         {seats && seats.max > 0 && (
                             <span className={`text-sm font-medium px-3 py-1 rounded-full ${atLimit ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'
                                 }`}>
-                                {seats.activeMembers ?? seats.current}/{seats.max >= 999 ? '∞' : seats.max} thành viên
+                                {seats.activeMembers ?? seats.current}/{seats.max >= 999 ? '∞' : seats.max} {t('members')}
                                 {(seats.pendingInvites ?? 0) > 0 && (
-                                    <span className="text-xs ml-1 opacity-70">(+{seats.pendingInvites} invite)</span>
+                                    <span className="text-xs ml-1 opacity-70">({t('inviteCount', { n: seats.pendingInvites })})</span>
                                 )}
                             </span>
                         )}
@@ -365,20 +367,20 @@ export default function TeamSettingsPage() {
 
                     {atLimit && (
                         <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
-                            <AlertTriangle className="w-4 h-4 inline mr-1" /> Đã đạt giới hạn thành viên cho gói <strong>{seats?.plan}</strong>.
-                            <p className="mt-1 text-xs text-amber-600">Quota Users giới hạn theo gói (tier), không theo số phòng (band).</p>
-                            <a href="/pricing-plans" className="mt-1 inline-block text-blue-600 hover:underline font-medium">Nâng cấp gói để thêm thành viên →</a>
+                            <AlertTriangle className="w-4 h-4 inline mr-1" /> {t('limitWarning')} <strong>{seats?.plan}</strong>.
+                            <p className="mt-1 text-xs text-amber-600">{t('limitNote')}</p>
+                            <a href="/pricing-plans" className="mt-1 inline-block text-blue-600 hover:underline font-medium">{t('upgradeLink')}</a>
                         </div>
                     )}
 
                     {invite ? (
                         <div className="space-y-4">
                             <div className="p-4 bg-gray-50 rounded-xl">
-                                <p className="text-sm text-gray-500 mb-2">Mã mời (vai trò: {ROLE_LABELS[invite.role] || invite.role}):</p>
+                                <p className="text-sm text-gray-500 mb-2">{t('inviteCodeLabel', { role: ROLE_LABELS[invite.role] || invite.role })}:</p>
                                 <p className="text-2xl font-mono font-bold text-gray-900 tracking-wider">{invite.shortCode}</p>
                             </div>
                             <div className="p-4 bg-gray-50 rounded-xl">
-                                <p className="text-sm text-gray-500 mb-2">Hoặc gửi link:</p>
+                                <p className="text-sm text-gray-500 mb-2">{t('shareLabel')}</p>
                                 <div className="flex gap-2">
                                     <input
                                         type="text"
@@ -390,19 +392,19 @@ export default function TeamSettingsPage() {
                                         onClick={copyInvite}
                                         className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 shrink-0"
                                     >
-                                        {copied ? '✓ Đã copy' : 'Copy'}
+                                        {copied ? t('copied') : t('copy')}
                                     </button>
                                 </div>
                             </div>
                             <div className="flex items-center justify-between">
                                 <p className="text-xs text-gray-400">
-                                    Hết hạn: {formatDate(invite.expiresAt)}
+                                    {t('expires', { date: formatDate(invite.expiresAt) })}
                                 </p>
                                 <button
                                     onClick={() => setInvite(null)}
                                     className="text-xs text-blue-600 hover:underline"
                                 >
-                                    Tạo mã mời khác
+                                    {t('createAnother')}
                                 </button>
                             </div>
                         </div>
@@ -416,8 +418,8 @@ export default function TeamSettingsPage() {
                                     className="appearance-none pl-3 pr-8 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
                                     disabled={atLimit}
                                 >
-                                    <option value="viewer">👁 Viewer</option>
-                                    <option value="manager">🔧 Manager</option>
+                                    <option value="viewer">{t('viewer')}</option>
+                                    <option value="manager">{t('manager')}</option>
                                 </select>
                                 <ChevronDown className="w-4 h-4 text-gray-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
                             </div>
@@ -425,9 +427,9 @@ export default function TeamSettingsPage() {
                                 onClick={createInvite}
                                 disabled={inviteLoading || atLimit}
                                 className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                title={atLimit ? 'Đã đạt giới hạn thành viên' : ''}
+                                title={atLimit ? t('limitReached') : ''}
                             >
-                                {inviteLoading ? 'Đang tạo...' : atLimit ? 'Đã đạt giới hạn' : '+ Tạo mã mời mới'}
+                                {inviteLoading ? t('creating') : atLimit ? t('limitReached') : t('createInvite')}
                             </button>
                         </div>
                     )}
@@ -439,7 +441,7 @@ export default function TeamSettingsPage() {
                 <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
                     <div className="p-4 border-b border-gray-100">
                         <h2 className="font-semibold text-gray-900">
-                            <Ticket className="w-4 h-4 inline mr-1" /> Mã mời đang hoạt động ({activeInvites.length})
+                            <Ticket className="w-4 h-4 inline mr-1" /> {t('activeInvites', { n: activeInvites.length })}
                         </h2>
                     </div>
                     <div className="divide-y divide-gray-100">
@@ -453,11 +455,11 @@ export default function TeamSettingsPage() {
                                         <p className="font-mono font-bold text-gray-900">{inv.short_code}</p>
                                         <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
                                             <span className="px-1.5 py-0.5 bg-gray-100 rounded">{ROLE_LABELS[inv.role] || inv.role}</span>
-                                            <span>Dùng: {inv.used_count}/{inv.max_uses}</span>
+                                            <span>{t('usedCount', { used: inv.used_count, max: inv.max_uses })}</span>
                                             <span className="flex items-center gap-0.5">
                                                 <Clock className="w-3 h-3" />
                                                 {inv.isExpired ? (
-                                                    <span className="text-red-500">Hết hạn</span>
+                                                    <span className="text-red-500">{t('expired')}</span>
                                                 ) : (
                                                     formatDate(inv.expires_at)
                                                 )}
@@ -469,7 +471,7 @@ export default function TeamSettingsPage() {
                                     onClick={() => revokeInvite(inv.invite_id)}
                                     disabled={revoking === inv.invite_id}
                                     className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                                    title="Thu hồi mã mời"
+                                    title={t('revokeTitle')}
                                 >
                                     {revoking === inv.invite_id ? (
                                         <XCircle className="w-4 h-4 animate-spin" />
@@ -486,13 +488,13 @@ export default function TeamSettingsPage() {
             {/* Members List */}
             <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
                 <div className="p-4 border-b border-gray-100">
-                    <h2 className="font-semibold text-gray-900"><Users className="w-4 h-4 inline mr-1" /> Thành viên ({members.length})</h2>
+                    <h2 className="font-semibold text-gray-900"><Users className="w-4 h-4 inline mr-1" /> {t('membersTitle', { n: members.length })}</h2>
                 </div>
 
                 {loading ? (
-                    <div className="p-8 text-center text-gray-400">Đang tải...</div>
+                    <div className="p-8 text-center text-gray-400">{t('loading')}</div>
                 ) : members.length === 0 ? (
-                    <div className="p-8 text-center text-gray-400">Chưa có thành viên nào</div>
+                    <div className="p-8 text-center text-gray-400">{t('noMembers')}</div>
                 ) : (
                     <div className="divide-y divide-gray-100">
                         {members.map((member) => {
@@ -508,9 +510,9 @@ export default function TeamSettingsPage() {
                                         </div>
                                         <div className="min-w-0">
                                             <p className="text-gray-900 font-medium truncate">
-                                                {member.user.name || 'Unnamed'}
+                                                {member.user.name || t('unnamed')}
                                                 {member.user.id === session?.user?.id && (
-                                                    <span className="ml-1.5 text-xs text-gray-400">(bạn)</span>
+                                                    <span className="ml-1.5 text-xs text-gray-400">{t('you')}</span>
                                                 )}
                                             </p>
                                             <p className="text-sm text-gray-500 truncate">{member.user.email}</p>
@@ -547,20 +549,20 @@ export default function TeamSettingsPage() {
                                                             disabled={removing === member.id}
                                                             className="px-2 py-1 text-xs bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
                                                         >
-                                                            {removing === member.id ? '...' : 'Xác nhận'}
+                                                            {removing === member.id ? '...' : t('confirm')}
                                                         </button>
                                                         <button
                                                             onClick={() => setConfirmRemove(null)}
                                                             className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-md hover:bg-gray-200"
                                                         >
-                                                            Hủy
+                                                            Cancel
                                                         </button>
                                                     </div>
                                                 ) : (
                                                     <button
                                                         onClick={() => setConfirmRemove(member.id)}
                                                         className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                        title="Xóa thành viên"
+                                                        title={t('removeMemberTitle')}
                                                     >
                                                         <Trash2 className="w-4 h-4" />
                                                     </button>

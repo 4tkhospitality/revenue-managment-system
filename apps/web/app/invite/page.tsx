@@ -37,15 +37,15 @@ function InviteContent() {
             if (res.ok) {
                 router.push('/dashboard')
                 router.refresh()
-            } else if (data.error?.includes('thành viên')) {
+            } else if (data.error?.includes('member')) {
                 // Already a member — go to dashboard
                 router.push('/dashboard')
                 router.refresh()
             } else {
-                setError(data.error || 'Mã mời không hợp lệ')
+                setError(data.error || 'Invalid invite code')
             }
         } catch (err) {
-            setError('Có lỗi xảy ra, vui lòng thử lại')
+            setError('An error occurred, please try again')
         } finally {
             setLoading(false)
         }
@@ -78,10 +78,10 @@ function InviteContent() {
                     className="text-xl font-semibold mb-2"
                     style={{ color: 'var(--foreground)' }}
                 >
-                    Nhập mã mời
+                    Enter invite code
                 </h1>
                 <p style={{ color: 'var(--muted)' }} className="text-sm">
-                    Nhập mã để tham gia khách sạn của đồng nghiệp
+                    Enter code to join your colleague's hotel
                 </p>
             </div>
 
@@ -128,7 +128,7 @@ function InviteContent() {
                             <div
                                 className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"
                             />
-                            Đang xử lý...
+                            Processing...
                         </>
                     ) : (
                         'Tham gia'
@@ -142,7 +142,7 @@ function InviteContent() {
                     className="w-full text-sm text-center"
                     style={{ color: 'var(--muted)' }}
                 >
-                    ← Quay lại trang chào mừng
+                    ← Go Back to welcome
                 </button>
             </div>
         </div>
@@ -177,7 +177,7 @@ export default function InvitePage() {
                             className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin mx-auto"
                             style={{ borderColor: 'var(--brand-primary)', borderTopColor: 'transparent' }}
                         />
-                        <p className="mt-4" style={{ color: 'var(--muted)' }}>Đang tải...</p>
+                        <p className="mt-4" style={{ color: 'var(--muted)' }}>Loading...</p>
                     </div>
                 }>
                     <InviteContent />

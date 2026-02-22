@@ -2,16 +2,17 @@
 
 import { useState } from 'react';
 import { Activity, Play, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 // ─── Pipeline Steps ─────────────────────────────────────────
 
-const PIPELINE_STEPS = [
-    { key: 'otbYesterday', label: 'OTB (hôm qua)', action: 'buildOTB', dateOffset: -1 },
-    { key: 'otbToday', label: 'OTB (hôm nay)', action: 'buildOTB', dateOffset: 0 },
-    { key: 'cancelStats', label: 'Tính Cancel Stats', action: 'buildCancelStats' },
-    { key: 'features', label: 'Build Features', action: 'buildFeatures' },
-    { key: 'forecast', label: 'Run Forecast', action: 'runForecast' },
-    { key: 'pricing', label: 'Tối ưu giá', action: 'runPricing' },
+const PIPELINE_STEP_KEYS = [
+    { key: 'otbYesterday', labelKey: 'stepOtbYesterday', action: 'buildOTB', dateOffset: -1 },
+    { key: 'otbToday', labelKey: 'stepOtbToday', action: 'buildOTB', dateOffset: 0 },
+    { key: 'cancelStats', labelKey: 'stepCancelStats', action: 'buildCancelStats' },
+    { key: 'features', labelKey: 'stepBuildFeatures', action: 'buildFeatures' },
+    { key: 'forecast', labelKey: 'stepRunForecast', action: 'runForecast' },
+    { key: 'pricing', labelKey: 'stepOptimizePricing', action: 'runPricing' },
 ] as const;
 
 type StepStatus = 'pending' | 'running' | 'done' | 'error';
@@ -23,6 +24,7 @@ interface PipelineButtonProps {
 }
 
 export function FullPipelineButton({ hotelId, asOfDate, onComplete }: PipelineButtonProps) {
+    const t = useTranslations('analyticsTab');
     const [running, setRunning] = useState(false);
     const [stepStatuses, setStepStatuses] = useState<Record<string, StepStatus>>({});
     const [error, setError] = useState<string | null>(null);
@@ -34,7 +36,7 @@ export function FullPipelineButton({ hotelId, asOfDate, onComplete }: PipelineBu
         setStepStatuses({});
 
         try {
-            for (const step of PIPELINE_STEPS) {
+            for (const step of PIPELINE_STEP_KEYS) {
                 setCurrentStep(step.key);
                 setStepStatuses(prev => ({ ...prev, [step.key]: 'running' }));
 
@@ -53,7 +55,7 @@ export function FullPipelineButton({ hotelId, asOfDate, onComplete }: PipelineBu
 
                 if (!res.ok) {
                     const errData = await res.json().catch(() => ({}));
-                    throw new Error(errData.error || `Step "${step.label}" failed`);
+                    throw new Error(errData.error || t('stepFailed', { step: t(step.labelKey) }));
                 }
 
                 setStepStatuses(prev => ({ ...prev, [step.key]: 'done' }));
@@ -62,7 +64,7 @@ export function FullPipelineButton({ hotelId, asOfDate, onComplete }: PipelineBu
             setCurrentStep(null);
             onComplete?.();
         } catch (e: any) {
-            setError(e.message || 'Unknown error');
+            setError(e.message || t('unknownError'));
             if (currentStep) {
                 setStepStatuses(prev => ({ ...prev, [currentStep]: 'error' }));
             }
@@ -77,7 +79,7 @@ export function FullPipelineButton({ hotelId, asOfDate, onComplete }: PipelineBu
                 <div className="flex items-center gap-2">
                     <Activity className="w-4 h-4 text-indigo-500" />
                     <h3 className="text-sm font-semibold text-slate-700">
-                        Analytics Pipeline
+                        {t('pipelineTitle')}
                     </h3>
                 </div>
                 <button
@@ -95,12 +97,12 @@ export function FullPipelineButton({ hotelId, asOfDate, onComplete }: PipelineBu
                     {running ? (
                         <>
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            Đang chạy...
+                            {t('running')}
                         </>
                     ) : (
                         <>
                             <Play className="w-3.5 h-3.5" />
-                            Chạy Full Pipeline
+                            {t('runPipeline')}
                         </>
                     )}
                 </button>
@@ -109,7 +111,7 @@ export function FullPipelineButton({ hotelId, asOfDate, onComplete }: PipelineBu
             {/* Pipeline steps */}
             {(running || Object.keys(stepStatuses).length > 0) && (
                 <div className="flex items-center gap-1 mt-2">
-                    {PIPELINE_STEPS.map((step, i) => {
+                    {PIPELINE_STEP_KEYS.map((step, i) => {
                         const status = stepStatuses[step.key] || 'pending';
                         return (
                             <div key={step.key} className="flex items-center gap-1">
@@ -130,7 +132,7 @@ export function FullPipelineButton({ hotelId, asOfDate, onComplete }: PipelineBu
                                     {status === 'done' && <CheckCircle2 className="w-3 h-3" />}
                                     {status === 'running' && <Loader2 className="w-3 h-3 animate-spin" />}
                                     {status === 'error' && <AlertCircle className="w-3 h-3" />}
-                                    {step.label}
+                                    {t(step.labelKey)}
                                 </div>
                             </div>
                         );

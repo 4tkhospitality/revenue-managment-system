@@ -118,7 +118,7 @@ export function HotelSwitcher() {
 
     // Find active hotel name for display
     const activeHotel = hotelList.find(h => h.id === activeHotelId);
-    const activeHotelName = activeHotel?.name || 'Chọn Hotel';
+    const activeHotelName = activeHotel?.name || 'Select Hotel';
 
     return (
         <div className="relative" ref={dropdownRef}>
@@ -148,7 +148,7 @@ export function HotelSwitcher() {
             {isOpen && (
                 <div className="absolute top-full left-0 right-0 mt-1 bg-[#0f1d36] border border-white/10 rounded-xl shadow-2xl z-50 py-1 max-h-64 overflow-y-auto">
                     <div className="px-3 py-2 text-xs text-white/40 border-b border-white/5">
-                        {isAdmin ? `Tất cả khách sạn (${hotelList.length})` : 'Khách sạn của bạn'}
+                        {isAdmin ? `All hotels (${hotelList.length})` : 'Your hotels'}
                     </div>
                     {hotelList.map((hotel) => {
                         const isActive = hotel.id === activeHotelId;

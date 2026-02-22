@@ -11,14 +11,14 @@ import { attributeHotel } from '@/lib/reseller/attribution';
 export async function validateCode(code: string, hotelPlan?: PlanTier) {
     const promo = await prisma.promoCode.findUnique({ where: { code } });
 
-    if (!promo) return { valid: false, error: 'Mã không tồn tại' };
-    if (!promo.is_active) return { valid: false, error: 'Mã đã bị vô hiệu hóa' };
-    if (promo.expires_at && promo.expires_at < new Date()) return { valid: false, error: 'Mã đã hết hạn' };
+    if (!promo) return { valid: false, error: 'Code does not exist' };
+    if (!promo.is_active) return { valid: false, error: 'Code has been deactivated' };
+    if (promo.expires_at && promo.expires_at < new Date()) return { valid: false, error: 'Code has expired' };
     if (promo.max_redemptions && promo.current_redemptions >= promo.max_redemptions) {
-        return { valid: false, error: 'Mã đã đạt giới hạn sử dụng' };
+        return { valid: false, error: 'Code has reached usage limit' };
     }
     if (hotelPlan && promo.plan_eligible.length > 0 && !promo.plan_eligible.includes(hotelPlan)) {
-        return { valid: false, error: 'Mã không áp dụng cho gói của bạn' };
+        return { valid: false, error: 'Code does not apply to your plan' };
     }
 
     return {
@@ -47,7 +47,7 @@ export async function redeemCode(code: string, hotelId: string) {
         });
 
         if (hotel?.active_promo_code_id) {
-            throw new Error('Bạn đã có mã giảm giá đang hoạt động');
+            throw new Error('You already have an active promo code');
         }
 
         // Step c: Atomic increment with conditions
@@ -61,12 +61,12 @@ export async function redeemCode(code: string, hotelId: string) {
     `;
 
         if (result === 0) {
-            throw new Error('Mã không hợp lệ hoặc đã hết lượt sử dụng');
+            throw new Error('Invalid code or usage limit reached');
         }
 
         // Get the promo for redemption info
         const promo = await tx.promoCode.findUnique({ where: { code } });
-        if (!promo) throw new Error('Mã không tồn tại');
+        if (!promo) throw new Error('Code does not exist');
 
         // Step d: Create redemption record
         const redemption = await tx.promoRedemption.create({

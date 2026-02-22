@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════════════════════════════
 // PLG — Entitlements Service
 // Central function: getEntitlements(hotelId) → plan, features, limits
-// Resolves subscription via Organization (Cách 2)
+// Resolves subscription via Organization (Method 2)
 // ════════════════════════════════════════════════════════════════════
 
 import { PlanTier, SubscriptionStatus, RoomBand } from '@prisma/client';

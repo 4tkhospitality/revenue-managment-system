@@ -57,7 +57,7 @@ export async function POST(req: Request) {
             ) {
                 return NextResponse.json(
                     {
-                        error: `Bạn đang có subscription qua ${currentSub.external_provider}. Vui lòng hủy trước hoặc quản lý tại /settings/billing.`,
+                        error: `You have an active subscription via ${currentSub.external_provider}. Please cancel first or manage at /settings/billing.`,
                     },
                     { status: 409 }
                 );
@@ -110,7 +110,7 @@ export async function POST(req: Request) {
                     billing_cycle: billingCycle,
                     term_months: termMonths,
                     expires_at: expiresAt,
-                    description: `Nâng cấp gói ${tier} - Band ${roomBand} - ${termMonths} tháng`,
+                    description: `Upgrade plan ${tier} - Band ${roomBand} - ${termMonths} months`,
                 },
             });
         });
@@ -141,7 +141,7 @@ export async function POST(req: Request) {
         const message = err instanceof Error ? err.message : 'Unknown error';
         if (message === 'PENDING_EXISTS') {
             return NextResponse.json(
-                { error: 'Bạn đã có giao dịch đang chờ xử lý. Vui lòng hoàn tất hoặc chờ hết hạn.' },
+                { error: 'You have a pending transaction. Please complete it or wait for it to expire.' },
                 { status: 409 }
             );
         }
