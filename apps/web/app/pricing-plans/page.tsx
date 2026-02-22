@@ -376,7 +376,7 @@ export default function PricingPlansPage() {
             </div>
 
             {/* FAQ / Trust Section */}
-            <div className="grid md:grid-cols-3 gap-8 border-t border-gray-200 pt-12">
+            <div className="grid md:grid-cols-2 gap-8 border-t border-gray-200 pt-12 max-w-2xl mx-auto">
                 <div className="text-center">
                     <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-600">
                         <Zap className="w-6 h-6" />
@@ -390,13 +390,6 @@ export default function PricingPlansPage() {
                     </div>
                     <h4 className="font-semibold text-gray-900 mb-2">{t('trust.support')}</h4>
                     <p className="text-sm text-gray-600">{t('trust.supportDesc')}</p>
-                </div>
-                <div className="text-center">
-                    <div className="w-12 h-12 bg-purple-50 rounded-full flex items-center justify-center mx-auto mb-4 text-purple-600">
-                        <AlertCircle className="w-6 h-6" />
-                    </div>
-                    <h4 className="font-semibold text-gray-900 mb-2">{t('trust.refund')}</h4>
-                    <p className="text-sm text-gray-600">{t('trust.refundDesc')}</p>
                 </div>
             </div>
         </div>

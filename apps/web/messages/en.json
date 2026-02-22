@@ -1286,9 +1286,7 @@
       "setup": "Setup in 5 minutes",
       "setupDesc": "No complex installation needed. Sign in and start using immediately.",
       "support": "24/7 Support",
-      "supportDesc": "Our Zalo support team is always ready to answer all your questions.",
-      "refund": "30-day refund",
-      "refundDesc": "If you're not satisfied, we'll refund 100% within the first 30 days."
+      "supportDesc": "Our Zalo support team is always ready to answer all your questions."
     }
   },
   "guidePage": {
